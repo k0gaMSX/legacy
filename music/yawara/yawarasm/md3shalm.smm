@@ -1,0 +1,231 @@
+;
+;                      MD3Shalm.SMM
+;
+;     "Majou Densetsu III - Shalom (Knightmare III)"
+;                Source Game Music Module
+;
+; Version Amalthea-1-1 (1st Ver., 1st Release, 1st Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =MD3Shalm.SMM
+;   L80 MD3Shalm,MD3Shalm.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Majou Densetsu III - Shalom (Knightmare III)"
+;   cartridge mapping:
+;
+;    4000 5FFF
+;   00000 01FFF
+;       |M|?|?|?|?|?|?|?|?|?|?|?|?|?|?|?|
+;   00000                               1FFFF
+;
+;                              6000     BFFF
+;                             3A000     3FFFF
+;       |?|?|?|?|?|?|?|?|?|?|?|?|?|M|M|M|
+;   20000                               3FFFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+; MSX PSG constants.
+
+PSGAdr equ  0A0H
+PSGWrP equ  0A1H
+PChnCt equ  007H
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '  Majou Densetsu III - Shalom   '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   0C000H
+GMPNam:db   'Yawara  C00'
+OpenMN:db   000H
+StrtSE:db   000H
+ChATDD:dw   0E011H
+ChBTDD:dw   0E01CH
+ChCTDD:dw   0E027H
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'MD3Shlm0Sc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'MD3Shlm1Sc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00000010B
+
+SetupR:ret  nz
+       ld   hl,04000H
+       xor  a
+       ld   (hl),a
+       inc  hl
+       ld   (hl),a
+       ld   hl,0E000H
+       ld   de,0E001H
+       ld   bc,003FFH
+       ld   (hl),000H
+       ldir
+SilnRt:ld   a,PChnCt
+       out  (PSGAdr),a
+       ld   a,10111111B
+       ld   (0E2FEH),a
+       out  (PSGWrP),a
+       ld   a,001H
+StMsRt:jp   06000H
+
+PlayRt:jp   06449H
+
+GmBlNm:db   'MD3Shalm000'
+GmBlSz:dw   02000H
+LoadAd:dw   04000H
+GmBlN1:db   'MD3Shalm001'
+GmBlS1:dw   06000H
+LoadA1:dw   06000H
+       dw   0FFFFH
+MusicT:db   02BH,'           2B*         '
+       db   02CH,'           2C          '
+       db   02DH,'           2D*         '
+       db   02EH,'           2E*         '
+       db   02FH,'           2F*         '
+       db   030H,'           30*         '
+       db   031H,'           31*         '
+       db   032H,'           32*         '
+       db   033H,'           33*         '
+       db   034H,' Majou Densetsu Returns'
+       db   035H,'           35*         '
+       db   036H,'           36*         '
+       db   037H,'           37          '
+       db   038H,'           38          '
+       db   039H,'           39          '
+       db   03AH,'           3A          '
+       db   03BH,'           3B*         '
+       db   03CH,'           3C          '
+       db   03DH,'           3D          '
+       db   03FH,'           3F*         '
+       db   042H,'Majou Densetsu Reprised'
+       db   049H,'           49          '
+       db   04AH,'           4A          '
+       db   04BH,'           4B*         '
+       db   04CH,'           4C          '
+       db   04EH,'           4E          '
+       db   055H,'           55          '
+       db   056H,'           56          '
+       db   057H,'           57          '
+       db   058H,'           58          '
+       db   059H,'           59*         '
+       db   05BH,'           5B          '
+       db   05CH,'           5C          '
+       db   05DH,'           5D*         '
+       db   05EH,'           5E*         '
+       db   05FH,'           5F*         '
+       db   060H,'           60*         '
+       db   088H,'           88          '
+       db   0FFH,0FFH
+EffctT:db   000H,'           00*         '
+       db   001H,'           01*         '
+       db   002H,'           02          '
+       db   003H,'           03          '
+       db   004H,'           04          '
+       db   005H,'           05*         '
+       db   006H,'           06*         '
+       db   007H,'           07*         '
+       db   008H,'           08*         '
+       db   009H,'           09*         '
+       db   00AH,'           0A*         '
+       db   00BH,'           0B          '
+       db   00CH,'           0C          '
+       db   00DH,'           0D          '
+       db   00EH,'           0E          '
+       db   010H,'           10          '
+       db   011H,'           11          '
+       db   012H,'           12          '
+       db   013H,'           13*         '
+       db   014H,'           14*         '
+       db   015H,'           15*         '
+       db   017H,'           17          '
+       db   018H,'           18*         '
+       db   019H,'           19*         '
+       db   01AH,'           1A*         '
+       db   01BH,'           1B*         '
+       db   01CH,'           1C          '
+       db   01DH,'           1D          '
+       db   01EH,'           1E*         '
+       db   01FH,'           1F*         '
+       db   020H,'           20*         '
+       db   021H,'           21*         '
+       db   022H,'           22          '
+       db   023H,'           23*         '
+       db   024H,'           24*         '
+       db   025H,'           25          '
+       db   026H,'           26*         '
+       db   027H,'           27*         '
+       db   028H,'           28*         '
+       db   029H,'           29*         '
+       db   03EH,'           3E          '
+       db   043H,'           43          '
+       db   044H,'           44          '
+       db   045H,'           45          '
+       db   046H,'           46          '
+       db   047H,'           47*         '
+       db   048H,'           48*         '
+       db   04FH,'           4F          '
+       db   050H,'           50          '
+       db   051H,'           51          '
+       db   052H,'           52          '
+       db   053H,'           53*         '
+       db   05AH,'           5A          '
+       db   080H,'           80*         '
+       db   081H,'           81*         '
+       db   082H,'           82          '
+       db   083H,'           83          '
+       db   084H,'           84          '
+       db   085H,'           85*         '
+       db   087H,'           87?         '
+       db   089H,'           89?         '
+       db   08AH,'           8A?         '
+       db   08BH,'           8B?         '
+       db   08CH,'           8C?         '
+       db   08DH,'           8D?         '
+       db   08EH,'           8E?         '
+       db   086H,'   ---- fade out ----  '
+       db   0FFH,0FFH
+
+       end

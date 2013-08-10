@@ -1,0 +1,237 @@
+
+	Floppy disk emulator for harddisk [HDDEMU] v1.01
+
+					Quick reference HDDEMU.ENG
+					Copyright TSUYOSHI 1994,1995
+
+					Written by Kenji KITAYAMA(TEAM-PMK)
+
+
+HDDEMU.COM copies datas in floppy disks to harddisk wholly and runs it. 
+Many softwares which is weeped by too slowly disk access, becomes comfotable 
+because speedy harddisk access.
+
+Characteristic:
+
+	- HDDEMU doesn't give the damages for no floppy access.
+	- You need not kill a protect because HDDEMU appears protect check 
+	  again at first inatalling.
+	- You can disk change at emulating.
+	- HDDEMU can handle 9 floppies maximum.
+
+Environment:
+
+	Machine    : MSX turboR(FS-A1ST/GT)
+	Memory     : 64KB memory mapper in machine
+		     HDDEMU uses only built mapper. 
+		     If it is exist in ex.slot, HDDEMU may be able not to use.
+	Diskdrive  : Floppy disk drive and harddisk
+
+	OS	   : MSX-DOS2
+
+
+How to use
+==========
+
+	Make a directry for keeping emulating data in harddrive, 
+	and copy 2 files there.
+
+		HDDEMU.COM	.. Execute command
+		HDDEMU.OVL	.. Over lay data
+
+	Execute HDDEMU.COM after copying. A menu will appear:
+
+	[E]xcute	HDDEMU reads a software in harddisk, 
+			and execute emulator system.
+	[L]oad		HDDEMU copys a software from floppydisk to harddisk.
+	[C]onfigration	HDDEMU assigns drive number, CPU change and so on.
+	[Q]uit		Quit to MSX-DOS2.
+
+
+[E]xecute:	If you type [E] and softwares are exists in harddisk, 
+		next menu will appear.
+
+		Select a file which you want to execute and push [RETURN].
+		If there isn't enough memory, HDDEMU appears error and returns 
+		to menu.
+
+[L]oad:		If you type [L], HDDEMU prompts to give a file name.
+		for keeping in harddisk.
+
+		If there isn't enough free, HDDMENU appears error and return 
+		to menu. If you don't want to read, it return to menu after 
+		only [RETURN] typed.
+
+		HDDEMU starts to load to harddisk after floppy set and any key.
+		If error occurs for loading, HDDEMU appears error sector.
+
+		HDDEMU prompts to load next floppy after loading one disk is 
+		ended. If there isn't enough free, HDDEMU is ended 
+		automatically.
+		These files are made in directory:
+
+		*.EMn [n = 0,1,2,3...]	Disk image file of each floppy
+		*.HED			Header file for boot
+
+[C]onfigration: If you type [C], HDDEMU appears congigration menu 
+		if there is exist disk image file.
+
+		Select a file by cursol and return key.
+
+		If you select a file, HDDEMU reads the header file and 
+		appears a congigration menu.
+		There are five commands:
+
+		[D]rive		Select a drive number on emulator.
+				Primary, this command is for the software 
+				[CTRL] booting needed. Usually you need not 
+				it.
+			[1]	:1 drive mode (CTRL boot)
+			[2]	:2 drive mode
+			[Q]	:No assign
+
+			The softwares which is used on 2 drive mode are 
+			need to change a mode.
+
+		[C]pu		Select a CPU mode in emulating.
+			[Z]80	:Z-80 CPU
+			[R]800	:R800 CPU
+			[Q]uit	:No assign
+
+		[K]ey		Assign a disk change key in emulating.
+			[J]ikkou:Jikko or torikeshi key
+			[S]hift :Shift key
+			[G]raph :Graph key
+			[Q]uit  :No assign
+
+		[B]reak		Assign a key which is returned in emulating.
+			[1]   :Return with [CTRL+GRAPH+DEL]
+			[2]   :Return without [CTRL+GRAPH+DEL]
+			[Q]uit:No assign
+
+			Break command returns to menu in emulating,
+			but you should not abuse it because dangerous.
+
+		[Q]uit		Quit to menu
+
+
+Disk change in emulating
+========================
+
+	If the software prompts disk change in emulating, hit a number key 
+	from 1 to 9 with a key which is set in configiration menu.
+	If you hit a key already set, [CAPS] LED is flashed. Then push 
+	from 1 to 9.
+
+	If you want to access a floppy drive directly, push [0] key.
+
+
+Option
+======
+
+	HDDEMU <filename>
+
+	If you write a filename, HDDEMU reads it automatically and 
+	emulator will start.
+
+
+Trouble shooting
+================
+
+	If software breaks emulator system, HDDEMU can't handle it.
+	Sorry, you must give up.
+
+	If software runs on MSX-DOS2, HDDEMU can't handle it.
+
+	If softwares stops or resets suddenly, you must use floppies 
+	which protect is removed because HDDEMU can't understand protect type.
+	Now HDDEMU can find out only multi sector format in last sector.
+	And if you are using disk cache, HDDEMU can't find mUlti sector format.
+
+	If softwares controls memory mapper individually, running the software 
+	will be strange. And it also occur if software checks memory in the 
+	middle of one's running. You must give up.
+
+	If you use a software for Z80 on R800, running will be strange.
+	Set R800 mode by configiration. On R800 mode most softwares can't 
+	play OPLL right.
+
+
+REMARKS
+=======
+
+	HDDEMU is only for 2DD-9 sector format. HDDEMU can't handle other 
+	format type.
+	And the software which secures work area in boot sector must go to 
+	cyber space nobody known. Take care it.
+
+	HDDEMU becomes software which is file type, speedy. 
+	The software which is red datas directly from sector and data 
+	constructs is done most suitable, isn't speedy.
+
+	I tried these softwares.
+
+	HDDEMU can handle:
+		Galforce Prelude of creation	(Sony)
+		Ys 2				(FALCOM)
+		Kubikiri Yakata			(BIT2)
+		Snatcher			(Konami)
+		Princess Maker			(Micro Cabin)
+		Harajyuku After Dark		(KGD)
+		Angelus				(Enix)
+		Toshin Toshi			(Alice Soft)
+		X'NA				(Fairy Tale)
+		Konai Shasei			(Farly Tale)
+		CAL 1 and 2			(Birdy Soft)
+		Majhang Shikaku			(Nihon Bussan)
+
+	Sorry, HDDEMU went to cyber space:
+		DOLL				(Hart Electlic)
+		Ranma 1/2			(Bothtech)
+		Illusion City			(Micro Cabin)
+		Fray				(Micro Cabin)
+		Xak				(Micro Cabin)
+		Xak II				(Micro Cabin)
+		LENAM				(Helz)
+
+
+For using, copy, 
+translating to other machine, updating by others
+================================================
+
+This software is FREE SOFTWARE which Author does not, did not and will not 
+abandon the Copyrights. You must subject to these terms for using:
+
+	- DO NOT CHANGE the copyrights marking.
+	- Copy with HDDEMU.DOC
+	- If you change the code like translating to other machine 
+	  or updating, you must write down your name, address
+	  and changed thing in document.
+	- Author don't assure any dameges by using.
+	- Author don't have any duties to update.
+
+
+E-Mail address
+==============
+
+	RYOKUN-NET		R800
+	Erupare Net 2		LLP00335
+	Illusion City		R800
+	YM-NET GROOVE		TSUYOSHI
+	Nuinui Fankids!		R800
+	MSX Networker's Point	R800
+
+(C)TSUYOSHI 1994,1995
+
+
+From translater
+===============
+
+If you want to send E-mail to author, please send it to translater.
+
+Kenji KITAYAMA(TEAM-PMK Foreign Working Section)
+HQE00031@niftyserve.or.jp
+
+Kisaragi(February).14.1995
+
+

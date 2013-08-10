@@ -1,0 +1,134 @@
+                          ******* Mission *******
+                   The ColecoVision Emulator for the MSX
+                                Version 1.1
+                                     
+                    Copyright (C) 1996  Marcel de Kogel
+
+Hardware and Software Requirements
+==================================
+An MSX1 with 64K RAM minimum (an MSX2 is recommended)
+MSX-DOS
+Some ColecoVision ROM images
+Both PSG and SCC and up to two joysticks are supported. The emulator will
+automatically detect and use an SCC cartridge in either slot 1 or 2
+
+Files included
+==============
+mission.com The emulator
+mission.txt This file
+coleco.rom  ColecoVision OS ROM image. Since the emulator makes some
+            assumptions of where certain OS routines are located, you may
+            not be able to use different OS ROM images
+The latest version of Mission can always be found on the Mission
+distribution site at http://www.komkon.org/~dekogel/mission.html
+
+Note
+====
+Since the program emulates a ColecoVision by patching the OS ROM, many
+games will not run on the emulator. About 1/3rd of all images I've tested
+run correctly, a few more run, but with flaws (e.g. corrupted graphics or
+sound). Also, because the MSX is significantly slower than the
+ColecoVision, you may find fewer games run correctly if you're using a
+60Hz (NTSC) display. If you're having trouble running some games, try
+switching to 50Hz mode
+
+Key Mappings
+============
+F1           -  Pause emulation
+F2           -  Continue emulation
+F4           -  Quit emulator (only works on MSX2 systems) to 40 column
+                text mode. Please note that this will not work properly if
+                you started the emulator in 80 column mode
+SELECT       -  Quit emulator (only works on MSX2 systems) to 80 column
+                text mode. Please note that this will not work properly if
+                you started the emulator in 40 column mode
+F5           -  ColecoVision reset switch
+STOP         -  Toggle slow mode. For all cheaters out there
+INS          -  Map keyboard to joystick port #1 (default)
+DEL          -  Map keyboard to joystick port #2
+Cursor keys  -  Joystick movement
+Space, M     -  Joystick first button
+N            -  Joystick second button
+B            -  Joystick third button
+V            -  Joystick fourth button
+0-9          -  Keypad key buttons
+-            -  Keypad * button
+=            -  Keypad # button
+
+Starting the emulator
+=====================
+To start the emulator, simply type MISSION <filename> <ENTER>. If no
+filename is given, the emulator will load and execute CART.ROM, if
+present. The extension of your game ROM images is assumed to be .ROM. If a
+file CART.PAT is present, the emulator will load it and use it to patch
+CART.ROM
+
+Patch file format
+=================
+The patch file (*.PAT) format is as follows:
+String "Mission Patch File",$1A
+Word   Size of ROM image in bytes
+Word   ROM image checksum. This is the sum of all bytes in the image
+Word   Number of patches to apply
+Patch data follows and has this format:
+Word   Offset in image of this patch
+Byte   New value
+
+Creating patch files
+====================
+Below are some addresses useful for those who want to create patch files:
+Offset Type        Contents/Function
+------ ----        -----------------
+$3f00  String      "MISSION"
+$3f07  Byte        Emulator version number. The high nibble contains the
+                   major version number, the low nibble the minor version
+                   number. Currently, this byte contains $11
+$3f10  Byte        Current joypad #1 status
+$3f11  Byte        Current keypad #1 status
+$3f12  Byte        Current joypad #2 status
+$3f13  Byte        Current keypad #2 status
+$3f14  Byte        Current VDP status byte. Calling the READ_VDP_STATUS
+                   routine ($1fdc) modifies this; using this routine is
+                   highly recommended
+$3f80  Subroutine  Send A to the sound chip, you can also use location
+                   $335. Please note that calling this function does not
+                   change the PSG/SCC settings
+$3f83  Subroutine  Interpret sound chip data, this is called at every
+                   interrupt
+$3f86  Subroutine  Update current controller statuses. This is also called
+                   by the interrupt routine
+The subroutines do not change any register unless specified otherwise, and
+use no stack space
+If the upper two bits of the first byte of a cartridge image are both
+cleared, the lower bits have the following function:
+Bit Function
+--- --------
+0   This game does not use the VDP_OUT routine ($1fd9) to set VDP register
+    #1. Setting this bit ensures interrupts are passed to the cartridge
+    NMI handler
+1-5 Reserved
+If the first instruction of a game (the one pointed to by [$800a])is LD
+SP,nnnn; the emulator will replace it with LD SP,$7ff0. If a game runs out
+of stack space, try changing the first instruction, or add a LD SP,nnnn
+instruction somewhere in it's initialisation routine. ColecoVision RAM is
+at $7000-$73ff, all other memory between $4000-$7fff can be used freely
+
+Legal issues
+============
+This software can be used free of charge and may be distributed freely, as
+long as the archive isn't modified in any way, no profit is made from
+distributing it, and no game ROMs are supplied with it. Also, this
+software comes without any warranty, neither express nor implied: Use at
+your own risk
+
+History
+=======
+1.1  31-12-1996   Some (minor) bug fixes, added slow mode, keyboard can
+                  now be mapped to joystick port #2, improved SCC support
+                  and added 80 column support, removed separate NTSC
+                  version, pause feature stabilised, added support for
+                  patch files
+1.0  30-11-1996   Initial release
+
+Please send your comments to Marcel at
+m.dekogel@student.utwente.nl

@@ -1,0 +1,88 @@
+RUNDISK                                                    usch 1991
+-------
+
+Format:      RUNDISK drive [options]
+
+
+Purpose:     Runs application or game software from a bootable  disk 
+        in a drive other than A:.
+
+
+Use:         Disk software depending on the startup code in the boot 
+        sector  can normally only be run from the first  disk  drive 
+        attached  to the lowest-numbered slot, i.e.  physical  drive 
+        A:.  If  this  drive is not compatible with  the  disk,  for 
+        example because it is a 5.25" drive or a hard disk, it  must 
+        be  removed from the system so that the other drive  becomes 
+        drive A:.
+
+
+
+
+
+
+             In  this case RUNDISK may be used to load  and  execute 
+        the  boot  sector from a different drive. RUNDISK  tries  to 
+        make  the  system  believe  that  drive  was  drive  A:   by 
+        intercepting  MSXDOS calls _RDABS and _WRABS and the  PHYDIO 
+        hook and reASSIGNing the drive names, then loads sector 0 at 
+        the standard address &HC000 and executes the boot code.
+
+             There is no guarantee that this procedure works for all 
+        programs since there are so many different non-standard ways 
+        to  perform disk I/O (like directly calling the DSKIO  entry 
+        of  the  disk  driver  ROM,  in  which  case  it  cannot  be 
+        intercepted at all).
+
+             For the hard cases there are some command line  options 
+        that  should only be given if the application disk does  not 
+        run correctly otherwise:
+
+        /S:    Add  code to stop the disk drive after  each  access. 
+        This  is  for programs that overwrite H.TIMI  and  therefore 
+        disable  the countdown timer that normally stops  the  drive 
+        motor. Using /S probably slows down disk I/O dramatically.
+
+
+        /F:    Provide  a DOS 1 style FAT buffer for  the  simulated 
+        drive A:. This fixes an incompatibility between MSXDOS 1 and 
+        MSXDOS  2, so this option may help programs that cannot  run 
+        under MSXDOS 2 at all otherwise.
+
+        /1 or /2: Treat the disk as single or double sided 80  track 
+        disk,  regardless of the ID byte. This option is  for  disks 
+        that  would  normally be rejected with a "Not  a  DOS  disk" 
+        error  message.  The  internal operation of  MSX-DOS  2  may 
+        require  that a normal single or double sided disk has  been 
+        accessed in that drive before.
+
+
+        Programs  that  perform  a  reset as  a  part  of  the  boot 
+        procedure  (e.g.  Synth  Saurus)  cannot  be  started   with 
+        RUNDISK.
+
+
+
+
+
+
+
+Examples:
+
+        Some  programs  that  can be started  without  command  line 
+        options (RUNDISK D:):
+
+             Undeadline, Aleste 2, Disc Station
+
+        Some programs that may need the /S option (RUNDISK D:/S):
+
+             Golvellious, Gandhara, Super Cooks
+
+        One program that needs the /F option (RUNDISK D:/F):
+
+             Might & Magic 2
+
+        One program that needs the /2 option (RUNDISK D:/2):
+
+             Laydock 2
+

@@ -1,0 +1,182 @@
+
+			 MSX DOS 2.xx documentation.
+
+
+ presented by:  //--------\             //--/         //---------/
+	       //  /---\\  \           //__/         //  _______/  '94
+	      //  /    //  /           ___          //  /
+	     //  /    //  /          //  /         //  ------/
+	    //  /    //  /          //  /         //  ______/
+	   //  /    //  /          //  /         //  /
+	  //  /____//  /  //--/   //  /  //--/  //  ---------/  //--/
+	 //___________/  //__/   //__/  //__/   \\__________/  //__/  products.
+
+			       - Desire In Envy -
+
+	     ~ Greetinx to all our friends and contacts on MSX ~
+
+
+Here are some addresses found by D.I.E. for DOS2.xx. These addresses are
+mainly notes, so there can be a little confusing (sorry). 
+
+E-mail: STW_DAM@HROVX1.HRO.NL    (ps: all documentation about MSX is welcome!)
+
+
+
+				 *** DOS2 ***
+
+		 Warning! These addresses can be incompatibel.
+
+Maarten "The Arithmetic Master" Verheijdt & Vincent "Hacker" van Dam, 94/05/16
+
+Adres   Remarks
+==============================================================================
+0005    BDOS entry
+
+005C    Allocate a 16k segment (memmory management)
+	Input: [ A] - 0 = user segment
+		      1 = system segment
+	       [ B] - 0 = primary mapper
+		    - FxxxSSPP = slot adress (primary mapper, if 0)
+		       xxx=000 = allocate specified slot only
+		       xxx=001 = allocate other slots than specified
+		       xxx=010 = try to allocate specified slot and, if it
+			 failed, try another slot (if any)
+		       xxx=011 = try to allocate other slots than specified
+			 and, if it failt, try specified slot
+	Output: carry set = no free segment, else
+		[ A] = segment number
+		[ B] = slot adress of mapper slot (0 if called as [B]=0
+
+005F    Free a 16k segment (memmory management)
+	Input: [ A] - segment number to free
+	       [ B] - 0  = primary mapper
+		      0! = other is specified mapper (slot adres)
+	Output: carry set = error
+
+01CB    Performs a malloc in the DOS2 buffer segment
+	Input: [HL] - Number of bytes to reserve
+	Output:[HL] - Address of allocated buffer
+	       [ A] - Error code (00=no error)
+	Remark: DOS actualy allocates HL+2 bytes. The start address of the
+		buffer - 2 contains the length of the buffer + 2.
+
+0EC8    BDOS routine (#6F), get version number (see FUNCTION.DOC)
+
+2D0F    Performs a de-malloc in the DOS2 buffer segment
+	Input: [HL] - Address of buffer ([HL]-2/[HL]-1 must contain the length)
+	Output: < unknown >
+
+4010    SCSI sector i/o (logical)
+	[HL] = DMA adress
+	[DE] = sector
+	[B]  = sectors
+	[C]  = media descipter (F0 = hard drive)
+	[A]  = drive number
+	Carry= set for write, reset for read
+
+	Out: Carry set = error
+	      [B] = remaining sectors
+	      [A] = error code
+		     0 - write protected
+		     2 - not ready
+		     4 - CRC error
+		     6 - seek error
+		     8 - record not found
+		    10 - write fault
+		    12 - disk error
+		    18 - not a dos disk
+		    20 - incompatible disk
+		    22 - unformatted disk
+		    24 - disk change (no message because trapped internally?)
+		    26 - user error 10
+		   rest- disk error
+
+	* If there is no SCSI driver: Out: [A]  = 0C
+				   Carry= set
+
+4013    SCSI disk change
+	[A]  = drive number
+	[B]  = 0
+	[C]  = media descripter (F0 = hard drive)
+	[HL] = base adress of DPB
+
+	Out: Carry set = error; [A] = return error code (see SCSI i/o)
+	     [B] = 1 (disk unchanged)
+		   0 (unknown)
+		  -1 (disk changed)
+
+	* If there is no SCSI driver: Out: [A]  = 0C
+				   Carry= set
+
+4016    SCSI get Drive parameter block
+	[A]  = drive number
+	[HL] = base adress of DPB
+	[B]  = first byte of FAT
+	[C]  = media descripter (F0 = hard drive)
+
+	Out: [HL+1] ... [HL+18] = DPB
+
+	* If there is no SCSI driver: Out: [A]  = 0C
+				   Carry= set
+
+4019    SCSI
+	Used for SCSI format?
+
+	* If there is no SCSI driver: Out: [HL]= 6ED1
+
+401C    SCSI format
+	[A]  = 1..9 (as specified in CHODAT=4019?)
+	[D]  = drive number (0-based)
+	[HL] = begin adress of work area
+	[BC] = length of work area
+
+	Out: [A] = error code
+		    0 - write protected
+		    2 - not ready
+		    4 - CRC error
+		    6 - seek error
+		    8 - record not found
+		   10 - write fault
+		   12 - bad parameter
+		   14 - insufficient memmory
+		   16 - other errors
+
+	* If there is no SCSI driver: Out: [A] = 10, carry set
+
+401F    nothing (RET)
+4022    Jump to BASIC
+4025    Format routine (with questions)
+4029    Stop drive(s)
+
+402D    Where Am I (calculates slot number of DOS2)
+	in: <none>
+	out: [A] - slot number
+
+4030    Out: [HL]=[F34B]=highest available ram adress
+
+40FF    (in DOS2 ROM) Current block. The 64Kb DOS2 ROM system is divided into
+	16Kb ROM segments. These segments can be swappen only in page 1.
+	The legal segment numbers are 0,1,2 and 3.
+Bank-2
+------
+4FC8    BDOS-routine (6F = Get MSX-DOS version number)
+
+6000    Swap address (for ROM banks).
+
+
+F1E5    Jumps to interrupt handler (only when processing BDOS functions)
+F1E8    See BIOS #0C (only when processing BDOS functions)
+F1EB    See BIOS #14 (only when processing BDOS functions)
+F1EE    See BIOS #1C (only when processing BDOS functions)
+F1F1    See BIOS #24 (only when processing BDOS functions)
+F1F4    See BIOS #30 (only when processing BDOS functions)
+F1F7    Switch to 'DOS-mode' (=page 0 & 2 system segments)
+F1FA    Switch to 'user-mode'
+F1FD    Select DOS system segment on page 0
+
+	Mapper Support Routines
+F200    Allocate a 16k segment
+F203    Free a 16k segment
+F206    Read byte from address A:HL to A
+

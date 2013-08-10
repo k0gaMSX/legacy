@@ -1,0 +1,159 @@
+;------ Faking stuff for M80 and MX -----------------------------------
+
+module  macro           ;; "module" must be lower cased
+	endm
+
+endmodule macro         ;; "endmodule" must be lower cased
+	endm
+
+extrn   macro
+	endm
+
+;----------------------------------------------------------------------
+
+
+	MODULE  CALBIO
+;
+;       CALBIO  inter-slot calls BIOS ROM.
+;       Entry:  [AF], [BC], [DE] and [HL] are passed to the BIOS as is.
+;       Exit:   Depends on the BIOS which is called.
+;
+CALSLT  equ     001Ch
+EXPTBL  equ     0FCC1h
+;
+CALBIO::
+	ld      iy,(EXPTBL-1)
+	call    CALSLT
+	ei                      ; Make sure interrupts are enabled
+	ret
+
+	ENDMODULE
+
+
+	MODULE  CHGMOD
+;
+;       CHGMOD  sets the VDP mode.
+;       Entry:  [A] screen mode (0..3 on MSX1, 0..8 on MSX2).
+;       Exit:   None.
+;
+CHGMOD  equ     005Fh
+;
+chgmod@::
+	ld      ix,CHGMOD
+	jp      CALBIO
+
+	extrn   CALBIO
+
+	ENDMODULE
+
+
+	MODULE  CHGCLR
+;
+;       CHGCLR  changes the color of the screen.
+;       Entry:  Foreground color in FORCLR.
+;               Background color in BAKCLR.
+;               Border color in BDRCLR.
+;       Exit:   None.
+;
+CHGCLR  equ     0062h
+;
+chgclr@::
+	ld      ix,CHGCLR
+	jp      CALBIO
+
+	extrn   CALBIO
+
+	ENDMODULE
+
+
+	MODULE  CLS
+;
+;       CLS     clears the screen.
+;       Entry:  None.
+;       Exit:   None.
+;
+CLS     equ     00C3h
+;
+cls@::
+	cp      a               ;by unknown reason must set Z flag
+	ld      ix,CLS
+	jp      CALBIO
+
+	extrn   CALBIO
+
+	ENDMODULE
+
+
+	MODULE  TOTEXT
+;
+;       TOTEXT  forces the screen to text mode.
+;       Entry:  None.
+;       Exit:   None.
+;
+TOTEXT  equ     00D2h
+;
+totext@::
+	ld      ix,TOTEXT
+	jp      CALBIO
+
+	extrn   CALBIO
+
+	ENDMODULE
+
+
+	MODULE  CALBAS
+;
+;       CALBAS  performs inter-slot call into the BASIC interpreter.
+;       Entry:  Interpreter entry address in [HL].
+;               [BC] and [DE] are passed as is to the interpreter.
+;       Exit:   None.
+;
+;       The  problem  is  we  can  never  pass IX register, which CALBAS
+;       wants, by inter-slot call.  What must  be  done  is  to  set  IX
+;       register and jump to CALBAS after the BIOS ROM is enabled.
+;
+CALBAS  equ     0159h
+NMI     equ     0066h           ; Non-maskable interrupt
+				; (never used and only hook is provided)
+H.NMI   equ     0FDD6h          ; Hook for NMI
+;
+calbas@::
+	exx
+	ex      af,af'
+;
+	ld      hl,CALBAS       ; Build the following interface routine
+	push    hl              ; on the stack
+	ld      hl,0C300h       ;
+	push    hl              ; +0    inc     sp
+	exx                     ; +1    inc     sp
+	push    hl              ; +2    ld      ix,<interpreter entry>
+	exx                     ; +6    nop
+	ld      hl,021DDh       ; +7    jp      CALBAS
+	push    hl              ;
+	ld      hl,03333h       ;
+	push    hl              ;
+;
+	ld      hl,0            ; Make NMI hook jump to it
+	add     hl,sp           ;
+	ld      a,0C3h          ;
+	ld      (H.NMI),a       ;
+	ld      (H.NMI+1),hl    ;
+;
+	ex      af,af'
+	exx
+;
+	ld      ix,NMI          ; inter-slot call BIOS NMI entry
+	call    CALBIO          ;
+;
+	ld      hl,10           ; Throw away the interface routine
+	add     hl,sp           ;
+	ld      sp,hl           ;
+;
+	ret
+
+	extrn   CALBIO
+
+	ENDMODULE
+
+	end
+

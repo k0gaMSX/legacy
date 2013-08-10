@@ -1,0 +1,1081 @@
+This  TED  file  contains  a  description of  all V9990  registers, both  the
+ordinary  known and  some 'secret' ones which I found during my work with the
+GFX9000 PowerBasic, Paint9000, Xbasic and more.
+
+(c) Henrik Gilvad 1996. May be used as long as it's for free!
+
+V9990 Register specifications
+-----------------------------
+R#0-2VRAM WRITE ADDRESS(W)
+R#3-5VRAM READ ADDRESS(W)
+R#6,7SCREEN MODE(R/W)
+R#8CONTROL (R/W)
+R#9-12INTERRUPT(R/W)
+R#13PALETTE CONTROL (W)
+R#14PALETTE POINTER (W)
+R#15BACK DROP COLOR (R/W)
+R#16DISPLAY ADJUST(R/W)
+R#17-24 SCROLL CONTROL(R/W)
+R#25SPRITE PATTERN GENERATOR BASE ADDRESS(R/W)
+R#26LCD CONTROL(R/W)
+R#27PRIORITY CONTROL(R/W)
+R#28SPRITE PALETTE CONTROL(W)
+R#32-52 COMMAND (W)
+R#53-54 COMMAND (R)
+--------------------------------------
+
+
+VRAM WRITE ADDRESS (Write only)
+================================
+
+       b7     b6     b5     b4     b3     b2     b1     b0
+     +------+------+------+------+------+------+------+------+
+R#0  |CVWA7 |CVWA6 |CVWA5 |CVWA4 |CVWA3 |CVWA2 |CVWA1 |CVWA0 |
+     +------+------+------+------+------+------+------+------+
+R#1  |CVWA15|CVWA14|CVWA13|CVWA12|CVWA11|CVWA10|CVWA9 |CVWA8 |
+     +------+------+------+------+------+------+------+------+
+R#2  |CVWAIH|  0   |  0   |  0   |  0   |CVWA18|CVWA17|CVWA16|
+     +------+------+------+------+------+------+------+------+
+CVWA0-18 : VRAM write address
+CVWAIH =0: CVWA undergoes an increment of plus 1 only at the end of writing
+   to P#0.
+       =1: No increment.
+
+
+VRAM READ ADDRESS (Write only)
+===============================
+        b7     b6     b5     b4     b3     b2     b1     b0
+     +------+------+------+------+------+------+------+------+
+R#3  |CVRA7 |CVRA6 |CVRA5 |CVRA4 |CVRA3 |CVRA2 |CVRA1 |CVRA0 |
+     +------+------+------+------+------+------+------+------+
+R#4  |CVRA15|CVRA14|CVRA13|CVRA12|CVRA11|CVRA10|CVRA9 |CVRA8 |
+     +------+------+------+------+------+------+------+------+
+R#5  |CVRAIH|  0   |  0   |  0   |  0   |CVRA18|CVRA17|CVRA16|
+     +------+------+------+------+------+------+------+------+
+CVRA0-18 : VRAM read address
+CVRAIH =0: CVRA undergoes an increment of plus 1 only at the end of reading
+   at P#0.
+       =1: No increment.
+
+
+SCREEN MODE (Read / Write)
+===========================
+       b7    b6    b5    b4    b3    b2    b1    b0
+    +-----+-----+-----+-----+-----+-----+-----+-----+
+R#6 |DSPM1|DSPM0|DCKM1|DCKM0|XIMM1|XIMM0|CLRM1|CLRM0|
+    +-----+-----+-----+-----+-----+-----+-----+-----+
+R#7 |  0  |C25M | SM1 | SM  | PAL | EO  | IL  | HSCN|
+    +-----+-----+-----+-----+-----+-----+-----+-----+
+DSPM1-DSPM0:Display mode selection
+  11Stand-by mode (non-display, no VRAM refresh, kanji readable)
+  10Bit map mode (B1~B6)
+  01P2 mode
+  00P1 mode
+
+DCKM1-DCKM0Dot clock selection (usind in combination with MCS of P#7)
+MCS=0DOTSMCS=1 DOTS
+  10XTAL11024MCKIN 768
+  01XTAL1/2  512MCKIN/2  384
+  00XTAL1/4  256MCKIN/4  192
+
+MCS=1 means that we are in the socalled 'Overscan' mode. This means that most
+of the 'border' area are also used for drawing pixel data. In the Y direction
+NTSC will  have 240  dots in  Overscan mode (480 in Interlace), PAL will have
+around 290 dots (580 in Interlace).
+
+This gives us 'new' screenmodes: (not mentioned by Yamaha)
+1024 x 212 (424) dots
+ 768 x 290 (580) dots (PAL)
+
+XIMM1-XIMM0Selection of number of dots in X direction of image space
+  112048 dots
+  101024 dots
+  01 512 dots
+  00 256 dots
+
+CLRM1-CLRM0Selection of bit number per dot
+  1116 bits/dot
+  10 8 bits/dot
+  01 4 bits/dot
+  00 2 bits/dot
+
+C25MSelection of 640x480 mode, valid when HSCN is "1"
+  1B6 mode (Requires VGA oscillator instead of 21.4772)
+  0P1, P2, B1~B5 mode
+
+SM1Selection of total number of vertical lines during non-
+interlace, NTSC
+  1263 lines (in combination with SM, the sub-carrier phase is
+     inverted for each frame.)
+  0262 lines
+
+SMSelection of horizontal frequency (invalid when in B5 and B6)
+  11H = fsc/227.5 (the sub-carrier phase is inverted for each
+line.)
+  01H = fsc/228
+
+PALSelection of PAL mode (invalid when in B5 and B6 modes)
+  1Vertical frequency becomes PAL specification.
+  0Vertical frequency becomes NTSC specification.
+
+EOSelection of vertical resolution during interlace.
+(invalid when in B5 and B6 modes)
+  1Twice the vertical resolution during Non-interlace
+  0Same as during Non-interlace
+
+ILSelection of interlace mode (invalid when in B5 and B6 modes)
+  1Interlace
+  0Non-interlace
+
+HSCNSelection of horizontal high scan mode (VGA)
+  1B5, B6 modes
+  0P1, P2, B1~B4 modes
+
+
+CONTROL (Read/Write)
+=====================
+      b7   b6  b5  b4  b3   b2   b1   b0
+    +----+---+---+----+---+----+----+----+
+R#8 |DISP|SPD|YSE|VWTE|VWM|DMAE|VSL1|VSL0|
+    +----+---+---+----+---+----+----+----+
+DISPScreen display enable
+  1Display appears on screen according to the VRAM content.
+  0Back drop color is displayed all over the screen.
+
+SPDSprite (Cursor in B5~B6 modes) non-display
+  1Sprite (cursor) is not displayed
+  0Sprite (cursor) is displayed
+
+YSE/YS signal output enable (Super impose layer select)
+  1/YS signal is output.
+  0/YS signal is not output (/YS terminal constantly low)
+
+VWTEVRAM serial data bus input/output control during digitization.
+  1Dummy write transfer is executed during horizontal retrace line
+interval.
+(The serial data bus of VRAM becomes an input terminal.)
+  0Read transfer is executed during horizontal retrace line interval.
+(The serial data bus of VRAM becomes an output terminal)
+
+VWMVRAM write control during digitization
+   1Write transfer is executed during horizontal retrace line interval.
+(The data inputted into the serial data bus of VRAM during display
+period undergoes write transfer.)
+   0Write transfer is not executed.
+
+DMAE/DREQ signal output enable
+   1The signal is synchronized to the status TR while command is executed
+and output at /DREQ terminal.
+   0/DREQ terminal remains as high level.
+
+VSL1 VSL0Selection of video memory configuration
+  1    0256k word x 4 bit VRAM, 4 units (512k byte)
+  0    1128k word x 8 bit VRAM, 2 units (256k byte)
+  0    0 64k word x 4 bit VRAM, 4 units (128k byte)
+
+Note)Always use the 256k word x 4 bit VRAM on GFX9000 !
+
+
+INTERRUPT (Read/Write)
+=======================
+       b7  b6  b5  b4   b3  b2   b1  b0
+     +----+---+---+---+---+----+---+---+
+R#9  | 0  | 0 | 0 | 0 | 0 |IECE|IEH|IEV|
+     +----+---+---+---+---+----+---+---+
+R#10 |IL7 |IL6|IL5|IL4|IL3| IL2|IL1|IL0|
+     +----+---+---+---+---+----+---+---+
+R#11 |IEHM| 0 | 0 | 0 | 0 |  0 |IL9|IL8|
+     +----+---+---+---+---+----+---+---+
+R#12 |  0 | 0 | 0 | 0 |IX3| IX2|IX1|IX0|
+     +----+---+---+---+---+----+---+---+
+IECECommand end interrupt enable control
+  1/INT0 terminal becomes low level when CE flag of P#6 is "1"
+  0/INT0 terminal does not change according to CE flag
+
+IEVInterrupt enable during vertical retrace line interval.
+  1/INT0 terminal becomes low level when VI flag of P#6 is "1"
+  0/INT0 terminal does not change according to VI flag
+
+IEHDisplay position interrupt enable (Interrupt position is specified
+with IL0-9, IX0-3 and IEHM.)
+  1/INT1 terminal becomes low level when HI flag of P#6 is "1"
+  0/INT1 terminal does not change according to HI flag.
+
+IL0-9Specification of vertical position where display position interrupt
+occurs(Specified by  means of LINE no. with the display start as 0)
+
+IX0-3Specification of horizontal position where display position interrupt
+occurs (Specified  by unit  of 64 master clock with the display start
+as "0")
+
+IEHMSelection of vertical position for display position interrupt
+   1Every line (IL0-9 are ignored.)
+   0Specified line
+
+
+PALETTE CONTROL (Write only)
+=============================
+       b7    b6   b5   b4    b3    b2   b1    b0
+    +-----+-----+---+------+-----+-----+-----+-----+
+R#13|PLTM1|PLTM0|YAE|PLTAIH|PLT05|PLT04|PLT03|PLT02|
+    +-----+-----+---+------+-----+-----+-----+-----+
+PLTM1 PLTM0Selection of color palette mode
+  11YUV mode (8 bit / dot)
+  10YJK mode (8 bit / dot)
+  01256 color mode (like Screen 8 on MSX)
+  00Palette mode (2, 4, 16 or 64 colors)
+
+YAESelection of YJK (YUV) and RGB mixing mode (valid when in YUV/YJK)
+  1YJK (YUV) and RGB images are displayed together (Like screen 10/11)
+  0Only YJK (YUV) image is displayed.
+
+PLTAIHPalette Number increment control at color palette read-out.
+  1R#14 palette pointer is not changed by P#1 read-out.
+  0After P#1 read-out. R#14 palette pointer undergoes an increment.
+
+PLT05-2 Still Screen palette number offset.
+
+
+PALETTE POINTER (Write only)
+=============================
+      b7    b6    b5    b4    b3    b2    b1    b0
+    +-----+-----+-----+-----+-----+-----+-----+-----+
+R#14|PLTA5|PLTA4|PLTA3|PLTA2|PLTA1|PLTA0|PLTP1|PLTP0|
+    +-----+-----+-----+-----+-----+-----+-----+-----+
+PLTA5-0 Palette number (color code)
+
+PLTP1 PLTP0Specification of RGB
+  10Blue
+  01Green
+  00Red
+
+After completion of access to P#1, an increment takes place by plus 1 only.
+PLT1 and 0 are used as a 0 to 2 ternary counter.
+
+BACK DROP COLOR (Read/Write)
+      b7  b6  b5   b4   b3   b2   b1   b0
+    +---+---+----+----+----+----+----+----+
+R#15| 0 | 0 |BDC5|BDC4|BDC3|BDC2|BDC1|BDC0|
+    +---+---+----+----+----+----+----+----+
+BDC5-0Palette number of back drop color
+
+
+DISPLAY ADJUST (Read/Write)
+===========================
+      b7    b6    b5     b4    b3    b2   b1    b0
+    +-----+-----+-----+-----+-----+-----+-----+-----+
+R#16|ADJV3|ADJV2|ADJV1|ADJV0|ADJH3|ADJH2|ADJV1|ADJV0|
+    +-----+-----+-----+-----+-----+-----+-----+-----+
+
+ADJV3-0 Vertical display position adjustment 8 9 ...15 0 1 ... 6 7
+(by line)    Down    Standard Up
+
+ADJH3-0 Horizontal display position adjustment 8 9 ... 15 0 1 ... 6 7
+     Right    Standard  Left
+P1 and B1 by 1 dot unit
+P2, B2 and B3 by 2 dot unit
+B4, B5 and B6 by 4 dot unit
+
+
+SCROLL CONTROL (Read/Write)
+===========================
+       b7    b6      b5     b4    b3    b2      b1    b0
+     +------+-----+-----+------+------+------+-----+-----+
+R#17 | SCAY7|SCAY6|SCAY5| SCAY4| SCAY3| SCAY2|SCAY1|SCAY0|
+     +------+-----+-----+------+------+------+-----+-----+
+R#18 | R512 |R256 |  0  |SCAY12|SCAY11|SCAY10|SCAY9|SCAY8|
+     +------+-----+-----+------+------+------+-----+-----+
+R#19 |  0   |  0  |  0  |  0   |  0   |SCAX2 |SCAX1|SCAX0|
+     +------+-----+-----+------+------+------+-----+-----+
+R#20 |SCAX10|SCAX9|SCAX8|SCAX7 |SCAX6 |SCAX5 |SCAX4|SCAX3|
+     +------+-----+-----+------+------+------+-----+-----+
+R#21 | SCBY7|SCBY6|SCBY5| SCBY4| SCBY3| SCBY2|SCBY1|SCBY0|
+     +------+-----+-----+------+------+------+-----+-----+
+R#22 |DisB  |DisA |  0  |  0   |  0   |  0   |  0  |SCBY8|
+     +------+-----+-----+------+------+------+-----+-----+
+R#23 |   0  |  0  |  0  |  0   |  0   |SCBX2 |SCBX1|SCBX0|
+     +------+-----+-----+------+------+------+-----+-----+
+R#24 |   0  |  0  |SCBX8|SCBX7 |SCBX6 |SCBX5 |SCBX4|SCBX3|
+     +------+-----+-----+------+------+------+-----+-----+
+SCAY12-0As display start coordinates for screen "A" of P1 mode and
+SCAX10-0screens of other modes, X-Y coordinates in the image space
+are specified by dots. (When 16 bit/dot is used in B2 and B3
+modes, however, SCAX0 is ignored and X coordinate is specified
+by 2 dot unit.)
+
+SCBY8-0 For screen "B" of P1 mode, X-Y coordinates are specified in
+SCBX8-0 the same way as for screen "A".
+
+R512 R256Number of roll page line in Y direction is specified.
+  1    0Displayed page is rolled by 512 lines.
+  0    1Displayed page is rolled by 256 lines.
+  0    0Rolling by image space size takes place.
+
+DisBDisable display of screen "B"
+  1Screen "B" is disabled
+  0Screen "B" is enabled
+
+DisADisable display of screen "A"
+  1Screen "A" is disabled
+  0Screen "A" is enabled
+
+
+SPRITE PATTERN GENERATOR TABLE BASE ADDRESS (Read/Write)
+========================================================
+       b7  b6  b5  b4b3     b2     b1     b0
+     XWWWRWWWRWWWRWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#25 V 0 V 0 V 0 V 0 VSGBA17VSGBA16VSGBA15V  0 V  P1 mode!
+     TWWWUWWWUWWWUWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+R#25 V 0 V 0 V 0 V 0 VSGBA18VSGBA17VSGBA16VSGBA15V  P2 mode!
+     ZWWWQWWWQWWWQWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+SGBA18-15Base address of P1 and P2 mode sprite pattern generator.
+
+
+LCD CONTROL (Read/Write)
+=========================
+       b7  b6  b5  b4  b3   b2 b1   b0
+     XWWWRWWWRWWWRWWWRWWWWRWWWWRWWWWWRWWWWY
+R#26 V 0 V 0 V 0 VVRIVPNSLVPLV0VPDUALVPNENV
+     ZWWWQWWWQWWWQWWWQWWWWQWWWWQWWWWWQWWWW[
+VRISelection of number of lines during vertical retrace line interval
+when in panel mode
+  11 line (Frame frequency increases)
+  0Same as CRT mode
+
+PNSLSelection of number of vertical direction dot in panel
+  1480 dots
+  0400 dots
+
+PLV0Selection of Gray Scaling
+  1Display data is output at color codes to terminals of CB7 to 0.
+  0Binary converted data is output to terminals of D3 to 0.
+
+PDUALSelection of panal type
+  12 screen panel (single drive type)
+  01 screen panel
+
+PNENSelection of panel display mode
+  1Display cycle and terminal function used for panel
+  0Display cycle and terminal function used for CRT
+
+
+PRIORITY CONTROL (Read/Write)
+=============================
+      b7  b6  b5  b4  b3  b2  b1  b0
+    XWWWRWWWRWWWRWWWRWWWWRWWWWRWWWWRWWWWY
+R#27V 0 V 0 V 0 V 0 VPRY1VPRY0VPRX1VPRX0V
+    ZWWWQWWWQWWWQWWWQWWWWQWWWWQWWWWQWWWW[
+PRY1,0When in P1 mode, the display Y coordinate to exchange display priority
+order between screens "A" and "B" is specified.
+A unit of 64 lines is used and in the range lower than the specified
+line (including that line), screen "B" has a priority. At "00", screen
+"A" has a priority throughout the range.
+PRX1,0When in P1 mode, the display X coordinate to exchange display priority
+order between screens "A" and "B" is specified.
+A unit of 64 dots is used and in that range to the right of the
+specified dot (including that dot), screen "B" has a priority.
+At "00", screen "A" has a priority throughout the range.
+
+
+SPRITE PALETTE CONTROL (Write only)
+====================================
+      b7  b6  b5  b4  b3  b2  b1  b0
+    XWWWRWWWRWWWRWWWRWWWWWRWWWWWRWWWWWRWWWWWY
+R#28V 0 V 0 V 0 V 0 VCSPO5VCSPO4VCSPO3VCSPO2V
+    ZWWWQWWWQWWWQWWWQWWWWWQWWWWWQWWWWWQWWWWW[
+CSPO5-2 Palette number offset of sprite (cursor in B5/B6)
+
+
+COMMAND REGISTERS
+==================
+
+SOURCE XY-Coordinate    (SX,SY)   (All Write only!)
+       Linear address    (SA)
+       Kanji-rom address    (KA)
+
+b7     b6     b5     b4     b3   b2  b1 b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#32 V SX7  V SX6  V SX5  V SX4  V SX3V SX2  V SX1  V SX0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V SA7  V SA6  V SA5  V SA4  V SA3V SA2  V SA1  V SA0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V KA7  V KA6  V KA5  V KA4  V KA3V KA2  V KA1  V KA0  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#33 V0   V  0   V  0   V  0 V  0V SX10 V SX9  V SX8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#34 V SY7  V SY6  V SY5  V SY4  V SY3V SY2  V SY1  V SY0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V SA15 V SA14 V SA13 V SA12 V SA11 V SA10 V SA9  V SA8  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V KA15 V KA14 V KA13 V KA12 V KA11 V KA10 V KA9  V KA8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#35 V0   V  0   V  0   V  0 V SY11 V SY10 V SY9  V SY8  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V0   V  0   V  0   V  0 V  0V SA18 V SA17 V SA16 V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V0   V  0   V  0   V  0 V  0V  0   V KA17 V KA16 V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+
+DESTINATION XY-Coordinate(DX,DY) (All Write only!)
+    Linear address(DA)
+
+b7     b6     b5     b4     b3   b2  b1 b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#36 V DX7  V DX6  V DX5  V DX4  V DX3V DX2  V DX1  V DX0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V DA7  V DA6  V DA5  V DA4  V DA3V DA2  V DA1  V DA0  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#37 V0   V  0   V  0   V  0 V  0V DX10 V DX9  V DX8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#38 V DY7  V DY6  V DY5  V DY4  V DY3V DY2  V DY1  V DY0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V DA15 V DA14 V DA13 V DA12 V DA11 V DA10 V DA9  V DA8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#39 V0   V  0   V  0   V  0 V DY11 V DY10 V DY9  V DY8  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V0   V  0   V  0   V  0 V  0V DA18 V DA17 V DA16 V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+
+TRANSFER DOT NUMBER XY(NX,NY) (Write only)
+    LINEAR(NA)
+    LINE MINER(MI)
+    LINE MAJOR(MJ)
+
+b7     b6     b5     b4     b3   b2  b1 b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#40 V NX7  V NX6  V NX5  V NX4  V NX3V NX2  V NX1  V NX0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V NA7  V NA6  V NA5  V NA4  V NA3V NA2  V NA1  V NA0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V MJ7  V MJ6  V MJ5  V MJ4  V MJ3V MJ2  V MJ1  V MJ0  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#41 V0   V  0   V  0   V  0 V  0V NX10 V NX9  V NX8  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V0   V  0   V  0   V  0 V MJ11 V MJ10 V MJ9  V MJ8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#42 V NY7  V NY6  V NY5  V NY4  V NY3V NY2  V NY1  V NY0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V NA15 V NA14 V NA13 V NA12 V NA11 V NA10 V NA9  V NA8  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V MI7  V MI6  V MI5  V MI4  V MI3V MI2  V MI1  V MI0  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#43 V0   V  0   V  0   V  0 V NY11 V NY10 V NY9  V NY8  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V0   V  0   V  0   V  0 V  0V NA18 V NA17 V NA16 V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V0   V  0   V  0   V  0 V MI11 V MI10 V MI9  V MI8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+ARGUMENT (Write only)
+
+       b7     b6     b5     b4   b3  b2 b1b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#44 V0   V  0   V  0   V  0 V DIYV DIX  V NEQ  V MAJ  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+
+LOGICAL OPERATION (Write only)
+
+       b7     b6     b5     b4   b3  b2 b1b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#45 V0   V  0   V  0   V TP V L11V L10  V L01  V L00  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+
+WRITE MASK (Write only)
+
+       b7     b6     b5     b4   b3  b2 b1b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#46 V WM7  V WM6  V WM5  V WM4  V WM3V WM2  V WM1  V WM0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+R#47 V WM15 V WM14 V WM13 V WM12 V WM11 V WM10 V WM9  V WM8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+
+FONT COLOR (Write only)
+
+       b7     b6     b5     b4   b3  b2 b1b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#48 V FC7  V FC6  V FC5  V FC4  V FC3V FC2  V FC1  V FC0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+R#49 V FC15 V FC14 V FC13 V FC12 V FC11 V FC10 V FC9  V FC8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#50 V BC7  V BC6  V BC5  V BC4  V BC3V BC2  V BC1  V BC0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+R#51 V BC15 V BC14 V BC13 V BC12 V BC11 V BC10 V BC9  V BC8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+
+OPERATION CODE (Write only)
+
+       b7     b6     b5     b4   b3  b2 b1b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#52 V OP3  V OP2  V OP1  V OP0  V AYMV AYE  V AXM  V AXE  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+
+BORDER X-COORDINATE (Read only)
+
+       b7     b6     b5     b4   b3  b2 b1b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#53 V BX7  V BX6  V BX5  V BX4  V BX3V BX2  V BX1  V BX0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+R#54 V0   V  0   V  0   V  0 V  0V BX10 V BX9  V BX8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+
+
+
+---------------------- cut -----------------------------------
+
+
+컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+COMMAND
+
+11.1 Command execution method
+
+After  settingthe  necessaryparameter  register, set  the command  to the
+operation  code register,  and it  will be  executed. As soon as execution is
+started, the status CE is set to "1" and upon completion, it is reset to "0".
+Furthermore, the interrupt flag CE is set to "1".
+
+Most commands  are issued  after the necessary registers out of the following
+parameters  are  set.  Also some  commands require  output andinput of  the
+necessary data at and through the command data port after they are issued.
+
+  1. Source (for transfer) coordinate.
+  2. Destination (for transfer) coordinate.
+  3. Transfer range coordinate.
+  4. Argument, logical operation and write mask.
+  5. Font color
+
+
+11.2 Parameter setting.
+
+Source (for transfer) coordinate or address
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+b7     b6     b5     b4     b3   b2  b1 b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#32 V SX7  V SX6  V SX5  V SX4  V SX3V SX2  V SX1  V SX0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V SA7  V SA6  V SA5  V SA4  V SA3V SA2  V SA1  V SA0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V KA7  V KA6  V KA5  V KA4  V KA3V KA2  V KA1  V KA0  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#33 V0   V  0   V  0   V  0 V  0V SX10 V SX9  V SX8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#34 V SY7  V SY6  V SY5  V SY4  V SY3V SY2  V SY1  V SY0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V SA15 V SA14 V SA13 V SA12 V SA11 V SA10 V SA9  V SA8  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V KA15 V KA14 V KA13 V KA12 V KA11 V KA10 V KA9  V KA8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#35 V0   V  0   V  0   V  0 V SY11 V SY10 V SY9  V SY8  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V0   V  0   V  0   V  0 V  0V SA18 V SA17 V SA16 V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V0   V  0   V  0   V  0 V  0V  0   V KA17 V KA16 V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+
+There are 3 ways of setting depending on types of command as follows.
+1) LMCM, LMMM, BMLX, SRCH, POINT
+   SX0-10: Specified with the X coordinate of the image coordinate space (by
+   dots) and rolling to "0" occurs when a larger value than the image
+   size is used for setting. (When in P1 mode, screen "A" is selected
+   at SX9=0 and screen "B" at SX9=1.)
+   SY0-11: Specified with the Y coordinate of the image coordinate space (by
+   dots) and rolling to "0" occurs when a larger value than the image
+   size is used for setting.
+
+2) CMMM, BMXL, BMLL
+   SA0-18: Specified with the address on the VRAM map (by bytes).
+
+3) CMMK
+   KA0-17: Specified with the kanji ROM address (by bytes).
+
+
+Destination (for transfer) coordinate or address
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+b7     b6     b5     b4     b3   b2  b1 b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#36 V DX7  V DX6  V DX5  V DX4  V DX3V DX2  V DX1  V DX0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V DA7  V DA6  V DA5  V DA4  V DA3V DA2  V DA1  V DA0  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#37 V0   V  0   V  0   V  0 V  0V DX10 V DX9  V DX8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#38 V DY7  V DY6  V DY5  V DY4  V DY3V DY2  V DY1  V DY0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V DA15 V DA14 V DA13 V DA12 V DA11 V DA10 V DA9  V DA8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#39 V0   V  0   V  0   V  0 V DY11 V DY10 V DY9  V DY8  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V0   V  0   V  0   V  0 V  0V DA18 V DA17 V DA16 V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+There are 2 ways of setting depending on types of command as follows.
+1) LMMC, LMMV, LMMM, CMMC, CMMK, CMMM, BMXL, LINE, PSET, ADVN
+   DX0-10: Specified with the X coordinate of the image coordinate space (by
+   dots) and rolling to "0" occurs when a larger value than the image
+   size is used for setting (When in P1 mode, screen "A" is selected
+   at DX9=0 and screen "B" at DX9=1.)
+   DY0-11: Specified with the Y coordinate of the image coordinate space (by
+   dots) and rolling to "0" occurs when a larger value than the image
+   size is used for setting.
+
+2) BMLX, BMLL
+   DA0-18: Specified with the address on the VRAM map (by bytes)
+
+
+Transfer range coordinate or address
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+b7     b6     b5     b4     b3   b2  b1 b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#40 V NX7  V NX6  V NX5  V NX4  V NX3V NX2  V NX1  V NX0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V NA7  V NA6  V NA5  V NA4  V NA3V NA2  V NA1  V NA0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V MJ7  V MJ6  V MJ5  V MJ4  V MJ3V MJ2  V MJ1  V MJ0  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#41 V0   V  0   V  0   V  0 V  0V NX10 V NX9  V NX8  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V0   V  0   V  0   V  0 V MJ11 V MJ10 V MJ9  V MJ8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#42 V NY7  V NY6  V NY5  V NY4  V NY3V NY2  V NY1  V NY0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V NA15 V NA14 V NA13 V NA12 V NA11 V NA10 V NA9  V NA8  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V MI7  V MI6  V MI5  V MI4  V MI3V MI2  V MI1  V MI0  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#43 V0   V  0   V  0   V  0 V NY11 V NY10 V NY9  V NY8  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V0   V  0   V  0   V  0 V  0V NA18 V NA17 V NA16 V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+     V0   V  0   V  0   V  0 V MI11 V MI10 V MI9  V MI8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+There are 3 ways of setting depending on types of command as follows.
+1) LMMC, LMMV, LMCM, LMMM, CMMC, CMMK, CMMM, BMXL, BMLX
+   NX0-10: The number of dots in X direction of the image coordinate space is
+   specified and rolling to "0" occurs when the specified range
+   exceeds the image size. (Maximum values is 2048 dots when all "0".)
+   NY0-11: The number of dots in Y direction of the image coordinate space is
+   specified and rolling to "0" occurs when the specified range
+   exceeds the image size. (Maximum value is 4096 when all "0".)
+
+2) BMLL
+   NA0-18: The number of bytes on the VRAM map is specified and rolling to
+   address "0" occurs when the specified range exceeds the VRAM
+   capacity. (Maximum value is 512k bytes when all "0".)
+   Note) 256 bytes when NA7 to NA0 are all "0"
+
+3) LINE
+   MJ0-11: The length of the longer side of the rectangle whose diagonal line
+   is the same as the drawn line is specified by dots. When the
+   specified range exceeds the image size, rolling to "0" occurs.
+   MI0-11: The length of the shorter side of the rectangle whose line is the
+   same as the drawn line is specified by dots. When the specified
+   range exceeds the image size, rolling to "0" occurs.
+
+
+Argument
+WWWWWWWW
+
+       b7     b6     b5     b4   b3  b2 b1b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#44 V0   V  0   V  0   V  0 V DIYV DIX  V NEQ  V MAJ  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+DIY DIX: The transfer direction (plus direction at "0" and minus direction at
+ "1") from the base coordinates is specified. With BMXL and BMLX,
+ however, the linear address specified side is fixed to "plus" and
+ with BMLL, both X and Y are specified to the same direction.
+NEQ: In the border color specification for SRCH, "0" is for specified
+ color detection and "1" is for non-specified color detection.
+MAJ: In the line inclinatino specification for LINE, X is the longer side
+ and Y the shorter side at "0" while Y is the longer side and X the
+ shorter side at "1".
+
+
+Logical operation
+WWWWWWWWWWWWWWWWWW
+
+       b7     b6     b5     b4   b3  b2 b1b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#45 V0   V  0   V  0   V TP V L11V L10  V L01  V L00  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+When  drawing  by means  of commands,  it is possible to write the value (WC)
+obtained  through the  logical operation using the value to be drawn (SC) and
+the targer value (DC). The content of the operation is specified as follows.
+  L00: WC value for the bit with SC=0 and DC=0
+  L01: WC value for the bit with SC=0 and DC=1
+  L10: WC value for the bit with SC=1 and DC=0
+  L11: WC value for the bit with SC=1 and DC=1
+  TP : When this bit is "1", the data with SC as all "0" (by dot for the XY
+       coordinates and by byte for the linear address) is not transferred.
+
+<Example>
+XWWWWWWWWWWWWWWWWWRWWWRWWWRWWWRWWWRWWWWWRWWY
+VLogical operationVL11VL10VL01VL00VName V# V
+TWWWWWWWWWWWWWWWWWUWWWUWWWUWWWUWWWUWWWWWUWWS
+VWC = SC  V 1 V 1 V 0 V 0 V PSETV12V
+TWWWWWWWWWWWWWWWWWUWWWUWWWUWWWUWWWUWWWWWUWWS
+VWC = !SC  V 0 V 0 V 1 V 1 V NOT V3 V
+TWWWWWWWWWWWWWWWWWUWWWUWWWUWWWUWWWUWWWWWUWWS
+VWC = (SC AND DC) V 1 V 0 V 0 V 0 V AND V8 V
+TWWWWWWWWWWWWWWWWWUWWWUWWWUWWWUWWWUWWWWWUWWS
+VWC = (SC OR DC)  V 1 V 1 V 1 V 0 V ORV14V
+TWWWWWWWWWWWWWWWWWUWWWUWWWUWWWUWWWUWWWWWUWWS
+VWC = (SC XOR DC) V 0 V 1 V 1 V 0 V XOR V6 V
+ZWWWWWWWWWWWWWWWWWQWWWQWWWQWWWQWWWQWWWWWQWW[
+
+
+Write mask
+WWWWWWWWWWW
+
+       b7     b6     b5     b4   b3  b2 b1b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#46 V WM7  V WM6  V WM5  V WM4  V WM3V WM2  V WM1  V WM0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+R#47 V WM15 V WM14 V WM13 V WM12 V WM11 V WM10 V WM9  V WM8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+When drawing  by meansof commands,  writing can be prohibited by bits. With
+WM0-7  and WM8-15, VRAM0 bits and VRAM1 bits are specified respectively. Then
+"1" is for write enable and "0" is for write prohibit.
+In P1  mode, writing  is prohibited on the side not specified as the transfer
+destination. (Screen "A":R#46, Screen "B":R#47)
+
+
+Font color
+WWWWWWWWWWW
+
+       b7     b6     b5     b4   b3  b2 b1b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#48 V FC7  V FC6  V FC5  V FC4  V FC3V FC2  V FC1  V FC0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+R#49 V FC15 V FC14 V FC13 V FC12 V FC11 V FC10 V FC9  V FC8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#50 V BC7  V BC6  V BC5  V BC4  V BC3V BC2  V BC1  V BC0  V
+     TWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWUWWWWWWS
+R#51 V BC15 V BC14 V BC13 V BC12 V BC11 V BC10 V BC9  V BC8  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+The  font color  (color code) is specified for CMMC, CMMK and CMMM. Also, the
+drawing color  for LMMV,  LINE and  PSET and  the border  color for  SRCH are
+specified by using FC0-15.
+Correspondance with VRAM bit position is the same as write mask.
+ FC0-15: Color code of font data "1"
+ BC0-15: Color code of font data "0"
+
+Note)  Depending on  conditions of R#6 (CLRM1, CLRM0), use the following data
+setting for FC0-15 of R#48 and R#49 (BC0-15 of R#50 and R#51).
+  16 bit/dot --- Write 16 bit data for FC0-FC15
+   8 bit/dot --- Write the same data for FC0-7 and FC8-15
+   4 bit/dot --- Write the same data for FRC0-3, FC4-7, FC8-11 and FC12-15.
+   2 bit/dot --- Fill FC0-15 with the same eight 2-bit unit data.
+
+
+11.3 Setting of operation code
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+Operation code
+WWWWWWWWWWWWWW
+
+       b7     b6     b5     b4   b3  b2 b1b0
+     XWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWRWWWWWWY
+R#52 V OP3  V OP2  V OP1  V OP0  V AYMV AYE  V AXM  V AXE  V
+     ZWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWWQWWWWWW[
+
+When  a   codefrom  the  list  belowis  written  in  this  register,  the
+corresponding command will be executed.
+
+XWWWWWWWWWWWWWWWRWWWWWWRWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWY
+VOP3 OP2 OP1 OP0V Name V Operation    V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 0   0   0   0 V STOP VCommand being executed is stopped.    V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 0   0   0   1 V LMMC VData is transferred from CPU to VRAM rectangle area.V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 0   0   1   0 V LMMV VVRAM rectangle area is painted out with FC0-15    V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 0   0   1   1 V LMCM VVRAM rectangle area data is transferred to CPU.     V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 0   1   0   0 V LMMM VRectangle area data is transferred from VRAM to VRAMV
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 0   1   0   1 V CMMC VCPU character data is colordeveloped and transferredV
+VV      Vto VRAM rectangle area.     V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 0   1   1   0 V CMMK VKanji ROM data is colordeveloped and transferred to V
+VV      VVRAM rectangle area.    V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 0   1   1   1 V CMMM VVRAM character data is colordeveloped and transfer- V
+VV      Vred to VRAM rectangle area.    V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 1   0   0   0 V BMXL V Data on VRAM linear address is transferred to VRAM V
+VV      V rectangle area.    V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 1   0   0   1 V BMLX V VRAM rectangle area data is transferred onto VRAM  V
+VV      V linear address.    V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 1   0   1   0 V BMLL V Data on VRAM linear address is transferred onto    V
+VV      V VRAM linear address.    V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 1   0   1   1 V LINE V Straight line is drawn on XY coordinates.    V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 1   1   0   0 V SRCH V Search horizontally for Equal or Nonequal color    V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 1   1   0   1 V POINTV Color code of specified point is read out.    V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 1   1   1   0 V PSET V Drawing is executed at drawing point on X-Y coor.  V
+TWWWWWWWWWWWWWWWUWWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS
+V 1   1   1   1 V ADVN V Drawing point on X-Y coordinates is shifted    V
+ZWWWWWWWWWWWWWWWQWWWWWWQWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW[
+With PSET  and ADVN,  the drawing  point can  be shifted  after executing the
+command.
+  AXE AXM
+   0   0(DX,DY) is used as a pointer.
+   0   1The pointer is not shifted.
+   1   0The pointer is shifted to the right by 1 dot.
+   1   1The pointer is shifted to the left by 1 dot.
+
+  AYE AYM
+   0   0The pointer is not shifted.
+   0   1The pointer is not shifted.
+   1   0The pointer is shifted down by 1 dot.
+   1   1The pointer is shifted up by 1 dot.
+
+
+------------------------- cut ----------------------
+컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+V9990 I/O port specifications
+
+Port  GFX9000Description
+WWWW  WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+P#0#60VRAM DATA
+P#1#61PALETTE DATA
+P#2#62COMMAND DATA
+P#3#63REGISTER DATA
+P#4#64REGISTER SELECT
+P#5#65STATUS
+P#6#66INTERRUPT FLAG
+P#7#67SYSTEM CONTROL
+P#8#68Primary standard kanji ROM lower order address
+P#9#69Primary standard kanji ROM higher order address
+P#9#69Primary standard kanji ROM data
+P#A#6ASecondary standard kanji ROM lower order address
+P#B#6BSecondary standard kanji ROM higher order address
+P#B#6BSecondary standard kanji ROM data
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+VRAM DATA PORT (Read / Write)
+
+      b7  b6  b5  b4  b3  b2  b1  b0
+    XWWWRWWWRWWWRWWWRWWWRWWWRWWWRWWWY
+P#0 VVD7VVD6VVD5VVD4VVD3VVD2VVD1VVD0V
+    ZWWWQWWWQWWWQWWWQWWWQWWWQWWWQWWW[
+The  data written  in this  port is  written in the VRAM address specified by
+using R#0  to 3. If writing to this port has taken place before completion of
+data write in VRAM, a WAIT signal is output.
+By reading through this port, the VRAM address data specified by using R#3 to
+5 is obtained.
+If  reading has  taken place  at this  port before  data preparation,  a WAIT
+signal is output.
+When VRAM  read address has been modified to prepare the VRAM address data at
+completion of data write to R#5, it must be written in R#5.
+
+
+PALETTE DATA PORT (Read / Write)
+
+      b7  b6  b5  b4  b3  b2  b1  b0
+    XWWWRWWWRWWWRWWWRWWWRWWWRWWWRWWWY
+P#1 VPD7VPD6VPD5VPD4VPD3VPD2VPD1VPD0V
+    ZWWWQWWWQWWWQWWWQWWWQWWWQWWWQWWW[
+The data written in this port is written in the internal palette RAM.
+By  reading through this port, the internal palette RAM data can be obtained.
+A WAIT signal is output till the data has been prepared.
+The palette RAM address is specified by using R#14.
+The data format is as follows.
+
+       b7  b6  b5  b4  b3  b2  b1  b0
+     XWWWRWWWRWWWRWWWRWWWRWWWRWWWRWWWY
+RED  V!YSV - V - V R4V R3V R2V R1V R0V
+     TWWWUWWWUWWWUWWWUWWWUWWWUWWWUWWWS
+GREENV - V - V - V G4V G3V G2V G1V G0V
+     TWWWUWWWUWWWUWWWUWWWUWWWUWWWUWWWS
+BLUE V - V - V - V B4V B3V B2V B1V B0V
+     ZWWWQWWWQWWWQWWWQWWWQWWWQWWWQWWW[
+
+
+COMMAND DATA PORT (Read / Write)
+
+      b7  b6  b5  b4  b3  b2  b1  b0
+    XWWWRWWWRWWWRWWWRWWWRWWWRWWWRWWWY
+P#2 VCD7VCD6VCD5VCD4VCD3VCD2VCD1VCD0V
+    ZWWWQWWWQWWWQWWWQWWWQWWWQWWWQWWW[
+The command  data is  read and written through this port. Access to this port
+when the status TR bit is "0" while the command is being executed will result
+in an output of WAIT signal.
+
+
+REGISTER DATA PORT (Read / Write)
+
+      b7  b6  b5  b4  b3  b2  b1  b0
+    XWWWRWWWRWWWRWWWRWWWRWWWRWWWRWWWY
+P#3 VRD7VRD6VRD5VRD4VRD3VRD2VRD1VRD0V
+    ZWWWQWWWQWWWQWWWQWWWQWWWQWWWQWWW[
+The  data written  in this port is written in the register specified by using
+P#4.
+By reading through this port, the register data specified by using P#4 can be
+obtained.
+
+
+REGISTER SELECT PORT (Write only)
+
+      b7  b6  b5  b4  b3  b2  b1  b0
+    XWWWRWWWRWWWRWWWRWWWRWWWRWWWRWWWY
+P#4 VWIIVRIIVRA5VRA4VRA3VRA2VRA1VRA0V
+    ZWWWQWWWQWWWQWWWQWWWQWWWQWWWQWWW[
+Using RA5  to 0,  the registerNo. towhich access  is made  through P#3 is
+specified.
+The  register No.  undergoes aplus 1 increment through P#3 access. However,
+when WII  is "1",  increment in  writing at P#3 is prohibited and when RII is
+"1", increment in reading at P#3 is prohibited.
+
+
+STATUS PORT (Read only)
+
+      b7  b6  b5  b4  b3  b2  b1  b0
+    XWWWRWWWRWWWRWWWRWWWRWWWRWWWRWWWY
+P#5 VTR VVR VHR VBD V 0 VMCSVE0 VCE V
+    ZWWWQWWWQWWWQWWWQWWWQWWWQWWWQWWW[
+Various types of status data can be read out as follows.
+  TR: Command data transfer ready. It is reset through P#2 access.
+  VR: Vertical non-display period.
+  HR: Horizontal non-display period.
+  BD: Border color detect at completion of SRCH command (becomes "1" when
+      detected)
+  EO: In the second field period during interlace.
+  CE: Command being executed.
+ MCS: Content of P#7 MCS
+
+
+INTERRUPT FLAG PORT (Read / Write)
+
+      b7  b6  b5  b4  b3  b2  b1  b0
+    XWWWRWWWRWWWRWWWRWWWRWWWRWWWRWWWY
+P#6 V 0 V 0 V 0 V 0 V 0 VCE VHI VVI V
+    ZWWWQWWWQWWWQWWWQWWWQWWWQWWWQWWW[
+The interrupt flags can be read out as follows.
+  CE: Command completion flag
+  HI: Display position flag
+  VI: Vertical display period completion flag
+By writing "1", the related bit flag is reset.
+
+
+SYSTEM CONTROL PORT (Write only)
+
+      b7  b6  b5  b4  b3  b2  b1  b0
+    XWWWRWWWRWWWRWWWRWWWRWWWRWWWRWWWY
+P#7 V 0 V 0 V 0 V 0 V 0 V 0 VSRSVMCSV
+    ZWWWQWWWQWWWQWWWQWWWQWWWQWWWQWWW[
+  SRS:Writing "1"  will set  all ports  except this  one in  "power ON reset"
+      state. "0" should be written to cancel it.
+  MCS:The internally used master clock is selected.
+      1:MCKIN terminal (14.318MHz Overscan on GFX9000)
+      0:XTAL1 terminal (21.4772MHz Normal on GFX9000)
+
+NOTE) XTAL1  terminal is  selected when "power ON reset". If specification is
+      not made properly when either XTAL1 or MCKIN terminal is used, specifi-
+      cations for external input clock timing will not be fulfilled and a chip
+      will be damaged in the worst case.
+      As a measure to prevent this, it is necessary to supply clock signals to
+      both terminals. The above does not apply when both terminals are used.
+
+
+Primary standard kanji ROM ADDRESS PORT (Write only)
+
+      b7  b6  b5    b4 b3   b2   b1b0
+    XWWWRWWWRWWWWWRWWWWWRWWWWWRWWWWWRWWWWWRWWWWWY
+P#8 V - V - VK1A10V K1A9V K1A8V K1A7V K1A6V K1A5V
+    TWWWUWWWUWWWWWUWWWWWUWWWWWUWWWWWUWWWWWUWWWWWS
+P#9 V - V - VK1A16VK1A15VK1A14VK1A13VK1A12VK1A11V
+    ZWWWQWWWQWWWWWQWWWWWQWWWWWQWWWWWQWWWWWQWWWWW[
+The  font (16x16  bits) address  for the  primary standard kanji ROM which is
+read through P#9 is specified.
+It is necessary to write in the order of P#9 and then P#8 to prepare data for
+the kanji ROM address at completion of writing to P#8.
+
+
+Primary standard kanji ROM DATA PORT (Read only)
+
+      b7  b6  b5  b4  b3  b2  b1  b0
+    XWWWWRWWWWRWWWWRWWWWRWWWWRWWWWRWWWWRWWWWY
+P#9 VK1D7VK1D6VK1D5VK1D4VK1D3VK1D2VK1D1VK1D0V
+    ZWWWWQWWWWQWWWWQWWWWQWWWWQWWWWQWWWWQWWWW[
+It is  possible to  read the  data of the font address specified by using P#8
+and  P#9 of  the primary standard kanji ROM. A WAIT signal is output till the
+data has been prepared.
+By reading  32 times  continuously, it is possible to obtain 32 bytes data in
+the  order of  the upper left, upper right, lower left and lower right blocks
+(of 8 bytes each) of the 16x16 bits font.
+
+
+Secondary standard kanji ROM ADDRESS PORT (Write only)
+
+      b7  b6  b5    b4 b3   b2   b1b0
+    XWWWRWWWRWWWWWRWWWWWRWWWWWRWWWWWRWWWWWRWWWWWY
+P#A V - V - VK2A10V K2A9V K2A8V K2A7V K2A6V K2A5V
+    TWWWUWWWUWWWWWUWWWWWUWWWWWUWWWWWUWWWWWUWWWWWS
+P#B V - V - VK2A16VK2A15VK2A14VK2A13VK2A12VK2A11V
+    ZWWWQWWWQWWWWWQWWWWWQWWWWWQWWWWWQWWWWWQWWWWW[
+The font  (16x16 bits)address for the secondary standard kanji ROM which is
+read through P#9 is specified.
+It is necessary to write in the order of P#B and then P#A to prepare data for
+the kanji ROM address at completion of writing to P#A.
+
+
+Secondary standard kanji ROM DATA PORT (Read only)
+
+      b7  b6  b5  b4  b3  b2  b1  b0
+    XWWWWRWWWWRWWWWRWWWWRWWWWRWWWWRWWWWRWWWWY
+P#C VK2D7VK2D6VK2D5VK2D4VK2D3VK2D2VK2D1VK2D0V
+    ZWWWWQWWWWQWWWWQWWWWQWWWWQWWWWQWWWWQWWWW[
+It  is possible  to read  the data of the font address specified by using P#A
+and P#B of the secondary standard kanji ROM. A WAIT signal is output till the
+data has been prepared.
+By reading  32 times  continuously, it is possible to obtain 32 bytes data in
+the  order of  the upper left, upper right, lower left and lower right blocks
+(of 8 bytes each) of the 16x16 bits font.
+
+Note)
+GFX9000 does not contain a kanji ROM.
+GFX9000 I/O port #6F is used for Superimpose control.
+

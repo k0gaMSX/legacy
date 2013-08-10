@@ -1,0 +1,217 @@
+;››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››
+;
+;			Sample Application for Multi-Z
+;
+;››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››››
+
+
+GE = 0F39Ch
+
+
+MZMAIN::call	redraw_screen
+;
+	ld	hl,handler
+	call	0C369h		;Register program as event handler
+
+MainLoop:
+	ld	iy,94		;analyze menu
+	call	GE
+	or	a
+	jr	z,MainLoop	;nothing selected in menu
+	inc	h		;item from upper menu selected?
+	jr	z,MainLoop	;yes -> go loop
+	ld	h,0		;else HL contains ID of menu item
+	add	hl,hl
+	ld	de,jptab
+	add	hl,de
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	jp	(hl)
+;
+jptab:	dw	MainLoop	;Default [NULL] ID does no action!
+	dw	ExitSample
+	dw	runcom		;AboutSample
+	dw	ModalBox
+	dw	NhDialog
+	dw	DynamicDraw
+
+;ŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸ
+;
+;œœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœ
+
+runcom:	ld	hl,$file
+	call	0C375h
+	or	a
+	jp	nz,mainloop
+	ld	de,80h
+	inc	hl
+runc1:	ld	a,(hl)
+	cp	'!'
+	jr	c,runc2
+	ldi
+	jr	runc1
+runc2:	xor	a
+	ld	(de),a
+	ld	hl,80h
+	call	0C34Eh
+	jp	mainloop
+
+
+
+$file:	db	0,'????????COM',0
+
+;ŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸ
+;	Exits sample!
+;œœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœ
+
+ExitSample:
+	rst	0
+
+;ŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸ
+;	About Sample Message box
+;œœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœ
+
+AboutSample:
+	ld	ix,about@##	;pointer to DIALOG resource
+	ld	iy,102		;Output nonhandled dialog
+	call	GE
+	jp	MainLoop
+
+;ŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸ
+;	Show Modal Box
+;œœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœ
+
+ModalBox:
+	ld	ix,@modal##	;pointer to DIALOG resource of modal box
+	ld	iy,102		;Modal box is also a dialog box!
+	call	GE
+	jp	MainLoop
+
+
+;ŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸ
+;    Illustartion nested dialog
+;œœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœ
+
+NhDialog:
+	ld	ix,nh@##	;pointer to DIALOG resource 
+	ld	hl,wproc1	;window proc 1
+	ld	iy,104		;Output Dialog Box and attach window function
+	call	GE
+	jp	MainLoop
+
+wproc1:	cp	2
+	jr	z,wpa1
+wpa0:	xor	a
+	ret
+;
+wpa1:	ld	a,c
+	cp	2		;check for 'see more' button
+	jr	nz,wpa0
+	ld	ix,about@	;if ok, show 'about sample...' dialog
+	ld	iy,102
+	call	GE
+	xor	a		;return 0, as we need further standard
+				;processing and handling
+	ret
+
+;ŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸ
+;    Illustartion: dynamic redraw
+;œœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœ
+
+DynamicDraw:
+	ld	ix,dynami##	;pointer to DIALOG resource 
+	ld	hl,wproc2	;window proc 2 pointer
+	ld	iy,104		;Output Dialog Box and attach window function
+	call	GE
+	jp	MainLoop
+
+wproc2:	cp	2
+	jr	nz,wpa0
+	ld	a,c
+	cp	1
+	jp	z,s_bit
+	cp	2
+	jp	z,s_box
+	cp	3
+	jp	z,s_nbt
+	xor	a
+	ret
+;
+s_bit:	push	hl		;save Y coordinate of dialog window
+	ld	iy,68		;disable cursor as we shall draw
+	call	GE
+	ld	hl,b@sys@##	;as GROUP is only a pointer to embedded DIALOG
+	ld	(dynami##+19),hl;only change pointer of <<dynami>>.GROUP
+	push	hl		;to new dialog and then redraw it
+	pop	ix		;IX points to DIALOG resource (or GROUP)
+	pop	hl		;DE contains X coordinate of window, L == Y;
+	ld	iy,96		;draw resources
+	call	GE
+	ld	iy,70		;re-enable cursor!
+	call	GE
+	xor	a
+	ret
+;
+s_box:	push	hl		;save Y coordinate of dialog window
+	ld	iy,68		;disable cursor as we shall draw
+	call	GE
+	ld	hl,b@box@##	;as GROUP is only a pointer to embedded DIALOG
+	ld	(dynami##+19),hl;only change pointer of <<dynami>>.GROUP
+	push	hl		;to new dialog and then redraw it
+	pop	ix		;IX points to DIALOG resource (or GROUP)
+	pop	hl		;DE contains X coordinate of window, L == Y;
+	ld	iy,96		;draw resources
+	call	GE
+	ld	iy,70		;re-enable cursor!
+	call	GE
+	xor	a
+	ret
+;
+s_nbt:	push	hl		;save Y coordinate of dialog window
+	ld	iy,68		;disable cursor as we shall draw
+	call	GE
+	ld	hl,b@btn@##	;as GROUP is only a pointer to embedded DIALOG
+	ld	(dynami##+19),hl;only change pointer of <<dynami>>.GROUP
+	push	hl		;to new dialog and then redraw it
+	pop	ix		;IX points to DIALOG resource (or GROUP)
+	pop	hl		;DE contains X coordinate of window, L == Y;
+	ld	iy,96		;draw resources
+	call	GE
+	ld	iy,70		;re-enable cursor!
+	call	GE
+	xor	a
+	ret
+;
+;ŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸ
+;	Redraw screen
+;œœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœ
+
+redraw_screen:
+	ld	iy,68
+	call	GE
+	ld	iy,26		;CLS
+	call	GE
+	ld	iy,70
+	call	GE
+	ld	hl,menu@##
+	ld	iy,92
+	call	GE
+
+	xor	a
+	ret
+
+;ŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸŸ
+;	MultiZ event handler
+;œœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœœ
+
+handler:
+	cp	251
+	jp	z,redraw_screen
+	xor	a
+	ret
+
+
+
+

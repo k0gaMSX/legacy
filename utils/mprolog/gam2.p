@@ -1,0 +1,17 @@
+((игра The_GOONIESth (лабиринт) (GOON.COM 4) (5 5))) 
+((игра The_blackonix (лабиринт) (BLACKONIX.BAS 4) (4 4))) 
+((игра Midnight_Brothers (лабиринт) (BROK.GM 4) (5 4))) 
+((игра Chiller (лабиринт) (CHILLER.GMB 4) (3 2))) 
+
+((игра Pyramid Warp (лабиринт) (RIRAMIDW.BLO 2))) 
+((игра Picture_Puzzale (головоломка) (PUZZLE.BLO 2) (3 3))) 
+((игра Pyramid_Warp (лабиринт) (PYRAMIDW.BLO 2) (3 3))) 
+((игра Magical_kid_wiz (бегалка стрелялка) (WIZ.COM 2) (3 3))) 
+((игра Crazy_Train (лабиринт) (TRAIN.COM 2) (2 2))) 
+((игра The_activiision_deca (бегалка) (DECA,GMB 2) (2 2))) 
+((игра Tetris_2 (головоломка ) (TETRIS.COM 2) (2 2))) 
+((игра Funky_mouse (лабиринт) (FUNMOUSE.GM 2) (3 3))) 
+((игра Pay_load (лабиринт) (PAYLOAD.GM 2) (3 3))) 
+((игра Fire_rescue (лабиринт) (FIRE.BLO 2) (3 3))) 
+((игра Soukoban (лабиринт) (SOUKOBAN.COM 2) (5 5))) 
+

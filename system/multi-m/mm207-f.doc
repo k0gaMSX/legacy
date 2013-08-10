@@ -1,0 +1,840 @@
+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*
+
+                       Mode d'emploi de Mutli-Mente V2.07
+
+
+
+					Copyright (C)MOGU  1993-1996
+
+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*
+
+
+* Premierement *
+
+  D'abord, je vous remercie de visualiser MM207-F.DOC
+
+  MM (l'abreviation de Multi-Mente) est un programme qui a ete consu pour
+ pouvoir gerer facilement tous les differents fichiers ce trouvant sur les
+ disques du systeme.
+
+
+* Materiels requis *
+
+MSX2,MSX2+ ou MSX tr (VRAM 128 Ko minimun), OS (MSX-DOS 2 minimum).
+
+  Si il y a des pages de memoire MAPPER libre, MM en fera l'utilisation
+ lors des copies ou autres procecus. (Plus besoin de DOSCASH.COM)
+
+
+* Methode d'execution *
+
+ A partir du DOS 2, executez MM de la facon suivante:
+
+ MM <Drv:Dirctry>[RETURN]
+
+ La partie Drv: indique le choix du lecteur au demarrage.
+ La partie Dirctry indique le choix du repertoire au demarrage.
+
+ L'indication du lecteur et du repertoire peut etre omise.
+ Dans ce cas, le lecteur et le repertoire present sera selectionne.
+
+
+* Fichiers qu'utilise MM *
+
+
+MM.COM	      Fichiers du programme MM.
+
+MM.EXE	      OVERLAY FILE. Si ce fichier n'est pas dans le meme repertoire
+	      que MM.COM plusieurs fonctions ne pourront pas fonctionner.
+	      (donc il doit etre obligatoirement present)
+
+MMRET.DAT     Contient les extentions et les commandes correspondandes a
+	      executer lorsqu'on pousse [RETURN]. Si ce fichier est absent
+	      au moment de la configuration. Les commandes a executer en
+	      fonction de l'exetention du fichier resteront comme auparavant.
+
+MMMCR.DAT     Fichier contenant les outils etendus du menu appele par
+	      l'appui de la touche [GRAPH].
+
+MM.CFG        Fichier de configuration.
+
+MM.HIS        Fichier historique des commandes. Contient les commandes du DOS
+              entrees auparavant. (commands File history.) 
+
+MM.PHS        Fichier historique des repertoires. Contient les noms de
+              repertoires entrees auparavant. (directory File history.) 
+
+MMPART.DIR    Fichier utilise lors de commutations de partitions avec
+              la MEGA-SCSI.
+
+- Les fichiers MM.HIS, MM.PHS et MMPART.DIR sont creees ou reactualises
+ automatiquement apres chaque entree pendant une "Execution de commandes
+ du DOS".
+
+
+* Variables d'environement qu'utilise MM *
+
+%HOME%        Indiquez le nom du repertoire ou vous voulez allez en poussant
+	      la touche [/].
+
+%SHELL%       Utilise a l'occasion d'une execution de fichier exterieur.
+              Veuillez laissez COMMAND2.COM.
+
+%TIME%        Regle le mode de l'orloge ('12' ou '24' heures).
+              Le mode 12 h est choisi par defaut.
+
+%MM%          Ecrire ici le repertoire ou MM devra lire les fichiers
+              exterieurs lui appartenant (Par exemple  MMRET.DAT, MMMCR.DAT)
+              Si rien a ete indique, MM.EXE sera lu a partir du repertoire ou
+              le programme principale (MM.COM) aura ete execute.
+
+%FONT0808%    Permet de changer le jeu de caracteres 8x8 (ank) contenu en ROM
+              par un autre sous forme de fichier d'une longueur de 1784 octets.
+              Un fichier de jeu de caracteres doit contenir les caracteres
+              numero 20H a FFH.
+
+- Pour mieux comprendre les variables d'environements visionnez le contenu du
+ fichier d'exemple AUTOEXEC.BAT du fichier archive.
+
+
+* Groupe d'outils exterieurs existants pour combler le manque de MM. *
+
+PMM    .COM:   Outil de maintenance des fichiers de compression.
+KID-A  .COM:   Editeur de texte avec Kanji (Noms des fonctions en anglais).
+VF     .COM:   Visualisation d'un texte exterieur.
+PMEXT  .COM:   Outil de decompression d'archives au format PMA / LZH.
+PMARC2 .COM:   Outil de compression de fichier au format PMA.
+LHARC  .COM:   Outil de compression de fichier au format LZH.
+UNZIP  .COM:   Outil de decompression d'archives au format ZIP.
+UNARC  .COM:   Outil de decompression d'archives au format ARC / ARK.
+FUPDATE.COM:   Outil qui permet de voir la liste du contenu de
+               plusieurs parties.  
+ISH    .COM:   Outil de transformation/developement ISH. 
+ISHREC .COM:   Outil de restauration de fichier ISH.
+POPCOM .COM:   Compression de fichier .COM.
+PCMPLAY.COM:   Outil de creation/lecture de donnees PCM.
+MGSC   .COM:   Compilateur de source MGS.
+YANBE  .COM:   Preserveur d'ecran.
+BLS.COM, TMP.COM, SLV.COM, LAP.COM, XLD.COM, MISA.COM, BMP.COM, JLD.COM, MG.COM
+JPD.COM, MIF.COM, ect...:   Groupe d'Outils permetant de voir des graphiques.
+
+- Vous pouvez regrouper ces fichiers dans un sous repertoire 'TOOLS' par
+ exemple.
+
+
+* Explication des fonctions *
+
+[A]ttribute    Modification de la date et des attributs d'un
+	       repertoire / fichier.
+
+[B]ackup       Bien que cette fonction soit inscrite dans le menu HELP, ne
+               fonctionne pas.
+ 
+[C]opy	       Copie de repertoires / fichiers.
+
+[D]elete       Effacement de repertoires / fichiers.
+
+[E]dit	       Edition du fichier texte present au curseur.
+[SHIFT]+[E]    Ouverture d'un nouveau fichier texte.
+
+[F]ind	       Deplace le curseur jusqu'au fichier indique (dans le repertoire
+               present).L'indication du fichier est possible si il est 
+               present dans ceux filtres par le "Mot de passe".
+
+m[G]s play     Affiche le titre des donnees MGS present dans le "driver". 
+	       (ne s'effectue pas si MGSDRV n'est pas installe)
+
+[SHIFT]+[G]    Il est possible, avec le curseur, de voir tout le titre
+	       des donnees MGS dans le "driver".
+	       (s'effectue qu'avec MGSDRV a partir de la version 3.15)
+
+[GRAPH]        Appel du menu "Extra key list". La liste des outils etendus
+               contenu dans le fichier "MMMCR.DAT" s'afficherons. Voir la
+               partie consernant ce menu pour plus de precision.
+
+c[H]ange path  Effectue des modifications du "drive" ainsi que du
+               repertoire de travail. 
+
+[I]nfo	       Informations du disque.
+
+ma[K]e dir     Creer un nouveau repertoire.
+
+[L]og drive    Modification du lecteur de travail.
+
+[M]ove	       Deplacement de repertoires / fichiers.
+	       (Ex: deplacer les fichiers indique dans un autre repertoire)
+
+re[N]ame       Changer le nom d'un repertoire / fichier.
+
+[P]artition    Commutation de partitions. Valable seulement pour la Mega-SCSI.
+
+[R]un          Executer un programme.
+	       (Juge et execute automatiquement meme un fichier Bacth)
+
+[S]ort	       Triage des fichiers. (voir les explications plus bas.)
+
+[T]ree	       Effectue l'arbre des repertoires dans un disque. 
+
+[U]npac	       Decompression de tous les fichiers a l'interieur d'un fichier
+	       d'archivage.
+	       Si l'extention n'est pas .ZIP .PMA .LZH .ARK .ARC .COM (fichier
+	       Light (DIET)) la decompression se fera avec ISH.COM
+
+[SHIFT]+[U]    Execute l'outil de maintenance, des fichiers des compresses,
+	       indique dans la configuration. (Par defaut PMM.COM)
+
+[V]iew	       Visualise le contenu d'un fichier avec l'outil indique dans la
+	       configuration. (Par defaut, le visionneur integre)
+
+[SHIFT]+[V]    Visualise le contenu d'un fichier avec l'oulil indique dans la
+	       configuration. (Ex: VF.COM)
+
+[CTRL]+[V]ol   Changement de nom du volume (du disque).
+
+[W]ild card    Indication du mot de passe pour selectionner les fichiers
+	       a afficher. Si vous n'entrez aucun caractere, MM utilisera '*.*'
+	       comme mot de passe.
+
+[CTRL]+[W]     Faire le mot de passe aussi a l'aide des attributs.
+
+[SHIFT]+[W]    Fait une marque aux fichiers indique par ce mot de passe.
+		ex: *.com, fait une marque a tous les fichiers de command. 
+
+e[X]ecom       Execution de commande du DOS. En appuyant sur [HAUT], on obtient
+               le menu de l'historisque des commandes. Poussez [RET]
+               sans entrer de commande pour obtenir le DOS. Le retour
+               a Multi-mente doit s'effectuer par l'entree de la commande EXIT.
+
+[Y] write Y?   Ecriture au repertoire du resultat, par exemple, a l'origine
+	       d'un triage de ficfiers (Sort) ou bien rangement de fichiers.
+
+[CTRL]+[I]sh   Transformation au format ISH.
+[CTRL]+[P]ma   Compression au format PMA.
+[CTRL]+[L]zh   Compression au format LZH.
+[CTRL]+c[O]m   Tramsforme un fichier .COM normal en .COM light (diet).
+
+- Lors de la compression au format PMA ou LZH, on peut ommettre le nom de
+ fichier. Le fichier d'archive aura le nom qui est present au curseur avec
+ l'extention PMA ou LZH.
+
+[F1],[?]       help. Affiche le resume des commandes.
+
+[0]~[8]        On change de lecteur a l'aide d'une seule touche.
+	       ([0] lecture au meme lecteur une second fois)
+
+[.] / [BS]     Deplacement du repertoire de travail au repertoire parent.
+
+[/]	       Deplacement du lecteur et du repertoire qui a ete indique par
+	       la variable d'environement %HOME%. Cependant si on ne fait pas
+	       d'indication a %HOME%, il ne se passera rien.
+
+[\]	       Deplacement vers le repertoire de base.
+	       (Si vous y etes deja il ne se passe rien)
+
+[RETURN]       Execute un outil exterieur en fonction de configuration (voir le
+	       fichier 'MMRET.DAT'). Cependant si l'extention est .MGS,
+	       il y aura lecture des donnees de la composition musical puis
+	       interpretation automatique. (Si MGSDRV est installe)
+
+[RETURN]+[SHIFT]
+               Execute l'outil No.1. (voir le fichier de configuration)
+ 
+[RETURN]+[CTRL]
+               Execute l'outil No.2. (voir le fichier de configuration)
+		
+[RETURN]+[SHIFT]+[CTRL]
+               Execute l'outil No.3. (voir le fichier de configuration)
+
+[TAB]	       Fait une marque ou se trouve le curseur.
+[SPACE]        Fait une marque ou se trouve le curseur et place le curseur
+               au prochain fichier.
+
+[SELECT]       Fait une marque a chaque fichier. 
+	       (si il y a des marques elles seront toutes effacees)
+
+[SELECT]+[SHIFT]
+	       Inverse toutes les marques.
+[SELECT]+[CTRL]
+	       Inverse toutes les marques a partir du curseur.
+
+- Les 3 fonctions ci-dessus ignorent les repertoires.
+
+
+[1]/[2]/[3]/[5]/[9]+[SHIFT]
+
+               Change le mode des indications des fichiers.
+               (1= mode 1  2= mode 2  3= mode 3  5= mode 5
+               9= changement automatique).
+
+- Le mode 9, c'est le mode qui choisit automatiquement l'affichage en fonction
+ du nombre de fichier.
+
+[0]+[SHIFT]    Change la couleur d'affichage des noms de fichiers.
+	       (En fonction de l'extention et des attributs des fichiers)
+
+[UP]/[DOWN]+[SHIFT]
+	       Place le curseur au premier ou au dernier fichier.
+
+[LEFT]/[RIGHT]+[SHIFT]
+	       Change de page.
+
+[CTRL]+[GRAPH]+[DEL]
+	       Fait un "shutdown" puis un "RESET".
+	       (Attention au maniement)
+
+[HOME]	       Effectue un "Shutdown" d'un lecteur HDD.
+	       (C'est ainsi que l'on stop le disque dur)
+
+[DEL]	       Entree dans le mode rangement de repertoires/fichiers.
+	       (Pour en savoir plus, voir le chapitre "MODE RANGEMENT DE
+	       REPERTOIRES/FICHIERS".)
+
+[CTRL]+[/]     Stop la musique MGS. (Si MGSDRV est installe)
+
+[CTRL]+[*]     Recommence la musique MGS. (Si MGSDRV est installe)
+
+[CTRL]+[-]/[+] Volume la musique MGS. (Si MGSDRV est installe)
+
+[CTRL]+[.]     Pause de la musique MGS. (Si MGSDRV est installe)
+
+[CTRL]+[,]     Apres une pause, recontinu l'interpretation musicale MGS. (Si
+	       MGSDRV est installe)
+
+
+* Emulation des touches du curseur *
+
+ Avec MM, on peut deplacer le curseur avec [CTRL]+[caractere] de la facon
+ suivante:
+
+[X]	Deplacement vers le bas.
+[E]	Deplacement vers le haut.
+[S]	Deplacement vers la droite.
+[D]	Deplacement vers la gauche.
+[A]	Une page en arriere.
+[F]	Une page en avant.
+[R]	Deplacement au premier fichier.
+[C]	Deplacement au dernier fichier.
+
+- On peut deplacer le curseur dans toutes les directions.
+
+
+* Execution de commande du DOS *
+
+  Depuis cette version a chaque que l'on entre une commande en mode
+ 'COMMAND DOS', cette commande s'ajoutera automatiquement aux autres dans le
+ fichier 'MM.HIS'. Pour recuperer une des commandes qui a ete sauvegardee
+ dans ce fichier, appuyez sur la touche du curseur [HAUT]. Ensuite selectionnez
+ la commande avec les touches du curseur puis [RETURN].
+
+  Si vous appuyez sur [RETURN] sans rien entrer, le DOS apparaitra. Attention,
+ pour retourner a Multi-mente, entrez la commande 'Exit'.
+
+- Vous pouvez effacer une commande en appuyant sur [D] (delete). Mais, vous
+ pouver aussi bien utiliser un editeur de texte pour faire cela.
+- Les noms de repertoire ou de lecteur s'incrirons dans le fichier 'MM.PHS'.
+- Avant l'installation de cette version, il est mieux d'effacer ces deux
+ fichiers de la version precedante.
+
+
+* Explications du visionneur interne *
+
+[UP]/[DOWN]     Deplacement d'une page vers le haut/bas.
+[LEFT]/[RIGHT]  Deplacement de dix pages.
+[SPACE]         Aller a la prochaine page.
+[BS]            retour a la page precedente.
+
+- Si l'on appuie sur [SHIFT] en meme temps le deplacement se fera de moitie.
+
+[H]ead		Deplacement vers le debut du texte.
+[T]ail		Deplacement a la fin du texte.
+
+[B]inary	Indique le ON/OFF du mode binaire.
+		Si on fait ON, ignore le code de fin 1AH en affichant.
+
+[TAB]		indique le saut de la tabulation.( inversion de 8 ou 4)
+
+[C]trl		Indique les codes Ctrl a l'aide de caracteres de couleurs.
+
+[R]eturn	Indique les codes return a l'aide d'un caractere redefini.
+
+[A]nk		Affichage en mode ANK. ( Kanji mode off)
+
+[RETURN]+[SHIFT]
+               Execute l'outil No.1. (voir le fichier de configuration)
+ 
+[RETURN]+[CTRL]
+               Execute l'outil No.2. (voir le fichier de configuration)
+		
+[RETURN]+[SHIFT]+[CTRL]
+               Execute l'outil No.3. (voir le fichier de configuration)
+
+[RETURN] ou [ESC]
+		Quitter VIEW.
+
+[SHIFT]+[V]	Changement des indications de VIEW.
+
+
+- [ B 8 C R A ] en haut a droite de l'ecran. Montre l'etat des modes Binary,
+ TAB,Ctrl,Return,Ank. Indique ON ou OFF,exepte TAB ou l'on voit le chiffre de
+ tabulation.
+
+
+* Explications a propos de l'arbre *
+
+[0]~[8]  	Change de lecteur puis affiche l'arbre du repertoire.
+		Etant donne que les chiffres 1~8 selectionne le lecteur
+		A: ~ H:, alors si on appui sur [2] on aura le lecteur B:
+		([0] lecture au meme lecteur encore une fois)
+
+[9]		Affiche l'arbre de tous les lecteurs.
+
+*[L]og drive	Changement du disque de travail.
+
+[UP]		Deplacement du curseur vers le haut.
+[DOWN]		Deplacement du curseur vers le bas.
+[LEFT]		Deplacement en haut de l'arbre.
+[RIGHT]		Deplacement en bas de l'arbre.
+
+[SHIFT]+[UP]/[DOWN]/[LEFT]/[RIGHT]
+		Si le mode "Afficher les fichier d'un repertoire" est a ON
+		pendant que l'on pousse [SHIFT] il reste a OFF. Mais si le ce
+		mode est a OFF, en appyuant sur [SHIFT], il sera a ON.
+
+*[R]esearch	Recommence l'arbre.
+		Ne fait pas la lecture du fichier '.DIR'.
+
+*[W]rite	Ecriture au fichier MMTREE.DIR. La fois prochaine ce fichier
+		sera consulte avant de faire l'arbre. C'est ainsi qu'a partir
+		du prochain arbre le temps de consultation diminu.
+		Le fichier MMTREE.DIR s'ecrit automatiquement dans le
+		repertoire de base. (Evitez de cree se fichier si vous etes
+		debutant.)
+
+[F]ile		ON/OFF du mode d'indication des fichiers.
+		Quand ce mode est a ON, la liste des fichiers du repertoire
+		s'affiche dans la fenetre a droite de l'arbre.
+
+*[D]elete	Effacement d'un repertoire.
+
+*ma[K]e dir	Creation d'un repertoire.
+
+[TAB]+[lettre]	Compare la [lettre] appuyee avec le caractere en tete de
+		chaque nom de repertoire et fait un saut au premier repertoire
+		dont le	caractere de tete est identique.
+
+- Lors d'un COPY ou MOVE, on peut afficher l'arbre du lecteur present en
+ appuyant uniquement sur [RETURN] au moment de l'entree de ligne. Si on entre
+ la commande '/?' on affichera l'arbre du lecteur correspondant .( ? = A...H)
+
+- Au moment d'un effacement ou d'une creation de repertoire, comme il n'y a
+ pas de renouvellement du fichier 'MMTREE.DIR', faites le avec [W].
+
+- Les fonctions precedees de la marque "*", ne peuvent est actionnees lors
+ d'un changement de repertoire.
+ 
+
+* Format des donnees de l'arbre *
+
+  On cree le fichier des donnees de l'arbre en poussant [W] au moment
+ de l'affichage de l'arbre.
+
+ Le format des donnees sont du type:
+
+00 ?:\
+01 ?:\UTILS
+02 ?:\UTILS\FILE
+
+  Le '0' en tete correspond aux attributs du repertoire (0= repertoire visible
+ 2= invisible). Le caractere suivant montre le numero de branche du repertoire.
+  '0' indique le repertoire de base. Si depasse '9', devient un caractere de
+ code ASCII correspondant.
+
+  Ensuite, il y a un espace ou un code TAB. Puis, le nom de lecteur suivi par
+ le(s) nom(s) de repertoire(s) (FULL PATH).
+
+- '?' indique le lecteur actuel.
+
+  Si besoin est, utilisez un editeur pour changer les donnees de l'arbre.
+
+Exemple; Rajout de repertoires d'autres lecteurs dans l'arbre:
+
+00 ?:\
+01 ?:\UTILS2
+00 H:\
+01 H:\TEMP
+
+- Pour ameliorer la vitesse de consultation de l'arbre, mettez le fichier
+ MMTREE.DIR le plus en avant possible, dans les repertoires de base.
+
+
+* Format des donnees du fichier partitions *
+
+  Le fichier partitions se cree automatiquement au meme repertoire que
+ celui ou se trouve MM (si une Mega-SCSI est presente). 
+
+Description du format:
+
+00 #PN:NAME[RET]
+
+  Comme indique ci-dessus, le chiffre en tete de ligne '0' correspond
+ aux attributs de la partition (ex: 0= repertoire visible  2= invisible).
+
+  Le caractere suivant indique l'emplacement dans la pile. Si la place dans
+ l'empilement depasse '9', on aura un caractere de code ASCII correspondant. 
+  '2' correspond a la partition 1.
+
+  Ensuite, on a un espace ou une tabulation.
+
+  Puis a partir de '#", on a PN qui indique le numero de partition par
+ un chiffre hexadecimal de deux caracteres de code ASCII.
+ 
+  Enfin, il y a ':' pour separer le nom (de taille quelquonque) du reste.
+
+Exemple de fichier:
+
+00 #00:3-1 Mega-sram		(00= autre)
+01 #00:DNS-334			(00= autre)
+02 #01:SYSTEM			(01= partition)
+02 #02:SYSTEM #2
+
+  Utilisez un editeur de texte pour modifier ce fichier.
+
+
+* Commandes de bases lors de l'entree de caracteres *
+
+[LEFT] ou [RIGHT]
+		Deplacement du curseur.
+
+[LEFT]+[SHIFT]	Deplacement au debut de la chaine de caracteres.
+
+[RIGHT]+[SHIFT]	Deplacement a la fin de la chaine de caracteres.
+
+[INS]		Ecrire dessus/ inserer du texte.
+
+[DEL] ou [CTRL]+[G]
+		Efface le caractere au curseur.
+
+[BS]		efface le caractere de devant.
+
+[U]+[CTRL]	Elimine tous les caracteres qui se trouve avant le curseur.
+
+[K]+[CTRL] ou [HOME]
+		Elimine tous les caracteres apres le curseur.
+
+[CTRL]+[SPACE] ou [SELECT]+[GRAPH]
+		Mode entree de Kanjis.
+		(les commandes sont les memes qu'en Basic.)
+
+- En plus, si on entre des HIRAGANAs, ils seront consideres comme des KATAKANA.
+
+
+* Copie *
+
+ Si l'on veut interrompre la copie des fichiers, il faut pousser [ESC]. Puis un
+ menu 'Abort file/dir. copy' apparaitra.
+
+ En copiant un repertoire, faites attention car la gestion de reprise de
+ fichiers jusque dans le repertoire n'existe pas.
+
+- Lorsque l'on copie des fichiers, si le mapper primaire existe, la partie
+ libre sera utilise comme Buffer de copie.(maximum 64 pages soit 1Mbyte)
+
+- N'oubliez pas qu'en copiant un repertoire vers une branche lointaine le
+ Buffer diminue en consequence.
+
+
+* Dans le cas ou le nom de fichier se repete *
+
+  Lors d'une copie ou d'un deplacement, si le meme nom existe dans le
+ repertoire de destination, il sera possible de choisir la methode de copie.
+
+Les differents choix sont:
+
+> [T] :Time up duplicate.
+
+  Compare en meme temps la source de la copie et le fichier suivant. Puis fait
+ la copie.(Si le fichier suivant est nouveau ou si la date est la meme la copie
+ ne se fait pas)
+
+> [Y] :Over write duplicate.
+
+  Ecrire par dessus le fichier du meme nom.
+
+> [C] :Change name duplicate. (changement de nom)
+
+  Reproduction sous un autre nom. Si le nouveau nom existe deja, on revient a
+ ce menu.
+
+> [N] :Abort.
+
+  N'effectue pas la copie. ([ESC] a le meme effet)
+
+- Si l'on appuie sur [SHIFT] en meme temps que la selection, le traitement
+ se fera de meme pour les fichiers marques suivants jusqu'a la fin.
+
+
+* MACRO utilisable *
+
+ MM permet, par exemple lors d'une commande [X] ou [R], d'utiliser le
+ MACRO suivant:
+
+	$C =	Nom du fichier au curseur (avec son extention)
+	$X =	Nom du fichier au curseur (sans son extention)
+	$D =	Nom du lecteur present (curent drive)
+	$d =	Nom du lecteur temporaire
+	$J =	Execution en mode kanji
+	$K =	Attend l'appui d'une touche avant le retour a MM
+	$k =	Attend l'appui d'une touche apres chaque commandes
+	$P =	Voix (path) du repertoire present
+	$R =	Mise a la ligne d'une serie
+	$T =	Realisation d'une serie de fichiers labels (avec extention)
+	$t =	Realisation d'une serie de fichiers labels (sans extention)
+	$M =	Rassemble en une ligne et execute les fichiers labels (avec
+		leurs extentions)
+	$m =	Rassemble en une ligne et execute les fichiers labels (sans
+		leurs extentions)
+	$$ =	Remplacement de "$"
+
+
+* Mot de passe (Wild card) *
+
+ Pour mot de passe, MM possede une fonction autre que '?', '*'. Cette fonction
+ est '/'. Celle-ci permet d'afficher uniquement les fichiers contenant la chaine de caractere qui suit cette fonction.
+
+Exemple:	/COM	(il faut mettre '/' en tete)
+
+Fichiers corespondant seront:
+
+COMMAND2.BAK	MM.COM		PMMCOM.DOC	ectÅc,
+^^^		   ^^^		   ^^^
+ Mais, avec cette fonction, l'emploi simultane de '*' est impossible.
+ Cependant, on peut employer simultanement la commande '?'.
+
+
+* Indications du repertoire *
+
+  Avec MM, comme avec le MSX DOS 2, on peut remplacer le nom de repertoire 
+ par '.' ou bien '..'.
+
+  Par exemple si on decompresse avec l'indication '.', la decompression se fera
+ au lecteur et au repertoire present.
+
+- L'indication du repertoire represente par '.' est possible pour l'indication
+ du repertoire de decompression et de base.
+
+- '.' = repertoire present et '..' = repertoire parent.
+
+
+* Sauvegardeur d'ecran *
+
+ Si l'on ne pousse aucune touche pendant un certain temps, pour preserver
+ l'ecran, il y a une fonction de securite qui charge un 'Sauveur d'ecran' (au
+ bout de 3 minutes par defaut). On peut modifier ce temps a la configuration.
+
+
+* Creation du fichier d'execution de commandes en fonction de l'extention *
+
+ Le fichier d'execution de commandes en fonction de l'extention (MMRET.DAT)
+ est un fichier texte pouvant avoir une taille de 16 Ko maximun.
+ Et doit se trouver dans le meme repertoire que MM.COM, ou bien dans
+ le repertoire indique par la variable d'environement %MM%.
+
+Format des donnees:
+
+.Extention		commande	message (peut etre omis)
+:FILENAME.Extention	commande	message (peut etre omis)
+
+'.' en tete de ligne indique une commande qui demarrera en fonction de
+    l'extention qui suit.
+':' en tete de ligne indique une commande qui demarrera en fonction du
+    fichier.
+
+ Pour separer l'extention d'une commade ou bien une commande d'une remarque, il
+ faut utiliser [TAB].
+
+ On peut mettre un ou plusieurs [TAB]. La ligne doit se terminer par [RET].
+
+Exemple:
+
+.BAS		BASIC $C	execution du fichier $C sous BASIC
+.C		MAKEC.BAT $C
+:AUTOEXEC.BAT	$C$K
+
+- Pour en savoir plus sur $C,$K veuillez voir le chapitre du MACRO language.
+
+
+* Touche etendu de fonction (Extra key) *
+
+ Extra key data file (MMMCR.DAT) est un fichier texte qui doit avoir une taille
+ de 14 Ko maximum. Et doit se trouver dans le meme repertoire que MM.COM, ou
+ bien dans le repertoire indique par la variable d'environement %MM%.
+
+Format des donnees:
+
+?)Commande	'message 1 (peut etre omis) ;message 2 (peut etre omis)
+
+? est touche qui correspont a la commande a executer.
+
+? doit etre un caractere 8x8.
+
+ En appyant sur [GRAPH] le menu "Extra key list" apparait. Les commandes 
+ s'afficherons sauf si le message 1 existe. Dans ce cas, ca sera ce dernier
+ qui s'affichera a la place. Le message 2 est identique au REM du Basic.
+ Si on appuie sur une touche alors q'auccune commande au ete inscrite, il ne
+ se passera rien.
+
+ Pour separer l'extention d'une commade ou bien une commande d'une remarque, il
+ faut utiliser [TAB].
+
+ On peut mettre un ou plusieurs [TAB]. La ligne doit se terminer par [RET].
+
+Exemple:
+
+M)MM.COM	'Execution de MM.
+0)CS MM		;Configuration de MM.
+A)PMEXT $T
+
+ Si on entre ces parametre, apres confuguration, on aura:
+
+----- Extra key -------------
+|
+| M) Execution de MM.
+| 0) CS MM
+| A) PMEXT $T
+|
+
+- Attention, le menu ne peut afficher que 32 caracteres par ligne.
+- Pour en savoir plus sur $T veuillez voir le chapitre du MACRO language.
+
+
+* MODE RANGEMENT DE REPERTOIRES/FICHIERS *
+
+ Avec cette version de MM, a partir du mode de gestion de fichiers (Filer),
+ en poussant [DEL] on entre dans le mode rangement de repertoires/fichiers.
+ Dans ce mode voici ce qui ce passe si on pousse les touches suivantes.
+
+[UP]/[DOWN](+[SHIFT])
+[LEFT]/[RIGHT](+[SHIFT])
+		     Deplacements du curseur.
+
+[ESC]		     Retour au mode gestion de fichiers.
+		     (attention! A ce moment la, le repertoire sera reecrit
+		     en fonction des donnees du moment.)
+
+[INS]		     Deplace un fichier du "buffer" vers le repertoire.
+		     Si le "buffer" devient vide on retourne au mode gestion
+		     de fichiers.
+
+[DEL]		     Prend le fichier au cuseur du repertoire pour le mettre
+		     dans le "buffer".
+
+[0]~[9]+[SHIFT]      Change le mode d'affichage. C'est la meme chose qu'en
+		     mode gestion de fichiers.
+
+- On ne peut que faire entre que 24 fichiers dans le "buffer".
+
+- Il faut faire de nombreux deplacements pour ranger les fichiers mais,
+  c'est plus amusant comme ca !
+
+
+* Configuration *
+
+  CS.COM est un utilitaire qui permet de modifier l'environement utilise par
+ MM ainsi que l'execution des outils exterieurs reuni par l'utilisateur.
+ Pour faire la configuration de MM, on utilise donc CS.COM.
+
+  Attention ! Utilisez CS a partir de la Version 3.11.
+
+Methode:
+
+  Verifiez que CS.COM, MM.COM, MM.CFG soient dans le repertoire present.
+  (on peut indiquer le repertoire ou se trouve CS.COM a l'aide d'un 'Path".)
+  Puis, taper la commande:
+ 
+ CS MM [RETURN]
+ 
+  Ensuite, l'environement est ajuste automatiquement en fonction du fichier de
+  configuration.(pour faire ceci il faut un peu de memoire libre sur le disque). 
+ 
+  En ce qui conserne la configuration, veuillez voir le fichier MM.CFG.
+
+
+* Remarques *
+
+- MM ne peut traiter plus de 255 fichiers en meme temps. Ceux situe plus haut
+seront ignore.
+
+- Si vous utilisez la ViewROM (cartouche de font vendu avec MSX-VIEW), ou bien  un FS-A1GT vous pouvez beneficier d'un jeu de caracteres 12*8.
+
+- A partir de la ver2.01 la reduction de la TPA est devenu assez petite meme
+  en executant les fichiers .COM (minimum 256 byte). Mais, cela depend de la
+  longueur des commandes. Comme elle diminue a peu pres de 1,5 Ko en utilisant
+  commandes BAT ou "redirect treatment pipe" alors faites attention.
+  Puisque j'ai elabore un fichier temporaire, l'utilisation de UNDEL, par
+  exemple, est devenu possible.
+
+
+* Regle d'utilisation & Reproches *
+
+ MM est un 'free ware'.MOGU, l'auteur detient les droits de duplications.
+
+ La reproduction est possible. La procedure a suivre est indique plus haut.
+
+ Je ne suis pas responsable des accidents ainsi que des degats cause lors de
+ l'utilisation de MM. Faites des testes avant l'utilisation d'une nouvelle
+ version.
+
+
+* En suite *
+
+ Je remercie:
+ M.Taka qui verifie MM chaque nouvelle version.
+ M.Matty et M.Iita qui m'ont aide a developer MM.
+ Et aussi tous ceux qui m'ont signale les Bugs.
+
+ Cette version n'est pas la derniere. Je continue toujours a l'ameliorer.
+ Donc, si vous avez decouvert un Bug ou envie de fonctions nouvelles,
+ n'esitez pas a me contacter par les reseaux suivants:
+
+
+						1994/04/09	By.Mogu
+
+						Coordonnees	---ID---
+						Natsume-Net	NAT26263
+						MARIO-NET	    MOGU
+						FALCON-NET	FALC0022
+						AME-NET		    MOGU
+						TOKYO BBS	    MOGU
+
+Special merci a: Takawo, Matty, Iita, Namu, Ain, Gengoro et Natume NET
+
+- MGSDRV et MGSC sont des 'free software' crees par Ain.
+- PMM ,CS et FUPDATE sont des 'free software' crees par Iita.
+- MANBOW est un 'free software' cree par Gengolo.
+- KID et MSX-DOS2 TOOLS sont des outils commercialises par ASCII.
+- La serie PM et PopCom! sont des 'free software' crees par Pepper Min et Star.
+- VF est un 'free software' cree par HyDE.
+- LHa,LHrd sont des 'free software' crees par H.Saito.
+- Lharc est un 'free software' cree par Yoshiza Eitai.
+- Larc est un 'free software' cree par Miki Kazuhiko.
+- ZIP est un 'free software" cree par S.Greenberg.
+- ISH est un 'free software' cree par Ishizuka Kuniya.
+- JLD et BLS sont des 'free software' crees par Aokawa.
+- ISHREC est un 'free software' cree par Kawasaki Masahilo.
+- UNARC est un 'free software' cree par Robert A.Freed.
+
+Reference: FMTM (MSX), FILMTN (MSX,PC98,J31), FD (MSX,PC98), AEG (MSX),
+	   KJ-FOS (MSX)
+								MOGU.
+
+Traduction (Fevrier 1997):
+
+Name:		Herve Gerardin
+
+Address:	1-2 ShinMei So
+		2-16-4 Nishihara
+		Shibuya-ku Tokyo
+
+			JAPAN
+
+

@@ -1,0 +1,320 @@
+:TAPE2HDD CPC/MSX homecomputer cassette tape reader 1999 by Martin Korth
+------------------------------------------------------------------------
+
+:What is it?
+------------
+
+A program that copies homecomputer programs/data from cassettes to your PC.
+Tapes are a terrible media for computer programs, if possible avoid to use
+it - ie. if you want to get copies of old 'commercial' games, better try to
+download these from the internet. However, if you have your own/selfmade
+programs stored on old tapes, then TAPE2HDD might be useful for you...
+
+Not sure if anybody will ever use this program, but if you do so, please send
+me an email and let me know how (if) it worked!
+
+Once you have copied the files to PC you might do with it whatever you want,
+one possible purpose would be to copy the files into DSK images, and use them
+in emulators. (Like NO$CPC and NO$MSX cpc/msx emulators, on my webpage.)
+
+:What is required?
+------------------
+
+* Computer (PC with DOS) (program assembled for 286+) (tested on 486-66)
+* Soundblaster (see 'Soundcard notes' below)
+* Audio tape drive (hifi stereo deck, walkman, whatever)
+* Connection cable (tape to soundblaster)
+* Disk drive for saving (preferably harddisk, or RAM disk on slow computer)
+
+:Important note
+---------------
+
+Before you try to read your old tapes: I would strongly recommend to test
+whether your tape drive still works okay. Ie. TEST THE DRIVE with an EMPTY
+CASSETTE! It'd be worse if you'd damage your invaluable old tapes in a worn
+out tape drive, wouldn't it?
+
+:Usage
+------
+
+For a list of supported commandline switches, use the /? switch.
+Currently the program doesn't insist on leading slashes for switches, that
+means "TAPE2HDD /d /v /r" could be abbreviated as "TAPE2HDD dvr".
+
+For normal use start the program without switches. TAPE2HDD will sample
+incoming data from the sound blaster's line-in line and save any recognized
+files to disk (into current directory).
+
+File formats are autodetected, CPC and MSX files are recognized as such. The
+savenames are truncated to 8 characters, depending on the filetype extensions
+.BAS, .ASC, or .BIN are appended.
+
+Existing filenames are overwritten if they are older than the current session,
+ie. if the existing file's timestamp is older than the time when TAPE2HDD has
+been started. If files with same names are received during the same session,
+then numbers in range 1-9999 are appended to the filename.
+
+Basic and Binary programs are normally saved with 'disk headers'. These
+headers contain information about file type, load, start address and length,
+and are ready for use in emulators, just copy the files into disk images (for
+copying MSX files into DSK images use DSX.COM, included in no$msx).
+
+:Soundcard notes
+----------------
+
+PORT / IRQ / DMA
+Soundblaster port and IRQ are autodetected, DMA channel is assumed to be
+channel #1. In case that the autodetection fails (or that you are using
+another DMA channel) you must have set the BLASTER environment variable, for
+example "SET BLASTER=A220 I7 D1" for port 220h, IRQ7, DMA channel #1.
+
+SAMPLERATE
+The samplerate can be specified per commandline. According to SBLAST09 docs,
+valid sample rates are max. 11111Hz for Soundblaster 1.x, 15151Hz for
+Soundblaster 2.x, and 45454Hz for SBPro, SB16 and above. Typically the
+highest possible sample rate should give best results.
+
+MIXER/PLUG'N'PLAY
+The mixer registers aren't initialized by tape2hdd, if you have a soundcard
+with mixer (SBpro, SB16, and above) be sure to set up these settings on your
+own. Line-In should be enabled, and set to maximum volume. Not sure if the
+bass/treble affect the line-in signal, if so, set them to medium, or whatever
+works best.
+For "Plug'N'InstallDrivers'N'Reboot'N'MaybePlay" soundcards be sure that you
+have installed that bullshit drivers.
+
+SOUNDCARD MODEL
+I have tried the program with three different computers/soundcards.
+ 1) SB 2.0  Produces some dirt (heavy dirt if samplerate is higher than 33kHz)
+             alltogether works, 'transition mode' should be used, and readfails
+             could be expected, ie. rewind & try again.
+ 2) SB 2.0  Another SB 2. Heavy dirt, most times can't even read the filenames.
+ 3) SB 16   Works perfectly, produces absolutely no dirt, 'transition mode'
+             shouldn't be used, the default mode appears to work best.
+
+SIGNAL QUALITY (DIRT NOISE/VOLUME)
+Use the 'sample to screen' switch to verify if the signal looks like a clean
+sine/sawtooth wave form without dirt, and if the signal is loud enough.
+  To prevent dirt, you could try to reduce the sample rate (helps a little on
+some soundcards), or try to use another computer/soundcard, or different
+tape drive, or different connector (for example on my hifi, the phone jack
+trashed by noise, whereas the cinch connectors at the rearside give a clean
+signal.
+  To increase the volume, ensure that the mixer (if any) is set up, or use
+another tape deck, or amplify the signal, or maybe even try to use the
+Microphone connector of the soundcard rather than the line-in connector, but
+don't blame me if that turns your soundcard into dust.
+  Finally be sure to experiment with the 'filter' and 'trigger' commandline
+switches if you get readfails...
+
+CONNECTION CABLE
+Use a shielded cable. In case that you connect a stereo tape deck to a mono
+soundcard, be sure that you connect the correct signal line (some tapes might
+use only the left or right signal).
+
+:Readfails
+----------
+
+Well, can't promise anything. I tried it with a couple of older tapes, some
+worked fine, others not. Depends on the baud rate of the recording, the
+quality of the tape and tape drive, and possible dirt noise produced by the
+soundcard/computer, and whether the built-in filtering methods match for your
+own noise problems.
+
+Readfails are usually recognized as such. Ie. you can be quite sure that the
+saved files are clean if you didn't get errormessages. If you get readfails,
+be sure that you also read the 'Soundcard notes' about samplerate, soundcard
+model, and noise/volume above.
+
+Normally the program treats all 'positive' samplebytes as positive values,
+and negative as negative values. (Assume the signal is in range +10 to -10,
+whereas 0 is the medium value measured on startup.)
+  In some cases it could be required to use the 'transition trigger mode'.
+In that mode, rising and falling sample values are trated as positive and
+negative values. (That would be useful if the wave sometimes isn't in the
+expected range, for example -2 to -12 rather than +5 to -5).
+
+In case that the signal is interrupted by short dirt pulses (that shouldn't
+be treated as bits), specify a filtering value per commandline, a value of
+"1" would filter out only very short dirt pulses (and treat all longer pulses
+as data).
+
+When you are experimentating with the above switches and combinations, you
+could use the 'sample to/from file' options, so that you don't have to
+rewind the tape each time - BUT be sure to delete the TAPE2HDD.RAW file when
+you don't need it anymore, that file might easily fill up some megabytes of
+harddisk space!
+
+:Supported data formats
+-----------------------
+
+Currently only MSX and Amstrad CPC. However, the main problem about reading
+data from tapes is proper identification of high-to-low transitions, and of
+course low-to-high transitions as well.
+
+That means, it shouldn't be too difficult to add support for other
+formats, if anybody is interested, please let me know, preferably if
+you already have specifications on that format.
+
+:General Info about data formats
+--------------------------------
+
+The audio signals on the tapes are simply a stream of long and short
+pulses, indicating "0" and "1" bits. These streams are usually introduced
+by a stream of "1"-bits (synchronisation mark), the tape reader software
+is supposed to measure the pulse lengths in this stream to determine
+the baud rate.
+
+These "1"-bits might consist of either short or long pulses, but the program
+can easily calculate the length for "0"-bits because long pulses are typically
+just twice as long as short pulses). That means the tape reader could
+interprete <any> baud rate, not only fixed rates like 1000 or 2000 bps.
+
+The supported formats comply with the formats generated by the BIOSes
+of the specific home computers. Some programs (like copy-protected games)
+might have their own data format, which could be entirely different.
+
+For example, a game might consist of a small loader (in standard format),
+followed by the actual program (in any format). Such specific formats
+wouldn't be recognized by the usual BIOS functions (or TAPE2HDD).
+
+:The CPC tape data format
+-------------------------
+
+The files are separated into 2K data blocks, whereas each of these data
+blocks is having it's own header block.
+For example, a 3K file would consist of the following blocks:
+  Header block #1 (64 bytes)
+  Data block #1   (2048 bytes)
+  Header block #2 (64 bytes)
+  Data block #2   (1024 bytes)
+Whereas all blocks consist of 256 bytes 'subsections' and are rounded up
+to that size, for example the header blocks are physically sized 256 bytes
+(64 bytes actually used, and the remaining 192 bytes zero-filled).
+
+Format of CPC Header blocks
+  00-0F  Filename (unused bytes zero filled)
+  10     Block-number (01..NN)
+  11     Last block flag (FFh=last block, 00h=other block)
+  12     Filetype:
+           00h basic program
+           01h encrypted basic program
+           02h binary (program or data)
+           16h ascii data
+  13-14  Block length (1..2048)
+  15-16  Block loadaddress (destination address in RAM)
+  17     First block flag (FFh=first block, 00h=other block)
+  18-19  Total file length (length of all blocks) (zero for ascii files)
+  1A-1B  Startaddress (for binary programs)
+  1C-3F  Unused
+(Remember, the size of 64 bytes is rounded up to 256 bytes)
+
+Format of CPC Data blocks
+  That is raw data, consisting of "one-or-more" 256 byte subsections, the
+  data block itself gives no information on its length. (That information
+  has been specified in the previous header block, and is round up to 256.)
+
+The physical format of Header- and Data blocks:
+      2049  "1"-bits  synchronisation bits (identifies the baud rate)
+         1  "0"-bit   sync end bit
+         1  byte      ID: 2Ch=header block, 16h=data block
+ n*(256+2)  bytes     data section(s) (each 256 bytes plus 2 byte checksum)
+        33  "1"-bits  terminator
+The data sections always consists of 256 bytes data (any unused bytes in
+these sections should be zero filled). For header blocks there is always
+only one subsection, for data blocks the number of subsections depends on
+the "block length" entry in the previous header block.
+
+The checksum is generated bitwise, in a rather odd way: The initial value
+is FFFFh, for each bit in the 256 byte section the value is adjusted as
+follows:
+  IF  (newbit XOR value.bit15)=0 THEN value=value*2
+  ELSE value=(value XOR 810h)*2+1
+The result is XORed by FFFFh, and saved to tape (upper byte first).
+
+Surprisingly, each byte consists of eight bits, whereas the most significant
+bit is saved first. The bits themselves are encoded as follows:
+  "0"  =   \___/"""\
+  "1"  =   \_______/"""""""\
+That means, each bits consists of a low-pulse, and a high-pulse,
+whereas for "1" bits the pulses are twice as long as for "0" bits.
+Physically the signal looks less square, because a capaciator turns it
+into a sawtooth-waveform.
+(Note: The signal could be inverted, ie. high-pulse first...)
+
+:The MSX tape data format
+-------------------------
+
+Each MSX file consists of two blocks, a header block, and a data block.
+The headerblock indicates the filename and type. The file-type could be
+binary (D0h), basic (D3h), or ascii (EAh). All data is saved without any
+checksums, readfails could be particulary recognized by verifying that each
+byte has proper Start- and Stopbits.
+
+Physical Format of MSX Header Blocks
+    1E00h  "1"-bits  synchronisation bits (identifies the baud rate)
+       10  bytes     file type (the same value, repeated 10 times)
+        6  bytes     file name (unused entries filled by SPCs)
+
+Physical Format of MSX Basic Data Blocks (Type D3h)
+     780h  "1"-bits  synchronisation bits (identifies the baud rate)
+     <nn>  lines     data, format for each line as follows:
+                           2  bytes   origin of next line (lower byte first)
+                        <xx>  bytes   data (xx = nextlineorg-currentlineorg-2)
+        2  bytes     0000h zero origin, no further lines following
+      7-8  bytes     terminator, seven or eight 00h bytes
+    Note: The first line is assumed to begin at origin 8001h.
+
+Physical Format of MSX Binary Data Blocks (Type D0h)
+         780h  "1"-bits  synchronisation bits (identifies the baud rate)
+            2  bytes     load address  (lower byte first)
+            2  bytes     end address   ("")
+            2  bytes     start address ("")
+     <length>  bytes     data (length = endadr-loadadr+1)
+
+Physical Format of MSX Ascii Data Blocks (Type EAh)
+         780h  "1"-bits  synchronisation bits (identifies the baud rate)
+       x*100h  bytes     data (ended by EOF/1Ah, unused bytes filled up by 1Ah)
+
+The MSX BIOS generates start and stop bits for each byte:
+  1  start bit ("0")
+  8  data bits (lower bit first)
+  1  first stop bit ("1")
+  1  second stop bit ("1") (but might be unreadable if short delay follows)
+And finally, the MSX bits themselves are encoded as follows:
+  "0"  =   \_______/"""""""\
+  "1"  =   \___/"""\___/"""\
+Physically the signal looks less square, rather like a sine-wave.
+(Note: The signal could be inverted, ie. high-pulse first...)
+
+:Connectors
+-----------
+
+CPC 664/6128 external cassette drive connector:
+  Pin 1 /Motor on
+  Pin 2 Ground
+  Pin 3 /Motor on (again???)
+  Pin 4 Output (Record)
+  Pin 5 Input  (Play)
+The "Motor on" signal isn't really required.
+
+Theoretically you could also directly connect the above Output/Record line
+to the soundblaster, then type SAVE"NAME and on the homecomputer receive the
+data with tape2hdd, even though there aren't any tapes used in that case...
+
+:Credits
+--------
+
+- Peter-Micheal Kuhne for asking me how he could copy his old cpc tapes.
+- J”rn W. Janneck & Till Mossakowski for describing the cpc tape format.
+- Andr‚ Baresel & Craig Jackson for the SBLAST09 docs & included examples.
+- Several people whom called me completely mad when they heard about tape2hdd.
+- Rammstein & Garbage for frequently interrupting the noisy beep-srshcshshcsh.
+
+:Contact / Copyright
+--------------------
+
+Copyright 1999 Martin Korth. The program is freeware.
+Homepage: http://www.work.de/nocash
+Email: nocash@work.de
+

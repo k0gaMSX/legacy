@@ -1,0 +1,1041 @@
+  Z80 and R800 Assembly/Machine Language Op-code Tables
+
+    Written by "Cyberknight" Masao Kawata.
+    E-Mail: cyber_unicorn@hotmail.com
+    Revised: 1997-10-06 Monday.
+
+
+
+    Notes:
+
+  *1: the op-code "ED 70" has no mnemonic defined for
+      Z80, though it is a valid instruction.
+  *2: SHL and SHLA instructions of the R800 are the
+      same, but with two different mnemonics defined,
+      so they can "pair" the SHR and SHRA instruction
+      mnemonics.
+  *3: some op-codes are equivalent, performing the same
+      operations, so they are assigned to the same
+      mnemonics.
+
+
++------------------------------------------------------+
+|       Fast Reference (sorted by Z80 mnemonics)       |
++--------------+-------------------------+-------------+
+| Z80 Assembly |  R800 Assembly          |  Op-codes   |
+|  Mnemonics   |    Mnemonics            |(Hexadecimal)|
++==============+=========================+=============+
+|adc a,(hl)    |addc .a,[.hl]            |8E           |
+|adc a,(ix+d)  |addc .a,[.ix+d]          |DD 8E d      |
+|adc a,(iy+d)  |addc .a,[.iy+d]          |FD 8E d      |
++--------------+-------------------------+-------------+
+|adc a,n       |addc .a,n                |CE n         |
++--------------+-------------------------+-------------+
+|adc a,a       |addc .a,.a               |8F           |
+|adc a,b       |addc .a,.b               |88           |
+|adc a,c       |addc .a,.c               |89           |
+|adc a,d       |addc .a,.d               |8A           |
+|adc a,e       |addc .a,.e               |8B           |
+|adc a,h       |addc .a,.h               |8C           |
+|              |addc .a,.ixh             |DD 8C        |
+|              |addc .a,.ixl             |DD 8D        |
+|              |addc .a,.iyh             |FD 8C        |
+|              |addc .a,.iyl             |FD 8D        |
+|adc a,l       |addc .a,.l               |8D           |
++--------------+-------------------------+-------------+
+|adc hl,bc     |addc .hl,.bc             |ED 4A        |
+|adc hl,de     |addc .hl,.de             |ED 5A        |
+|adc hl,hl     |addc .hl,.hl             |ED 6A        |
+|adc hl,sp     |addc .hl,.sp             |ED 7A        |
++==============+=========================+=============+
+|add a,(hl)    |add .a,[.hl]             |86           |
+|add a,(ix+d)  |add .a,[.ix+d]           |DD 86 d      |
+|add a,(iy+d)  |add .a,[.iy+d]           |FD 86 d      |
++--------------+-------------------------+-------------+
+|add a,n       |add .a,n                 |C6 n         |
++--------------+-------------------------+-------------+
+|add a,a       |add .a,.a                |87           |
+|add a,b       |add .a,.b                |80           |
+|add a,c       |add .a,.c                |81           |
+|add a,d       |add .a,.d                |82           |
+|add a,e       |add .a,.e                |83           |
+|add a,h       |add .a,.h                |84           |
+|              |add .a,.ixh              |DD 84        |
+|              |add .a,.ixl              |DD 85        |
+|              |add .a,.iyh              |FD 84        |
+|              |add .a,.iyl              |FD 85        |
+|add a,l       |add .a,.l                |85           |
++--------------+-------------------------+-------------+
+|add hl,bc     |add .hl,.bc              |09           |
+|add hl,de     |add .hl,.de              |19           |
+|add hl,hl     |add .hl,.hl              |29           |
+|add hl,sp     |add .hl,.sp              |39           |
++--------------+-------------------------+-------------+
+|add ix,bc     |add .ix,.bc              |DD 09        |
+|add ix,de     |add .ix,.de              |DD 19        |
+|add ix,ix     |add .ix,.ix              |DD 29        |
+|add ix,sp     |add .ix,.sp              |DD 39        |
+|add iy,bc     |add .iy,.bc              |FD 09        |
+|add iy,de     |add .iy,.de              |FD 19        |
+|add iy,iy     |add .iy,.iy              |FD 29        |
+|add iy,sp     |add .iy,.sp              |FD 39        |
++==============+=========================+=============+
+|and (hl)      |and .a,[.hl]             |A6           |
+|and (ix+d)    |and .a,[.ix+d]           |DD A6 d      |
+|and (iy+d)    |and .a,[.iy+d]           |FD A6 d      |
++--------------+-------------------------+-------------+
+|and n         |and .a,n                 |E6 n         |
++--------------+-------------------------+-------------+
+|and a         |and .a,.a                |A7           |
+|and b         |and .a,.b                |A0           |
+|and c         |and .a,.c                |A1           |
+|and d         |and .a,.d                |A2           |
+|and e         |and .a,.e                |A3           |
+|and h         |and .a,.h                |A4           |
+|              |and .a,.ixh              |DD A4        |
+|              |and .a,.ixl              |DD A5        |
+|              |and .a,.iyh              |FD A4        |
+|              |and .a,.iyl              |FD A5        |
+|and l         |and .a,.l                |A5           |
++==============+=========================+=============+
+|bit 0,(hl)    |bit 0,[.hl]              |CB 46        |
+|bit 0,(ix+d)  |bit 0,[.ix+d]            |DD CB d 46   |
+|bit 0,(iy+d)  |bit 0,[.iy+d]            |FD CB d 46   |
+|bit 0,a       |bit 0,.a                 |CB 47        |
+|bit 0,b       |bit 0,.b                 |CB 40        |
+|bit 0,c       |bit 0,.c                 |CB 41        |
+|bit 0,d       |bit 0,.d                 |CB 42        |
+|bit 0,e       |bit 0,.e                 |CB 43        |
+|bit 0,h       |bit 0,.h                 |CB 44        |
+|bit 0,l       |bit 0,.l                 |CB 45        |
++--------------+-------------------------+-------------+
+|bit 1,(hl)    |bit 1,[.hl]              |CB 4E        |
+|bit 1,(ix+d)  |bit 1,[.ix+d]            |DD CB d 4E   |
+|bit 1,(iy+d)  |bit 1,[.iy+d]            |FD CB d 4E   |
+|bit 1,a       |bit 1,.a                 |CB 4F        |
+|bit 1,b       |bit 1,.b                 |CB 48        |
+|bit 1,c       |bit 1,.c                 |CB 49        |
+|bit 1,d       |bit 1,.d                 |CB 4A        |
+|bit 1,e       |bit 1,.e                 |CB 4B        |
+|bit 1,h       |bit 1,.h                 |CB 4C        |
+|bit 1,l       |bit 1,.l                 |CB 4D        |
++--------------+-------------------------+-------------+
+|bit 2,(hl)    |bit 2,[.hl]              |CB 56        |
+|bit 2,(ix+d)  |bit 2,[.ix+d]            |DD CB d 56   |
+|bit 2,(iy+d)  |bit 2,[.iy+d]            |FD CB d 56   |
+|bit 2,a       |bit 2,.a                 |CB 57        |
+|bit 2,b       |bit 2,.b                 |CB 50        |
+|bit 2,c       |bit 2,.c                 |CB 51        |
+|bit 2,d       |bit 2,.d                 |CB 52        |
+|bit 2,e       |bit 2,.e                 |CB 53        |
+|bit 2,h       |bit 2,.h                 |CB 54        |
+|bit 2,l       |bit 2,.l                 |CB 55        |
++--------------+-------------------------+-------------+
+|bit 3,(hl)    |bit 3,[.hl]              |CB 5E        |
+|bit 3,(ix+d)  |bit 3,[.ix+d]            |DD CB d 5E   |
+|bit 3,(iy+d)  |bit 3,[.iy+d]            |FD CB d 5E   |
+|bit 3,a       |bit 3,.a                 |CB 5F        |
+|bit 3,b       |bit 3,.b                 |CB 58        |
+|bit 3,c       |bit 3,.c                 |CB 59        |
+|bit 3,d       |bit 3,.d                 |CB 5A        |
+|bit 3,e       |bit 3,.e                 |CB 5B        |
+|bit 3,h       |bit 3,.h                 |CB 5C        |
+|bit 3,l       |bit 3,.l                 |CB 5D        |
++--------------+-------------------------+-------------+
+|bit 4,(hl)    |bit 4,[.hl]              |CB 66        |
+|bit 4,(ix+d)  |bit 4,[.ix+d]            |DD CB d 66   |
+|bit 4,(iy+d)  |bit 4,[.iy+d]            |FD CB d 66   |
+|bit 4,a       |bit 4,.a                 |CB 67        |
+|bit 4,b       |bit 4,.b                 |CB 60        |
+|bit 4,c       |bit 4,.c                 |CB 61        |
+|bit 4,d       |bit 4,.d                 |CB 62        |
+|bit 4,e       |bit 4,.e                 |CB 63        |
+|bit 4,h       |bit 4,.h                 |CB 64        |
+|bit 4,l       |bit 4,.l                 |CB 65        |
++--------------+-------------------------+-------------+
+|bit 5,(hl)    |bit 5,[.hl]              |CB 6E        |
+|bit 5,(ix+d)  |bit 5,[.ix+d]            |DD CB d 6E   |
+|bit 5,(iy+d)  |bit 5,[.iy+d]            |FD CB d 6E   |
+|bit 5,a       |bit 5,.a                 |CB 6F        |
+|bit 5,b       |bit 5,.b                 |CB 68        |
+|bit 5,c       |bit 5,.c                 |CB 69        |
+|bit 5,d       |bit 5,.d                 |CB 6A        |
+|bit 5,e       |bit 5,.e                 |CB 6B        |
+|bit 5,h       |bit 5,.h                 |CB 6C        |
+|bit 5,l       |bit 5,.l                 |CB 6D        |
++--------------+-------------------------+-------------+
+|bit 6,(hl)    |bit 6,[.hl]              |CB 76        |
+|bit 6,(ix+d)  |bit 6,[.ix+d]            |DD CB d 76   |
+|bit 6,(iy+d)  |bit 6,[.iy+d]            |FD CB d 76   |
+|bit 6,a       |bit 6,.a                 |CB 77        |
+|bit 6,b       |bit 6,.b                 |CB 70        |
+|bit 6,c       |bit 6,.c                 |CB 71        |
+|bit 6,d       |bit 6,.d                 |CB 72        |
+|bit 6,e       |bit 6,.e                 |CB 73        |
+|bit 6,h       |bit 6,.h                 |CB 74        |
+|bit 6,l       |bit 6,.l                 |CB 75        |
++--------------+-------------------------+-------------+
+|bit 7,(hl)    |bit 7,[.hl]              |CB 7E        |
+|bit 7,(ix+d)  |bit 7,[.ix+d]            |DD CB d 7E   |
+|bit 7,(iy+d)  |bit 7,[.iy+d]            |FD CB d 7E   |
+|bit 7,a       |bit 7,.a                 |CB 7F        |
+|bit 7,b       |bit 7,.b                 |CB 78        |
+|bit 7,c       |bit 7,.c                 |CB 79        |
+|bit 7,d       |bit 7,.d                 |CB 7A        |
+|bit 7,e       |bit 7,.e                 |CB 7B        |
+|bit 7,h       |bit 7,.h                 |CB 7C        |
+|bit 7,l       |bit 7,.l                 |CB 7D        |
++==============+=========================+=============+
+|call nn       |call nn                  |CD nnl nnh   |
++--------------+-------------------------+-------------+
+|call c,nn     |call c,nn                |DC nnl nnh   |
+|call m,nn     |call m,nn                |FC nnl nnh   |
+|call nc,nn    |call nc,nn               |D4 nnl nnh   |
+|call nz,nn    |call nz,nn               |C4 nnl nnh   |
+|call p,nn     |call p,nn                |F4 nnl nnh   |
+|call pe,nn    |call pe,nn               |EC nnl nnh   |
+|call po,nn    |call po,nn               |E4 nnl nnh   |
+|call z,nn     |call z,nn                |CC nnl nnh   |
++==============+=========================+=============+
+|ccf           |notc                     |3F           |
++==============+=========================+=============+
+|cp (hl)       |cmp .a,[.hl]             |BE           |
+|cp (ix+d)     |cmp .a,[.ix+d]           |DD BE d      |
+|cp (iy+d)     |cmp .a,[.iy+d]           |FD BE d      |
++--------------+-------------------------+-------------+
+|cp n          |cmp .a,n                 |FE n         |
++--------------+-------------------------+-------------+
+|cp a          |cmp .a,.a                |BF           |
+|cp b          |cmp .a,.b                |B8           |
+|cp c          |cmp .a,.c                |B9           |
+|cp d          |cmp .a,.d                |BA           |
+|cp e          |cmp .a,.e                |BB           |
+|cp h          |cmp .a,.h                |BC           |
+|              |cmp .a,.ixh              |DD BC        |
+|              |cmp .a,.ixl              |DD BD        |
+|              |cmp .a,.iyh              |FD BC        |
+|              |cmp .a,.iyl              |FD BD        |
+|cp l          |cmp .a,.l                |BD           |
++==============+=========================+=============+
+|cpd           |cmp .a,[.hl--]           |ED A9        |
++--------------+-------------------------+-------------+
+|cpdr          |cmpm .a,[.hl--]          |ED B9        |
++--------------+-------------------------+-------------+
+|cpi           |cmp .a,[.hl++]           |ED A1        |
++--------------+-------------------------+-------------+
+|cpir          |cmpm .a,[.hl++]          |ED B1        |
++==============+=========================+=============+
+|cpl           |not .a                   |2F           |
++==============+=========================+=============+
+|daa           |adj .a                   |27           |
++==============+=========================+=============+
+|dec (hl)      |dec [.hl]                |35           |
+|dec (ix+d)    |dec [.ix+d]              |DD 35 d      |
+|dec (iy+d)    |dec [.iy+d]              |FD 35 d      |
++--------------+-------------------------+-------------+
+|dec a         |dec .a                   |3D           |
+|dec b         |dec .b                   |05           |
+|dec bc        |dec .bc                  |0B           |
+|dec c         |dec .c                   |0D           |
+|dec d         |dec .d                   |15           |
+|dec de        |dec .de                  |1B           |
+|dec e         |dec .e                   |1D           |
+|dec h         |dec .h                   |25           |
+|dec hl        |dec .hl                  |2B           |
+|dec ix        |dec .ix                  |DD 2B        |
+|              |dec .ixh                 |DD 25        |
+|              |dec .ixl                 |DD 2D        |
+|dec iy        |dec .iy                  |FD 2B        |
+|              |dec .iyh                 |FD 25        |
+|              |dec .iyl                 |FD 2D        |
+|dec l         |dec .l                   |2D           |
+|dec sp        |dec .sp                  |3B           |
++==============+=========================+=============+
+|di            |di                       |F3           |
++==============+=========================+=============+
+|djnz d        |dbnz d                   |10 d         |
++==============+=========================+=============+
+|ei            |ei                       |FB           |
++==============+=========================+=============+
+|ex (sp),hl    |xch [.sp],.hl            |E3           |
+|ex (sp),ix    |xch [.sp],.ix            |DD E3        |
+|ex (sp),iy    |xch [.sp],.iy            |FD E3        |
++--------------+-------------------------+-------------+
+|ex af,af'     |xch .af,.af'             |08           |
++--------------+-------------------------+-------------+
+|ex de,hl      |xch .de,.hl              |EB           |
++--------------+-------------------------+-------------+
+|exx           |xchx                     |D9           |
++==============+=========================+=============+
+|halt          |halt                     |76           |
++==============+=========================+=============+
+|im 0          |im 0                     |ED 46        |
+|im 1          |im 1                     |ED 56        |
+|im 2          |im 2                     |ED 5E        |
++==============+=========================+=============+
+|in a,(n)      |in .a,[n]                |DB n         |
++--------------+-------------------------+-------------+
+|in a,(c)      |in .a,[.c]               |ED 78        |
+|in b,(c)      |in .b,[.c]               |ED 40        |
+|in c,(c)      |in .c,[.c]               |ED 48        |
+|in d,(c)      |in .d,[.c]               |ED 50        |
+|in e,(c)      |in .e,[.c]               |ED 58        |
+|in h,(c)      |in .h,[.c]               |ED 60        |
+|in l,(c)      |in .l,[.c]               |ED 68        |
+| *1           |in .f,[.c]               |ED 70        |
++==============+=========================+=============+
+|ind           |in [.hl--],[.c]          |ED AA        |
++--------------+-------------------------+-------------+
+|indr          |inm [.hl--],[.c]         |ED BA        |
++--------------+-------------------------+-------------+
+|ini           |in [.hl++],[.c]          |ED A2        |
++--------------+-------------------------+-------------+
+|inir          |inm [.hl++],[.c]         |ED B2        |
++==============+=========================+=============+
+|inc (hl)      |inc [.hl]                |34           |
+|inc (ix+d)    |inc [.ix+d]              |DD 34 d      |
+|inc (iy+d)    |inc [.iy+d]              |FD 34 d      |
++--------------+-------------------------+-------------+
+|inc a         |inc .a                   |3C           |
+|inc b         |inc .b                   |04           |
+|inc bc        |inc .bc                  |03           |
+|inc c         |inc .c                   |0C           |
+|inc d         |inc .d                   |14           |
+|inc de        |inc .de                  |13           |
+|inc e         |inc .e                   |1C           |
+|inc h         |inc .h                   |24           |
+|inc hl        |inc .hl                  |23           |
+|inc ix        |inc .ix                  |DD 23        |
+|              |inc .ixh                 |DD 24        |
+|              |inc .ixl                 |DD 2C        |
+|inc iy        |inc .iy                  |FD 23        |
+|              |inc .iyh                 |FD 24        |
+|              |inc .iyl                 |FD 2C        |
+|inc l         |inc .l                   |2C           |
+|inc sp        |inc .sp                  |33           |
++==============+=========================+=============+
+|jp (hl)       |br [.hl]                 |E9           |
+|jp (ix)       |br [.ix]                 |DD E9        |
+|jp (iy)       |br [.iy]                 |FD E9        |
++--------------+-------------------------+-------------+
+|jp nn         |br nn                    |C3 nnl nnh   |
++--------------+-------------------------+-------------+
+|jp c,nn       |bc nn                    |DA nnl nnh   |
+|jp m,nn       |bm nn                    |FA nnl nnh   |
+|jp nc,nn      |bnc nn                   |D2 nnl nnh   |
+|jp nz,nn      |bnz nn                   |C2 nnl nnh   |
+|jp p,nn       |bp nn                    |F2 nnl nnh   |
+|jp pe,nn      |bpe nn                   |EA nnl nnh   |
+|jp po,nn      |bpo nn                   |E2 nnl nnh   |
+|jp z,nn       |bz nn                    |CA nnl nnh   |
++==============+=========================+=============+
+|jr d          |short br d               |18 d         |
++--------------+-------------------------+-------------+
+|jr nz,d       |short bnz d              |20 d         |
+|jr z,d        |short bz d               |28 d         |
+|jr nc,d       |short bnc d              |30 d         |
+|jr c,d        |short bc d               |38 d         |
++==============+=========================+=============+
+|ld (nn),a     |ld [nn],.a               |32 nnl nnh   |
+|ld (nn),bc    |ld [nn],.bc              |ED 43 nnl nnh|
+|ld (nn),de    |ld [nn],.de              |ED 53 nnl nnh|
+|ld (nn),hl    |ld [nn],.hl              |22 nnl nnh   |
+|ld (nn),hl    |ld [nn],.hl              |ED 63 nnl nnh|
+|ld (nn),ix    |ld [nn],.ix              |DD 22 nnl nnh|
+|ld (nn),iy    |ld [nn],.iy              |FD 22 nnl nnh|
+|ld (nn),sp    |ld [nn],.sp              |ED 73 nnl nnh|
++--------------+-------------------------+-------------+
+|ld (bc),a     |ld [.bc],.a              |02           |
+|ld (de),a     |ld [.de],.a              |12           |
++--------------+-------------------------+-------------+
+|ld (hl),n     |ld [.hl],n               |36 n         |
++--------------+-------------------------+-------------+
+|ld (hl),a     |ld [.hl],.a              |77           |
+|ld (hl),b     |ld [.hl],.b              |70           |
+|ld (hl),c     |ld [.hl],.c              |71           |
+|ld (hl),d     |ld [.hl],.d              |72           |
+|ld (hl),e     |ld [.hl],.e              |73           |
+|ld (hl),h     |ld [.hl],.h              |74           |
+|ld (hl),l     |ld [.hl],.l              |75           |
++--------------+-------------------------+-------------+
+|ld (ix+d),n   |ld [.ix+d],n             |DD 36 d n    |
++--------------+-------------------------+-------------+
+|ld (ix+d),a   |ld [.ix+d],.a            |DD 77 d      |
+|ld (ix+d),b   |ld [.ix+d],.b            |DD 70 d      |
+|ld (ix+d),c   |ld [.ix+d],.c            |DD 71 d      |
+|ld (ix+d),d   |ld [.ix+d],.d            |DD 72 d      |
+|ld (ix+d),e   |ld [.ix+d],.e            |DD 73 d      |
+|ld (ix+d),h   |ld [.ix+d],.h            |DD 74 d      |
+|ld (ix+d),l   |ld [.ix+d],.l            |DD 75 d      |
++--------------+-------------------------+-------------+
+|ld (iy+d),n   |ld [.iy+d],n             |FD 36 d n    |
++--------------+-------------------------+-------------+
+|ld (iy+d),a   |ld [.iy+d],.a            |FD 77 d      |
+|ld (iy+d),b   |ld [.iy+d],.b            |FD 70 d      |
+|ld (iy+d),c   |ld [.iy+d],.c            |FD 71 d      |
+|ld (iy+d),d   |ld [.iy+d],.d            |FD 72 d      |
+|ld (iy+d),e   |ld [.iy+d],.e            |FD 73 d      |
+|ld (iy+d),h   |ld [.iy+d],.h            |FD 74 d      |
+|ld (iy+d),l   |ld [.iy+d],.l            |FD 75 d      |
++--------------+-------------------------+-------------+
+|ld a,(nn)     |ld .a,[nn]               |3A nnl nnh   |
++--------------+-------------------------+-------------+
+|ld a,(bc)     |ld .a,[.bc]              |0A           |
+|ld a,(de)     |ld .a,[.de]              |1A           |
+|ld a,(hl)     |ld .a,[.hl]              |7E           |
+|ld a,(ix+d)   |ld .a,[.ix+d]            |DD 7E d      |
+|ld a,(iy+d)   |ld .a,[.iy+d]            |FD 7E d      |
+|ld a,n        |ld .a,n                  |3E n         |
++--------------+-------------------------+-------------+
+|ld a,a        |ld .a,.a                 |7F           |
+|              |ld .a,.a                 |DD 7F        |
+|              |ld .a,.a                 |FD 7F        |
+|ld a,b        |ld .a,.b                 |78           |
+|              |ld .a,.b                 |DD 78        |
+|              |ld .a,.b                 |FD 78        |
+|ld a,c        |ld .a,.c                 |79           |
+|              |ld .a,.c                 |DD 79        |
+|              |ld .a,.c                 |FD 79        |
+|ld a,d        |ld .a,.d                 |7A           |
+|              |ld .a,.d                 |DD 7A        |
+|              |ld .a,.d                 |FD 7A        |
+|ld a,e        |ld .a,.e                 |7B           |
+|              |ld .a,.e                 |DD 7B        |
+|              |ld .a,.e                 |FD 7B        |
+|ld a,h        |ld .a,.h                 |7C           |
+|ld a,i        |ld .a,.i                 |ED 57        |
+|              |ld .a,.ixh               |DD 7C        |
+|              |ld .a,.ixl               |DD 7D        |
+|              |ld .a,.iyh               |FD 7C        |
+|              |ld .a,.iyl               |FD 7D        |
+|ld a,l        |ld .a,.l                 |7D           |
+|ld a,r        |ld .a,.r                 |ED 5F        |
++--------------+-------------------------+-------------+
+|ld b,(hl)     |ld .b,[.hl]              |46           |
+|ld b,(ix+d)   |ld .b,[.ix+d]            |DD 46 d      |
+|ld b,(iy+d)   |ld .b,[.iy+d]            |FD 46 d      |
+|ld b,n        |ld .b,n                  |06 n         |
++--------------+-------------------------+-------------+
+|ld b,a        |ld .b,.a                 |47           |
+|              |ld .b,.a                 |DD 47        |
+|              |ld .b,.a                 |FD 47        |
+|ld b,b        |ld .b,.b                 |40           |
+|              |ld .b,.b                 |DD 40        |
+|              |ld .b,.b                 |FD 40        |
+|ld b,c        |ld .b,.c                 |41           |
+|              |ld .b,.c                 |DD 41        |
+|              |ld .b,.c                 |FD 41        |
+|ld b,d        |ld .b,.d                 |42           |
+|              |ld .b,.d                 |DD 42        |
+|              |ld .b,.d                 |FD 42        |
+|ld b,e        |ld .b,.e                 |43           |
+|              |ld .b,.e                 |DD 43        |
+|              |ld .b,.e                 |FD 43        |
+|ld b,h        |ld .b,.h                 |44           |
+|              |ld .b,.ixh               |DD 44        |
+|              |ld .b,.ixl               |DD 45        |
+|              |ld .b,.iyh               |FD 44        |
+|              |ld .b,.iyl               |FD 45        |
+|ld b,l        |ld .b,.l                 |45           |
++--------------+-------------------------+-------------+
+|ld bc,(nn)    |ld .bc,[nn]              |ED 4B nnl nnh|
+|ld bc,nn      |ld .bc,nn                |01 nnl nnh   |
++--------------+-------------------------+-------------+
+|ld c,(hl)     |ld .c,[.hl]              |4E           |
+|ld c,(ix+d)   |ld .c,[.ix+d]            |DD 4E d      |
+|ld c,(iy+d)   |ld .c,[.iy+d]            |FD 4E d      |
+|ld c,n        |ld .c,n                  |0E n         |
++--------------+-------------------------+-------------+
+|ld c,a        |ld .c,.a                 |4F           |
+|              |ld .c,.a                 |DD 4F        |
+|              |ld .c,.a                 |FD 4F        |
+|ld c,b        |ld .c,.b                 |48           |
+|              |ld .c,.b                 |DD 48        |
+|              |ld .c,.b                 |FD 48        |
+|ld c,c        |ld .c,.c                 |49           |
+|              |ld .c,.c                 |DD 49        |
+|              |ld .c,.c                 |FD 49        |
+|ld c,d        |ld .c,.d                 |4A           |
+|              |ld .c,.d                 |DD 4A        |
+|              |ld .c,.d                 |FD 4A        |
+|ld c,e        |ld .c,.e                 |4B           |
+|              |ld .c,.e                 |DD 4B        |
+|              |ld .c,.e                 |FD 4B        |
+|ld c,h        |ld .c,.h                 |4C           |
+|              |ld .c,.ixh               |DD 4C        |
+|              |ld .c,.ixl               |DD 4D        |
+|              |ld .c,.iyh               |FD 4C        |
+|              |ld .c,.iyl               |FD 4D        |
+|ld c,l        |ld .c,.l                 |4D           |
++--------------+-------------------------+-------------+
+|ld d,(hl)     |ld .d,[.hl]              |56           |
+|ld d,(ix+d)   |ld .d,[.ix+d]            |DD 56 d      |
+|ld d,(iy+d)   |ld .d,[.iy+d]            |FD 56 d      |
+|ld d,n        |ld .d,n                  |16 n         |
++--------------+-------------------------+-------------+
+|ld d,a        |ld .d,.a                 |57           |
+|              |ld .d,.a                 |DD 57        |
+|              |ld .d,.a                 |FD 57        |
+|ld d,b        |ld .d,.b                 |50           |
+|              |ld .d,.b                 |DD 50        |
+|              |ld .d,.b                 |FD 50        |
+|ld d,c        |ld .d,.c                 |51           |
+|              |ld .d,.c                 |DD 51        |
+|              |ld .d,.c                 |FD 51        |
+|ld d,d        |ld .d,.d                 |52           |
+|              |ld .d,.d                 |DD 52        |
+|              |ld .d,.d                 |FD 52        |
+|ld d,e        |ld .d,.e                 |53           |
+|              |ld .d,.e                 |DD 53        |
+|              |ld .d,.e                 |FD 53        |
+|ld d,h        |ld .d,.h                 |54           |
+|              |ld .d,.ixh               |DD 54        |
+|              |ld .d,.ixl               |DD 55        |
+|              |ld .d,.iyh               |FD 54        |
+|              |ld .d,.iyl               |FD 55        |
+|ld d,l        |ld .d,.l                 |55           |
++--------------+-------------------------+-------------+
+|ld de,(nn)    |ld .de,[nn]              |ED 5B nnl nnh|
+|ld de,nn      |ld .de,nn                |11 nnl nnh   |
++--------------+-------------------------+-------------+
+|ld e,(hl)     |ld .e,[.hl]              |5E           |
+|ld e,(ix+d)   |ld .e,[.ix+d]            |DD 5E d      |
+|ld e,(iy+d)   |ld .e,[.iy+d]            |FD 5E d      |
+|ld e,n        |ld .e,n                  |1E n         |
++--------------+-------------------------+-------------+
+|ld e,a        |ld .e,.a                 |5F           |
+|              |ld .e,.a                 |DD 5F        |
+|              |ld .e,.a                 |FD 5F        |
+|ld e,b        |ld .e,.b                 |58           |
+|              |ld .e,.b                 |DD 58        |
+|              |ld .e,.b                 |FD 58        |
+|ld e,c        |ld .e,.c                 |59           |
+|              |ld .e,.c                 |DD 59        |
+|              |ld .e,.c                 |FD 59        |
+|ld e,d        |ld .e,.d                 |5A           |
+|              |ld .e,.d                 |DD 5A        |
+|              |ld .e,.d                 |FD 5A        |
+|ld e,e        |ld .e,.e                 |5B           |
+|              |ld .e,.e                 |DD 5B        |
+|              |ld .e,.e                 |FD 5B        |
+|ld e,h        |ld .e,.h                 |5C           |
+|              |ld .e,.ixh               |DD 5C        |
+|              |ld .e,.ixl               |DD 5D        |
+|              |ld .e,.iyh               |FD 5C        |
+|              |ld .e,.iyl               |FD 5D        |
+|ld e,l        |ld .e,.l                 |5D           |
++--------------+-------------------------+-------------+
+|ld h,(hl)     |ld .h,[.hl]              |66           |
+|ld h,(ix+d)   |ld .h,[.ix+d]            |DD 66 d      |
+|ld h,(iy+d)   |ld .h,[.iy+d]            |FD 66 d      |
+|ld h,n        |ld .h,n                  |26 n         |
++--------------+-------------------------+-------------+
+|ld h,a        |ld .h,.a                 |67           |
+|ld h,b        |ld .h,.b                 |60           |
+|ld h,c        |ld .h,.c                 |61           |
+|ld h,d        |ld .h,.d                 |62           |
+|ld h,e        |ld .h,.e                 |63           |
+|ld h,h        |ld .h,.h                 |64           |
+|ld h,l        |ld .h,.l                 |65           |
++--------------+-------------------------+-------------+
+|ld hl,(nn)    |ld .hl,[nn]              |2A nnl nnh   |
+|ld hl,(nn)    |ld .hl,[nn]              |ED 6B nnl nnh|
+|ld hl,nn      |ld .hl,nn                |21 nnl nnh   |
++--------------+-------------------------+-------------+
+|ld i,a        |ld .i,.a                 |ED 47        |
++--------------+-------------------------+-------------+
+|ld ix,(nn)    |ld .ix,[nn]              |DD 2A nnl nnh|
+|ld ix,nn      |ld .ix,nn                |DD 21 nnl nnh|
++--------------+-------------------------+-------------+
+|              |ld .ixh,n                |DD 26 n      |
+|              |ld .ixh,.a               |DD 67        |
+|              |ld .ixh,.b               |DD 60        |
+|              |ld .ixh,.c               |DD 61        |
+|              |ld .ixh,.d               |DD 62        |
+|              |ld .ixh,.e               |DD 63        |
+|              |ld .ixh,.ixh             |DD 64        |
+|              |ld .ixh,.ixl             |DD 65        |
++--------------+-------------------------+-------------+
+|              |ld .ixl,n                |DD 2E n      |
+|              |ld .ixl,.a               |DD 6F        |
+|              |ld .ixl,.b               |DD 68        |
+|              |ld .ixl,.c               |DD 69        |
+|              |ld .ixl,.d               |DD 6A        |
+|              |ld .ixl,.e               |DD 6B        |
+|              |ld .ixl,.ixh             |DD 6C        |
+|              |ld .ixl,.ixl             |DD 6D        |
++--------------+-------------------------+-------------+
+|ld iy,(nn)    |ld .iy,[nn]              |FD 2A nnl nnh|
+|ld iy,nn      |ld .iy,nn                |FD 21 nnl nnh|
++--------------+-------------------------+-------------+
+|              |ld .iyh,n                |FD 26 n      |
+|              |ld .iyh,.a               |FD 67        |
+|              |ld .iyh,.b               |FD 60        |
+|              |ld .iyh,.c               |FD 61        |
+|              |ld .iyh,.d               |FD 62        |
+|              |ld .iyh,.e               |FD 63        |
+|              |ld .iyh,.iyh             |FD 64        |
+|              |ld .iyh,.iyl             |FD 65        |
++--------------+-------------------------+-------------+
+|              |ld .iyl,n                |FD 2E n      |
+|              |ld .iyl,.a               |FD 6F        |
+|              |ld .iyl,.b               |FD 68        |
+|              |ld .iyl,.c               |FD 69        |
+|              |ld .iyl,.d               |FD 6A        |
+|              |ld .iyl,.e               |FD 6B        |
+|              |ld .iyl,.iyh             |FD 6C        |
+|              |ld .iyl,.iyl             |FD 6D        |
++--------------+-------------------------+-------------+
+|ld l,(hl)     |ld .l,[.hl]              |6E           |
+|ld l,(ix+d)   |ld .l,[.ix+d]            |DD 6E d      |
+|ld l,(iy+d)   |ld .l,[.iy+d]            |FD 6E d      |
+|ld l,n        |ld .l,n                  |2E n         |
++--------------+-------------------------+-------------+
+|ld l,a        |ld .l,.a                 |6F           |
+|ld l,b        |ld .l,.b                 |68           |
+|ld l,c        |ld .l,.c                 |69           |
+|ld l,d        |ld .l,.d                 |6A           |
+|ld l,e        |ld .l,.e                 |6B           |
+|ld l,h        |ld .l,.h                 |6C           |
+|ld l,l        |ld .l,.l                 |6D           |
++--------------+-------------------------+-------------+
+|ld r,a        |ld .r,.a                 |ED 4F        |
++--------------+-------------------------+-------------+
+|ld sp,(nn)    |ld .sp,[nn]              |ED 7B nnl nnh|
+|ld sp,nn      |ld .sp,nn                |31 nnl nnh   |
++--------------+-------------------------+-------------+
+|ld sp,hl      |ld .sp,.hl               |F9           |
+|ld sp,ix      |ld .sp,.ix               |DD F9        |
+|ld sp,iy      |ld .sp,.iy               |FD F9        |
++==============+=========================+=============+
+|ldd           |move [.hl--],[.de--]     |ED A8        |
++--------------+-------------------------+-------------+
+|lddr          |movem [.hl--],[.de--]    |ED B8        |
++--------------+-------------------------+-------------+
+|ldi           |move [.hl++],[.de++]     |ED A0        |
++--------------+-------------------------+-------------+
+|ldir          |movem [.hl++],[.de++]    |ED B0        |
++==============+=========================+=============+
+|              |mulub .a,.a              |ED F9        |
+|              |mulub .a,.b              |ED C1        |
+|              |mulub .a,.c              |ED C9        |
+|              |mulub .a,.d              |ED D1        |
+|              |mulub .a,.e              |ED D9        |
+|              |mulub .a,.h              |ED E1        |
+|              |mulub .a,.l              |ED E9        |
++--------------+-------------------------+-------------+
+|              |muluw .hl,.bc            |ED C3        |
+|              |muluw .hl,.de            |ED D3        |
+|              |muluw .hl,.hl            |ED E3        |
+|              |muluw .hl,.sp            |ED F3        |
++==============+=========================+=============+
+|neg           |neg .a                   |ED 44        |
++==============+=========================+=============+
+|nop           |nop                      |00           |
++==============+=========================+=============+
+|or (hl)       |or .a,[.hl]              |B6           |
+|or (ix+d)     |or .a,[.ix+d]            |DD B6 d      |
+|or (iy+d)     |or .a,[.iy+d]            |FD B6 d      |
++--------------+-------------------------+-------------+
+|or n          |or .a,n                  |F6 n         |
++--------------+-------------------------+-------------+
+|or a          |or .a,.a                 |B7           |
+|or b          |or .a,.b                 |B0           |
+|or c          |or .a,.c                 |B1           |
+|or d          |or .a,.d                 |B2           |
+|or e          |or .a,.e                 |B3           |
+|or h          |or .a,.h                 |B4           |
+|              |or .a,.ixh               |DD B4        |
+|              |or .a,.ixl               |DD B5        |
+|              |or .a,.iyh               |FD B4        |
+|              |or .a,.iyl               |FD B5        |
+|or l          |or .a,.l                 |B5           |
++==============+=========================+=============+
+|otdr          |outm [.c],[.hl--]        |ED BB        |
++--------------+-------------------------+-------------+
+|otir          |outm [.c],[.hl++]        |ED B3        |
++==============+=========================+=============+
+|out (n),a     |out [n],.a               |D3 n         |
++--------------+-------------------------+-------------+
+|out (c),a     |out [.c],.a              |ED 79        |
+|out (c),b     |out [.c],.b              |ED 41        |
+|out (c),c     |out [.c],.c              |ED 49        |
+|out (c),d     |out [.c],.d              |ED 51        |
+|out (c),e     |out [.c],.e              |ED 59        |
+|out (c),h     |out [.c],.h              |ED 61        |
+|out (c),l     |out [.c],.l              |ED 69        |
++==============+=========================+=============+
+|outd          |out [.c],[.hl--]         |ED AB        |
++--------------+-------------------------+-------------+
+|outi          |out [.c],[.hl++]         |ED A3        |
++==============+=========================+=============+
+|pop af        |pop .af                  |F1           |
+|pop bc        |pop .bc                  |C1           |
+|pop de        |pop .de                  |D1           |
+|pop hl        |pop .hl                  |E1           |
+|pop ix        |pop .ix                  |DD E1        |
+|pop iy        |pop .iy                  |FD E1        |
++==============+=========================+=============+
+|push af       |push .af                 |F5           |
+|push bc       |push .bc                 |C5           |
+|push de       |push .de                 |D5           |
+|push hl       |push .hl                 |E5           |
+|push ix       |push .ix                 |DD E5        |
+|push iy       |push .iy                 |FD E5        |
++==============+=========================+=============+
+|res 0,(hl)    |clr 0,[.hl]              |CB 86        |
+|res 0,(ix+d)  |clr 0,[.ix+d]            |DD CB d 86   |
+|res 0,(iy+d)  |clr 0,[.iy+d]            |FD CB d 86   |
+|res 0,a       |clr 0,.a                 |CB 87        |
+|res 0,b       |clr 0,.b                 |CB 80        |
+|res 0,c       |clr 0,.c                 |CB 81        |
+|res 0,d       |clr 0,.d                 |CB 82        |
+|res 0,e       |clr 0,.e                 |CB 83        |
+|res 0,h       |clr 0,.h                 |CB 84        |
+|res 0,l       |clr 0,.l                 |CB 85        |
++--------------+-------------------------+-------------+
+|res 1,(hl)    |clr 1,[.hl]              |CB 8E        |
+|res 1,(ix+d)  |clr 1,[.ix+d]            |DD CB d 8E   |
+|res 1,(iy+d)  |clr 1,[.iy+d]            |FD CB d 8E   |
+|res 1,a       |clr 1,.a                 |CB 8F        |
+|res 1,b       |clr 1,.b                 |CB 88        |
+|res 1,c       |clr 1,.c                 |CB 89        |
+|res 1,d       |clr 1,.d                 |CB 8A        |
+|res 1,e       |clr 1,.e                 |CB 8B        |
+|res 1,h       |clr 1,.h                 |CB 8C        |
+|res 1,l       |clr 1,.l                 |CB 8D        |
++--------------+-------------------------+-------------+
+|res 2,(hl)    |clr 2,[.hl]              |CB 96        |
+|res 2,(ix+d)  |clr 2,[.ix+d]            |DD CB d 96   |
+|res 2,(iy+d)  |clr 2,[.iy+d]            |FD CB d 96   |
+|res 2,a       |clr 2,.a                 |CB 97        |
+|res 2,b       |clr 2,.b                 |CB 90        |
+|res 2,c       |clr 2,.c                 |CB 91        |
+|res 2,d       |clr 2,.d                 |CB 92        |
+|res 2,e       |clr 2,.e                 |CB 93        |
+|res 2,h       |clr 2,.h                 |CB 94        |
+|res 2,l       |clr 2,.l                 |CB 95        |
++--------------+-------------------------+-------------+
+|res 3,(hl)    |clr 3,[.hl]              |CB 9E        |
+|res 3,(ix+d)  |clr 3,[.ix+d]            |DD CB d 9E   |
+|res 3,(iy+d)  |clr 3,[.iy+d]            |FD CB d 9E   |
+|res 3,a       |clr 3,.a                 |CB 9F        |
+|res 3,b       |clr 3,.b                 |CB 98        |
+|res 3,c       |clr 3,.c                 |CB 99        |
+|res 3,d       |clr 3,.d                 |CB 9A        |
+|res 3,e       |clr 3,.e                 |CB 9B        |
+|res 3,h       |clr 3,.h                 |CB 9C        |
+|res 3,l       |clr 3,.l                 |CB 9D        |
++--------------+-------------------------+-------------+
+|res 4,(hl)    |clr 4,[.hl]              |CB A6        |
+|res 4,(ix+d)  |clr 4,[.ix+d]            |DD CB d A6   |
+|res 4,(iy+d)  |clr 4,[.iy+d]            |FD CB d A6   |
+|res 4,a       |clr 4,.a                 |CB A7        |
+|res 4,b       |clr 4,.b                 |CB A0        |
+|res 4,c       |clr 4,.c                 |CB A1        |
+|res 4,d       |clr 4,.d                 |CB A2        |
+|res 4,e       |clr 4,.e                 |CB A3        |
+|res 4,h       |clr 4,.h                 |CB A4        |
+|res 4,l       |clr 4,.l                 |CB A5        |
++--------------+-------------------------+-------------+
+|res 5,(hl)    |clr 5,[.hl]              |CB AE        |
+|res 5,(ix+d)  |clr 5,[.ix+d]            |DD CB d AE   |
+|res 5,(iy+d)  |clr 5,[.iy+d]            |FD CB d AE   |
+|res 5,a       |clr 5,.a                 |CB AF        |
+|res 5,b       |clr 5,.b                 |CB A8        |
+|res 5,c       |clr 5,.c                 |CB A9        |
+|res 5,d       |clr 5,.d                 |CB AA        |
+|res 5,e       |clr 5,.e                 |CB AB        |
+|res 5,h       |clr 5,.h                 |CB AC        |
+|res 5,l       |clr 5,.l                 |CB AD        |
++--------------+-------------------------+-------------+
+|res 6,(hl)    |clr 6,[.hl]              |CB B6        |
+|res 6,(ix+d)  |clr 6,[.ix+d]            |DD CB d B6   |
+|res 6,(iy+d)  |clr 6,[.iy+d]            |FD CB d B6   |
+|res 6,a       |clr 6,.a                 |CB B7        |
+|res 6,b       |clr 6,.b                 |CB B0        |
+|res 6,c       |clr 6,.c                 |CB B1        |
+|res 6,d       |clr 6,.d                 |CB B2        |
+|res 6,e       |clr 6,.e                 |CB B3        |
+|res 6,h       |clr 6,.h                 |CB B4        |
+|res 6,l       |clr 6,.l                 |CB B5        |
++--------------+-------------------------+-------------+
+|res 7,(hl)    |clr 7,[.hl]              |CB BE        |
+|res 7,(ix+d)  |clr 7,[.ix+d]            |DD CB d BE   |
+|res 7,(iy+d)  |clr 7,[.iy+d]            |FD CB d BE   |
+|res 7,a       |clr 7,.a                 |CB BF        |
+|res 7,b       |clr 7,.b                 |CB B8        |
+|res 7,c       |clr 7,.c                 |CB B9        |
+|res 7,d       |clr 7,.d                 |CB BA        |
+|res 7,e       |clr 7,.e                 |CB BB        |
+|res 7,h       |clr 7,.h                 |CB BC        |
+|res 7,l       |clr 7,.l                 |CB BD        |
++==============+=========================+=============+
+|ret           |ret                      |C9           |
++--------------+-------------------------+-------------+
+|ret c         |ret c                    |D8           |
+|ret m         |ret m                    |F8           |
+|ret nc        |ret nc                   |D0           |
+|ret nz        |ret nz                   |C0           |
+|ret p         |ret p                    |F0           |
+|ret pe        |ret pe                   |E8           |
+|ret po        |ret po                   |E0           |
+|ret z         |ret z                    |C8           |
++--------------+-------------------------+-------------+
+|reti          |reti                     |ED 4D        |
+|retn          |retn                     |ED 45        |
++==============+=========================+=============+
+|rl (hl)       |rolc [.hl]               |CB 16        |
+|rl (ix+d)     |rolc [.ix+d]             |DD CB d 16   |
+|rl (iy+d)     |rolc [.iy+d]             |FD CB d 16   |
++--------------+-------------------------+-------------+
+|rl a          |rolc .a                  |CB 17        |
+|rl b          |rolc .b                  |CB 10        |
+|rl c          |rolc .c                  |CB 11        |
+|rl d          |rolc .d                  |CB 12        |
+|rl e          |rolc .e                  |CB 13        |
+|rl h          |rolc .h                  |CB 14        |
+|rl l          |rolc .l                  |CB 15        |
++--------------+-------------------------+-------------+
+|rla           |rolca                    |17           |
++==============+=========================+=============+
+|rlc (hl)      |rol [.hl]                |CB 06        |
+|rlc (ix+d)    |rol [.ix+d]              |DD CB d 06   |
+|rlc (iy+d)    |rol [.iy+d]              |FD CB d 06   |
++--------------+-------------------------+-------------+
+|rlc a         |rol .a                   |CB 07        |
+|rlc b         |rol .b                   |CB 00        |
+|rlc c         |rol .c                   |CB 01        |
+|rlc d         |rol .d                   |CB 02        |
+|rlc e         |rol .e                   |CB 03        |
+|rlc h         |rol .h                   |CB 04        |
+|rlc l         |rol .l                   |CB 05        |
++--------------+-------------------------+-------------+
+|rlca          |rola                     |07           |
++==============+=========================+=============+
+|rld           |rol4 [.hl]               |ED 6F        |
++==============+=========================+=============+
+|rr (hl)       |rorc [.hl]               |CB 1E        |
+|rr (ix+d)     |rorc [.ix+d]             |DD CB d 1E   |
+|rr (iy+d)     |rorc [.iy+d]             |FD CB d 1E   |
++--------------+-------------------------+-------------+
+|rr a          |rorc .a                  |CB 1F        |
+|rr b          |rorc .b                  |CB 18        |
+|rr c          |rorc .c                  |CB 19        |
+|rr d          |rorc .d                  |CB 1A        |
+|rr e          |rorc .e                  |CB 1B        |
+|rr h          |rorc .h                  |CB 1C        |
+|rr l          |rorc .l                  |CB 1D        |
++--------------+-------------------------+-------------+
+|rra           |rorca                    |1F           |
++==============+=========================+=============+
+|rrc (hl)      |ror [.hl]                |CB 0E        |
+|rrc (ix+d)    |ror [.ix+d]              |DD CB d 0E   |
+|rrc (iy+d)    |ror [.iy+d]              |FD CB d 0E   |
++--------------+-------------------------+-------------+
+|rrc a         |ror .a                   |CB 0F        |
+|rrc b         |ror .b                   |CB 08        |
+|rrc c         |ror .c                   |CB 09        |
+|rrc d         |ror .d                   |CB 0A        |
+|rrc e         |ror .e                   |CB 0B        |
+|rrc h         |ror .h                   |CB 0C        |
+|rrc l         |ror .l                   |CB 0D        |
++--------------+-------------------------+-------------+
+|rrca          |rora                     |0F           |
++==============+=========================+=============+
+|rrd           |rol4 [.hl]               |ED 67        |
++==============+=========================+=============+
+|rst 00H       |brk 00H                  |C7           |
+|rst 08H       |brk 08H                  |CF           |
+|rst 10H       |brk 10H                  |D7           |
+|rst 18H       |brk 18H                  |DF           |
+|rst 20H       |brk 20H                  |E7           |
+|rst 28H       |brk 28H                  |EF           |
+|rst 30H       |brk 30H                  |F7           |
+|rst 38H       |brk 38H                  |FF           |
++==============+=========================+=============+
+|sbc a,(hl)    |subc .a,[.hl]            |9E           |
+|sbc a,(ix+d)  |subc .a,[.ix+d]          |DD 9E d      |
+|sbc a,(iy+d)  |subc .a,[.iy+d]          |FD 9E d      |
++--------------+-------------------------+-------------+
+|sbc a,n       |subc .a,n                |DE n         |
++--------------+-------------------------+-------------+
+|sbc a,a       |subc .a,.a               |9F           |
+|sbc a,b       |subc .a,.b               |98           |
+|sbc a,c       |subc .a,.c               |99           |
+|sbc a,d       |subc .a,.d               |9A           |
+|sbc a,e       |subc .a,.e               |9B           |
+|sbc a,h       |subc .a,.h               |9C           |
+|              |subc .a,.ixh             |DD 9C        |
+|              |subc .a,.ixl             |DD 9D        |
+|              |subc .a,.iyh             |FD 9C        |
+|              |subc .a,.iyl             |FD 9D        |
+|sbc a,l       |subc .a,.l               |9D           |
++--------------+-------------------------+-------------+
+|sbc hl,bc     |subc .hl,.bc             |ED 42        |
+|sbc hl,de     |subc .hl,.de             |ED 52        |
+|sbc hl,hl     |subc .hl,.hl             |ED 62        |
+|sbc hl,sp     |subc .hl,.sp             |ED 72        |
++==============+=========================+=============+
+|scf           |setc                     |37           |
++==============+=========================+=============+
+|set 0,(hl)    |set 0,[.hl]              |CB C6        |
+|set 0,(ix+d)  |set 0,[.ix+d]            |DD CB d C6   |
+|set 0,(iy+d)  |set 0,[.iy+d]            |FD CB d C6   |
+|set 0,a       |set 0,.a                 |CB C7        |
+|set 0,b       |set 0,.b                 |CB C0        |
+|set 0,c       |set 0,.c                 |CB C1        |
+|set 0,d       |set 0,.d                 |CB C2        |
+|set 0,e       |set 0,.e                 |CB C3        |
+|set 0,h       |set 0,.h                 |CB C4        |
+|set 0,l       |set 0,.l                 |CB C5        |
++--------------+-------------------------+-------------+
+|set 1,(hl)    |set 1,[.hl]              |CB CE        |
+|set 1,(ix+d)  |set 1,[.ix+d]            |DD CB d CE   |
+|set 1,(iy+d)  |set 1,[.iy+d]            |FD CB d CE   |
+|set 1,a       |set 1,.a                 |CB CF        |
+|set 1,b       |set 1,.b                 |CB C8        |
+|set 1,c       |set 1,.c                 |CB C9        |
+|set 1,d       |set 1,.d                 |CB CA        |
+|set 1,e       |set 1,.e                 |CB CB        |
+|set 1,h       |set 1,.h                 |CB CC        |
+|set 1,l       |set 1,.l                 |CB CD        |
++--------------+-------------------------+-------------+
+|set 2,(hl)    |set 2,[.hl]              |CB D6        |
+|set 2,(ix+d)  |set 2,[.ix+d]            |DD CB d D6   |
+|set 2,(iy+d)  |set 2,[.iy+d]            |FD CB d D6   |
+|set 2,a       |set 2,.a                 |CB D7        |
+|set 2,b       |set 2,.b                 |CB D0        |
+|set 2,c       |set 2,.c                 |CB D1        |
+|set 2,d       |set 2,.d                 |CB D2        |
+|set 2,e       |set 2,.e                 |CB D3        |
+|set 2,h       |set 2,.h                 |CB D4        |
+|set 2,l       |set 2,.l                 |CB D5        |
++--------------+-------------------------+-------------+
+|set 3,(hl)    |set 3,[.hl]              |CB DE        |
+|set 3,(ix+d)  |set 3,[.ix+d]            |DD CB d DE   |
+|set 3,(iy+d)  |set 3,[.iy+d]            |FD CB d DE   |
+|set 3,a       |set 3,.a                 |CB DF        |
+|set 3,b       |set 3,.b                 |CB D8        |
+|set 3,c       |set 3,.c                 |CB D9        |
+|set 3,d       |set 3,.d                 |CB DA        |
+|set 3,e       |set 3,.e                 |CB DB        |
+|set 3,h       |set 3,.h                 |CB DC        |
+|set 3,l       |set 3,.l                 |CB DD        |
++--------------+-------------------------+-------------+
+|set 4,(hl)    |set 4,[.hl]              |CB E6        |
+|set 4,(ix+d)  |set 4,[.ix+d]            |DD CB d E6   |
+|set 4,(iy+d)  |set 4,[.iy+d]            |FD CB d E6   |
+|set 4,a       |set 4,.a                 |CB E7        |
+|set 4,b       |set 4,.b                 |CB E0        |
+|set 4,c       |set 4,.c                 |CB E1        |
+|set 4,d       |set 4,.d                 |CB E2        |
+|set 4,e       |set 4,.e                 |CB E3        |
+|set 4,h       |set 4,.h                 |CB E4        |
+|set 4,l       |set 4,.l                 |CB E5        |
++--------------+-------------------------+-------------+
+|set 5,(hl)    |set 5,[.hl]              |CB EE        |
+|set 5,(ix+d)  |set 5,[.ix+d]            |DD CB d EE   |
+|set 5,(iy+d)  |set 5,[.iy+d]            |FD CB d EE   |
+|set 5,a       |set 5,.a                 |CB EF        |
+|set 5,b       |set 5,.b                 |CB E8        |
+|set 5,c       |set 5,.c                 |CB E9        |
+|set 5,d       |set 5,.d                 |CB EA        |
+|set 5,e       |set 5,.e                 |CB EB        |
+|set 5,h       |set 5,.h                 |CB EC        |
+|set 5,l       |set 5,.l                 |CB ED        |
++--------------+-------------------------+-------------+
+|set 6,(hl)    |set 6,[.hl]              |CB F6        |
+|set 6,(ix+d)  |set 6,[.ix+d]            |DD CB d F6   |
+|set 6,(iy+d)  |set 6,[.iy+d]            |FD CB d F6   |
+|set 6,a       |set 6,.a                 |CB F7        |
+|set 6,b       |set 6,.b                 |CB F0        |
+|set 6,c       |set 6,.c                 |CB F1        |
+|set 6,d       |set 6,.d                 |CB F2        |
+|set 6,e       |set 6,.e                 |CB F3        |
+|set 6,h       |set 6,.h                 |CB F4        |
+|set 6,l       |set 6,.l                 |CB F5        |
++--------------+-------------------------+-------------+
+|set 7,(hl)    |set 7,[.hl]              |CB FE        |
+|set 7,(ix+d)  |set 7,[.ix+d]            |DD CB d FE   |
+|set 7,(iy+d)  |set 7,[.iy+d]            |FD CB d FE   |
+|set 7,a       |set 7,.a                 |CB FF        |
+|set 7,b       |set 7,.b                 |CB F8        |
+|set 7,c       |set 7,.c                 |CB F9        |
+|set 7,d       |set 7,.d                 |CB FA        |
+|set 7,e       |set 7,.e                 |CB FB        |
+|set 7,h       |set 7,.h                 |CB FC        |
+|set 7,l       |set 7,.l                 |CB FD        |
++==============+============+============+=============+
+|sla (hl)      |shl [.hl]   |shla [.hl]  |CB 26        |
+|sla (ix+d)    |shl [.ix+d] |shla [.ix+d]|DD CB d 26   |
+|sla (iy+d)    |shl [.iy+d] |shla [.iy+d]|FD CB d 26   |
++--------------+------------+------------+-------------+
+|sla a         |shl .a      |shla .a     |CB 27        |
+|sla b         |shl .b      |shla .b     |CB 20        |
+|sla c         |shl .c      |shla .c     |CB 21        |
+|sla d         |shl .d      |shla .d     |CB 22        |
+|sla e         |shl .e      |shla .e     |CB 23        |
+|sla h         |shl .h      |shla .h     |CB 24        |
+|sla l         |shl .l      |shla .l     |CB 25        |
++==============+=========================+=============+
+|sra (hl)      |shra [.hl]               |CB 2E        |
+|sra (ix+d)    |shra [ix+d]              |DD CB d 2E   |
+|sra (iy+d)    |shra [iy+d]              |FD CB d 2E   |
++--------------+-------------------------+-------------+
+|sra a         |shra .a                  |CB 2F        |
+|sra b         |shra .b                  |CB 28        |
+|sra c         |shra .c                  |CB 29        |
+|sra d         |shra .d                  |CB 2A        |
+|sra e         |shra .e                  |CB 2B        |
+|sra h         |shra .h                  |CB 2C        |
+|sra l         |shra .l                  |CB 2D        |
++==============+=========================+=============+
+|srl (hl)      |shr [.hl]                |CB 3E        |
+|srl (ix+d)    |shr [.ix+d]              |DD CB d 3E   |
+|srl (iy+d)    |shr [.iy+d]              |FD CB d 3E   |
++--------------+-------------------------+-------------+
+|srl a         |shr .a                   |CB 3F        |
+|srl b         |shr .b                   |CB 38        |
+|srl c         |shr .c                   |CB 39        |
+|srl d         |shr .d                   |CB 3A        |
+|srl e         |shr .e                   |CB 3B        |
+|srl h         |shr .h                   |CB 3C        |
+|srl l         |shr .l                   |CB 3D        |
++==============+=========================+=============+
+|sub (hl)      |sub .a,[.hl]             |96           |
+|sub (ix+d)    |sub .a,[.ix+d]           |DD 96 d      |
+|sub (iy+d)    |sub .a,[.iy+d]           |FD 96 d      |
++--------------+-------------------------+-------------+
+|sub n         |sub .a,n                 |D6 n         |
++--------------+-------------------------+-------------+
+|sub a         |sub .a,.a                |97           |
+|sub b         |sub .a,.b                |90           |
+|sub c         |sub .a,.c                |91           |
+|sub d         |sub .a,.d                |92           |
+|sub e         |sub .a,.e                |93           |
+|sub h         |sub .a,.h                |94           |
+|              |sub .a,.ixh              |DD 94        |
+|              |sub .a,.ixl              |DD 95        |
+|              |sub .a,.iyh              |FD 94        |
+|              |sub .a,.iyl              |FD 95        |
+|sub l         |sub .a,.l                |95           |
++==============+=========================+=============+
+|xor (hl)      |xor .a,[.hl]             |AE           |
+|xor (ix+d)    |xor .a,[.ix+d]           |DD AE d      |
+|xor (iy+d)    |xor .a,[.iy+d]           |FD AE d      |
++--------------+-------------------------+-------------+
+|xor n         |xor .a,n                 |EE n         |
++--------------+-------------------------+-------------+
+|xor a         |xor .a,.a                |AF           |
+|xor b         |xor .a,.b                |A8           |
+|xor c         |xor .a,.c                |A9           |
+|xor d         |xor .a,.d                |AA           |
+|xor e         |xor .a,.e                |AB           |
+|xor h         |xor .a,.h                |AC           |
+|              |xor .a,.ixh              |DD AC        |
+|              |xor .a,.ixl              |DD AD        |
+|              |xor .a,.iyh              |FD AC        |
+|              |xor .a,.iyl              |FD AD        |
+|xor l         |xor .a,.l                |AD           |
++==============+=========================+=============+

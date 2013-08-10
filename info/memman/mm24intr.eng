@@ -1,0 +1,493 @@
+File : MM24INTR.ENG (c) MST
+Datum: 19 september 1992
+Door : Ries Vriend / Ramon van der Winkel / Robbert Wethmar
+
+Unauthorised translation by Arnold Metselaar, 1 April 1996
+Updated 6 January 1998 to fix some typos and misspellings.
+----------------------------------------------------------
+
+This text contains an explanation about the functions and the use  of
+MemMan. For further information about the internals we point  you  to
+the file MM24SPEC.TXT that is also a part of the MemMan-package. That
+file is over-full with information that is valuable  to  programmers.
+For ordinary users it is not very useful.
+
+Contents
+--------
+
+The files
+
+Configuring MemMan
+Installing MemMan
+Installing MemMan automaticly
+
+Terminate and Stay Resident programs
+
+Loading TSR's
+Viewing TSR's
+Removing TSR's
+
+MemMan BASIC-statements
+
+
+MST's MemMan 2, the MSX Memory Manager
+======================================
+
+  In the beginning of 1990 MSX Computer  Magazine  gathered  together
+the best MSX programmers of the Netherlands  with  the  intention  to
+revive the MSX world. De group  of  programmers  got  acquainted  and
+ideas were exchanged. It turned out that there was a need for an  MSX
+Memory Manager, a program that administers the memory of an MSX.
+
+Two targets were aimed at with the Memory Manager:
+
+1) The searching  for  and  using  of  memory  becomes  simpler.  The
+   searching is done by MemMan while the using of the memory is  made
+   independent of  the  configuration  as  much  as  possible:  `Old'
+   expansions, one, two or more mappers, MemMan can handle it all.
+2) It becomes possible to have more than one program  loaded  at  the
+   same time without conflicts. Think of  RAM-disks,  printer-buffers
+   and other background programs.
+
+  The first target is reached with version 1 of MemMan  -  introduced
+on 9 September 1990. Now the second target is reached as well.
+  MemMan version 2 can load more  than  program  `somewhere'  in  the
+memory and have them working without the problem of interference.  On
+other computers this technique was already known. Such  programs  are
+called TSR's on these, and here as well: Terminate and Stay  Resident
+programs.
+
+  Hopefully even more programs will  start  using  MemMan  and  other
+programs will be adapted for MemMan. A direct advantage is  that  the
+program will be able to work to work with  64  kB  modules  and  even
+multiple mappers directly, something most existing programs do not do
+or do not right.
+
+  MemMan version 2 will be sent into the world as Public Domain, just
+like the first version. That means  that  everybody  may  use  MemMan
+freely. It is even permitted to sell MemMan as a part of a commercial
+package. Only in this way the program can become an extension of  the
+MSX-standard. Two packages will be released. The  first  one  is  for
+users of of MemMan. This package will contain MemMan and  some  tools
+for the TSR's. The second package contains development tools for  and
+technical documentation about programming TSR's. This last package is
+not Public Domain.
+
+The following people worked on and thought about MemMan:
+
+  Ramon van der Winkel
+  Ries Vriend
+  Robbert Wethmar
+  Paul te Bokkel
+  Markus The
+  en some others who helped MemMan to become what it  is  with  their
+constructive criticism.
+
+The files
+---------
+
+MEMMAN.COM   This file contains MemMan itself, one  can  load  it  by
+             typing MEMMAN at the DOS prompt. Internally this file is
+             the same as MEMMAN.BIN,  only  the  way  of  loading  is
+             different.
+MEMMAN.BIN   This file contains MemMan itself, one can load it by
+             typing BLOAD"MEMMAN.BIN",R  in  BASIC.  Internally  this
+             file is the same as MEMMAN.COM, only the way of  loading
+             is different.
+TL.COM       The TSR Loader. With TL TSR's can be loaded into  memory
+             from DOS. From BASIC they can be loaded with CMD TL.
+TV.COM       The TSR Viewer. With TV one can get a list of the  TSR's
+             that are present in the memory  with  their  full  names
+             (TSR ID's) on screen. From BASIC, this can be done  with
+             CMD TV. The TSR ID's are necessary, amongst  others  to
+             remove a TSR using TK.
+TK.COM       The TSR Killer. With TK TSR's can be  removed  from  the
+             memory from DOS. From BASIC, TSR's can be  removed  with
+             CMD TK. One can find the name needed  to  kill  the  TSR
+             using TV. 
+CFGMMAN.COM  The configuring program for MemMan. With CFGMMAN one can
+             configure MEMMAN.COM and MEMMAN.BIN from DOS. E.g. it is
+             possible  to  have  a  command  executed  after  loading
+             automaticly.
+
+MM24SPEC.TXT The  specifications  of  MemMan  2.4,  information   for
+             programmers. Only the  part  with  the  changes  in  the
+             latest version may be interesting to users.
+MM24INTR.TXT An introduction to MemMan 2.4, for those who use  MemMan
+             or want to use MemMan applications. This  file  contains
+             all necessary information, but nothing about how  MemMan
+             works internally. 
+
+TV.BAS       An example of the use of the  built-in  TSR-commands  in
+             BASIC. Not an essential part of MemMan.
+
+BK.COM       The file-copier that uses MemMan, not an essential  part
+             of MemMan.
+BK-MAN.TXT   The Manual of BK.COM, not an essential part of MemMan.
+
+others       Furthermore some example TSR's (CAPS.TSR and  COLOR.TSR)
+             are  delivered  with  MemMan.  They  are   intended   as
+             illustration and example and do not  form  an  essential
+             part of MemMan.
+
+Configuring MemMan
+------------------
+
+  MemMan comes in two version: a .BIN and  a.COM  file.  It  will  be
+clear  that  the  .BIN  version  is  loaded   from   BASIC   with   a
+BLOAD"MEMMAN.BIN",R instruction, while the .COM can be  started  from
+DOS by simply typing MEMMAN. Both version return to BASIC - by  a  so
+called `warm boot'- after loading. If the  .COM  version  is  started
+from DOS a command line can be given as an argument. Such  a  command
+line contains commands that are executed as if  they  were  typed.  A
+Return can be represented with  the  @-sign.  There  can  be  several
+@-signs in the command line causing several commands to  be  executed
+in sequence. 
+
+  Example:
+
+A>MEMMAN _SYSTEM@TL CAPS@
+
+After starting MemMan there will be a return to MSXDOS  and  the  TSR
+CAPS will be loaded
+
+  Using CFGMMAN it is possible to give some installation options  and
+a default command line. CFGMMAN can configure both the .COM  and  the
+.BIN version. Regarding TSR's the following installation options  can
+be changed:
+
+  - Default command line
+  This is where the default command line can be entered. This command
+line is executed after MemMan is installed. The default command  line
+is always executed  after  loading  the  .BIN  version.  The  default
+command line is not executed if MemMan is  loaded  from  DOS  with  a
+command line as an argument. After  error  messages  from  MemMan  no
+command line is executed.
+
+  - Heap size
+  Some TSR's need additional memory in page 3, which they normally do
+not have access to. The heap is a piece of memory in page 3  that  is
+accessible to TSR's. When a TSR reports that the heap size  available
+is too small this value should be increased. In most cases adding 100
+bytes to the heap will fix the problem. If  a  TSR  needs  more  heap
+space the manual should state this.
+  Each change of the heap size is only effective after loading MemMan
+again.
+
+  - Maximum number of TSR's 
+  The number of TSR's that can be loaded by MemMan is limited. If the
+TSR Loader (TL) gives the message `TSR Table Full' this value  should
+be increased.
+
+  - Recursion depth
+  When TSR's call each other or themselves too often the system  will
+hang at some point  in  time.  One  can  prevent  these  problems  by
+increasing the recursion depth. TSR's  that  call  themselves  should
+mention this - with the required recursion depth - in the manual.
+
+Installing MemMan
+-----------------
+
+  To load MemMan from MSX-DOS it is sufficient to  type  `MEMMAN'  at
+the the `>'-prompt. From BASIC  the  BLOAD"MEMMAN.BIN",R  instruction
+should be executed. After installing MemMan BASIC is started in  both
+cases and the default command line is executed , as  given  with  the
+configuration  program  CFGMMAN.  De  default  command  line  is  not
+executed if MemMan is started from DOS with with another command line
+as its argument.
+
+  Version 2 of MemMan occupies not only a piece of  the  BASIC-memory
+but also a 16 kB segment. this keeps the memory  available  in  BASIC
+and MSXDOS as big as possible. The space that is left over in the  16
+kB segment is used for TSR's if possible. The amount of BASIC  memory
+that MemMan uses can be influenced by using the CFGMMAN configuration
+program.
+
+  When MemMan is installed under DOS2, all segments - except the  one
+that MemMan needs itself - remain available for DOS2. Therefore it is
+just possible to install MemMan first and than a DOS2 RAM-disk. 
+
+  Before installing itself in the memory MemMan will check whether  a
+version of MemMan is already present. In  that  case  the  info-lines
+appear, completed with a messages that MemMan is  already  installed.
+Nothing else happens. The command line is executed normally. 
+
+Installing MemMan automaticly
+-----------------------------
+
+  Like any other program MemMan can be put in AUTOEXEC.BAS  or  .BAT.
+There is just one `problem': Installing MemMan causes a  `warm  boot'
+that puts  the  computer  in  BASIC.  This  stops  the  execution  of
+AUTOEXEC. Fortunately there is an easy  and  sufficient  solution  to
+this problem.
+
+  The trick is that CFGMMAN  makes  it  possible  to  give  MemMan  a
+command line. This command line is executed immediately after  MemMan
+is installed. The first command in the command must therefore  be  an
+MSX BASIC command.
+
+  Those who work under DOS,  will  in  general  install  MemMan  from
+AUTOEXEC.BAT by executing MEMMAN.COM. When other programs need to  be
+installed - like a series of TSR's - , The  command  line  must  look
+like:
+
+CALL SYSTEM@GOON@
+
+In this line the @-signs represent Return, and GOON is the name of  a
+batch file that will be executed after MemMan is installed.  GOON.BAT
+can than contain the following commands to be executed. When e.g. the
+intention is the start TED with a printer-buffer of 48 kB:
+
+TL PB
+PRINT /i48
+TED
+
+Of course this does require the files TL.COM, PB.TSR,  PRINT.COM  and
+TED.COM to be present on the disk.
+
+  Those who work under Basic, will often want to install  some  TSR's
+after the installation of MemMan. In this case this can  be  done  by
+having a  second  BASIC  program  executed  after  MemMan  using  the
+following command line:
+
+RUN "GOON.BAS"@
+
+While GOON.BAS can look like:
+
+10 CMD TL ("TRACER",t)
+20 CMD TL ("PB",t)
+30 NEW
+
+  To load e.g. the TSR's  TRACER.TSR  and  PB.TSR  automaticly  after
+which BASIC programs can be written. Of course it is also possible to
+load some other TSR's in line 30 and following, to start a program or
+to ask the user which TSR's should be loaded and not...
+
+  Those who are only interested in few TSR's can of course do without
+a GOON.BAT or a GOON.BAS. Loading TSR's from command line  of  MemMan
+is no problem at all.
+
+_SYSTEM@TL PB@TED@
+
+The command line above returns to DOS after loading MemMan, loads the
+printer-buffer and starts the word processor TED. This needs  TL.COM,
+but it can easily be done without:
+
+CMD TL("PB",T)@_SYSTEM@TED@
+
+Now Pb is loaded from BASIC using MemMan's CMD commands.  That  is  a
+little bit faster because TL.COM need not be loaded first.
+
+Terminate and Stay Resident programs
+------------------------------------
+
+  Normally a program will not stay in  the  memory  after  execution.
+Programs that do stay are referred  to  with  the  abbreviation  TSR:
+Terminate  and  Stay  Resident.  Examples  of   such   programs   are
+printer-buffers and RAM-disks. But one can think  other  applications
+as well, like a calculator or a calendar that can be activated with a
+single key-press.
+  In the past TSR's for MSX have been quite  rare.  The  problem  was
+that the memory the TSR uses can be used by other programs  as  well.
+There are no possibilities in a standard MSX  machine  to  reserve  a
+piece of memory for a TSR. This  problem  is  eliminated  by  MemMan.
+MemMan administers the memory and prevents memory conflicts.
+  Thanks to MemMan it is possible to have more than one  TSR  in  the
+memory at the same time, where each TSR can be up to 16 kB  in  size.
+On a standard MSX loading more than one TSR is  cumbersome  and  only
+possible if the TSR is not too big. With the introduction  of  MemMan
+the MSX gets better TSR  features  than  the  commonly  esteemed  PC.
+Moreover they are not inferior to the `Desktop Accesoires'  that  are
+used on the Macintosh and the Atari ST.
+  Two simple example TSR's are delivered with MemMan. They  don't  do
+anything useful by they demonstrate the potentials of Terminate  and
+Stay Resident programs. The examples are CAPS.TSR and COLOR.TSR.  The
+first makes the Caps indicator blink, while  the  latter  causes  the
+Basic command CMD COLOR to swap the fore- and background  colour.  In
+the future more and more TSR's will  appear  with  possibilities  MSX
+users could only dream of until recently.
+
+
+Loading TSR's
+-------------
+
+  TSR programs can be recognised by the extension  of  the  filename;
+they end on .TSR. These files contain not only program code but  also
+all the information necessary to install the TSR in the memory.
+  To load e.g. the demonstration TSR `CAPS' - that does  nothing  but
+making the Caps indicator blink - , one must type the following under
+MSX-DOS:
+
+TL CAPS
+
+Several  TSR-file-specifications  can  be  given   sequentially.   If
+MSX-DOS2 is used, the subdirectory from where the TSR must be  loaded
+can be given as well. For instance using the  following  command  one
+can load the TSR `CAPS' and all  TSR's  with  a  name  starting  with
+`DEMO'.
+
+TL CAPS DEMO*
+
+`TL' means `TSR-Load', it is the program that load TSR's  and  places
+them in the memory. Under BASIC there is also a version  of  TSR-Load
+available, see the chapter on `MemMan BASIC-statements'.
+
+  As soon TL has installed the TSR in the memory, the  program  shall
+become active.  In  the  example  above  that  means  that  the  Caps
+indicator will start to blink and that each key-press will switch the
+cassette-relay.
+  TL is a smart program. As long as there is space left in the MemMan
+segment TSR's will be placed there. Only if it is  really  necessary,
+a new segment will be  used.  E.g.  when  an  exceptionally  big  TSR
+program must be loaded. When after that a smaller one  is  loaded  TL
+will first check all existing MemMan segments  to  see  if  there  is
+space somewhere.  The  order  in  which  the  TSR  are  loaded,  will
+therefore have no influence on the amount of memory used.
+
+  Under MSX-DOS2 TL will use the environment item `TL'  to  find  out
+where the TSR's are.   Hard  disk   owners  only  need  to  put  `SET
+TL=A:\TSRS' in their AUTOEXEC.BAT and all TSR's in  the  subdirectory
+A:\TSRS are always reachable for TL.  Supplying the path is  than  no
+longer necessary.
+
+Viewing TSR's
+-------------
+
+  At all times it is possible to look which TSR's are active  in  the
+memory. That is why the  MemMan  package  contains  the  utility  TV,
+TSR-View. Using it is the simplicity itself; just type the  following
+at the DOS prompt:
+
+TV
+
+  There will appear an overview of the active  TSR's,  complete  with
+their full names. These names must be unique for each  TSR,  en  will
+almost always contain the initials of the programmer.  This  name  is
+thus different from the filename! It is this full name - the TSR ID -
+that is necessary if a TSR must be removed from the memory.  Programs
+that cooperate with TSR's directly can use this name to check whether
+a TSR is in the memory.
+
+  Behind the names of the TSR's TV mentions the segment in where they
+reside and which hooks are linked. The  last  is  only  important  to
+programmers. Knowing the segment where a TSR resides is also handsome
+in other cases. If all TSR's are removed from a segment, that segment
+will be released and can be used by other programs  again.  The  only
+exception is segment 0, that contains not only TSR's but also  a  big
+part of MemMan itself.
+
+
+Removing TSR's
+-------------
+
+  As mentioned before it also possible to remove  TSR  programs  from
+the memory. The program needed is named TK, TSR-Kill. TK  takes  care
+of removing a TSR neatly. All  other  other  TSR  remain  working  as
+normal, if the TSR was the only one in a segment, that  segment  will
+be released for use by other applications
+  For instance to make the Caps indicator behave  normally  and  stop
+the blinking, one only needs to remove the TSR involved. You type the
+following to do this:
+
+TK "MJVcapsblink"
+
+  The full name of the TSR must be given between quotation marks. One
+can remove several TSR's with  one  command  by  entering  the  names
+sequentially. E.g:
+
+TK "TSR name 1" "TSR name 2" "TSR name 3"
+
+TSR-Kill can not only be used to release memory, but also  to  remove
+crashed TSR's from the memory. A TSR that, for any reason whatsoever,
+no longer functions well can often still be removed using  TK.  After
+that the TSR can be loaded again. Restarting  can  be  beneficial  to
+both normal programs and to TSR's.
+
+
+MemMan BASIC-statements
+-----------------------
+
+  Starting from version  2.3  MemMan  contains  some  statements  and
+functions that can be used from MSX-BASIC. MemMan has  a  system  TSR
+for this, named "MST TsrUtils". This TSR has number 0 and can not  be
+removed by TSR-Kill. Below is a description of  the  available  BASIC
+instructions. The meaning of the used symbols is as follows:
+
+[]     Anything between square brackets may be left out.
+<>     Descriptions of arguments are between angular brackets.
+()",   Round brackets must be typed, as well as punctuation and 
+       commas.
+
+
+Command:     TSR-Load
+Syntax:      CMD TL("<filename>",[T],[<N$>],[<F>])
+Type:        Statement
+Example:     CMD TL("PB")
+             CMD TL("ALARM",T,,A)
+Purpose:     Load a TSR-file into the memory.
+             <filename>   =Name of the TSR-file. Under MSX-DOS2
+                          a subdirectory may be given as well.
+             T            = Show the intro-text of the TSR.
+             <N$>         = Name of a string-variable in which the
+                            TSR ID-name wil be stored.
+             <F>          = Variable in which an error code  will  be
+                            stored.  If  this  variable  is   omitted
+                            standard basic  error  messages  will  be
+                            given in  case  of  loading  errors.  The
+                            error codes are as follows:
+
+                            0 = TSR loaded successfully
+                            1 = Installation aborted by the TSR
+                            2 = Structural error in TSR-file
+                            3 = TSR-table full
+                            4 = Hook-table full
+                            5 = No free MemMan segment
+                            6 = Not enough BASIC memory free
+
+
+Command:     TSR-Kill
+Syntax:      CMD TK("<TSR ID-name>")
+Type:        Statement
+Example:     CMD TK("MJV printbuf")
+Purpose:     Remove a TSR from the memory.
+             <TSR ID-Name>. = Identification name of the  TSR  to  be
+                              removed. One can get this name by using
+                              TSR-View or Find TSR.
+
+
+Command:     TSR-View
+Syntax:      CMD TV
+Type:        Statement
+Purpose:     Show an overview with the ID-names of all active TSR's.
+
+
+Command:     Find-TSR name
+Syntax:      ATTR$ FT("<TSR ID-name>")
+Type:        Function
+Example:     IF ATTR$ FT("CAPS") THEN CMD TK("CAPS")
+Purpose:     Returns -1 if the given TSR is installed and 0 
+             otherwise. 
+             <TSR ID-Name>  =Identification name of the TSR.
+
+
+Command:     Find-TSR number
+Syntax:      ATTR$ FT(<TSR number>)
+Type:        Function
+Example:     N$ = ATTR$ FT(0)
+Purpose:     Give the ID-Name of the TSR with the  given  number.  If
+             the number is greater than the number of  active  TSR's,
+             an empty string with length 0 is returned. 
+
+
+Command:     Help
+Syntax:      CMD HELP
+Type:        Statement
+Example:     CMD HELP
+Purpose:     Give information on screen about all the  present  TSR's
+             that support CMD HELP. This includes  in  any  case  the
+             always present TSR `MST TsrUtils' and e.g. the  Tracer.
+             (For  programmers:  See  `hints   and   directions   for
+             programmers' in MM24SPEC.ENG.)
+
+** End **
+

@@ -1,0 +1,379 @@
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                how to use the SCC Blaffer NT replay routine ³
+               ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+Updates since version 1.00:
+
+v1.30 - Added the DOPSG override system (for sound effects while the music is
+        playing)
+        Added the STOPPSG command to stop the PSG SE (for infinite loops and
+        stuff)
+
+v1.25 - Added MPV (Maximum PSG Volume) options
+
+v1.20 - Added fading routine ( _bntfade(<x>) )
+
+v1.05 - No illegal function calls anymore (e.g. _bntstop while the music is
+        stopped)
+
+v1.00 - First build
+
+
+
+The SCC-Blaffer NT replay routine (BNTPLAY.BIN) is made to play the music
+made with the SCC-Blaffer NT editor. As it is a call-based replayer, ML users
+can better rip the replay routine from the source (delivered with the
+package)... BASIC Programmers should have no troubles whatsoever using the
+replay routine...
+
+See it like this:
+
+For BASIC users it's easier to use BNTPLAY.BIN than killing a bunny with an
+axe, and for ML users this file is harder to use than shitting on a crodile...
+(except if you're crocodile dundee that is...)
+
+(see, we didn't lost our dumb humor, Blaffer NT just was a 'serious' project)
+
+
+Info for BASIC users:
+
+Starting the replayer...
+
+The replayer has to be loaded into memory (ofcourse). After that the call's
+have to be initialised... It's easy to do that... BASIC Users only have to
+type BLOAD "BNTPLAY.BIN",R... After that the replayer will be loaded into
+memory, and the call's will be initialised... To let everything go how it
+should you must protect a little bit memory located at $da00... That memory
+is used by the loading routines, and it will contain some information about
+the song while it plays. That information can be read by the BASIC user,
+therefore it will be explained at the end of this document. You can protect
+the memory by typing CLEAR 200,&hDA00... In this way we avoid BASIC using
+these addresses...
+
+
+Getting things to work...
+
+As the SCC works different then the MSX-AUDIO, MSX-MUSIC and the MoonSound,
+the replayer has to initialise the SCC... This is simply done by call InitSCC.
+After that you'll see a message... That message will show you if an SCC is
+detected, and also in which slot it is detected. If no SCC is detected, the
+message will show you that no SCC has been detected...
+Well, after that you have to load a song and an instrument kit to play it...
+This can be easely done by call SBKLoad ("BLAF_NT.SBK") and
+call SBMLoad ("SDCHURCH.SBM") (in this example we use one of SCC Blaffer NT
+delivered example songs)... When you've done that, you're ready to play...
+But first we'll show you how you're screen can look like...
+
+bload "BNTPLAY.BIN",r
+files                    (I don't know anyone who has a different prompt!)
+_InitSCC
+SCC Initialise successful (slot 2)...
+files
+_SBKLoad ("BLAF_NT.SBK")
+files
+_SBMLoad ("SDCHURCH.SBM")
+files
+
+
+Now you're ready to play the song... By typing _BNTPlay you'll get the
+desired result... After that the song plays! Well... This is how the routine
+works...
+
+Neat features:
+As SCC-Blaffer NT was designed to be a game-engine-tracker, we build in a
+feature to accomplish the perfect game-engine-tracker. By calling doPSG(<X>)
+you can play a PSG sound manually. The replayer stops playing the PSG sound,
+and starts playing your PSG sound. When the PSG sound is done, the replayer
+takes over again. This proves to be very useful for sound effects!! When
+you play a PSG sound that is trapped in an infinite loop, just call stopPSG
+and the replayer will take over again playing it's PSG sounds (usually drums).
+Another neat function is the BNTFade(<X>) routine. Call this when a music is
+playing to fade out the music.
+
+
+Other things:
+
+When a disk-error occurs a message + a little help will be shown. The message
+will contain what error occured. The help show's how to use the disk-routines.
+(For example if you type _SBMLoad ("123456789.123") the routine will show that
+the specified name is too long, as a filename may not be longer than 8
+characters (excluding the extension which may be 3 characters ofcourse)). The
+following disk-errors can occur:
+
+Disk offline                   The drive does not contain a diskette.
+
+Disk I/O Error                 The routine cannot read from the disk, because
+                               it is broken or something like that...
+
+File not found                 The disk does not contain the file you tried to
+                               load...
+
+File not loaded                The file on the disk is not complete...
+
+This ain't no song             The header of the file does not contain the
+                               SCC Blaffer NT Song header...
+
+This ain't no instrument kit   The header of the file does not contain the
+                               SCC Blaffer NT Instrument kit header...
+
+Unknown                        The disk-error that occurred is not known to
+                               SCC Blaffer Nt...
+
+
+Now you might say ok... This is pretty cool, but imagine I have a program, and
+I do not want to have those irritating messages because it looks strange...
+Well... We thought of that too... The command _BNTSilent disables all
+messages, so you can 'silently' use it in your program... And now you might
+say hey! But when my program loads a song or intstrument kit, I would like
+to know whether it was loaded succesfully, cause else if I type _BNTPLay,
+you'll hear nothing but crap, and the replayer probably will hang! Well, we
+also thought of that! (ain't we cool??) When you try to load a song, you
+can test whether it was loaded successfully... When the file you tried to
+load is not loaded at all, the replay routine gives an error-code 100 back
+to BASIC. When it was successful, it will contain 0. So test it like this:
+
+...
+120 _BNTSilent
+130 _SBMLoad ("TEST1.123")
+140 IF ERR = 100 THEN PRINT "Song not loaded successfully!":END
+150 _BNTPlay
+...
+
+Ok... You now say, that's cool, but... I also would like to know whether the
+SCC was detected successful, and if it's possible in which slot it was
+detected... Also we thought of that. When no SCC was found an error-code 100
+is returned, else an error-code 1 or 2 (depanding in which slot it was
+detected will be returned...) You can test this the same way as shown above...
+
+Well.. I think now you'll know everything what you need to know, so here's
+a list of all available commands:
+
+_SBKLoad ("[D:]FileName.Ext")
+
+Loads an instrument kit into memory
+
+[] means that it is optional...`"
+D        - Drive name     (max. 1 character)`"
+FileName - File name      (max. 8 characters)`"
+Ext      - File extension (max. 3 characters)``"
+
+When no drive is specified, the current drive will be used...`"
+
+
+_SBMLoad ("[D:]FileName.Ext")
+
+Loads a song into memory
+
+(see _SBKLoad for usage)
+
+
+_BNTPlay
+
+Starts playing the current loaded song.
+
+This option is only available when the music is *NOT* playing!
+
+
+_BNTStop
+
+Stops playing the current loaded song.
+
+This option is only available when the music is playing!
+
+
+_BNTHalt
+
+Pauses the playing song...
+
+This option is only available when the music is playing!
+
+
+_BNTCont
+
+Continues playing the paused song.
+
+This option is only available when the music is paused!
+
+
+_BNTFade (<X>)
+
+Fade out playing music. <X> is the speed you want the music to be fading out.
+<X> can be a number from 0 through 255, where 255 is the slowest.
+
+This option is only available when the music is playing!
+
+
+_doPSG (<X>)
+Manually override PSG system (for sound effects). <X> is the PSG Instrument
+to be played. <X> can be a number from 1 through 44.
+
+This option is only available when the music is playing!
+
+
+_stopPSG
+
+Stop the manual PSG override system and continue the original PSG sounds
+again.
+
+This option is only available when the music is playing!
+
+
+_PlayVer
+
+Displays the replayer version, and some info...
+
+
+_BNTSilent
+
+Disables all messages.
+
+
+_BNTLoud
+
+Enables all messages.
+
+
+_InitSCC
+Initialises SCC.
+
+This option is only available when the music is *NOT* playing!
+
+
+_FORCE (<slot>)
+
+Where <slot> is the slot number you want the music to go through... <slot>
+can be a number from 1 through 2...
+
+This option is only available when the music is *NOT* playing!
+
+
+_SNGBank (<bank>)
+
+Where <bank> is the memory bank you want your song to be stored... Default: 3.
+This option is only available when the music is *NOT* playing!
+
+_KITBank (<bank>)
+
+Where <bank> is the memory bank you want your instrument kit to be stored...
+Default: 4.
+
+This option is only available when the music is *NOT* playing!
+
+
+Information for ML users:
+
+ML Users probably found most information they need in the text above... There
+are a few more things that are interesting for ML users though... As the
+source code is delivered with the package, the ML user can compile the source
+again. What is interesting for BASIC users is that in the source are a few
+equals which can be altered... These are:
+
+RomBank    : This equate contains the 'default' bank the replayer stores
+             itself. Normally this is 2.
+
+             (This can't be lower (for BASIC users) because bank 0 is used
+              by the system, and bank 1 is used by the BASIC program (and if
+              it's a large program it will also use a bit of bank 0)...
+
+SongBank   : This equate contains the 'default' bank the song will be stored
+             in. Normally this is 3.
+
+KitBank    : This equate contains the 'default' bank the intrument kit will be
+             stored in. Normally this is 4.
+
+SilentComp : Thos equate determines wheter the replayer should be compiled
+             with the _BNTSilent and the _BNTLoud... If this equate equals 0,
+             the replayer will be compiled with these options build in. Else
+             the replayer will not compile these options, and the replayer
+             will always be 'silent'...
+
+As said before, ML users can better rip the replayer from the source. But
+rembember to use the loading routine that is in the source, 'cause you cannot
+load it as a contigous block (read SBM_FRMT.TXT for that). The instrument KIT
+can be loaded as a contigous block, but don't forget to skip the header! Also
+keep address $da00 till about $da80 free, because the replayer (and the
+loading routines) store some data there... For the rest it's not a big
+problem...
+
+
+The storage of songdata:
+
+MusicAddress            .equ $8000                 ; Address of the music
+SongName                .equ MusicAddress          ; Name of the song
+InsKitName              .equ SongName+67           ; Name of the ins. kit
+LastPos                 .equ InsKitName+11         ; Last Position
+LoopPos                 .equ LastPos+1             ; byte 1: Loop position?
+                                                   ; byte 2: Position to loop
+Patterns                .equ LoopPos+2             ; Patterns to play
+InitialTempo            .equ Patterns+256          ; Initial tempo
+StartVolumes            .equ InitialTempo+1        ; Initial volumes
+StartInstruments        .equ StartVolumes+5        ; Initial instruments
+DetuneSettings          .equ StartInstruments+4    ; Detune Settings
+VolumeSlideSettings     .equ DetuneSettings+5      ; Auto vol. slide settings
+PatternData             .equ MusicAddress+448      ; Pattern data
+
+
+Addresses to read:
+
+Name            Address     Size                Description
+MusicPlay       $da26        1 Byte             Is music playing? <>0 if so.
+MusicPeak       $da27        1 Byte             Is a new row started??
+SccSlot         $da28        1 Byte             Current SCC Slot. (slot * 16)
+SngBnkPlay      $da29        1 Byte             Song bank
+InsBnkPlay      $da2a        1 Byte             Instrument bank
+SngPos          $da2b        1 Byte             Current song position
+SngRow          $da2c        1 Byte             Current song row
+SngTmp          $da2d        1 Byte             Current song tempo
+SngFreqs        $da2e       10 Bytes            Current frequencies
+SngVolumes      $da38        5 Bytes            Currnt volumes
+
+
+Current frequencies is build as follows:
+5 * 1 word of frequency data. The first one contains the frequency that is
+currently playing on channel 1, the second of channel 2, etc.
+
+Current volumes is build as follows:
+The first byte contains the volume of channel 1, the second one of channel 2,
+etc, etc.
+
+
+Well, that's it!... Take a look at BNTPLAY.BAS for a little example program.
+
+And remember... Bugs, suggestions and/or other ideas: twz@iname.com ...
+
+
+mzl. d-fader.TeZ   (that TeZ is our new compression method.. it really says
+                   TeddyWareZ.. Pretty good algorithm eh?? The only problem is
+                   we can't decompress it.. Maybe it's because we just delete
+                   a couple of bytes in the file..)
+
+Blue Crystal: I still can't figure out why I joined these strange fellows..
+              I mean, DJ. Chaos thinks d-fader is a cow who gives blue milk,
+              d-fader thinks DJ. Chaos comes from Mars, and HeXx.. Well eh...
+              He's ok (I think)...
+
+Tring
+d-fader     : Mooh, the doorbell!
+Chaos       : ZipZapZopZipZap...
+d-fader     : Yeah, yeah, I'll open the door, mooh...
+Triiiiiiing
+d-fader     : Yeah, yeah... relax!
+krrrg..
+d-fader     : Mooh! Hey HeXx!
+HeXx        : hey! Guess what I have gone through...
+d-fader     : You finally know smurfs don't exist...
+HeXx        : No, in contrary!
+HeXx        : I saw them! Housing smurfs!!
+d-fader     : Housing Smurfs?? Mooh..
+Dj. Chaos   : ZapZipZipZapZop..
+d-fader     : Shut up!
+HeXx        : Anyways, I asked 'Do you guys house all day long??'
+Smurfs      : Yeah, Housuh, Housuh, Housuh!
+HeXx        : Aren't you guys gettin' dead beat???
+Smurfs      : Ofcourse not, toad-stools enough!!!
+
+Blue Crystal: <sigh!>
+
+
+Blue Crystal is (just as Johnny Bravo) as you can see the victim of the zone
+where normal things don't happen... Very often...

@@ -1,0 +1,158 @@
+			Fastcopy version 3.0
+			(c) 1991 by XelaSoft
+		 Released for public domain: 4-8-1991
+	     First distributed on Clubguide Picture Disk 10
+
+-----------------------------------------------------------------------------
+
+This text is updated on 5-7-1992, so make sure you read it !!!
+
+-----------------------------------------------------------------------------
+
+When you like fastcopy you can send me a picture-postcard from the place 
+where YOU live.
+
+My (new) adres is:
+             Dhr. A. Wulms
+             Pelikaanhof 127 c
+             2312 EG Leiden   (Netherlands)
+
+-----------------------------------------------------------------------------
+Important note:
+There is a litle bug in fastc30i.bas (version 1.0). So make sure you use
+version 1.1 or moderner to install the right driver !!!!!
+
+-----------------------------------------------------------------------------
+With thanks to:
+- C. Timmer, P. Knubben and S. Danes for testing fastcopy 1.x on their
+  2-drive systems so I could develope a good working 2-drive support.
+- J. Smets, B. Wulms and S. Danes for their positive remarks to make fastcopy
+  and/or this text look better.
+- J. Smets for lending me his VG 8235 with double sided drive and NMS 8245 rom
+  to improve the bios, so it also works on the VG 8230, VG 8235 and NMS 8245.
+- S. Danes for his documentation about the WD 2793 drive controller.
+- Alcom electronics bv, Capelle a.d. IJssel for the documentation about the
+  TC 8566 AF drive controller.
+
+-----------------------------------------------------------------------------
+
+Fastcopy is a sector copier which uses your drive controller by direct
+acces. Because off this it will be faster than any other sector copier for
+the MSX. Not all the MSX-models use the same drive controller. To solve this
+problem fastcopy 3.0 can be installed with different drivers. At this moment
+there are drivers for the WD 2793, the WD 1793 and the TC 8566 AF drive
+controller.
+
+The WD 2793 drive controller has been used in:
+           Philips' VG 8235 new version, NMS 8245, 8250, 8255 and 8280
+           Sony's HB F550, F700 and F900.
+The WD 1793 drive controller has been used in:
+           Philips' VG 8230 and VG 8235 old version.
+The TC 8566 AF drive controller has been used in:
+           Panasonic's FS-A1ST and FS-A1GT (both MSX turbo-r models)
+
+The Philips PC-MSX emulation card also uses a different system. I'm still
+developing a driver for it, so it will be released some time in future.
+
+-----------------------------------------------------------------------------
+
+You can install the right bios running the basic program:
+                          FASTC30I.BAS
+
+If you want to start up Fastcopy version 3.0 you can type in:
+BLOAD"MEMMAN.BIN",R or RUN "FASTC30.BAS"
+
+-----------------------------------------------------------------------------
+
+When you distribute the fastcopy program e.g. for your friends, make sure that
+all the files belonging to fastcopy are included.
+These are:
+
+MEMMAN.BIN		; Memory manager installed to run fastc30.bas.
+FASTC30.BAS		; Basic loader for fastcopy.
+FASTC30.BIN		; The routines to copy your disk.
+FASTC30.L00		; The library for the WD 2793 controller.
+FASTC30.L01		; The library for the WD 1793 controller.
+FASTC30.L03		; The library for the TC 8566 AF controller.
+FASTC30.Lxx		; The library's for other controllers,
+			; they don't exist at this moment but will be released
+			; in future, so watch out for them.
+FASTC30I.BAS		; Installation program. (Use version 1.1 or newer !!)
+FASTC30C.BAS		; Color installation program
+FASTC30I.TXT		; Text with a list from supported computers,
+			; it will be updated every time a new bios is released.
+FASTC30.TXT		; This text.
+FASTC30U.BAS		; Program to display this text on your screen
+			; and printer.
+
+-----------------------------------------------------------------------------
+
+If you have a computer not mentioned in fastc30i.txt, then please
+let me know wether fastcopy works or not and, if it works, which bios
+your computer uses.
+
+This program may be freely distributed by anyone in its unmodified form only
+and must be complete with the above listed files and including this unmodified
+textfile.
+
+-----------------------------------------------------------------------------
+MSX is a trademark of ASCII Corportion.
+WD 1793 and WD 2793 are trademarks of Western Digital Corporation.
+TC 8566 AF is a trademark of Toshiba.
+Memman is a public domain utility from the MSX Software Team.
+_____________________________________________________________________________
+If you have never seen a (working) version off fastcopy before, then press
+space to read the rest, else press any other key to stop the display program.
+_____________________________________________________________________________
+
+How the program works:
+First it checks whether you have 1 or 2 drives. It will report the result off
+this check on the screen. If it gives a wrong number you should try to install
+it with another bios, and if it still goes wrong then send me a letter.
+When you started up your computer with CTRL but you have 2 drives then fastcopy
+will find and use that second drive !!!!!
+To controll your main memory it uses MST's memman.
+To controll your video memory it uses my own routines. It checks how many video
+memory you have, and if you have extended video ram it will also be used.
+
+There are several options you can fill in yourself:
+When you have 2 drives:
+  source drive:		Drive to read from.
+  destination drive:	Drive to write to.
+  number of copies:	When you fill in a number higher than 1, fastcopy will
+			read from the source drive once and than write to as
+			many copies as you filled in.
+	exchange:	This will only be displayed if you make more than one
+			copy.
+			 When you say yes fastcopy will write the first copy
+			to the destination drive, the second to the source,
+			the third to the destination, etc.
+			 When you say no all copies will go to the destination
+			drive.
+			Fastcopy shall always read from the source drive.
+			It will display a message if you must change floppy.
+When you have 1 drive, source drive and destination drive will always be the
+A-drive. When you set number of copies higher than 1, exchange won't be
+displayed on the screen.
+
+Options not dependent from the number of drives:
+first track:	Track number where fastcopy must start, can be up to 99,
+		however most drives won't accept more than 81 and for some
+		other drives 80 is the maximum, so please be carefull that
+		you don't destroy your drive by setting it to high.
+last track:	Track number where fastcopy must stop, see also first track.
+
+auto format:	When you say on, fastcopy will format the destination floppy
+		before writing sectors on it, so you can copy on unformatted
+		floppies. When you say off, the sectors will be written
+		immediatly, so this will be faster.
+
+double sided/single sided: Double sided will copy both sides of the floppy,
+		single sided only one. Fastcopy can't see wether you have a
+		single or double sided disk drive, so when you have a single
+		sided drive make sure that you fill in single sided here.
+
+
+You can walk between the different options with cursor up or down and change
+the values with cursor left or right.
+

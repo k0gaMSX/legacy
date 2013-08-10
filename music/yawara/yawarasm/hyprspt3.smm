@@ -1,0 +1,194 @@
+;
+;                      HyprSpt3.SMM
+;
+;        "Hyper Sports 3" Source Game Music Module
+;
+; Version Amalthea-1-1 (1st Ver., 1st Release, 1st Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =HyprSpt3.SMM
+;   L80 HyprSpt3,HyprSpt3.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Hyper Sports 3" cartridge mapping:
+;
+;   4000 5FFF
+;      |M|?|
+;   0000   3FFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '         Hyper Sports 3         '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   0C000H
+GMPNam:db   'Yawara  C00'
+OpenMN:db   000H
+StrtSE:db   000H
+ChATDD:dw   0E011H
+ChBTDD:dw   0E01FH
+ChCTDD:dw   0E02DH
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'HypSpt30Sc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'HypSpt31Sc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00010010B
+GCtRSt:db   'Entry  '
+
+SetupR:ret  nz
+       ld   hl,04000H
+       xor  a
+       ld   (hl),a
+       inc  hl
+       ld   (hl),a
+       ld   hl,0E000H
+       ld   de,0E001H
+       ld   bc,000FFH
+       ld   (hl),000H
+       ldir
+       ld   a,0B8H
+       call 04BA2H
+SilnRt:ld   a,0B5H
+StMsRt:jp   04AEBH
+
+PlayRt:jp   04BABH
+
+GmBlNm:db   'HyprSpt3ROM'
+GmBlSz:dw   04000H
+LoadAd:dw   04000H
+       dw   0FFFFH
+MusicT:db   0B5H,'       Silence...      '
+       db   08CH,'           8C?         '
+       db   08EH,'           8E*         '
+       db   0A3H,'           A3?         '
+       db   0A6H,'           A6*         '
+       db   0A9H,'           A9?         '
+       db   0ACH,'           AC?         '
+       db   0AFH,'           AF?         '
+       db   0B2H,'           B2?         '
+       db   0FFH,0FFH
+EffctT:db   001H,'           01*         '
+       db   002H,'           02          '
+       db   003H,'           03          '
+       db   004H,'           04*         '
+       db   005H,'           05          '
+       db   006H,'           06          '
+       db   007H,'           07*         '
+       db   008H,'           08          '
+       db   009H,'           09          '
+       db   00AH,'           0A          '
+       db   00BH,'           0B          '
+       db   00CH,'           0C          '
+       db   00DH,'           0D          '
+       db   00EH,'           0E          '
+       db   00FH,'           0F          '
+       db   010H,'           10*         '
+       db   011H,'           11          '
+       db   012H,'           12          '
+       db   013H,'           13          '
+       db   014H,'           14          '
+       db   015H,'           15          '
+       db   016H,'           16*         '
+       db   017H,'           17          '
+       db   018H,'           18          '
+       db   019H,'           19          '
+       db   01AH,'           1A          '
+       db   01BH,'           1B          '
+       db   01CH,'           1C          '
+       db   01DH,'           1D          '
+       db   01EH,'           1E*         '
+       db   01FH,'           1F          '
+       db   040H,'           40          '
+       db   041H,'           41          '
+       db   042H,'           42          '
+       db   043H,'           43*         '
+       db   044H,'           44          '
+       db   045H,'           45          '
+       db   046H,'           46          '
+       db   047H,'           47          '
+       db   048H,'           48          '
+       db   049H,'           49*         '
+       db   04AH,'           4A*         '
+       db   04BH,'           4B*         '
+       db   04CH,'           4C          '
+       db   04DH,'           4D          '
+       db   04EH,'           4E          '
+       db   04FH,'           4F          '
+       db   050H,'           50          '
+       db   051H,'           51          '
+       db   052H,'           52          '
+       db   053H,'           53          '
+       db   054H,'           54          '
+       db   055H,'           55          '
+       db   056H,'           56          '
+       db   057H,'           57          '
+       db   058H,'           58*         '
+       db   059H,'           59          '
+       db   05AH,'           5A          '
+       db   05BH,'           5B          '
+       db   05CH,'           5C          '
+       db   05DH,'           5D          '
+       db   05EH,'           5E          '
+       db   05FH,'           5F          '
+       db   060H,'           60*         '
+       db   061H,'           61          '
+       db   062H,'           62          '
+       db   063H,'           63          '
+       db   064H,'           64          '
+       db   065H,'           65          '
+       db   066H,'           66          '
+       db   067H,'           67          '
+       db   068H,'           68          '
+       db   069H,'           69          '
+       db   06AH,'           6A          '
+       db   06BH,'           6B          '
+       db   06CH,'           6C          '
+       db   06DH,'           6D          '
+       db   06EH,'           6E          '
+       db   06FH,'           6F          '
+       db   0FFH,0FFH
+
+       end

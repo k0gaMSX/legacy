@@ -1,0 +1,280 @@
+ZX65: Simulating a Micro					Page 1
+
+
+	Having logged many hours of software development work on my Z80-
+based system, I recently decided that I was up to a particular challenge:
+using my system as a development tool for a totally different microprocessor;
+specifically, the 6502.  This decision, I must confess, was not altogether
+based on a burning lust for knowledge, but rather on a more practical re-
+quirement:  I had become involved in the development of a 6502-based device,
+and had no ready access to a 6502 development system.  I decided that a sim-
+ple cross-assembler wasn't good enough, and set out to write a 6502-to-Z80
+object code translator/simulator/interpreter.
+
+	The program described here, which I have dubbed ZX65, is the result
+of my efforts to generate a software package to perform this task.  It is 
+useful not only for the intended purpose of software development, but also
+for the rewarding experience of exploring a whole new field of good soft-
+ware written for a processor other than one's own.
+
+	ZX65 operates as an interpretive simulator; that is, a simulated
+6502 CPU is maintained in system memory, and each encountered 6502 instru-
+ction is decoded and processed interpreter-fashion to properly act upon the
+simulated CPU registers.  The entire package resides in just over 4K Bytes
+of high system memory, leaving the remaining portion, including the all-im-
+portant (for 6502) base page, free for program and data storage.
+
+
+
+ZX65: Simulating a Micro					Page 2
+
+
+Note that CP/M* serves only as a loader and is not used thereafter.  In fact,
+while the program loads normally into CP/M's Transient Program Area, it imm-
+ediately relocates itself into high memory, overlaying both the CCP and the
+BDOS portions of CP/M.  The user I/O linkages (CBIOS), however, remain intact
+and are used by the package to perform disk and console functions.  The func-
+tions which must be provided by the system are a subset of those required by
+CP/M and should thus be readily available.  These functions are all accessed
+via a jump table within the interpreter and thus can be readily changed to
+accomodate different system requirements (see table 1).  Parameters must be
+passed to the drivers in register "C" (register pair "BC" for item six) and
+data, if any, is returned in the accumulator.
+
+	ZX65 is referred to as a package since it includes three distinct
+function groups.  The first and largest is the interpreter/simulator itself.
+The second group is an elementary monitor providing the functions of memory
+examine and modify.  The third group consists of a self contained, elementary
+disk operating system (DOS). (Note: ZX65 files are not CP/M compatible.) The
+normal configuration assumes a two-drive system, with the system diskette on
+drive A, and all internal disk access routed to drive B.
+
+
+
+ZX65: Simulating a Micro					Page 3
+
+
+(Modification for a single drive system could easily be done, requiring the
+user to switch diskettes after the package is loaded.)  The package is writ-
+ten in standard Zilog/Mostek source code and is quite heavily commented.  Much
+use is made of the Z80's special instructions and index registers, and oper-
+ation on an 8080 is definitely not possible without extensive modification.
+Although the commented listing should guide you through the program's opera-
+tion without too much trouble, a brief description of the interpreter portion
+is in order. A study of the small but powerful instruction set of the 6502
+will reveal certain patterns in the op codes, as also occurs with most other
+processors. The eight "BRANCH ON CONDITION" codes, for example, all have zero
+as a low-order nybble, while the high-order portion is always an odd value.
+Another pattern, not so obvious, is that every instruction having an odd-
+valued op code uses multiple addressing modes.  These and other such patterns
+are exploited by the program.  Even so, much of the code is devoted solely to
+decoding the op code and transferring control to the proper instruction proc-
+essor.  The code beginning at "STEP" (line 241) performs the initial decoding,
+and fully decodes certain instructions such as "RTI", "JMP", and a few others.
+In most cases, decoding proceeds to the point where the instruction is known
+to be part of a group, such as the branch group described above.  In these
+cases, look-up tables are used, but not always in the same way.
+
+
+
+ZX65: Simulating a Micro					Page 4
+
+
+The branch group and the flag set/reset group, for example, derive mask
+patterns from the tables which are used for testing, setting, or resetting
+the condition flags.  In the case of multiple addressing mode instructions,
+however, the tables serve an entirely different purpose.  The table contents
+are, in these instances, decoded into addresses for indirect jumps; first to
+the addressing mode processors, and then to the actual instruction processors.
+Each processor performs its instruction as required.  The "ADC" instruction,
+as an example, causes a byte of data to be fetched from memory or from the
+object code, depending on the addressing mode.  After setting the Z80 carry
+flag to match the simulated 6502 carry flag, the data byte is added to the
+value currently in the simulated accumulator, and the result is stored there.
+The simulated carry flag is then updated to again match the Z80 carry, and the
+simulated sign, overflow, and zero flags are set or reset according to the re-
+sults in the accumulator.  (In this case, the overflow flag is set or reset
+according to a logical "OR" of bits six and seven.)  Considerable care has
+been given to treatment of the flags, since Z80 flags and their 6502 name-
+sakes do not always have the same meaning.  (Case in point:  the 6502 carry
+flag assumes a logical "NOT" borrow meaning during subtract and compare op-
+erations, while the Z80 and most other common processors invert the carry  
+flag internally during these operations so that it represents a "TRUE" bor-
+row. Other flag differences, for the most part, are more subtle.)
+
+
+
+ZX65: Simulating a Micro					Page 5
+
+
+Finally each individual processor is responsible for exiting with codes
+for the mnemonic, the addressing mode, and the number of bytes occupied by
+the instruction available for use by the "DISPLAY" routine (line 173) to in-
+dex into yet another set of tables and retrieve the ASCII messages for mnem-
+onic and addressing modes.  Upon exiting the instruction processors, the val-
+ue stored in "NEXT PROGRAM COUNTER" is updated, and control is passed back to
+the COMMAND section where the operating mode in effect determines whether to
+display the updated CPU contents, and whether or not to continue execution
+with the next instruction.  
+
+
+
+	Several distinct operating modes are available, defined briefly as
+follows:
+
+SINGLE-STEP MODE:  One instruction is decoded and executed. The console
+	then displays the address of the instruction just executed (Current
+	Program Counter), the decoded instruction (Mnemonic and Operand),  
+	the state of all CPU registers, and the address of the next instr-
+	uction to be executed (Next Program Counter).  Control is then
+	returned to the user.
+
+MULTI-STEP TRACE MODE:  The user specifies up to 255 instructions to be
+	executed with the results displayed as above following each step.
+	This occurs at the rate of approximately two instructions per sec-
+	ond.  Control is returned to the user after the required number
+	of steps have been executed and displayed.
+
+RUN-TO-BREAKPOINT MODE:  Instructions are executed without display up to
+	and including the user-specified breakpoint.  CPU registers are
+	then displayed as above, and control is returned to the user.
+
+
+
+ZX65: Simulating a Micro					Page 7
+
+
+FREE-RUN MODE:  Instructions are executed with no display and no break-
+	points.  The console keyboard, however, is monitored, and CPU con-
+	tents are displayed as above and control is returned to the user
+	at any point upon console input.
+
+	The user may examine any or all CPU registers, including the Pro-
+gram Counter, at any time that he has control, without otherwise disturbing
+any operation on progress.
+
+	The 6502 "BRK" instruction (software interrupt) is handled through
+a vector location, just as in a normal system.  Optionally, however, the BRK
+instruction may be used (and is initialized) to return control to the user
+in the same manner as the breakpoint mode described above.  The BRK instru-
+ction and breakpoint mode operate independently, and both may be used in the
+same program.  Additionally, up to five different "user" subroutines may be
+called for transfer of control to Z80 routines (such as console I/O).  These
+are invoked by executing either a "JMP" or "JSR" instruction to addresses
+0000, 0001, 0002, 0003, and 0004 (HEX).  Control is passed via a jump table
+located within the interpreter, which the user may load with Z80 "JP" ins-
+tructions to the desired subroutines.  The subroutines must be terminated
+in the normal Z80 fashion by one of the "RET" instructions.  Note that the
+first two entries in the table (JMP or JSR 0000, 0001 HEX) are initialized
+as console input and output via the 6502 accumulator.  Three parameters may
+be passed to and from all user subroutines, as outlined in table 2.  Table
+3 lists the locations of the BRK vector and the user subroutine jump table.
+
+
+
+ZX65: Simulating a Micro					Page 8
+
+
+	Although the interpreter is quite versatile and all 6502 instruc-
+tions are handled properly, there are some limitations to its use.  Perhaps
+the most important of these is that, even in the "free-run" mode, execution
+is quite slow compared to an actual 6502 running at normal clock speeds.  No
+attempt has been made to correlate execution times with normal 6502 clock
+periods.  (This may, in fact, be impossible due to the way in which the sys-
+tem handles multiple addressing modes.)  Therefore, programs incorporating 
+software timing loops will not execute properly.  Also, since the package was
+intended for software development, hardware interrupts are not supported, and
+only a limited amount of hardware interfacing can be performed through the
+"user" subroutine calls.
+
+	Two program listings are included here.  The first, called "ZXLD",
+is a short program whose only function is to boot the main program from the
+CP/M Transient Program Area to high memory.  The second listing is the in-
+terpreter itself, assembled to reside from 6F00 to 7DFF (HEX) in a 32K sys-
+tem.  Note that this leaves 512 bytes, normally containing CBIOS, unaffected.
+
+
+
+ZX65: Simulating a Micro					Page 9
+
+
+The program is not relecatable, so that in order to run in a different mem-
+ory configuration, it will be necessary to reassemble the source with a new
+value in the "SIZE EQU XX" statement.  All other addresses are derived from 
+this value.  If the object code is to be manually loaded for the 32K system
+then "ZXLD" must be loaded first, starting at 0100 (HEX).  Then start loading
+ZX65 at 0110 (HEX), continuing until the end.  Finally, use the CP/M "SAVE"
+command (SAVE 15 ZX65.COM) to write the object code to disk.  The package can
+now be invoked by answering "ZX65" to the CP/M prompt.  If you are reassem-
+bling the package, then you should also reassemble the ZXLD routine (modified
+for your system) so that you have a .HEX file for each module.  Then load
+the package using DDT as follows:
+
+	DDT ZXLD.HEX
+	IZX65.HEX
+	Rdisp
+
+where "disp" is the load offset value required to load the object code from
+the .HEX file at a different address than that specified.  (DDT will calcu-
+late "disp" for you if you type "H110,ssss", where "ssss" is the actual
+starting address of your program.  DDT will respond with the sum and diff-
+erence of the two values, and the difference will be the required value
+"disp".)  Finally, save the object code as directed above for manual loading.
+
+
+
+ZX65: Simulating a Micro					Page 10
+
+
+	To run the program, place the disk with ZX65.COM on drive A (this
+disk should also have a copy of CP/M so that the system can be restarted, if
+necessary, without changing disks.)  Place the ZX65 data disk on drive B.
+Start CP/M and invoke ZX65 by answering "ZX65" to the CP/M input prompt.  
+The system will prompt you with a header and a ">" symbol.  You are now in
+the command mode, and typing one of the command codes (see table 4) will
+cause the appropriate action to occur.  Note that if you are using a disk
+not previously used for ZX65 on drive B, you will be unable to use the ZX65
+DOS functions until you have initialized the disk.  This is done simply by
+typing "I", at which point the system will ask you to verify this request
+with a "Y" or "N".  The reason for this (note this well) is that the "I"
+command clears and initializes the directory on disk B.  This is the equiv-
+alent of the CP/M command "ERA *.*" and must be used with caution.
+
+	For those unwilling to type in a 4K byte program by hand, I will
+make the package available on a standard 8 inch IBM format, single side,
+single density diskette (Sorry, I can't handle any other format!) at a nom-
+inal charge ееееедо»и»И Иy size.  I
+will send a diskette containing both source and object files assembled to
+reside in high memory as described above, as well as a copy of ZXLD.
+
+
+
+ZX65: Simulating a Micro					Page 11
+
+
+A command summary, operating hints, and other general information will be in-
+cluded on the disk.
+
+	Finally, although this program has been rather exhaustively tested
+with a variety of 6502 software (both simple and sophisticated) I cannot 
+guarantee it bug-free.  I have included no copyright notices of any kind,
+and I hope users will feel free to copy, add, delete, and improve at will.
+(I would like to hear of any major modifications...I may want to include them
+myself!)  As stated at the outset, the package was developed as a side benefit
+of another project, not as a money maker, and if anyone else finds it useful,
+so much the better.				-RMK
+
+
+
+Acknowledgements:
+
+	*CP/M is a registered trademark of Digital Research, Pacific
+	Grove, CA.
+
+	While not specifically mentioned in the text, I have relied
+	heavily on the information contained in the book "6502 Assembly
+	Language Programming" by Lance A. Leventhal (Osborne/McGraw Hill
+	Inc., 1979)
+
+
+

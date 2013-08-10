@@ -1,0 +1,1863 @@
+	.z80
+
+;**************************************
+;*                                    *
+;* RAM/VRAM disk driver               *
+;*                                    *
+;* Program resides at RAM-card and    *
+;* provides additional drive simula-  *
+;* ted in RAM, VRAM, ERAM and Mapper. *
+;* When started, formattes RAM-disk,  *
+;* and loads specified files.         *
+;*                                    *
+;* RAM-card may be connected to any   *
+;* slot.                              *
+;*                                    *
+;* RAM-disk replaces last drive.      *
+;*                                    *
+;* Getting started:                   *
+;* A>RDV flag... file...[;DOS command]*
+;*   Flags:                           *
+;*     -S  exclude all SLOT-pages     *
+;*     -Sx exclude SLOT-page x        *
+;*     +S  include all SLOT-pages     *
+;*     +Sx include SLOT-page x        *
+;*           x=0,2,3                  *
+;*                                    *
+;*     -V  exclude whole VRAM         *
+;*     -Vy exclude VRAM-page y        *
+;*     +V  include whole VRAM         *
+;*     +Vy include VRAM-page y        *
+;*           y=1-7                    *
+;*                                    *
+;*     -E  exclude whole ERAM         *
+;*     -Ez exclude ERAM-page z        *
+;*     +E  include whole ERAM         *
+;*     +Ez include ERAM-page z        *
+;*           z=0-3                    *
+;*                                    *
+;*     -M  exclude whole mapper       *
+;*     -Mw exclude mapper-page w      *
+;*     +M  include whole mapper       *
+;*     +Mw include mapper-page w      *
+;*           w=4-F                    *
+;*                                    *
+;*     :p  mapper slot p-             *
+;*     :ps mapper slot ps             *
+;*           p,s=0-3                  *
+;*                                    *
+;*     ?   list all pages             *
+;*                                    *
+;*     #   turn RAM-drive offline     *
+;*                                    *
+;**************************************
+
+;**************************************
+; FDD-independent areas (FD driver)
+ramtab	equ	0f341h
+maxdrv	equ	0f347h
+savdrv	equ	0f33fh
+drvtab	equ	0fb21h
+dpbtab	equ	0f355h
+sysbuf	equ	0f34dh
+sysldir	equ	0f36eh
+
+;**************************************
+; Video descriptor
+vmode	equ	0fafch
+
+;**************************************
+; Keyboard areas
+putpnt	equ	0f3f8h
+getpnt	equ	0f3fah
+keybuf	equ	0fbf0h
+keylen	equ	40
+
+;**************************************
+; ROM area
+romstart	equ	4000h
+romend		equ	8000h
+
+;**************************************
+pslreg	equ	0a8h
+sslreg	equ	-1
+slttab	equ	0fcc1h
+
+;**************************************
+enaslt	equ	24h
+calslt	equ	1ch
+rdslt	equ	0ch
+
+;**************************************
+;**************************************
+; Starter
+enter:
+	ld	sp,initsp
+
+	ld	de,copyright
+	call	putmsg
+
+	ld	a,(80h)
+	or	a
+	jp	nz,init
+
+	ld	de,helpmsg
+	call	putmsg
+
+	rst	0
+
+init:
+
+; RAM check and search
+	di
+
+	ld	e,10000000b
+ramloop:
+	push	de
+
+	ld	hl,ramtab+1
+	ld	a,e
+	cp	(hl)
+	jr	z,ramnext	; MAIN-RAM
+	and	00000011b
+	cp	(hl)
+	jr	z,ramnext	; MAIN-RAM
+
+	ld	a,e
+	call	enastart
+
+	ld	b,high (romend-romstart)
+	ld	hl,romstart
+tstloop:ld	a,(hl)
+	cpl
+	ld	(hl),a
+	cp	(hl)
+	cpl
+	ld	(hl),a
+	jr	nz,ramnext
+	inc	h
+	djnz	tstloop
+
+	jr	tstok
+
+; Next slot
+ramnext:pop	de
+	inc	e
+	ld	a,e
+	cp	10001111b
+	jr	c,ramloop
+
+; No RAM
+	ld	a,(ramtab + 1)
+	call	enastart
+
+	ei
+	ld	de,setram
+	call	putmsg
+	ld	c,1
+	call	5
+
+	jr	init
+
+; RAM OK
+tstok:	ld	a,(ramtab + 1)
+	call	enastart
+
+	pop	de
+
+	ld	a,e
+	ld	(drslot),a
+
+; Check drive:
+	ld	a,(maxdrv)
+	cp	2
+	jr	nc,dvok
+
+; Single drive
+	ei
+	ld	de,single
+	call	putmsg
+
+	rst	0
+
+; > 1 drives
+dvok:	dec	a
+	ld	(ramdrive),a
+
+; Move driver
+	ld	a,(drslot)
+	call	enastart
+	ld	hl,modrom
+	ld	de,romstart
+	ld	bc,ptable - romstart
+	ldir
+	ex	de,hl		;Keep DE !!!
+
+	ld	a,(drslot)
+	ld	(Wslot),a
+
+;Compare checksum 
+	ld	a,'V'		;RDV identifier
+	ld	hl,fddtab
+	ld	b,4 * 2
+ctloop1:xor	(hl)
+	inc	hl
+	djnz	ctloop1
+	ld	hl,ptable
+	ld	b,ptsize
+ctloop2:xor	(hl)
+	inc	hl
+	djnz	ctloop2
+	ld	hl,pmap
+	xor	(hl)
+	ld	hl,fddcheck
+	cp	(hl)		;Check sum test
+	jr	z,noptc		; Yes, check sum safe
+				; No,  check sum invalid
+
+;Checksum failed, store tables
+	ex	de,hl		;DE kept !!!
+	ld	de,ptable
+	ld	bc,ptsize
+	ldir
+	ld	hl,drvtab
+	ld	de,fddtab
+	ld	bc,4 * 2
+	ldir
+
+	ld	a,(ramtab+2)	; Mapper assumed
+	ld	(pmap),a	; to be in MAIN-RAM
+
+noptc:
+
+;Slot address
+	ld	a,(drslot)	; f000SsPp
+	and	00000011b	; 000000Pp
+	ld	b,a
+	rlca
+	rlca
+	or	b
+	ld	b,a		; 0000PpPp
+	rlca
+	rlca
+	rlca
+	rlca
+	or	b		; PpPpPpPp
+	ld	(prim),a
+
+	ld	a,(drslot)	; f000SsPp
+	and	00001100b	; 0000Ss00
+	ld	b,a
+	rrca
+	rrca
+	or	b
+	ld	b,a		; 0000SsSs
+	rlca
+	rlca
+	rlca
+	rlca
+	or	b		; SsSsSsSs
+	ld	(sec),a
+
+; Set pages
+	ld	hl,81h
+	push	hl
+	ld	bc,(80h)
+	ld	b,0
+	add	hl,bc
+	ld	(hl),0
+	pop	hl
+fgloop:	ld	a,(hl)
+	cp	0
+	jp	z,fgend
+	cp	';'
+	jp	z,fgcont
+	inc	hl
+	cp	' '+1
+	jp	c,fgloop
+	cp	':'
+	jp	z,fmaps
+	cp	'#'
+	jp	z,fgoff
+	cp	'?'
+	jp	z,fgshow
+	cp	'-'
+	jp	z,fgres
+	cp	'+'
+	jp	z,fgset
+fgnl:	ld	a,(hl)
+	cp	' '+1
+	jp	c,fgloop
+	inc	hl
+	jp	fgnl
+fgres:	ld	a,(hl)
+	or	'a'-'A'
+	jp	fgf
+fgset:	ld	a,(hl)
+	and	not ('a'-'A')
+;...	jp	fgf
+fgf:	ld	d,a
+	dec	hl
+	ld	(hl),' '
+	inc	hl
+	ld	(hl),' '
+	inc	hl
+	ld	e,-1
+	ld	a,(hl)
+	sub	'0'
+	jp	c,fgsf
+	cp	'9'-'0'+1
+	jp	c,fgsvf
+	ld	a,(hl)
+	and	not ('a'-'A')
+	cp	'A'
+	jp	c,fgsf
+	sub	'A'-10
+	cp	'F'-'A'+10+1
+	jp	nc,fgsf
+;...	jp	c,fgsvf
+fgsvf:	ld	e,a
+	ld	(hl),' '
+	inc	hl
+fgsf:	push	hl
+	call	setflag
+	pop	hl
+	jp	fgloop
+fgshow:	dec	hl
+	ld	(hl),' '
+	inc	hl
+	ld	a,-1
+	ld	(shows),a
+	jp	fgloop
+fgoff:	dec	hl
+	ld	(hl),' '
+	inc	hl
+	ld	a,-1
+	ld	(offs),a
+	jp	fgloop
+fmaps:	dec	hl
+	ld	(hl),' '
+	inc	hl
+	ld	a,(hl)
+	sub	'0'
+	jp	c,fgloop
+	cp	3+1
+	jp	nc,fgloop
+	ld	(pmap),a
+	ld	(hl),' '
+	inc	hl
+	ld	a,(hl)
+	sub	'0'
+	jp	c,fgloop
+	cp	3+1
+	jp	nc,fgloop
+	ld	(hl),' '
+	inc	hl
+	rlca
+	rlca
+	ld	b,a
+	ld	a,(pmap)
+	or	b
+	or	10000000b
+	ld	(pmap),a
+	jp	fgloop
+fgcont:	ld	(hl),0
+	inc	hl
+fgend:	ld	(contad),hl
+
+;Verify page allocations by machine parameters
+	ld	hl,ptv
+	ld	a,(vmode)
+	bit	2,a
+	jr	nz,vfv.e
+	ld	b,4
+	bit	1,a
+	jr	nz,vfv.l
+	ld	b,7
+vfv.l:	dec	hl
+	dec	hl
+	ld	(hl),'v'	;VRAM pages offline
+	djnz	vfv.l
+vfv.e:
+
+	di
+	ld	a,(pmap)
+	ld	h,high romend
+	call	enaslt
+	ld	a,(pmap)
+	call	enastart
+	ld	c,0fdh	;Mapper port 4000-7FFF
+	in	a,(c)
+	inc	c	;Mapper port 8000-BFFF
+	in	b,(c)
+	out	(c),a
+	push	bc
+	ld	hl,romend
+	ld	de,romstart
+	ld	bc,40h + 0ffh * 256	;C = 40h,B = 0FFh
+vfm.l:	ld	a,(de)
+	cp	(hl)
+	jr	nz,vfm.no
+	cpl
+	ld	(de),a
+	cp	(hl)
+	cpl
+	ld	(de),a
+	jr	nz,vfm.no
+	inc	hl
+	inc	de
+	djnz	vfm.l
+	dec	c
+	jr	nz,vfm.l
+;...	jr	vfm.yes
+
+vfm.yes:pop	bc	;Mapper present
+	out	(c),b
+	push	bc
+	ld	a,(drslot)
+	call	enastart
+	pop	bc
+
+	in	a,(c)
+	cpl
+	out	(c),a
+	in	b,(c)
+	cpl
+	out	(c),a
+	xor	b		;0s - dummy bits,1s - valuable bits
+	push	af
+	ld	a,(ramtab+2)
+	ld	h,high romend
+	call	enaslt
+	pop	af
+	ld	b,16 - 4
+	bit	2,a
+	jr	z,vfm.off	;4 pages present
+	ld	b,16 - 8
+	bit	3,a
+	jr	z,vfm.off	;8 pages present
+	jr	vfm.e		;16 pages present
+
+vfm.no:	pop	bc
+	out	(c),b	;Mapper absent
+	ld	a,(drslot)
+	call	enastart
+	ld	a,(ramtab+2)
+	ld	h,high romend
+	call	enaslt
+
+	ld	b,0 + (ptm - ptms) / 2
+
+vfm.off:ld	hl,ptm
+vfm.nl:	dec	hl
+	dec	hl
+	ld	(hl),'m'
+	djnz	vfm.nl
+;...	jr	vfm.e
+
+vfm.e:
+
+;Calculate new checksum
+	ld	a,'V'		;RDV identifier
+	ld	hl,fddtab
+	ld	b,4 * 2
+csloop1:xor	(hl)
+	inc	hl
+	djnz	csloop1
+	ld	hl,ptable
+	ld	b,ptsize
+csloop2:xor	(hl)
+	inc	hl
+	djnz	csloop2
+	ld	hl,pmap
+	xor	(hl)
+	ld	(fddcheck),a	;Save check sum
+
+; Slot configuration
+	ld	de,mpslot
+	ld	a,(pmap)
+	call	sladdr
+
+	ld	de,spslot
+	ld	hl,ramtab+1
+	cp	(hl)
+	jr	nz,mapside
+;...	jr	z,mapmain
+
+mapmain:	;Mapper in main slot
+	ld	hl,stabs
+	ld	(pstab),hl
+	ld	hl,drslot
+;...	jr	mapside
+
+mapside:
+	ld	a,(hl)
+	call	sladdr
+	ld	hl,(pstab)
+	inc	hl
+	ld	(hl),'X'
+
+;Prepare to show
+	ld	de,ptable
+swloop:	ld	a,(de)
+	inc	de
+	ld	hl,(pstab)
+	cp	'S'
+	jr	z,swon
+	cp	's'
+	jr	z,swoff
+	ld	hl,stabv
+	cp	'V'
+	jr	z,swon
+	cp	'v'
+	jr	z,swoff
+	ld	hl,stabe
+	cp	'E'
+	jr	z,swon
+	cp	'e'
+	jr	z,swoff
+	ld	hl,stabm
+	cp	'M'
+	jr	z,swon
+	cp	'm'
+	jr	z,swoff
+	jr	swend
+swon:	ld	a,'+'
+	jr	sw
+swoff:	ld	a,'-'
+;...	jr	sw
+sw:	ex	de,hl
+	ld	c,(hl)
+	ex	de,hl
+	inc	de
+	ld	b,0
+	add	hl,bc
+	ld	(hl),a
+	jr	swloop
+swend:
+
+; RAM drive connection
+	ld	hl,fddtab
+	ld	de,drvtab
+	ld	bc,4 * 2
+	ldir
+
+	ld	a,(offs)
+	or	a
+	jp	nz,offline
+
+	ld	hl,drvtab + 3 * 2
+	ld	b,3
+cvloop:	ld	a,(hl)
+	or	a
+	jr	nz,cvend
+	dec	hl
+	dec	hl
+	djnz	cvloop
+cvend:
+	ld	a,(hl)		; > 0
+	cp	1
+	jr	z,cvsng
+	dec	(hl)
+	inc	hl
+	inc	hl
+	ld	(hl),1		; 1 drive
+cvsng:	inc	hl
+	ld	a,(drslot)
+	ld	(hl),a		; slot
+
+; DPB
+	ld	hl,0 + (ressec - dirsec) / 4
+	ld	bc,16 * 2 / 4
+	ld	de,ptable-1
+dpbloop:inc	de
+	ld	a,(de)
+	inc	de
+	or	a
+	jr	z,dpbend
+	cp	'a'
+	jr	nc,dpbloop
+	add	hl,bc
+	jr	dpbloop
+dpbend:	ld	d,h
+	ld	e,l
+	add	hl,hl
+	ex	de,hl
+	add	hl,de
+	dec	hl		;clusters / 2 * 3 - 1
+	ld	(fmtclus),hl
+	ld	a,(pram3)
+	cp	'S'
+	jr	z,notr3		;clusters=(sectors+13-10)/2-1
+	inc	de		;clusters=(sectors+13-10)/2
+notr3:	ld	(mclus),de	;store to DPB
+	ld	hl,-3
+	add	hl,de
+	add	hl,de
+	ld	(sec0sec),hl	;store to Sector 0
+
+	ld	hl,dpbtab
+	ld	bc,(ramdrive)
+	ld	b,0
+	add	hl,bc
+	add	hl,bc
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)		; DPB RAM-drive
+	ld	hl,moddpb	; DPB model
+	inc	de
+	ld	bc,moddpbe-moddpb
+	ldir
+
+; DPB reference to FAT
+	ex	de,hl		; DPB RAM-drive
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a		; FAT RAM-drive
+	ld	(fmtfat),hl
+	ld	(pfat),hl
+
+; Format RAM-disk
+	call	ramfmt
+
+; Ready
+	ld	a,(ramtab+1)
+	call	enastart
+
+	ei
+
+	ld	de,pshow
+	ld	a,(shows)
+	or	a
+	call	nz,putmsg
+
+; Set default drive
+	ld	a,(ramdrive)
+	ld	e,a
+	ld	c,0eh
+	call	5
+
+; Copy files
+	ld	hl,comname
+	call	copywild
+
+	ld	hl,81h
+cploop:	ld	a,(hl)
+	cp	0
+	jr	z,cpend
+	call	copywild
+	jr	cploop
+cpend:
+
+; Show free space
+	ld	e,0
+	ld	c,1bh
+	call	5
+	push	de
+	ld	de,freenum
+	call	trnum
+	pop	hl
+	ld	de,totnum
+	call	trnum
+	ld	de,totmsg
+	call	putmsg
+
+; Prepare next command
+	ld	de,(contad)
+	ld	b,keylen-1
+	ld	hl,keybuf
+	di
+	ld	(getpnt),hl
+	ld	(putpnt),hl
+contloop:
+	ld	a,(de)
+	or	a
+	jr	z,endcont
+	ld	(hl),a
+	inc	hl
+	inc	de
+	djnz	contloop
+	jr	nocont		;too long
+endcont:
+	ld	a,b
+	cp	keylen-1
+	jr	nc,nocont
+	ld	(hl),'M'-'@'
+	inc	hl
+	ld	(putpnt),hl
+nocont:
+	ei
+
+; Exit
+	rst	0
+
+; Offline
+offline:ld	a,(ramtab+1)
+	call	enastart
+
+	ei
+
+	ld	de,pshow
+	ld	a,(shows)
+	or	a
+	call	nz,putmsg
+
+	ld	de,offmsg
+	call	putmsg
+
+	rst	0
+
+;**************************************
+;Show slot PS or P-
+;Enter:	A - slot address,DE - where to place
+;Return:No
+;Modify:BC,DE,HL
+sladdr:
+	ld	b,a
+	and	00000011b
+	ld	c,a
+	add	a,'0'
+	ld	(de),a
+	inc	de
+	ld	a,' '
+	ld	(de),a
+	ld	a,b
+
+	ld	b,0
+	ld	hl,slttab
+	add	hl,bc
+	ld	b,a
+	ld	a,(hl)
+	and	10000000b
+	ld	a,b
+	ret	z
+
+	and	00001100b
+	rrca
+	rrca
+	add	a,'0'
+	ld	(de),a
+	ld	a,b
+	ret
+
+;**************************************
+; Enable 'romstart' page
+enastart:
+	ld	h,high romstart
+	jp	enaslt
+
+;**************************************
+; Display message with file name
+; Enter:	hl=filename,de=ext
+selmsg:
+	push	de
+	ld	de,msgname
+	ld	bc,8
+	ldir
+	pop	hl
+	ld	de,msgext
+	ld	bc,3
+	ldir
+	ld	hl,msgname
+	ld	b,8+3+1
+mbl:	ld	a,(hl)
+	cp	' '
+	jr	nz,mbn
+	ld	(hl),0
+mbn:	inc	hl
+	djnz	mbl
+
+	ld	de,copymsg
+;...	jp	putmsg
+
+;**************************************
+; Put message
+; de=message
+putmsg:	ld	c,9
+	jp	5
+
+;**************************************
+; Process flag
+; d=letter(s/S,v/V,...),e=number or -1
+setflag:
+	ld	a,d
+	xor	'a'-'A'
+	ld	c,a
+	ld	hl,ptable-1
+sfloop:	inc	hl
+	ld	a,(hl)
+	inc	hl
+	or	a
+	ret	z
+	cp	c
+	jr	nz,sfloop
+	ld	a,e
+	cp	-1
+	jr	z,sfset
+	cp	(hl)
+	jr	nz,sfloop
+sfset:	dec	hl
+	ld	(hl),d
+	inc	hl
+	jr	sfloop
+
+;**************************************
+; Select name
+; Enter:  hl=name,de=field-1,b=length
+; Return: hl=after name,de=field-1+length
+selname:inc	de
+	ld	a,(hl)
+	cp	0
+	jr	z,snb
+	cp	' '+1
+	jr	c,snb
+	cp	'.'
+	jr	z,snb
+	cp	'*'
+	jr	z,snr
+	inc	hl
+	cp	'a'
+	jr	c,snput
+	cp	'z'+1
+	jr	nc,snput
+	sub	'a'-'A'
+	jr	snput
+snr:	ld	a,'?'
+	jr	snput
+snb:	ld	a,' '
+snput:	ld	(de),a
+	djnz	selname
+snpass:	ld	a,(hl)
+	cp	' '+1
+	ret	c
+	cp	'.'
+	ret	z
+	inc	hl
+	jr	snpass
+
+;**************************************
+; Translate number
+; Enter: hl = number,de = field 0000
+trnum:	push	de
+	ld	bc,1000
+	call	dvnd
+	ld	(de),a
+	inc	de
+	ld	bc,100
+	call	dvnd
+	ld	(de),a
+	inc	de
+	ld	bc,10
+	call	dvnd
+	ld	(de),a
+	inc	de
+	ld	a,l
+	add	a,'0'
+	ld	(de),a
+	pop	hl
+	ld	b,3
+	ld	a,'0'
+ltrz:	cp	(hl)
+	ret	nz
+	ld	(hl),0
+	inc	hl
+	djnz	ltrz
+	ret
+
+dvnd:	ld	a,'0'-1
+ldvn:	inc	a
+	or	a
+	sbc	hl,bc
+	jr	nc,ldvn
+	add	hl,bc
+	ret
+
+;**************************************
+; Copy files, corresponding to wild card
+; Enter:	hl=wildcard
+; Return	hl=next wildcard
+copywild:
+
+; Skip blanks
+bkloop:	ld	a,(hl)
+	cp	0
+	ret	z
+	cp	' '+1
+	jr	nc,bkend
+	inc	hl
+	jr	bkloop
+bkend:
+
+; Drive A:
+	ld	a,1
+	ld	de,wild
+	ld	(de),a
+
+; Filename
+	ld	b,8
+	call	selname
+
+; Fileext
+	ld	b,3
+	ld	a,(hl)
+	cp	'.'
+	jr	nz,fxs
+	inc	hl
+fxs:	call	selname
+
+; Skip blanks
+fbloop:	ld	a,(hl)
+	cp	0
+	jr	z,fbe
+	cp	' '+1
+	jr	nc,fbe
+	inc	hl
+	jr	fbloop
+fbe:
+
+; Save filename pointer
+	push	hl
+
+;Copy files
+	ld	de,fcb		;DMA for FSearF
+	ld	c,1ah		;SetDMA
+	call	5
+	ld	de,wild
+	ld	c,11h		;FSearF
+	call	5
+	or	a
+	jp	nz,wderror
+wdloop:	call	copyfile
+	ld	de,fcb		;DMA for FSearN
+	ld	c,1ah		;SetDMA
+	call	5
+	ld	de,wild
+	ld	c,12h		;FSearN
+	call	5
+	or	a
+	jp	z,wdloop
+
+; Exit
+	pop	hl	; Restore filename pointer
+	ret
+
+; Wild-card not matched
+wderror:
+	ld	hl,wildname
+	ld	de,wildext
+	call	selmsg
+
+	ld	de,noflmsg
+	call	putmsg
+
+	pop	hl
+	ret
+
+;**************************************
+; Copy single file
+; Enter:	No
+; Return	No
+copyfile:
+
+; Start message
+	ld	hl,fcbname
+	ld	de,fcbext
+	call	selmsg
+
+; Clear fcb
+	ld	hl,fcbw
+	ld	de,fcbw+1
+	ld	bc,fcbws-1
+	ld	(hl),0
+	ldir
+
+; Load file
+	ld	de,fcb
+	ld	c,0fh
+	call	5		; Open
+	or	a
+	jp	nz,cperror
+	ld	de,copybuf
+	ld	c,1ah
+	call	5		; Set DMA
+	ld	hl,1
+	ld	(fcbsize),hl
+	ld	hl,(6)
+	dec	h		; Reserved for stack
+	ld	de, - copybuf
+	add	hl,de
+	ld	de,fcb
+	ld	c,27h
+	call	5		; Read
+	or	a
+	jr	z,cperror
+	ld	(size),hl	; Save size
+	ld	de,fcb
+	ld	c,10h
+	call	5		; Close
+	ld	hl,(fcbdate)
+	ld	(date),hl
+	ld	hl,(fcbtime)
+	ld	(time),hl
+
+; Clear fcb
+	ld	hl,fcbw
+	ld	de,fcbw+1
+	ld	bc,fcbws-1
+	ld	(hl),0
+	ldir			; Clear fcb
+
+; Store file
+	ld	de,fcb
+	ld	a,0
+	ld	(de),a		; RAM drive
+	ld	c,16h
+	call	5		; Create
+	or	a
+	jr	nz,cwerror
+	ld	de,copybuf
+	ld	c,1ah
+	call	5		; Set DMA
+	ld	hl,1
+	ld	(fcbsize),hl
+	ld	hl,(size)
+	ld	de,fcb
+	ld	c,26h
+	call	5		; Write
+	push	af
+	ld	hl,(date)
+	ld	(fcbdate),hl
+	ld	hl,(time)
+	ld	(fcbtime),hl
+	ld	de,fcb
+	ld	c,10h
+	call	5		; Close
+	pop	af
+	or	a
+	ret	z		;Success
+
+; Failure
+cwerror:
+	ld	de,fcb
+	ld	c,13h
+	call	5		; Delete
+cperror:
+	ld	de,failmsg
+	jp	putmsg
+
+;**************************************
+;**************************************
+modrom:
+	.phase	romstart
+
+;**************************************
+;Header
+	rept	10h
+	nop
+	endm
+
+JDSKIO:	jp	DSKIO	;4010
+JDSKCHG:jp	DSKCHG	;4013
+JGETDPB:jp	GETDPB	;4016
+JCHOICE:jp	CHOICE	;4019
+JDSKFMT:jp	DSKFMT	;401C
+
+	rept	0eh
+	nop
+	endm
+
+JWHEREI:		;402D
+Wslot	equ	$+1
+	ld	a,0
+	ret
+
+;**************************************
+; Diskette changed
+; Enter: A=drive#
+;	 B=0
+;	 C=Media descriptor
+;	 HL=Base address of DPB
+; Return:B=1(unchanged)/0(unknown)/-1(changed)
+;	 Cy=error
+;	 A=error code
+DSKCHG:	xor	a	;Cy reset
+	ld	b,1	;Unchanged
+	ret
+
+;**************************************
+; Get DPB
+; Enter: A=drive#
+;	 B=First byte of FAT
+;	 C=Media descriptor
+;	 HL=Base address of DPB
+; Return:[HL+1] .. [HL+18] = DPB for RAM-drive
+GETDPB:	inc	hl
+	ld	(hl),b
+	inc	hl
+	ex	de,hl
+	ld	hl,moddpbs
+	ld	bc,moddpbe-moddpbs
+	ldir
+	ret
+
+;**************************************
+media	equ	0f9h
+seclen	equ	200h
+pagelen	equ	4000h
+
+;**************************************
+; DPB model
+moddpb:	db	media		;Media id
+moddpbs:dw	seclen		;Sector size (bytes)
+	db	(seclen/32)-1	;Dir mask (0F)
+	db	4		;Dir shift (number of 1 in Dir mask)
+	db	2 - 1		;Cluster mask (Sector/cluster - 1)
+	db	1 + 1		;Cluster shift (number of 1 in cluster mask) + 1
+	dw	fat		;First FAT sector
+	db	fatnum		;FATs number
+	db	dirsec * (seclen/32)	;Number of Dir entries
+	dw	dir + dirsec	;Number of first Data sector
+mclus:	dw	0000h		;Number of clusters + 1
+	db	fatsec		;Number of FAT sectors
+	dw	dir		;Number of first Dir sector
+moddpbe:
+
+;**************************************
+; Sector 0
+sec0:	db	0ebh,0feh,090h
+	db	'LQ-A1   '
+	dw	seclen	;Sector size (bytes)
+	db	2	;Cluster size (sectors)
+	dw	1	;Unused sectors by MSX-DOS
+	db	fatnum	;FATs number
+	dw	dirsec * (seclen/32)	;Number of Dir entries
+sec0sec:dw	0	;Sectors per disk
+	db	media	;Media id
+	dw	fatsec	;FAT size (sectors)
+	dw	9	;Sectors per track
+	dw	2	;Sides used
+	dw	0	;Hidden sectors
+
+;**************************************
+; RAM-disk format request
+; Return:HL=choice string
+CHOICE:	ld	hl,0	;No choice
+	ret
+
+;**************************************
+; RAM-disk format
+; Enter: A=choice(1-9)
+;	 D=drive#
+;	 HL=Work area address
+;	 BC=Work area size
+; Return:Cy=error
+;	 A=error code
+DSKFMT:
+
+ramfmt:
+
+; FAT
+fmtfat	equ	$+1
+	ld	hl,0
+	ld	(hl),media
+	inc	hl
+	ld	(hl),-1
+	inc	hl
+	ld	(hl),-1
+	inc	hl
+	ld	d,h
+	ld	e,l
+	ld	(hl),0eeh
+	inc	de
+	push	hl
+	push	de
+	ld	bc,3 * seclen - 4
+	ldir
+	pop	de
+	pop	hl
+	ld	(hl),0
+fmtclus	equ	$+1
+	ld	bc,0
+	ldir
+	ld	a,(pram3)
+	cp	'S'
+	jr	nz,nopr3
+	ld	(hl),0eeh
+	dec	hl
+	ld	(hl),0e0h
+nopr3:
+
+; Dir sectors
+	ld	b,dirsec
+	ld	de,dir
+fdirloop:
+	push	bc
+	push	de
+	ld	hl,(sysbuf)
+	ld	d,h
+	ld	e,l
+	inc	de
+	ld	bc,seclen - 1
+	ld	(hl),0e5h
+	push	hl
+	ldir
+	pop	hl
+	pop	de
+	push	de
+	ld	b,1
+	call	phywr
+	pop	de
+	inc	de
+	pop	bc
+	djnz	fdirloop
+
+;Exit
+	xor	a	;Cy reset
+	ret
+
+;**************************************
+; Physical RAM-disk read/write
+; Enter:	Cy=1(Write)/0(Read),
+;		A=drive#
+;		HL=transfer address,
+;		DE=first sector,
+;		B=sectors number
+; Return:	B=rest sectors number,
+;		Cy=error,
+;		A=error code (Cy)
+DSKIO:	ei
+	jp	nc,phyrd
+;...	jp	c,phywr
+
+;**************************************
+; Physical RAM-disk write
+; Enter:	HL=transfer address,
+;		DE=first sector,
+;		B=sectors number
+; Return:	B=rest sectors number,
+;		Cy=error,
+;		A=error code (Cy)
+phywr:	push	bc
+	push	de
+	call	swr
+	pop	de
+	pop	bc
+	ret	c
+        inc	de
+	djnz	phywr
+	xor	a	;clear carry
+	ret
+
+; Write single sector
+; Enter:	HL=transfer address;
+;		DE=sector
+; Return:	Cy=error,
+;		A=error code (Cy),
+;		DE=sector,
+;		HL=next transfer address
+swr:	push	de	; push sector
+	ld	de,(sysbuf)
+	ld	bc,seclen
+	call	sysldir	; ldir DMA => Sysbuf
+	pop	de
+	push	hl	; DMA + seclen
+	call	pdetect
+	ld	de,pwr
+	jp	psel
+
+pwr:	jr	wrexit
+	jr	wrldir
+	jr	wrldir
+	jr	wrram
+	jr	wrvram
+	jr	wreram
+	jr	wrmap
+;...	jr	wrerror
+
+; Writing error (other)
+wrerror:
+	pop	hl
+	ld	a,6*2+1
+	scf
+	ret
+
+; RAM sectors
+;    c=page(0,2,3),hl=offset
+wrram:	ld	e,0
+	ld	d,c
+	rrc	d
+	rrc	d	;DE:=C * 4000h
+	add	hl,de	;address
+	push	hl
+	ld	hl,(sysbuf)
+	ld	de,buffer
+	push	de
+	ld	bc,seclen
+	push	bc
+	ldir
+	pop	bc
+	pop	hl
+	pop	de
+
+	call	ramldir
+
+	jr	wrexit
+
+; Transfer
+wrldir:	ex	de,hl
+	ld	hl,(sysbuf)
+	ld	bc,seclen
+	ldir
+;...	jr	wrexit
+
+; Exit
+wrexit:	pop	hl
+	xor	a
+	ret
+
+; Mapper sectors
+;  c=page(0-F),hl=offset
+wrmap:	ld	de,romend
+	add	hl,de
+	ex	de,hl
+	ld	hl,(sysbuf)
+	ld	a,c
+	ld	bc,seclen
+	call	mapldir
+	jr	wrexit
+
+; ERAM sectors
+;    c=page(0-3),hl=offset
+wreram:	ld	a,01000000b
+	jr	wrvideo
+
+; VRAM sectors
+;    c=page(0-7),hl=offset
+wrvram:	xor	a  ; ld	a,00000000b
+;...	jr	wrvideo
+
+; All Video-RAM sectors
+;    a=0b000000,c=page,hl=offset
+wrvideo:di
+	ld	b,c
+	ld	c,99h
+	out	(c),a
+	ld	a,80h+45
+	out	(c),a
+	out	(c),b
+	ld	a,80h+14
+	out	(c),a
+	ld	a,h
+	or	40h
+	out	(c),l
+	out	(c),a
+	ld	hl,(sysbuf)
+	dec	c
+	ld	b,2
+wrvloop:push	bc
+	ld	b,0
+	otir
+	pop	bc
+	djnz	wrvloop
+	inc	c
+	xor	a
+	out	(c),a
+	ld	a,80h+14
+	out	(c),a
+	xor	a
+	out	(c),a
+	ld	a,80h+45
+	out	(c),a
+	ei
+
+	jr	wrexit
+
+;**************************************
+; Physical RAM-disk read
+; Enter:	HL=transfer address,
+;		DE=first sector,
+;		B=sectors number
+; Return:	B=rest sectors number,
+;		Cy=error,
+;		A=error code (Cy)
+phyrd:	push	bc
+	push	de
+	call	srd
+	pop	de
+	pop	bc
+	ret	c
+        inc	de
+	djnz	phyrd
+	xor	a	;clear carry
+	ret
+
+; Read single sector
+; Enter:	HL=transfer address;
+;		DE=sector
+; Return:	Cy=error,
+;		A=error code (Cy),
+;		DE=sector,
+;		HL=next transfer address
+srd:	push	hl	; DMA
+	call	pdetect
+	ld	de,prd
+	jp	psel
+
+prd:	jr	rdldir
+	jr	rdldir
+	jr	rdldir
+	jr	rdram
+	jr	rdvram
+	jr	rderam
+	jr	rdmap
+;...	jr	rderror
+
+; Reading error (other)
+rderror:
+	pop	hl
+	ld	a,6*2
+	scf
+	ret
+
+; RAM sectors
+;    c=page(0,2,3),hl=offset
+rdram:	ld	e,0
+	ld	d,c
+	rrc	d
+	rrc	d	;DE:=C * 4000h
+	add	hl,de	;address
+	ld	de,buffer
+	ld	bc,seclen
+	push	de
+
+	call	ramldir
+
+	pop	hl
+
+;...	jr	rdldir
+
+; Transfer
+rdldir:	ld	de,(sysbuf)
+	ld	bc,seclen
+	ldir
+;...	jr	rdexit
+
+; Exit
+rdexit:	pop	de	; DMA
+	ld	hl,(sysbuf)
+	ld	bc,seclen
+	call	sysldir	; ldir Sysbuf => DMA
+	ex	de,hl	; DMA + seclen
+	xor	a
+	ret
+
+; Mapper sectors
+;    c=page(0-F),hl=offset
+rdmap:	ld	de,romend
+	add	hl,de
+	ld	de,(sysbuf)
+	ld	a,c
+	ld	bc,seclen
+	call	mapldir
+	jr	rdexit
+
+; ERAM sectors
+;    c=page(0-3),hl=offset
+rderam:	ld	a,01000000b
+	jr	rdvideo
+
+; VRAM sectors
+;    c=page(0-7),hl=offset
+rdvram:	xor	a  ; ld	a,00000000b
+;...	jr	rdvideo
+
+; All Video-RAM sectors
+;    a=0b000000,c=page,hl=offset
+rdvideo:di
+	ld	b,c
+	ld	c,99h
+	out	(c),a
+	ld	a,80h+45
+	out	(c),a
+	out	(c),b
+	ld	a,80h+14
+	out	(c),a
+	out	(c),l
+	out	(c),h
+	ld	hl,(sysbuf)
+	dec	c
+	ld	b,2
+rdvloop:push	bc
+	ld	b,0
+	inir
+	pop	bc
+	djnz	rdvloop
+	inc	c
+	xor	a
+	out	(c),a
+	ld	a,80h+14
+	out	(c),a
+	xor	a
+	out	(c),a
+	ld	a,80h+45
+	out	(c),a
+	ei
+
+	jr	rdexit
+
+;**************************************
+;LDIR inside RAM-card
+ramldir:
+        di
+	exx
+prim	equ	$ + 2
+	ld	bc,pslreg ;+ drprim * 01010101b * 256
+	ld	hl,sslreg
+	ld	a,(hl)
+	cpl
+	ld	e,a
+	in	d,(c)
+	out	(c),b
+sec	equ	$ + 1
+	ld	(hl),0	  ; drsec * 01010101b
+	exx
+	ldir
+	exx
+	out	(c),d
+	ld	(hl),e
+	exx
+	ei
+
+	ret
+
+;**************************************
+;LDIR involving Mapper
+mapldir:di
+	exx
+	ex	af,af'
+	ld	a,(pmap)
+	ld	h,high romend
+	call	enaslt
+	ex	af,af'
+	ld	c,0feh	;Mapper port 8000-BFFF
+	in	b,(c)
+	out	(c),a
+	exx
+	ldir
+	exx
+	out	(c),b
+	ld	a,(ramtab+2)
+	ld	h,high romend
+	call	enaslt
+	exx
+	ei
+
+	ret
+
+;**************************************
+; Detect page type and number
+; Enter: DE=sector number
+; Return:A=type: 0 - error
+;		'B'- boot sector
+;		'F'- FAT sector
+;		'D'- DIR and resident sectors
+;		'S'- in RAM page
+;		'V'- in VRAM page
+;		'E'- in ERAM page
+;		'M'- in Mapper page
+;	 C=internal page code (type specific,SVEM)
+;	 HL=offset in page (SVEM)
+;	  or address (BFD)
+; Modify: AF,BC,HL,DE
+pdetect:
+; Check: special ?
+	ld	hl, - (dir + ressec)
+	add	hl,de	; relative sector number
+	jr	c,pnospc
+
+; Special sectors
+	ld	a,l
+
+	ld	hl,resbuf
+	ld	c,'D'
+	add	a,ressec
+	jr	c,pcom
+
+pfat	equ	$+1
+	ld	hl,0
+	ld	c,'F'
+	add	a,fatsec * fatnum
+	jr	c,pcom
+
+	ld	hl,sec0
+	ld	a,'B'
+	ret		; boot sector
+
+pcom:	ld	b,a
+	ld	a,c
+	ret	z
+	ld	de,seclen
+plcom:	add	hl,de
+	djnz	plcom
+	ret
+
+; Non-special sectors
+pnospc:			;HL=relative sector number
+			; (after dir)
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	ld	b,h	; page number B := (HL * seclen) / pagelen
+
+	ld	h,0
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl	; offset HL := ((HL * seclen) % pagelen) * seclen
+
+	inc	b
+	ld	de,ptable-1
+ptloop:	inc	de
+	ld	a,(de)
+	or	a
+	ret	z		; error
+	inc	de
+	cp	'a'
+	jr	nc,ptloop	; inactive
+	djnz	ptloop		; active
+
+; Page found
+	ex	de,hl
+	ld	c,(hl)		; internal page code
+	ex	de,hl
+
+; Check last sector of RAM-3
+	cp	'S'
+	ret	nz		; Not RAM
+	ld	b,a
+	ld	a,c
+	cp	3
+	ld	a,b
+	ret	nz		; Not RAM-3
+	ld	a,h
+	sub	high (romend-romstart-seclen)
+	ret	z		; error, RAM-3 last
+	ld	a,b
+	ret			; RAM-3 not last
+
+;**************************************
+; Select page processor
+; Enter: DE - 'prd' or 'pwr', A - page code
+; Modify: DE
+psel:	ld	(pend),a
+	dec	de
+	dec	de
+	push	hl
+	ld	hl,pcode-1
+psloop:	inc	de
+	inc	de
+	inc	hl
+	cp	(hl)
+	jr	nz,psloop
+	ex	de,hl
+	ex	(sp),hl
+	ret		;JP to selected routine
+
+;**************************************
+; Pages code table
+pcode:	db	'B'
+	db	'F'
+	db	'D'
+	db	'S'
+	db	'V'
+	db	'E'
+	db	'M'
+pend:	db	0
+
+;**************************************
+; Pages table
+; Each page contains 16*2 sectors
+ptable:
+; VRAM pages
+;	db	'v',0
+	db	'V',1
+	db	'V',2
+	db	'V',3
+	db	'V',4
+	db	'V',5
+	db	'V',6
+	db	'V',7
+ptv:
+; ERAM pages
+	db	'e',0
+	db	'e',1
+	db	'e',2
+	db	'e',3
+; Mapper pages
+ptms:
+;	db	'm',0
+;	db	'm',1
+;	db	'm',2
+;	db	'm',3
+	db	'M',4
+	db	'M',5
+	db	'M',6
+	db	'M',7
+	db	'M',8
+	db	'M',9
+	db	'M',0ah
+	db	'M',0bh
+	db	'M',0ch
+	db	'M',0dh
+	db	'M',0eh
+	db	'M',0fh
+ptm:
+; RAM-card pages
+	db	'S',0
+	db	'S',2
+pram3:	db	'S',3	;LAST in order !!!
+; Stop table
+	db	0
+
+; Table size
+ptsize	equ	$ - ptable
+
+; Mapper slot
+pmap:	db	0
+
+;**************************************
+;Check sum field
+fddcheck:db	'$'
+
+;**************************************
+; FD driver table
+fddtab:	db	0,0
+	db	0,0
+	db	0,0
+	db	0,0
+
+;**************************************
+; Sector 1 = FAT
+fatsec	equ	1
+fat	equ	1
+fatnum	equ	1
+
+;**************************************
+; Sectors 2-4 - Directory
+dir	equ	fat + fatsec * fatnum
+dirsec	equ	3
+
+;**************************************
+buffer	equ	$	;...	ds	seclen
+resbuf	equ	buffer + seclen
+ressec	equ	(romend - resbuf) / seclen
+
+;**************************************
+	.dephase
+
+;**************************************
+;**************************************
+; Work areas
+drslot:	db	0
+ramdrive:db	0
+shows:	db	0
+offs:	db	0
+pstab:	dw	stabm
+
+;**************************************
+; Messages
+copyright:
+	db	'M'-'@','J'-'@','RAM-drive version 1.3'
+	db	'M'-'@','J'-'@','(C) 1990, Leonid Baraz','M'-'@','J'-'@','M'-'@','J'-'@','$'
+setram:	db	'M'-'@','['-'@','K',"Set 'RAM' mode and press any key$"
+single:	db	'M'-'@','['-'@','K','Single drive A:$'
+offmsg:	db	'M'-'@','['-'@','K','M'-'@','J'-'@','RAM drive offline','M'-'@','J'-'@','$'
+pshow:	db	'M'-'@','['-'@','K','M'-'@'
+	db	'Pages:','I'-'@','0123456789ABCDEF'
+	db	'M'-'@','J'-'@','SLOT '
+spslot:	db	'0-'
+	db	'I'-'@'
+stabs:	db	'....'
+	db	'M'-'@','J'-'@','VRAM','I'-'@'
+stabv:	db	'........'
+	db	'M'-'@','J'-'@','ERAM','I'-'@'
+stabe:	db	'....'
+	db	'M'-'@','J'-'@','MAPR '
+mpslot:	db	'0-'
+	db	'I'-'@'
+stabm:	db	'................'
+	db	'M'-'@','J'-'@','$'
+copymsg:db	'M'-'@','J'-'@','Copy '
+msgname:db	'filename','.'
+msgext:	db	'ext','$'
+noflmsg:db	' - no files$'
+failmsg:db	' - failed$'
+totmsg:	db	'M'-'@','J'-'@'
+totnum:	db	'0000 Kbytes total, '
+freenum:db	'0000 Kbytes free'
+	db	'M'-'@','J'-'@','$'
+
+helpmsg:db	'RAM-card and FD driver required','M'-'@','J'-'@'
+	db	'Start:','I'-'@','RDV [flags ...] [files ...] [;DOS command]','M'-'@','J'-'@'
+	db	'Flags:','I'-'@','+c[n]','I'-'@','attach','M'-'@','J'-'@'
+	db	'I'-'@','-c[n]','I'-'@','detach area c or page n','M'-'@','J'-'@'
+	db	'I'-'@','I'-'@','of this area','M'-'@','J'-'@'
+	db	'I'-'@','I'-'@',"Where 'c':",'I'-'@','S  SLOT (n=0,2,3)','M'-'@','J'-'@'
+	db	'I'-'@','I'-'@','I'-'@','I'-'@','V  VRAM (n=1-7)','M'-'@','J'-'@'
+	db	'I'-'@','I'-'@','I'-'@','I'-'@','E  ERAM (n=0-3)','M'-'@','J'-'@'
+	db	'I'-'@','I'-'@','I'-'@','I'-'@','M  MAPPER (n=4-F)','M'-'@','J'-'@'
+	db	'I'-'@',':p[s]','I'-'@','mapper in slot p- or ps','M'-'@','J'-'@'
+	db	'I'-'@','?','I'-'@','list allocation of pages','M'-'@','J'-'@'
+	db	'I'-'@','#','I'-'@','detach RAM-drive','M'-'@','J'-'@','$'
+
+;**************************************
+; Command
+comname:db	'COMMAND.COM',0
+
+;**************************************
+; Copy areas
+wild:	db	0
+wildname:
+	ds	8,0
+wildext:ds	3,0
+wildw:	dw	0,0
+	dw	0,0
+	dw	0,0
+	ds	13,0
+wildws	equ	$-wildw
+
+fcb:	db	0
+fcbname:ds	8,0
+fcbext:	ds	3,0
+fcbw:	dw	0
+fcbsize:dw	0
+	dw	0,0
+fcbdate:dw	0
+fcbtime:dw	0
+	ds	13,0
+fcbws	equ	$-fcbw
+
+size:	dw	0
+date:	dw	0
+time:	dw	0
+
+;**************************************
+; Next system command
+contad:	dw	0
+
+;**************************************
+; Stack
+initsp	equ	$ + 256
+
+;**************************************
+; Copy buffer
+copybuf	equ	initsp
+
+;**************************************
+;**************************************
+
+	end	enter
+

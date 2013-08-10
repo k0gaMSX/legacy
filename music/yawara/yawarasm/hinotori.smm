@@ -1,0 +1,182 @@
+;
+;                      Hinotori.SMM
+;
+;   "Hinotori Houoohen" (Bird of The Fire - Compilation
+;         Story of The Bird Goddess of The Fire)
+;                Source Game Music Module
+;
+; Version Bianca-1-1 (2nd Ver., 1st Release, 1st Revision)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =Hinotori.SMM
+;   L80 Hinotori,Hinotori.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Hinotori Houoohen" cartridge mapping:
+;
+;                                8000   BFFF
+;                               1C000   1FFFF
+;       |?|?|?|?|?|?|?|?|?|?|?|?|?|?|M|M|
+;   00000                               1FFFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+; Program standard values.
+
+LINTTB equ  0FBB2H
+SysDB  equ  LINTTB
+GCtrlR equ  SysDB+017H
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '       Hinotori Houoohen        '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   0C200H
+GMPNam:db   'Yawara  C20'
+OpenMN:db   061H
+StrtSE:db   064H
+ChATDD:dw   0C011H
+ChBTDD:dw   0C031H
+ChCTDD:dw   0C051H
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'Hinotor0Sc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'Hinotor1Sc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00011011B
+GCtRSt:db   'Volume '
+
+SetupR:ret  nz
+       ld   hl,0C000H
+       ld   de,0C001H
+       ld   bc,000FFH
+       ld   (hl),000H
+       ldir
+       ld   a,0FFH
+       ld   (GCtrlR),a
+SilnRt:ld   a,05BH
+StMsRt:jp   09400H
+
+PlayRt:ld   a,(GCtrlR)
+       cpl
+       srl  a
+       srl  a
+       srl  a
+       srl  a
+       ld   (0C0F6H),a
+       jp   09497H
+
+GmBlNm:db   'Hinotori000'
+GmBlSz:dw   04000H
+LoadAd:dw   08000H
+       dw   0FFFFH
+MusicT:db   05BH,'       Silence...      '
+       db   061H,'   Opening - Houoohen  '  ; Short version of "Hinotori".
+       db   037H,'    Gaou''s Wandering   ' ; Konami original BGM.
+       db   03AH,'         Demons        '
+       db   03DH,'         Ghosts        '
+       db   040H,'        Spirits        '
+       db   043H,'         Omens         '
+       db   046H,'   Hinotori no Hikari  '  ; Konami's arrange of "Hinotori".
+       db   049H,'      Silver Wings     '  ; "Hinotori" refrain.
+       db   067H,'       For Hayame      '  ; Konami original BGM.
+       db   06AH,'      Gaou''s Death     '
+       db   06DH,'        Sayonara       '  ; "Game Over" music.
+       db   0FFH,0FFH
+EffctT:db   05EH,'        Still...       '
+       db   001H,'           01          '
+       db   002H,'           02          '
+       db   004H,'           04          '
+       db   005H,'           05          '
+       db   006H,'           06          '
+       db   007H,'           07          '
+       db   008H,'           08          '
+       db   009H,'           09          '
+       db   00AH,'           0A          '
+       db   00BH,'           0B          '
+       db   00CH,'           0C          '
+       db   00DH,'           0D          '
+       db   00FH,'           0F          '
+       db   010H,'           10          '
+       db   011H,'           11          '
+       db   012H,'           12          '
+       db   013H,'           13          '
+       db   014H,'           14          '
+       db   015H,'           15          '
+       db   017H,'           17          '
+       db   018H,'           18          '
+       db   019H,'           19          '
+       db   01AH,'           1A          '
+       db   01CH,'           1C          '
+       db   01DH,'           1D          '
+       db   01EH,'           1E          '
+       db   01FH,'           1F          '
+       db   020H,'           20          '
+       db   021H,'           21          '
+       db   022H,'           22          '
+       db   023H,'           23          '
+       db   025H,'           25          '
+       db   027H,'           27          '
+       db   028H,'           28          '
+       db   029H,'           29          '
+       db   02AH,'           2A          '
+       db   02BH,'           2B          '
+       db   02EH,'           2E          '
+       db   02FH,'           2F          '
+       db   030H,'           30          '
+       db   031H,'           31          '
+       db   033H,'           33          '
+       db   034H,'           34          '
+       db   036H,'           36          '
+       db   04CH,'           4C          '
+       db   04FH,'           4F          '
+       db   052H,'           52          '
+       db   055H,'           55          '
+       db   058H,'           58          '
+       db   064H,'         Start!        '
+       db   070H,'         Pause!        '
+       db   0FFH,0FFH
+
+       end

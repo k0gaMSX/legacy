@@ -1,0 +1,40 @@
+
+BDOS:	EQU	5
+
+Begin:	call	ReadCON
+	jp	z,0		;Geen input meer ->
+				;  pipen afgelopen
+	call	Upper
+	call	WriteCON
+	jr	Begin
+
+Upper:	cp	"a"              ;Kleiner dan "a"? ->
+	ret	c		;  terugspringen
+	cp	"z"+1            ;Groter dan "z"? ->
+	ret	nc		;  terugspringen
+	xor	"a"-"A"          ;Hoofdletter maken
+	ret
+
+ReadCON:	ld	c,#48		;Lees File Handle
+	ld	b,0		;Standaard File Handle
+				;  voor lezen van CON
+	ld	de,Buffer
+	ld	hl,1		;Lengte 1
+	call	BDOS
+	ld	a,l		;HL=0?
+	cp	0		;  Zet Z-flag
+	ld	a,(Buffer)	;Waarde uit buffer in A
+	ret
+
+WriteCON:	ld	(Buffer),a
+	ld	c,#49		;Schrijf File Handle
+	ld	b,1		;Schrijven naar CON
+	ld	de,Buffer
+	ld	hl,1
+	call	BDOS
+	ret
+
+Buffer:	db	0
+
+	db	"Public Domain, by Nuthemagic"
+

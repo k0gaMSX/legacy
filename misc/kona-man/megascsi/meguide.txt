@@ -1,0 +1,212 @@
+MegaSCSI incomplete BIOS reference
+Compiled by Nestor Soriano (Konami Man), 1999
+
+Get some MegaSCSI utilities from my web page:
+http://konamiman.msx.tni.nl
+...and/or ask me anything here:
+konamiman@geocities.com
+
+1. PREVIOUS INTERISTING DATA
+
+- The data contained here was extracted from the original japanese MegaSCSI 
+programming reference, but this document is not an exact translation work.
+
+- If you want to check the presence of a MegaSCSI in a given slot, search the 
+string MEGASCSI in the address #7FE0 of the slot.
+
+- All of the BIOS routines listed here must be called through an entry point 
+placed at address #7FCC on MegaSCSI addressing space. You can do this via 
+direct CALL or via interslot call.
+
+- MegaSCSI can handle 8 DOS partitions and 16 extended partitions. DOS 
+partitions refers to those which have assigned a DOS drive letter and are 
+accessed via DOS funtion calls. Extended partitions can be accessed only via 
+MegaSCSI BIOS, and are used for example when performing floppy emulations.
+
+- Each partition is described by an internal 16 byte partition table, which 
+can be read or written via BIOS functions #84 to #87. The format of this 
+table is as follows:
+
++0: Device ID. Bit b is placed to 1 when this partition is assigned to the 
+device with ID b. So this byte is %00000001 for ID 0, %00000010 for ID 1, 
+etc.
++1, bit 7: Disk change flag. It is 0 when a disk change was made but a disk 
+change status was not requested yet.
++1, bit 6: Write protection bit (1=write protected partition, 0=write enabled 
+partition). It is read and write bit.
++1, bits 0-5: unused, leave it to 0.
++2: Physical start sector, bits 23 to 16.
++3: Physical start sector, bits 15 to 8.
++4: Physical start sector, bits 7 to 0.
++5: Partition size in sectors, bits 23 to 16.
++6: Partition size in sectors, bits 15 to 8.
++7: Partition size in sectors, bits 7 to 0.
++8: Sector size in bytes, bits 15 to 8 (always #02).
++9: Sector size in bytes, bits 7 to 0 (always #00).
++10 to +15: Unused, leave it to zero.
+
+- Error codes for these functions are as follows:
+
+0: Write protected
+2: Not ready
+4: Data transfer error
+8: Reservation conflict
+10: Not supported media/Write error
+12: Other error/Arbitration error
+16: Format error
+
+Some of these errors are SCSI specific. Refer here for the SCSI standard 
+programming reference:
+
+http://scitexcd.com:8080/scsi2/Frames/
+
+- MegaSCSI addressing space size is 32K, and it is divided into four 8K 
+banks:
+
+Bank		Control address
+
+#4000-#5FFF	#6000
+#6000-#7FFF	#6800
+#8000-#9FFF	#7000
+#A000-#BFFF	#7800
+
+MegaSCSI SRAM is then divided also in 8K segments. You can connect any 
+segment to any bank by just sending the segment number to the control address 
+for the desired bank.
+
+There is two connecting methods: read-only mode (for ROM emulation) and read 
+and write mode. Before sending to the control address, put bit 7 of the 
+segment number to 0 if you want to connect the segment in read-only mode, 
+else put this bit to 1.
+
+2. BIOS FUNCTIONS LIST
+
+* Reading SRAM capacity and use
+
+Input:	A  = #A4
+	HL = Buffer address
+Output: Buffer filled with the following information:
+	+0: Total amount of SRAM 8K segments.
+	+1: Number of SRAM banks used for DOS kernel. It is 2 for DOS 1 
+kernel, and 8 for DOS 2 kernel. DOS kernel start segment number is always 0.
+	+2: First bank number used for ESE-RAMdisk.
+	+3: Amount of banks used for ESE-RAMdisk.
+
+* Setting SRAM use
+
+Input:	A  = #A5
+	HL = Buffer addres, same format as #A4 funtion
+
+Using these two functions you can reserve SRAM segments for your own use. 
+Just follow this procedure if you want to reserve N segments:
+
+- Call function #A4.
+- Add N to (BUFFER+2).
+- Substract N from (BUFFER+3).
+- Call function #A5.
+- Format ESE-RAMdisk with ESFORM.COM.
+
+Now ESE-RAMdisk is N*8K smaller, and you have N segments for your own use. 
+The number of the first reserved segment is 2 or 8, depending on the DOS 
+version of the kernel installed.
+
+* Checking disk change status
+
+Input:	A  = #10 + DOS partition number, or
+	     #50 + extended partition number
+	HL = Pointer to Drive Parameter Block for the drive
+Output: Cy = 1 if error
+	A  = error code if Cy=1
+	B  = 1	 -> No disk change was performed
+	     255 -> Disk was changed
+	     0	 -> Unknown disk status
+
+Use DOS function ALLOC (#1B) in order to obtain the Drive Parameter Block 
+address.
+
+* Reading/writing a partition table
+
+Input:	A  = #84 for read a DOS partition table
+	     #85 for set a DOS partition table
+	     #86 for read a extended partition table
+	     #87 for set a extended partition table
+	C  = Partition number
+	HL = Source or destination buffer address for the partition table
+Output: Cy = 1 if error
+	A  = error code if Cy=1
+
+If you set a new partition table, don't forget to put disk change bit to 0 
+first.
+
+If you try to read the table for an undefined partition, you will get 0 for 
+the ID byte. If the partition contains actually the ESE-RAMdisk, the ID byte 
+will be 255. In both cases, all the other bytes for the partition table are 
+undefined.
+
+* Creating a new partition
+
+Input:	A  = #80 for creating a DOS partition, or
+	     #82 for creating an extended partition
+	HL = Source buffer address for the partition table
+Output: Cy = 1 if error
+	A  = error code if Cy=1
+	C  = number of the new created partition
+
+If you can't create a new partition (8 DOS partitions or 16 extended 
+partitions are already defined) you will get error code 12.
+
+Note that you will be able to access only the DOS partitions which are 
+actually assigned to MegaSCSI. For example if MegaSCSI has drives C:, D: and 
+E: assigned, then you can access only DOS partitions 0, 1 and 2 respectively. 
+Use ESET.COM in order to set the number of DOS drives controlled by MegaSCSI.
+
+About the extended partitions, normally you will use them for emulating disk 
+image files. Use EP.COM for this.
+
+* Freeing a partition
+
+Input:	A  = #81 for free a DOS partition, or
+	     #83 for free an extended partition
+	C  = number of the partition to be freed
+Output: Cy = 1 if error
+	A  = error code if Cy=1
+
+Note that even if you free a visible DOS partition, the assigned drive stills 
+reserved for MegaSCSI, but unusable. The only way to change the number of DOS 
+drives reserved to MegaSCSI is via ESET.COM.
+
+* Sector read and write
+
+Input:	A  = #00 + DOS drive number, or
+	     #40 + extended partition number
+	Cy = 0 for read sectors
+	     1 for write sectors
+	B  = Number of sectors to be accessed
+	C  = First sector number, bits 23 to 16
+	DE = First sector number, bits 15 to 0
+	HL = Source/destination buffer address for the data
+Output: Cy = 1 if error
+	A  = error code if Cy=1
+	B  = number of sectors actually accessed
+
+* SCSI command handler
+
+Input:	A  = #C0
+	HL = Command packet buffer address
+Output: Cy = 1 if error
+	A  = error code if Cy=1
+
+Command packet format is as follows:
+
++0: Device ID, same format as in the partition tables.
++1: Unused, leave it to 0.
++2, 3: Command Descriptor Block (CDB) buffer address.
++4, 5: Data transfer buffer address.
++6, 7: Status byte buffer address.
++8, 9: Message buffer address.
+
+Refer here for the SCSI standard programming reference:
+
+http://scitexcd.com:8080/scsi2/Frames/
+
+

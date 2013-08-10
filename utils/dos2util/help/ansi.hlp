@@ -1,0 +1,276 @@
+                                   ANSI.OVR
+
+
+Auf  vielfachen  Wunsch  eines  einzelnen Herrn (hi ROWI)  habe  ich  die  von
+ANSI.OVR verstandenen Steuerzeichen hier einmal zusammengefaát.
+
+Anmerkung  vorweg: Das Steuerzeichen CSI hat den ASCII-Code 9B hex. (und  wird
+deshalb nur erkannt, wenn der IBM-Zeichensatz nicht eingestellt ist!), es kann
+aber stets durch die ESC-Sequenz "ESC [" ersetzt werden. Beispiel: Der Steuer-
+befehl "invers ein" (CSI 7 m) wird entweder durch die ASCII-Codes (hex) 1B  5B
+37 6D oder durch die ASCII-Codes 9B 37 6D ausgel”st.
+
+Noch  'ne  Anmerkung: In ANSI.OVR gehen drei  Befehlsstandards  durcheinander.
+Einmal  die eigentlichen (genormten) ANSI-Befehle, dann die Erweiterungen  des
+Standards   durch   die   IBM-Codes  (gekennzeichnet  durch   [ibm]   in   der
+Beschreibung), schlieálich die Erweiterungen der ANSI-Norm durch die DEC-Codes
+(VT100- bzw. VT200-Standard, gekennzeichnet durch [vt100] bzw. [vt200] in  der
+Beschreibung). Alle ANSI- und ANSI-artigen Steuerzeichenfolgen haben aber  ein
+einheitliches  Format,  so daá ein Terminal auch bei Befehlen,  die  es  nicht
+kennt, Anfang und Ende der Steuersequenz feststellen und den kompletten Befehl
+ignorieren kann.
+
+Und jetzt geht's los:
+
+Zun„chst die Ein-Byte-Befehle.
+
+Mnemonic        ASCII (hex)             Wirkung
+------------------------------------------------------------------------------
+BEL             07                      Beep.
+BS              08                      Cursor links. Wenn der Cursor schon am
+                                        linken Rand steht, ignoriert.
+HT              09                      TAB. Wenn keine weiteren TABs in der
+                                        Zeile definiert sind, geht der Cursor
+                                        an den rechten Rand und bleibt dort.
+LF              0A                      Zeilenvorschub.
+VT              0B                            "
+FF              0C                            "
+CR              0D                      Cursor an den Zeilenanfang.
+SO              0E                      Zeichensatz "G1" einschalten.
+SI              0F                      Zeichensatz "G0" einschalten.
+CAN             18                      Bricht eine angefangene Befehlssequenz
+                                        vorzeitig ab, ansonsten ignoriert.
+SUB             1A                      Bricht eine angefangene Befehlssequenz
+                                        vorzeitig ab, gibt ein kopfstehendes
+                                        Fragezeichen als Fehlermeldung aus.
+ESC             1B                      Leitet eine neue Befehlssequenz ein.
+
+
+TABs bewegen nur den Cursor und erzeugen keine Leerzeichen.
+
+
+Es  folgen die ANSI-Steuerzeichen > 80h. Jedes dieser Steuerzeichen kann  auch
+durch eine zwei-Byte-ESC-Sequenz dargestellt werden.
+
+IND             84  oder  ESC D         Cursor abw„rts, ggf. mit Scroll.
+NEL             85  oder  ESC E         Cursor an den Anfang der n„chsten
+                                        Zeile, ggf. mit Scroll.
+RI              8D  oder  ESC M         Cursor aufw„rts, ggf. mit Scroll.
+SS2             8E  oder  ESC N         Schaltet fr das n„chste Zeichen den
+                                        Zeichensatz "G2" ein [vt200].
+SS3             8F  oder  ESC O         Schaltet fr das n„chste Zeichen den
+                                        Zeichensatz "G3" ein [vt200].
+DCS             90  oder  ESC P         Leitet "Device Control String" ein.
+CSI             9B  oder  ESC [         Leitet eine neue Befehlssequenz ein.
+ST              9C  oder  ESC |         Beendet "Device Control String".
+
+
+Auswahl der Zeichens„tze G0 .. G3
+
+Es  stehen  insgesamt 15 verschiedene Zeichens„tze zur Verfgung.  Aus  diesen
+Zeichens„tzen  k”nnen 4 ausgew„hlt und den Zeichensatz-Tabellen G0 bis G3  zu-
+gewiesen werden. Zwischen diesen Tabellen kann dann folgendermaáen  umgeschal-
+tet werden:
+
+G0      Dies ist der Zeichensatz, mit dem normalerweise gearbeitet wird.
+
+G1      Dies  ist  der  Zeichensatz, mit dem die  ASCII-Zeichen  von  A0h..FFh
+        dargestellt werden. In einer 7-Bit-Umgebung kann man mittels SO und SI
+        zwischen den beiden Zeichens„tzen umschalten.
+
+G2, G3  [vt200] Zwei zus„tzliche Zeichens„tze, die mittels SS2 und SS3 fr ein
+        einzelnes Zeichen vorbergehend eingeschaltet werden k”nnen.
+
+Die Auswahl der Zeichens„tze erfolgt ber eine drei Byte lange ESC-Sequenz:
+
+        ESC   c1   c2
+              ^    ^
+              |    bestimmt den verwendeten Zeichensatz
+              |
+              bestimmt G0..G3
+
+c1:     (       fr G0
+        )       fr G1
+        *       fr G2                          [vt200]
+        +       fr G3                          [vt200]
+
+c2:     A       Britisch
+        B       Standard-ASCII-Zeichensatz
+        C       Finnisch
+        E       Norwegisch/D„nisch
+        H       Schwedisch
+        I       IBM-Blockgrafik statt C1        [nur ANSI.OVR]
+        K       Deutsch
+        Q       Kanadisch
+        R       Franz”sisch
+        X       IBM-Blockgrafik                 [nur ANSI.OVR]
+        Y       Italienisch
+        Z       Spanisch
+        =       Schweizerisch
+        <       erweiterter DEC-Zeichensatz     [vt200]
+        0       DEC-Grafikzeichensatz           [vt100]
+        4       Niederl„ndisch
+        5       Finnisch
+        6       Norwegisch/D„nisch
+        7       Schwedisch
+
+Beispiele:
+        ASCII als G0            ESC ( B
+        Britisch als G3         ESC * A
+
+
+
+Terminal-Modus-Umschaltung
+
+Auto-Wrap ein           CSI ?7h                 [vt100]
+Auto-Wrap aus           CSI ?7l                 [vt100]
+Cursor ein              CSI ?25h                [vt100]
+Cursor aus              CSI ?25l                [vt100]
+Terminal-Reset          ESC c
+Terminal-Reset          CSI !p                  [vt100]
+
+
+Cursor-Positionierung
+
+(## steht fr eine ein- oder zweistellige Dezimalzahl)
+
+Cursor ## Zeilen aufw„rts       CSI ##A
+Cursor ## Zeilen abw„rts        CSI ##B
+Cursor ## Zeichen rechts        CSI ##C
+Cursor ## Zeichen links         CSI ##D
+Cursor links oben               CSI H
+Cursor auf Anfang von Zeile ##  CSI ##H
+Cursor auf Zeile ##; Spalte ##  CSI ##;##H  oder  CSI ##;##f
+Cursor-Position speichern       CSI s           [ibm]
+Cursor-Position abrufen         CSI u           [ibm]
+
+
+Bildschirm-Attribute
+
+Die Befehlssequenz zur Auswahl der Bildschirm-Attribute beginnt stets mit  CSI
+und  wird durch ein kleines "m" abgeschlossen. Dazwischen stehen -  durch  ";"
+getrennt - die Codes der gewnschten Attribute:
+
+        0       Alle Bildschirm-Attribute aus
+        1       Helle Schrift ein
+        4       Unterstreichen ein
+        5       Heller Hintergrund ein (eigentlich: Blinken ein)
+        7       Inversschrift ein
+        22      Helle Schrift aus
+        24      Unterstreichen aus
+        25      Heller Hintergrund (bzw. Blinken) aus
+        27      Inversschrift aus
+        30      schwarze Schrift                [ibm]
+        31      rote Schrift                    [ibm]
+        32      grne Schrift                   [ibm]
+        33      gelbe Schrift                   [ibm]
+        34      blaue Schrift                   [ibm]
+        35      violette Schrift                [ibm]
+        36      cyanblaue Schrift               [ibm]
+        37      weiáe Schrift                   [ibm]
+        40      schwarzer Hintergrund           [ibm]
+        41      roter Hintergrund               [ibm]
+        42      grner Hintergrund              [ibm]
+        44      gelber Hintergrund              [ibm]
+        44      blauer Hintergrund              [ibm]
+        45      violetter Hintergrund           [ibm]
+        46      cyanblauer Hintergrund          [ibm]
+        47      weiáer Hintergrund              [ibm]
+
+
+L”schen/Einfgen
+
+(## steht wieder fr eine ein- oder zweistellige Zahl)
+
+## Leerzeilen einfgen                  CSI ##L
+## Zeilen entfernen                     CSI ##M
+
+L”schen von Cursor bis Zeilenende       CSI K  oder  CSI 0K
+L”schen von Cursor bis Zeilenanfang     CSI 1K
+Ganze Zeile l”schen                     CSI 2K
+
+L”schen von Cursor bis Bildschirmende   CSI J  oder CSI 0J
+L”schen von Cursor bis Bildschirmanfang CSI 1J
+Ganzen Bildschirm l”schen               CSI 2J
+
+Keiner  dieser  Befehle  ver„ndert die  Cursor-Position  auf  dem  Bildschirm!
+(Ausnahme: Wenn der IBM-Zeichensatz eingeschaltet ist, positioniert CSI 2J den
+Cursor  auf  die linke obere Ecke. Damit emulieren wir eine  kleine  Macke  in
+IBM's ANSI.SYS :-)
+
+
+DEC-Sixelgrafik (ab ANSI 2.50)
+
+Sixel-Grafik ist eine Bit-Image-Grafik, bei der jeweils sechs Pixel (also  ein
+"Sixel")  in einem ASCII-Zeichen codiert werden. Eingeleitet wird eine  Sixel-
+Sequenz durch die Steuerzeichen-Folge
+
+        DCS 1 q         (hex. 1B 50 31 71  oder  90 31 71).
+
+Die darauf folgenden Zeichen werden wie folgt interpretiert:
+
+
+1. Zeichen von '?' bis 'á'  (3F bis 7E hex.)
+
+Vom ASCII-Code des Zeichens wird 63 (dezimal) abgezogen; die verbleibende Dif-
+ferenz  beschreibt bitweise (LSB oben, MSB unten) ein  Sixel.  Aufeinanderfol-
+gende Sixel werden fortlaufend nebeneinander dargestellt.
+
+
+2. Das Zeichen '-'  (hex. 2D)
+
+Ein '-' beendet die laufende Sixel-Zeile; die n„chsten Grafikdaten werden wie-
+der in Spalte 1 dargestellt, allerdings 6 Pixel tiefer.
+
+
+3. Das Zeichen '!' (hex. 21)
+
+Das '!' markiert einen Wiederholungsz„hler. Es folgt eine Dezimalzahl  (ASCII-
+Klartext),  die  angibt, wie oft das darauf folgende Sixel  wiederholt  werden
+soll.
+
+
+Beendet  wird der Sixel-Modus durch das Steuerzeichen ST (oder ESC); alle  an-
+deren  zeichen (auch CR/LF!) werden ignoriert. Im Sixel-Modus wird  der  Bild-
+schirm nicht gescrollt, Bilddaten auáerhalb des darstellbaren Bereiches werden
+unterdrckt.
+
+
+
+Aufrufe in Maschinensprache
+
+ANSI.OVR  wird ab Adresse 8000h geladen und kann ber  eine  BIOS-Sprungleiste
+aufgerufen werden:
+
+8000    VTVERS: DB      25H             ; Version 2.5x
+                DW      OVRPAR          ; Adresse des Parameterblocks
+8003    VTINIT: JP      $VTINIT         ; Initialisierung
+8006    VTEXIT: JP      $VTEXIT         ; Rcksetzen
+8009    VTPUT:  JP      $VTPUT          ; Zeichen in A ausgeben (gepuffert)
+800C    VTREPL: JP      DUMMY           ; reserviert
+800F    VTCUR0: JP      $VTCUR0         ; Cursor ausschalten
+8012    VTCUR1: JP      $VTCUR1         ; Cursor  einschalten,  Puffer   bear-
+                                          beiten
+8015    VTTRNS: JP      $VTTRNS         ; Tastaturcode gem. NRC umcodieren
+8018    VTDPUT: JP      $$VTPUT         ; Zeichen in A ausgeben (ungepuffert)
+801B    VTDCUR: JP      $VTDCUR         ; Cursor einschalten ohne Puffer
+801E    VTPROM: JP      $VTPROM         ; "Insert disk for Drive ..."
+8021    VTERR:  JP      $VTERR          ; "Disk I/O error", MSXDOS 1
+8024    VTERR2: JP      $VTER2          ; "Disk I/O error", MSXDOS 2
+8027    VTSNS:  JP      $VTSNS          ; Tastatur-Status
+802A    VTGET:  JP      $VTGET          ; Zeichen holen (mit Codewandlung)
+
+
+	; Overlay-Parameterblock (read only!)
+
+        OVRPAR: DW      PARLEN          ; L„nge des Parameterblocks
+                DB      COLUMNS         ; Zeilenl„nge
+                DB      LINES           ; Anzahl Zeilen
+                DW      BUFLEN          ; ANSI-Bufferl„nge
+                DW      PLTAB           ; Adresse der Palettendaten (32 Byte)
+                DW      VTKEYS          ; Adresse der Funktionstasten (160 B.)
+        PARLEN  EQU     $-OVRPAR
+
+Anhand von PARLEN prfen, ob der gewnschte Parameter berhaupt vorhanden  ist
+(der Parameterblock w„chst mit den Versionen), bevor darauf zugegriffen wird!
+                                                                                                  

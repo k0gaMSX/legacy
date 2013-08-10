@@ -1,0 +1,194 @@
+NB: This is another excerpt from the manual (MSX2EMUL.DOC). Maybe you should
+    read it after all :-)
+
+
+     TROUBLE SHOOTING GUIDE/QUESTIONS & ANSWERS
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     ş I used /B but the emulator doesn't boot MSXDOS
+       ş Be sure you have MSXDOS.SYS  and COMMAND.COM in the same directory
+         as the MSX emulator executable (MSX2.EXE).
+       ş Also check if the drive on which these files are located is mapped
+         to a MSX drive (check DRIVES.TBL).
+
+     ş The MSX crashed when it starts after checking MSX drive A:
+       ş Check if  the drive  contains a MS-DOS  formatted disk.  You can't
+         boot   MS-DOS  formatted  disks  because  the  bootstrap  code  is
+         different. Don't boot from the disk or use MSXBOOT.COM.
+       ş Check if the disk in  MSX drive A: is a 3.5"  single sided (360Kb)
+         formatted  disk. If  you didn't  start  the emulator  with the  /D
+         parameter press F12 and try that.
+
+     ş I try to load a program but it crashes the MSX
+       There are MANY possible reasons, but try the following before giving
+       up or starting to yell at us :-)
+       ş Type  POKE -1,170  (Philips memory  layout) or  POKE  -1,255 (Sony
+         memory layout) prior to loading the program.
+       ş Try to reduce the number of MSX drives (DRIVES.TBL).
+       ş If reduced  the number of  drives downto 1  try resetting the  MSX
+         (emulator) and pressing CTRL until the beep.
+       ş Try a SONY memory layout (/S switch)
+       ş If the program loads  using a BASIC loader (likely a  .BAS or .LDR
+         file) check the file for POKE -1,xxxx or POKE  &HFFFF,xxxx. If you
+         are in Philips memory layout  mode (default) and the listing reads
+         POKE -1,255  or POKE &HFFFF,255 or POKE &HFFFF,&HFF make it POKE -
+         1,170 or start the emulator with /S.
+         The other way around: if you used  /S and the listing reads POKE -
+         1,170  or POKE &HFFFF,&HAA  don't use the  /S switch  or change it
+         into POKE -1,255.
+       ş If the  program boots from disk check if  it's a single sided 3.5"
+         (360Kb) disk or just try the /D switch.
+       ş Try MSX-1 ROMs instead of MSX-2 ROMs or vice versa.
+       ş Try the /R1 switch
+       ş Try combinations of the above mentioned solutions.
+
+     ş I have a CP/M boot disk but it crash the MSX
+       See "NOTES"
+
+     ş I have ROMs but the emulator seem to crash on them
+       DiskROMs  from  Turbo-R  machines tend  to  crash  the emulator.  We
+       haven't been able to supply a solution.
+       ROMs from Spectra Video machines probably won't work. We've had lots
+       of reports on that and suspect that these ROMs won't work at all.
+
+     ş I have ROM files for the previous MSX emulator, can I use them ?
+       Yes. rename them:
+         REN MSX1ROMA.BIN MSXBIOS.ROM
+         REN MSX1ROMB.BIN MSXBASIC.ROM
+       But you have to use real MSX-2 ROMs to get MSX-2 emulation.
+
+     ş I'm getting 'Overseek errors' from PMEXT
+       Check  out  your  CoNFIG.SYS  file  for  the  FCBS=  statement.  See
+       "REQUIREMENTS, INSTALLATION  AND  STARTING THE  EMULATOR"  for  more
+       details.
+
+
+     GETTINGS PROGRAMS TO WORK
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     If you've problems  with MSX programs to  get them working and  you've
+     read the complete manual read this section.
+
+     ş Read this manual COMPLETELY
+
+     ş Read the "TROUBLE SHOOTING GUIDE"
+
+     ş Read the "NOTES"
+
+     ş Read "SOME IMPORTANT BASIC COMMANDS"
+
+     ş Before loading the program:
+       Philips slot layout (default) : POKE -1,170
+       Sony slot layout (/S)         : POKE -1,255
+
+     ş Leave  out all the drives in DRIVES.TBL  except the drive you've got
+       the program on. Then  press CTRL while the MSX boots until a beep is
+       heard
+
+     ş Check out the BASIC loader of a program (if any) by loading it (e.g.
+       LOAD "file"  command) and typing  LIST (use ScrollLock to  pause the
+       listing). Look for a POKE -1 or POKE &HFFFF statement.
+       If  you're using  the Philips  memory layout  (default) and  this is
+       anything else then 170 or &HAA change it into 170 and run the  BASIC
+       loader again.
+       If  you're using  the Sony memory  layout (/S) and  this is anything
+       else then  255 or &HFF change  it into 255 and run  the BASIC loader
+       again.
+
+     ş If the program is  a bootable disk or  the program is on a  diskette
+       try _LOW or the /D command line switch before loading the program
+
+     ş Try other ROMs.  If you are running  with MSX-1 ROMs try  MSX-2 ROMs
+       and vice versa
+
+     ş Try the /R1 commandline switch (install only 128Kb memory mapper)
+
+     ş Try the /S commandline switch (Sony memory/slot layout)
+
+     ş Try  combinations of  the  above mentioned  solutions  (like e.g.  1
+       drive, CTRL key before BEEP, sony memory layout and POKE -1,255).
+
+     NOTES
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     This section is  dedicated to some notes  that don't belong to  one of
+     the  other  sections  but can  be  of  concern when  you  use  the MSX
+     emulator.
+
+     ş High level disk I/O and device names
+       Using e.g.  CON, AUX,  LPT, etc  in high  level disk  I/O mode  will
+       probably have strange effects. It's extremly difficult (impossible?)
+       to get this to work properly so we didn't. Example:
+         COPY "file" TO "CON"
+       will probably mess up the screen for a  while in high level disk I/O
+       mode.
+
+     ş Crashes when booting: the boot sector
+       Disks  formatted in  MS-DOS have  a different  boot sector  then MSX
+       disks. The  file system is compatible,  but the bootstrap  code in a
+       MS-DOS formatted boot  sector is  80x86 code while  the MSX has  Z80
+       code there. When  you try  to boot  a MS-DOS formatted  disk in  the
+       emulator the MSX will probably  crash. Use MSXBOOT.COM or _FORMAT to
+       fix the problem.
+
+     ş Formatting/Using 1.44Mb disks at 720Kb
+       You need to cover the second hole in the disk (opposite to the write
+       protect tab). Use e.g. 5.25" write protect stickers.
+
+     ş CP/M from RVS Daten Technik for VG8235
+       This  CP/M operating  system is  not  written very  open minded.  It
+       assumes  you have  a VG8235  or compatible  memory layout.  You also
+       can't have more then 128Kb memory mapper RAM installed.
+       If you want to run it use the /D and /R1 command line switches
+
+     SOME IMPORTANT MSX-BASIC COMMANDS
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     ş FILES ["filename"]
+       Shows a  listing of files  on the current disk.  Using FILES without
+       parameter will list ALL files.
+       Using the parameter, e.g. FILES  "*.BAS" lists only specified files.
+       Acts like DIR in MS-DOS.
+       Common used file extensions are:
+       .BAS  (or no extension) BASIC programs. Use RUN or LOAD
+       .LDR  (mostly BASIC) loader of a program. Use RUN or LOAD
+       .BIN  BINary file: executable Z80 code. Use BLOAD
+       .BL   BLoadable file. See .BIN
+       .ML   Machine Language. See .BIN
+       .COM  MSX-DOS program. Can probably only be executed in MSX-DOS
+       .BAT  MSX-DOS batch program. Can only be executed in MSX-DOS
+
+     ş POKE -1,170
+       or
+       POKE -1,255
+       Most MSX-2  machines have another  layout then most  MSX-1 machines.
+       The same is true for the MSX emulator. Some programs however require
+       a typical MSX-1 layout. If a program crashes try, before loading the
+       program, POKE -1,170  if you didn't use the /S switch or POKE -1,255
+       if you did use.
+
+     ş RUN ["file"]
+       Only RUN will execute the current BASIC program in memory. Using the
+       file parameter will execute a MSX-BASIC program on disk (or cassette
+       :-).
+       Example: RUN "LOADER.BAS"
+
+     ş BLOAD "file"[,R]
+       Load a binary file. When the optional ,R parameter is used  the code
+       will be executed right after loading it.
+       Example: BLOAD "CODE.BIN",R
+
+     ş LOAD "file"
+       Load but do not run a BASIC program with filename file
+       Example: LOAD "PROGRAM.BAS"
+
+     ş KILL "file"
+       Erases file(s) from disk
+       Example: KILL "*.BAS"
+
+     ş CALL FORMAT or _FORMAT
+       Formats a disk. Follow instructions on the screen.
+
+     ş CALL SYSTEM or _SYSTEM
+       Boots from A:. Can be used to  load MSX-DOS. Tip: type POKE &HF346,1
+       before entering  CALL SYSTEM  if you haven't  already booted  from a
+       disk.

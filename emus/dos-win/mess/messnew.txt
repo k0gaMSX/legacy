@@ -1,0 +1,169 @@
+0.37b2
+
+Note: .inp record/playback does still not work currently.
+
+
+New System Drivers Supported (in no particular order):
+------------------------------------------------------
+
+Spectrum +4 (48K) [David Robertson]
+Inves Spectrum 48K+ [David Robertson]
+TK90x Color Computer [David Robertson]
+TK95 Color Computer [David Robertson]
+Timex Computer 2048 [David Robertson]
+Timex-Sinclair 2068 [David Robertson]
+Spectrum +2 [David Robertson]
+C128 Italian [Peter Trauner]
+Vic64s (c64 swedish version/or c64 with swedish expansion kit) [Peter Trauner]
+Vic20swe (vic20 with swedish expansion kit) [Peter Trauner]
+Cbm40pal, Cbm80pal, superpet [Peter Trauner]
+Nascom2 [Paul Daniels]
+Memotech MTX512 [Lee Ward]
+Acorn Atom (preliminary) [Paul Daniels]
+Sam Coupe (preliminary) [Lee Hammerton]
+
+
+System Driver Changes:
+----------------------
+- PC: Mouse now very usable, PC CGA scrolling support in 320x200x2 fixed 
+  (Boulderdash), Tandy1000 Graphics memory switching enchanced (Lemmings), 
+  Joystick changes (slow autocenter remaining), added xtcga with mf2 keyboard 
+  and turbo switch, split the xtvga in xtega (vga with ega monitor), and added 
+  palette handling to ega/vga. [Peter Trauner]
+
+- C364: preliminary speech added (similar hardware in the C64 
+  cartridge Magic Voice, used in few programs). [Peter Trauner]
+
+- C128: Esc-x to switch c128 to 40 column mode. Keypad enter to switch 
+  emulator to 40 column mode. In the input keys configuration menu you 
+  should find several key assignments with normal (not reversed)T.  Change 
+  these to another key, and the normal T will work. (in the system file 
+  these keys are disabled, until I find a better solution) [Peter Trauner]
+
+- MACPLUS: driver boots (must use the 68k C core) [Nate Woods]
+
+- SEGA MASTER SYSTEM: Rewrite of the SMS video code, so quite a lot of games with
+  interrupt problems or corrupt graphics run fine now. [Charles MacDonald]
+
+- SPECTRUM: Added support for 128K .SNA and .Z80 files, ensured that the 48K Basic 
+  ROM is paged in when running 48K snapshots on 128K machine (for improved 
+  reliability and access to the default character set), changed +3 initialisation, 
+  128 and +3 now set 0x4000-0x7fff to bank 5 (Now not changed if switching to shadow 
+  screen), cleaned up spectrum_plus3_update_memory, fixed bug in decoding uncompressed 
+  v2+ .Z80 files, and changed running speed of 128K Machines to 3.54690MHz
+  [David Robertson]
+
+- COMMODORE: cbmdrive (memory freeing) fixed, cia6526 tod fix, c128fra fix, 
+  50 hertz machines now really have 50 hz video refresh, c16 1551 simulation fixed 
+  [Peter Trauner]
+
+- DRAGON series: Now supports a new variant of the .PAK file format for snapshots.
+  [Nate Woods]
+
+- TI99:  Mini Memory Support (rename minimemc.bin to minimemm.bin for it to 
+  work correctly), fixed a bug in banked roms when a hard reset (F3) is done, rom 
+  images are now identified by their filename extensions (image order isn't important 
+  anymore), no need to use NUL when no grom image, both alt -> fctn and both ctrl -> ctrl 
+  added, and new rom image extensions (.c .d .m .g .crom. drom. mrom .grom).
+  [Norberto Alfredo Bensa]
+
+- A7800: Support for bankswitched carts and carts with extra RAM, added 160B video mode, 
+  increased screen height to fix clipping at bottom, updated header format (details can be 
+  found in machine/a7800.c), added support for light gun trigger (not the light gun 
+  targetting yet, just the trigger), and removed requirment for a cartridge (since the 7800 
+  starts in the BIOS it doesn't technically need a cartridge) [Dan Boris]
+
+
+
+
+Other Changes:
+--------------
+
+- The core is based on MAME 0.37b2. This incorporates all 
+  features of the update to this core.  [MAME team] 
+
+- TOOLS: Disk Utility added (mkhdimg.exe) which will create variable sized HD images 
+  for use in MESS.  Can create images from 9,216 bytes to 142,606,848 bytes 
+  without problems.  The Western Digital 1004A that is emulated in MESS is 
+  limited to 1024 Cylinders and 16 heads. The sector size is limited to 512 
+  bytes as well as the sectors per track being limited to 17, this is also 
+  due to the WD1004A's limitations. [Randy Rains]
+
+- TOOLS: Generic image tool added (imgtool.exe) with the following features:
+  *MAME/MESS style driver architecture; where the image formats are contained in drivers.  
+   Currently, the only driver is for CoCo .DSK disk images, but there could be more.
+  *Runs on the command line.
+  *Commands for listing image contents, retrieving and storing files.
+  *Supports images in .ZIP files.
+  *"Engine" is separate from the "shell"; which gives the potential for front ends for 
+   those who don't like command lines. [Nate Woods]
+
+- Disk write support for AMSTRAD CPC [Oscar Martín González]
+
+- Wave timer fix [Oscar Martín González]
+
+- m6510t/m7501/m8502 CPU cores added [Peter Trauner]
+
+- Extensive CRC updates.
+  [Kurunir, Chris Henry]
+  SysInfo.dat documentation update 
+  [Chris Henry]
+  Please send all CRC/sysinfo file contributions to Chris Henry. 
+  (battlepriest@hotmail.com).
+
+
+
+
+
+----------------------------------------------------------
+
+0.37b1
+
+Note: .inp record/playback does still not work currently.
+
+
+New System Drivers Supported (in no particular order):
+------------------------------------------------------
+ZX Spectrum 128	   [David Roberson]
+ZX Spectrum 128 +2 [David Roberson]
+
+
+System Driver Changes:
+----------------------
+- PC Mouse now very usable. [Peter Trauner]
+
+- COCO/DRAGON now supports two distinct joysticks. [Nate Woods]
+
+- SPECTRUM: Fixed .TAP loading for Spectrum +3, added Dipswitch for action 
+  on end of tape, and snapshot files are now classifed as snapshots not 
+  cartridges [David Robertson]
+
+- MSX: added a detection routine which can detect most types of megaROMs.
+  [Sean Young]
+ 
+- VTECH: driver update to use V1.2 BASIC ROMs with the Laser 110, 200 and 
+  Texet 8000. [Juergen Buchmueller]
+
+
+
+Other Changes:
+--------------
+
+- The core is based on MAME 0.37b1. This incorporates all 
+  features of the update to this core.  [MAME team] 
+
+- Alias bug fix [Norberto Alfredo Bensa]
+
+- Systems with no ROMS but a ROM_REGION defined (eg Genesis, NES) are now
+  correctly identified.  Clones with no differing roms from the main set 
+  are correctly identified (eg. the Laser 210 clones etc.)
+  [David Robertson]
+
+- Extensive CRC updates.
+  [Sean Young, Chris Henry, Gerardo Jorrin, Peter Trauner, Cowering]
+  SysInfo.dat documentation update 
+  [Thierry Schimbi, Chris Henry, Kev Thacker, Raphael Nabet]
+  Please send all CRC/sysinfo file contributions to Chris Henry. 
+  (battlepriest@hotmail.com).
+
+

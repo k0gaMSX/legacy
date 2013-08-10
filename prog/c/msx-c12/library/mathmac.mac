@@ -1,0 +1,2162 @@
+;/*
+;
+;	(C) Copyrighted by ASCII corp., 1988
+;		All rights Reserved.
+;
+;		File:	mathmac.mac
+;
+;------ Faking stuff for M80 and MX ------------------------------------
+module  macro           ;; "module" must be lower cased
+	endm
+
+endmodule macro         ;; "endmodule" must be lower cased
+	endm
+
+extrn   macro
+	endm
+;-----------------------------------------------------------------------
+
+	MODULE	slldst
+;  load slong from bc  into dehl
+;  modified de, hl
+	public	slld
+slld:
+	call	slcnv
+	push	bc
+	ld	l, c
+	ld	h, b
+	ld	c, (hl)
+	inc	hl
+	ld	b, (hl)
+	inc	hl
+	ld	e, (hl)
+	inc	hl
+	ld	d, (hl)
+	ld	l, c
+	ld	h, b
+	pop	bc
+	ret
+;  store slong from dehl to bc
+;  modified bc, hl
+;  returns  bc:pointer to stored area   hl:same as bc
+	public	slst
+	public	slbuf@, slcy@
+	dseg
+slbuf@:	ds	8
+slcy@:	db	0
+	cseg
+slst:
+	call	slcnv
+	push	bc
+	push	bc
+	ex	(sp), hl
+	pop	bc
+	ld	(hl), c
+	inc	hl
+	ld	(hl), b
+	inc	hl
+	ld	(hl), e
+	inc	hl
+	ld	(hl), d
+	pop	bc
+	ld	l, c
+	ld	h, b
+	ret
+
+;
+;  convert special pointer for SLONG in bc
+;  NULL  ->  slbuf@
+;  -1    ->  slbuf@+4
+	public	slcnv
+slcnv:
+	push	af
+	ld	a, b
+	or	c
+	jr	nz, slcnv1
+;  pointer is NULL
+	ld	bc, slbuf@
+	jr	slcnv2
+slcnv1:
+	ld	a, b
+	and	c
+	inc	a
+	jr	nz, slcnv2
+;  pointer is -1
+	ld	bc, slbuf@+4
+slcnv2:
+	pop	af
+	ret
+	.comment %
+*/
+
+SLONG	*
+slcpy(ans, p1)
+SLONG	*ans, *p1;
+{
+/*%
+; *p1 = *ans;
+	public	slcpy@
+slcpy@:
+	push	hl
+	ld	c, e
+	ld	b, d
+	call	slld
+	pop	bc
+	jp	slst
+	ENDMODULE
+	.comment %
+*/
+}
+/*%
+	MODULE	slnegl
+;  negate dehl
+;  modified af
+	public	slneg
+slneg:
+;  dehl = ~dehl
+	call	slcpl
+;  inc dehl'
+	inc	hl
+	ld	a, l
+	or	h
+	ret	nz
+	inc	de
+	ret
+
+;  complement dehl
+;  modified af
+	public	slcpl
+slcpl:
+	ld	a, l
+	cpl
+	ld	l, a
+	ld	a, h
+	cpl
+	ld	h, a
+	ld	a, e
+	cpl
+	ld	e, a
+	ld	a, d
+	cpl
+	ld	d, a
+	ret
+	ENDMODULE
+
+	MODULE	sladdl
+;  dehl += dehl'
+;  modified	bc
+	public	sladd
+sladd:
+	exx
+	push	de
+	push	hl
+	exx
+	pop	bc
+	add	hl, bc
+	pop	bc
+	ex	de, hl
+	adc	hl, bc
+	ex	de, hl
+	ret
+	ENDMODULE
+
+	MODULE	slsubl
+;  dehl -= dehl'
+;  modified   bc
+	public	slsub
+slsub:
+	exx
+	push	de
+	push	hl
+	exx
+	and	a
+	pop	bc
+	sbc	hl, bc
+	pop	bc
+	ex	de, hl
+	sbc	hl, bc
+	ex	de, hl
+	ret
+	ENDMODULE
+	.comment %
+*/
+
+SLONG	*
+sladd(ans, p1, p2)
+SLONG	*ans, *p1, *p2;
+{
+/*%
+;  *ans = *p1 + *p2;
+	MODULE	sladd
+	extrn	slld, slst, slneg, sladd
+	public	sladd@
+sladd@:
+	push	hl
+	push	de
+	call	slld		;  load *p2 in DEHL'
+sladd1:
+	exx
+	pop	bc
+	call	slld		;  load *p1 in DEHL
+	call	sladd		;  DEHL += DEHL'
+	pop	bc
+	jp	slst
+	.comment %
+*/
+}
+
+SLONG	*
+slsub(ans, p1, p2)
+SLONG	*ans, *p1, *p2;
+{
+/*%
+;  *ans = *p1 - *p2;
+	public	slsub@
+slsub@:
+	push	hl
+	push	de
+	call	slld		;  load *p2 in DEHL'
+	call	slneg
+	jr	sladd1
+	.comment %
+*/
+}
+
+SLONG	*
+slneg(ans, p1)
+SLONG	*ans, *p1;
+{
+/* %
+;  *ans = -*p1
+	public	slneg@
+slneg@:
+	ld	a, 0ffh
+slneg1:
+	push	hl
+	ld	c, e
+	ld	b, d
+	call	slld		;  bc not modified
+	and	a
+	jr	nz, slneg2
+	bit	7, d
+slneg2:
+	call	nz, slneg		;  bc not modified
+	pop	bc
+	jp	slst
+	.comment %
+*/
+}
+
+SLONG	*
+slabs(ans, p1)
+SLONG	*ans, *p1;
+{
+/* %
+;  *ans = |*p1|;
+	public	slabs@
+slabs@:
+	xor	a
+	jr	slneg1
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+slmul(ans, p1, p2)
+SLONG	*ans, *p1, *p2;
+{
+/* %
+;  *ans = *p1 * *p2;
+	MODULE	slmul
+	extrn	slld, slst, sladd
+	public	slmul@
+slmul@:
+	push	hl		;  save pointer to ans 
+	call	slmul
+	pop	bc
+	jp	slst
+
+	dseg
+mul1:	ds	4
+	cseg
+	public	slmul
+slmul:
+	push	de
+	call	slld		;  load *p2(*bc) in mul1
+	ld	(mul1), hl
+	ld	(mul1+2), de
+	pop	bc
+	call	slld		;  load *p1 in dehl'
+	exx			;  transfer to back
+;  Now selected fore
+;  clear long acc dehl
+	ld	hl, 0
+	ld	e, l
+	ld	d, l
+	ld	a, 32		;  loop counter
+;
+slmullp:
+;  2 bai shite
+	add	hl, hl
+	rl	e
+	rl	d
+	push	hl
+	ld	hl, mul1
+	rl	(hl)
+	inc	hl
+	rl	(hl)
+	inc	hl
+	rl	(hl)
+	inc	hl
+	rl	(hl)
+	pop	hl
+;  tasu
+	call	c, sladd
+	dec	a
+	jr	nz, slmullp
+	ret
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+sldiv(ans, p1, p2)
+SLONG	*ans, *p1, *p2;
+{
+/* %
+;  *ans = *p1 / *p2;		(signed)
+	MODULE	sldiv
+	extrn	slld, slst, slneg, sladd, slsub
+;  *p1  / *p2   =>  sho ... amari
+	public	sldiv@
+sldiv@:
+	push	hl
+	call	sldiv
+sldivp:
+	pop	bc
+	jp	slst
+	.comment %
+*/
+}
+
+SLONG	*
+slmod(ans, p1, p2)
+SLONG	*ans, *p1, *p2;
+{
+/* %
+;  *ans = *p1 % *p2;	(signed)
+;  modified	all
+;  *p1  % *p2   =>  amari
+	public	slmod@
+slmod@:
+	push	hl
+	call	sldiv
+	exx
+	jr	sldivp
+
+;  divide signed *de with signed *bc
+	public	sldiv
+sldiv:
+	push	bc
+;  copy 1st parameta(dividend) to dehl		*de to dehl
+	ld	c, e
+	ld	b, d
+	call	slld
+	ld	b, d		;  save dividend sign byte in fore B
+	bit	7, d		;  check sign bit
+	call	nz, slneg	;  abs(dehl)
+;  load 2nd parameta(divisor)  to dehl'		*bc to dehl'
+	exx
+	pop	bc		;  load p2 into back bc
+	call	slld
+	ld	b, d		;  save divisor sign byte in back B
+	bit	7, d		;  check sign bit
+	call	nz, slneg	;  abs(dehl')
+	ld	a, b		;  take divisor sign byte in fore A
+	exx
+	xor	b		;  xor (*p1.signbit(D7)), (*p2.signbit(D'7))
+	push	af		;  save sign of answer(only bit 7)
+	call	sldivu
+	pop	af		;  restore
+	ret	p		;  if same sign(-/- or +/+), ret
+	call	slneg		;  negate quotient
+	exx
+	call	slneg		;  negate remainder
+	exx
+	ret
+	.comment %
+*/
+}
+
+SLONG	*
+uldiv(ans, p1, p2)		/*  unsigned division  */
+SLONG	*ans, *p1, *p2;
+{
+/* %
+;  *ans = *p1 / *p2
+;  modified	all
+;  *p1  / *p2   =>  sho ... amari
+	public	uldiv@
+uldiv@:
+	push	hl
+	call	uldiv
+uldivp:
+	pop	bc
+	jp	slst
+	.comment %
+*/
+}
+
+SLONG	*
+ulmod(ans, p1, p2)
+SLONG	*ans, *p1, *p2;
+{
+/* %
+;  *ans = *p1 % *p2
+;  modified	all
+;  *p1  % *p2   =>  amari
+	public	ulmod@
+ulmod@:
+	push	hl
+	call	uldiv
+	exx
+	jr	uldivp
+
+;  divide unsigned *de with unsigned *bc
+uldiv:
+	push	de
+	call	slld		;  load divisor into dehl'
+	exx
+	pop	bc
+	call	slld		;  load dividend into dehl'
+	jp	sldivu
+
+	dseg
+div1:	ds	4		;  jyosu -> sho
+	cseg
+;  divide unsigned dehl with unsigned dehl'
+;  dehl / dehl'  ->  quotient(dehl), remainder(dehl')
+	public	sldivu
+sldivu:
+;  save hi-jyosu(dehl) in div1(local work)
+	ld	(div1), hl
+	ld	(div1+2), de
+	ld	a, 33		;  loop counter
+	ld	hl, 0		;  clear remainder
+	ld	e, l
+	ld	d, l
+sldivulp:
+;  dehl <- *p1(div1) <- cy(1bit of sho)
+	push	hl
+	ld	hl, div1
+	rl	(hl)
+	inc	hl
+	rl	(hl)
+	inc	hl
+	rl	(hl)
+	inc	hl
+	rl	(hl)
+	pop	hl
+	dec	a
+	jr	z, sldivu2
+	adc	hl, hl
+	rl	e
+	rl	d
+;  able to subtract?
+	call	slsub			;  dehl -= dehl'
+	call	c, sladd		;  resume dehl
+	ccf
+	jr	sldivulp
+;  load sho in dehl
+sldivu2:
+	exx				;  save amari in dehl'
+	ld	hl, (div1)
+	ld	de, (div1+2)
+	ret
+	ENDMODULE
+	.comment %
+*/
+}
+
+int
+slsgn(p1)
+SLONG	*p1;
+{
+/* %
+	MODULE	slsgn
+	extrn	slld, slsub
+	public	slsgn@
+slsgn@:
+	ld	b, h
+	ld	c, l
+	call	slld
+slsgn0:
+	bit	7, d
+	jr	z, slsgn1	;  *p1 is plus or zero
+	ld	hl, -1
+	ret
+slsgn1:
+	ld	a, d
+	or	e
+	or	h
+	or	l
+	ld	hl, 0
+	ret	z
+	inc	hl
+	ret
+	.comment %
+*/
+}
+
+int
+slcmp(p1, p2)
+SLONG	*p1, *p2;
+{
+/* %
+;  (*p1 - *p2) 
+	public	slcmp@
+slcmp@:
+	push	hl
+	ld	c, e
+	ld	b, d
+	call	slld		;  get *p2 in dehl'
+	ld	a, d		;  sign of *p2
+	exx
+	pop	bc
+	call	slld	 	;  get *p1 in dehl
+	xor	d
+	jp	m, slcmp_ds	;  jump if different sign
+	call	slsub
+	jr	slsgn0
+slcmp_ds:
+	ld	hl, 1
+	bit	7, d		;  check sign of first argument
+	ret	z		;  return(1);  if 1st arg is plus
+	dec	hl		;  1st arg is minus, 2nd arg is plus
+	dec	hl		;  return(-1);
+	ret
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+slnot(ans, p1)
+SLONG	*ans, *p1;
+{
+/* %
+;  *ans = ~*p1;
+	MODULE	slnot
+	extrn	slld, slst, slcpl
+	public	slnot@
+slnot@:
+	push	hl
+	ld	b, d
+	ld	c, e
+	call	slld
+	call	slcpl
+	pop	bc
+	jp	slst
+	ENDMODULE
+
+	MODULE	slcval
+	extrn	slcnv
+;
+;  convert all pointer(SLONG *) in bc, de, hl
+	public	slcval
+slcval:
+	call	slcnv
+	push	bc
+	ld	c, e
+	ld	b, d
+	call	slcnv
+	ld	e, c
+	ld	d, b
+	ld	c, l
+	ld	b, h
+	call	slcnv
+	ld	l, c
+	ld	h, b
+	pop	bc
+	ret
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+sland(ans, p1, p2)
+SLONG	*ans, *p1, *p2;
+{
+/* %
+;  *ans = *p1 & *p2;
+	MODULE	sland
+	extrn	slcval
+	public	sland@
+sland@:
+	call	slcval		;  all pointer is converted
+	ex	de, hl
+	push	de		;  ans
+	ld	a, 4
+sland2:
+	push	af
+	ld	a, (bc)
+	and	(hl)
+	ld	(de), a
+	inc	bc		;  modify p2
+	inc	hl		;	  p1
+	inc	de		;	  ans
+	pop	af
+	dec	a
+	jr	nz, sland2
+	pop	hl
+	ret
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+slor(ans, p1, p2)
+SLONG	*ans, *p1, *p2;
+{
+/* %
+;  *ans = *p1 | *p2;
+	MODULE	slor
+	extrn	slcval
+	public	slor@
+slor@:
+	call	slcval		;  all pointer is converted
+	ex	de, hl
+	push	de		;  ans
+	ld	a, 4
+slor2:
+	push	af
+	ld	a, (bc)
+	or	(hl)
+	ld	(de), a
+	inc	bc		;  modify p2
+	inc	de		;	  ans
+	inc	hl		;	  p1
+	pop	af
+	dec	a
+	jr	nz, slor2
+	pop	hl
+	ret
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+slxor(ans, p1, p2)
+SLONG	*ans, *p1, *p2;
+{
+/* %
+;  *ans = *p1 ^ *p2;
+	MODULE	slxor
+	extrn	slcval
+	public	slxor@
+slxor@:
+	call	slcval		;  all pointer is converted
+	ex	de, hl
+	push	de		;  ans
+	ld	a, 4
+slxor2:
+	push	af
+	ld	a, (bc)
+	xor	(hl)
+	ld	(de), a
+	inc	bc		;  modify p2
+	inc	de		;	  ans
+	inc	hl		;	  p1
+	pop	af
+	dec	a
+	jr	nz, slxor2
+	pop	hl
+	ret
+	ENDMODULE
+
+	MODULE	slrsld
+	extrn	slld
+;  load & set up for rotate & shift functions
+;  modified a, b, de, hl
+	public	slrsld
+slrsld:
+	push	bc
+	ld	b, d
+	ld	c, e
+	call	slld
+	pop	bc
+	ld	b, c		;  copy counter for using djnz
+	ld	a, c
+	and	a		;  for checking count
+	ret
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+slsla(ans, p1, k)
+SLONG	*ans, *p1;
+TINY	k;
+{
+/* %
+;  *ans = *p1 << k;
+	MODULE	slsla
+	extrn	slrsld, slst, slcy@
+	public	slsla@, slsll@
+slsla@:
+slsll@:
+	push	hl
+	call	slrsld
+	jr	z, slsla3
+slsla2:
+	sla	l
+	rl	h
+	rl	e
+	rl	d
+	djnz	slsla2
+	ld	a, 0
+	rla
+	ld	(slcy@), a
+slsla3:
+	pop	bc
+	jp	slst
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+slsll(ans, p1, k)
+SLONG	*ans, *p1;
+TINY	k;
+{
+}
+
+SLONG	*
+slsra(ans, p1, k)
+SLONG	*ans, *p1;
+TINY	k;
+{
+/* %
+;  *ans = *p1 >> k;
+	MODULE	slsra
+	extrn	slrsld, slst, slcy@
+	public	slsra@
+slsra@:
+	push	hl
+	call	slrsld
+	jr	z, slsra3
+slsra2:
+	sra	d
+	rr	e
+	rr	h
+	rr	l
+	djnz	slsra2
+	ld	a, 0
+	rla
+	ld	(slcy@), a
+slsra3:
+	pop	bc
+	jp	slst
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+slsrl(ans, p1, k)
+SLONG	*ans, *p1;
+TINY	k;
+{
+/* %
+;  *ans = *p1 >> k;
+	MODULE	slsrl
+	extrn	slrsld, slst, slcy@
+	public	slsrl@
+slsrl@:
+	push	hl
+	call	slrsld
+	jr	z, slsrl3
+slsrl2:
+	srl	d
+	rr	e
+	rr	h
+	rr	l
+	djnz	slsrl2
+	ld	a, 0
+	rla
+	ld	(slcy@), a
+slsrl3:
+	pop	bc
+	jp	slst
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+slrlc(ans, p1, k)
+SLONG	*ans, *p1;
+TINY	k;
+{
+/* %
+;  *ans = *p1 << k;
+	MODULE	slrlc
+	extrn	slrsld, slst, slcy@
+	public	slrlc@
+slrlc@:
+	push	hl
+	call	slrsld
+	jr	z, slrlc4
+slrlc2:
+	sla	l		;  res 0, l
+	rl	h
+	rl	e
+	rl	d
+	jr	nc, slrlc3	;  bit31 rotated into bit 0
+	set	0, l
+slrlc3:
+	djnz	slrlc2
+	ld	a, 0		;  not affect cy
+	rla			;  a is ssumed as zero
+	ld	(slcy@), a
+slrlc4:
+	pop	bc
+	jp	slst
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+slrl(ans, p1, k)
+SLONG	*ans, *p1;
+TINY	k;
+{
+/* %
+;  *ans = *p1 << k;
+	MODULE	slrl
+	extrn	slrsld, slst, slcy@
+	public	slrl@
+slrl@:
+	push	hl
+	call	slrsld
+	jr	z, slrl4
+slrl2:
+	ld	a, (slcy@)
+	and	a		;  cy=0
+	jr	z, slrl3
+	scf
+slrl3:
+	rl	l
+	rl	h
+	rl	e
+	rl	d
+	djnz	slrl3
+	ld	a, 0
+	rla
+	ld	(slcy@), a
+slrl4:
+	pop	bc
+	jp	slst
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+slrrc(ans, p1, k)
+SLONG	*ans, *p1;
+TINY	k;
+{
+/* %
+;  *ans = *p1 >> k;
+	MODULE	slrrc
+	extrn	slrsld, slst, slcy@
+	public	slrrc@
+slrrc@:
+	push	hl
+	call	slrsld
+	jr	z, slrrc4
+slrrc2:
+	srl	d		;  res 7, d
+	rr	e
+	rr	h
+	rr	l
+	jr	nc, slrrc3
+	set	7, d
+slrrc3:
+	djnz	slrrc2
+	ld	a, 0
+	rla
+	ld	(slcy@), a
+slrrc4:
+	pop	bc
+	jp	slst
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+slrr(ans, p1, k)
+SLONG	*ans, *p1;
+TINY	k;
+{
+/* %
+;  *ans = *p1 >> k;
+	MODULE	slrr
+	extrn	slrsld, slst, slcy@
+	public	slrr@
+slrr@:
+	push	hl
+	call	slrsld
+	jr	z, slrr4
+slrr2:
+	ld	a, (slcy@)
+	and	a		;  cy=0
+	jr	z, slrr3
+	scf
+slrr3:
+	rr	d
+	rr	e
+	rr	h
+	rr	l
+	djnz	slrr3
+	ld	a, 0
+	rla
+	ld	(slcy@), a
+slrr4:
+	pop	bc
+	jp	slst
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+atosl(v, s)
+SLONG	*v;
+char	*s;
+{
+/* %
+;  ascii to long value
+	MODULE	atosl
+	extrn	slst, slneg
+	public	atosl@
+atosl@:
+;  hl  ans pointer
+	push	hl		;  will pop when store ans in hl'
+;  de  char pointer(s)
+;  check minus '-'
+	ld	a, (de)
+	cp	'-'
+	push	af		;  z=1 => minus, z=0 => plus
+	jr	nz, a2l1
+	inc	de		; skip '-'
+a2l1:
+	exx			;  sel back   normally selected back
+;  clear register dehl'
+	ld	de, 0
+	ld	l, e
+	ld	h, e
+a2l2:
+	exx			;  sel fore
+	ld	a, (de)		;  fore de
+	inc	de
+	exx			;  sel back
+;  digit => cy=0(a=0-9), non digit => cy=1
+	sub	'0'
+	jr	c, a2l_q	;  end of string   selected back
+	cp	10
+	jr	nc, a2l_q	;  end of string   selected back
+;  dehl' *= 10
+;    dehl' << 1
+	add	hl, hl
+	rl	e
+	rl	d
+	push	de
+	push	hl
+;    dehl' << 2		(hl 
+	add	hl, hl
+	rl	e
+	rl	d
+	add	hl, hl
+	rl	e
+	rl	d
+;  dehl' has been 8 times
+	pop	bc
+	add	hl, bc
+	pop	bc
+;  add bc higher word with carry
+	ex	de, hl
+	adc	hl, bc
+	ex	de, hl
+
+	ld	c, a		;  ld 'bc, zext(a)
+	ld	b, 0
+	add	hl, bc		;  add to lower word
+	jr	nc, a2l3	;  check overflow in word
+	inc	de		;  overflow  add carry to higher word
+a2l3:
+	jr	a2l2		;  loop until isdigit(*bc)
+
+a2l_q:				;  end of string   selected back
+	pop	af		;  check signed(minus)
+	jr	nz, a2l_r
+	call	slneg		;  negate dehl
+a2l_r:
+	pop	bc
+	jp	slst
+	ENDMODULE
+	.comment %
+*/
+}
+
+char		*
+sltoa(str, sl, radix)
+char	*str;
+SLONG	*sl;
+TINY	radix;  /* if (bit7 of radix)=1, *sl is unsigned. */
+{
+/* %
+	MODULE	sltoa
+	extrn	slneg
+	dseg
+?17:    ds      4
+	cseg
+	public  sltoa@
+sltoa@:
+	push    hl
+	ex      de,hl           ;make a local copy of "long"
+	ld      de,?17
+	push    de
+	push    bc
+	ld      bc,4
+	ldir
+	pop     bc
+	pop     de
+	pop     hl
+	push    hl
+	bit	7, c
+	jr	nz, ltoa@_cnv
+;  check argument sign
+	ld	a, (?17+3)
+	bit	7, a		;  sign bit
+	jr	z, ltoa@_cnv	;  jump if plus
+	push	de
+	push	hl
+	ld	hl, (?17)
+	ld	de, (?17+2)
+	call	slneg
+	ld	(?17), hl
+	ld	(?17+2), de
+	pop	hl
+	pop	de
+	ld	(hl), '-'
+	inc	hl
+ltoa@_cnv:
+	ld	b, 0
+	res	7, c
+	call    __ltoa__        ;convert to string
+	ld      (hl),0
+	pop     hl
+	ret
+
+__ltoa__:
+	push    hl
+	ld      l,e
+	ld      h,d
+	ld      a,(hl)
+	sub     c
+	inc     hl
+	ld      a,(hl)
+	sbc     a,b
+	inc     hl
+	ld      a,(hl)
+	sbc     a,0
+	inc     hl
+	ld      a,(hl)
+	sbc     a,0
+	jr      nc,@0
+
+	pop     hl
+	ld      a,(de)
+	jr      @1
+; Divide *DE by BC remainder into HL.  BC, DE unchanged.
+@0:
+	ld      hl,0
+	ld      a,33
+	jr      ldivs3
+	ldivs1:
+		adc     hl,hl
+		or      a
+		sbc     hl,bc
+		jr      nc,ldivs2
+			add     hl,bc
+		ldivs2:
+			ccf
+	ldivs3:
+		push    de
+		ex      de,hl
+		rl      (hl)
+		inc     hl
+		rl      (hl)
+		inc     hl
+		rl      (hl)
+		inc     hl
+		rl      (hl)
+		ex      de,hl
+		pop     de
+		dec     a
+		jr      nz,ldivs1
+	ld      a,l
+	pop     hl
+	push    af
+	call    __LTOA__
+	pop     af
+@1:
+	add     a,'0'
+	cp      '0'+10
+	jr      c,@3
+	add     a,'A'-10-'0'
+@3:
+	ld      (hl),a
+	inc     hl
+	ret
+	ENDMODULE
+	.comment %
+*/
+}
+
+SLONG	*
+itosl(ans, p1)
+SLONG	*ans;
+int	p1;
+{
+/* %
+	MODULE	itosl
+	extrn	slst
+	public	itosl@
+itosl@:
+	ld	b, h
+	ld	c, l
+	ex	de, hl
+	ld	a, h
+	rlca
+	sbc	a, a
+	ld	e, a
+	ld	d, a
+	jp	slst
+	.comment %
+*/
+}
+
+SLONG	*
+uitosl(ans, p1)
+SLONG	*ans;
+unsigned	p1;
+{
+/* %
+;	extrn	slst
+	public	uitosl@
+uitosl@:	
+	ld	b, h
+	ld	c, l
+	ex	de, hl
+	ld	de, 0
+	jp	slst
+	ENDMODULE
+
+
+	MODULE  CALMATH
+;
+;       CALMATH performs inter-slot call into the BIOS MATH-PACK.
+;       Entry:  MATH-PACK entry address in [HL].
+;       Exit:   If successful
+;                   carry flag reset,
+;               otherwise
+;                   carry flag set and BASIC error code in [E].
+;
+;       Calling  BIOS MATH-PACK is not a simple inter-slot call.  Due to
+;       design fault of BIOS MATH package,  we  must  enable  BASIC  ROM
+;       (page-1)  at  the  same  time.   And  we must trap BASIC's error
+;       routine to be entered in case of math error.
+;
+;   Bugs:
+;       Uses up many instructions before MATH-PACK is actually called.
+;       H.NMI is overwritten and never restored.
+;       Previous contents of H.ERROR are lost.
+;
+;   Notes:
+;       Fast version will be generated by defining the symbol FAST.  But
+;       caller  must insure to call MATHINI and MATHEND before and after
+;       everything.
+;       This  routine  is almost same as CALBAS routine in MSXBIOS.  So,
+;       it may be possible to  combine  both  routines  into  a  general
+;       purpose routine.
+;
+;   Additional Note:
+;	Parametas(AF', BC', DE', HL') are sent to Math-Pack.  And return
+;	values are in fore register set.
+;
+CALSLT  equ     001Ch
+ENASLT  equ     0024h
+;
+NMI     equ     0066h
+;
+CALMATH@::
+
+ifndef  FAST
+	ex	de, hl		;  save jump address
+;
+	ld      hl,-p3_routine_size-8
+	add     hl,sp           ;Allocate space on the stack.
+	ld      sp,hl
+;
+	call    MATHINI@	;  mathini@ not midify only de
+	ex	de, hl
+endif
+	ld      ix,NMI
+	ld      iy,(EXPTBL-1)
+	call    CALSLT		;  call p3_routine through NMI
+	ei                      ;Re-enable interrupt
+				; because CALSLT may disable it.
+ifndef  FAST
+	ex      af,af'
+	exx			;  save Math-Pack result(assume in fore regs)
+;
+	call    MATHEND@
+;
+	ld      hl,p3_routine_size+8
+	add     hl,sp
+	ld      sp,hl
+	ex      af,af'          ;restore error flag (carry).
+	exx			;  and other regs
+endif
+	ret
+
+;
+??????  equ     0               ;Value to be modified at run time.
+;
+JPIX    equ     0F38Ch+12       ;Where "JP (IX)" instruction is stored.
+JPHL    equ     0F38Ch+13       ;Where "JP (HL)" instruction is stored.
+EXPTBL  equ     0FCC1h
+H.NMI   equ     0FDD6h          ;Hook at NMI
+H.ERROR equ     0FFB1h          ;Hook at ERROR
+;
+MATHINI@::
+	ld      a,0C3h          ;Build a jump instruction to the newly
+	ld      (H.NMI),a       ; allocated space.
+	ld      (H.NMI+1),hl
+;
+	push	de
+	push	hl
+	ex      de,hl           ;Copy the routine body.
+	ld      hl,p3_routine   ;
+	ld      bc,p3_routine_size
+	ldir
+	ex	af, af'
+	exx
+	push	hl
+	push	de
+	push	bc
+	push	af
+	ex	af, af'
+	exx
+	ex	de, hl		;  destination address -> hl
+	ld	b, 4
+mathi1:
+	pop	de
+	ld	(hl), e
+	inc	hl
+	ld	(hl), d
+	inc	hl
+	djnz	mathi1
+	pop	hl
+	ld	d, h
+	ld	e, l
+	inc	hl
+	ld	(hl), e
+	inc	hl
+	ld	(hl), d
+
+;
+	ld      de,H.ERROR      ;Set error trap
+	ld      hl,error_trap   ; in case of error.
+	ld      bc,5
+	ldir
+	pop	de
+;
+	ret
+
+MATHEND@::
+	ld      a,0C9h          ;Kill error trap
+	ld      (H.ERROR),a     ; for fail safe.
+	ret
+
+
+;   Skeleton of page-3 routine.
+p3_routine:
+	ld	de, ??????	;  whereis
+	pop     af              ;Adjust stack.  ret adrs for next of call H.NMI
+	ld      (H.ERROR+1),sp
+	push    hl
+	push	de
+	ld      a,(EXPTBL)      ;Enable ROM at page-1.
+	ld      h,40h           ;
+	call    ENASLT
+	pop	de
+	ei                      ;Re-enable interrupt
+				; because ENASLT disables it.
+	ld	hl, p3_routine_size	;  pointer to parameta area
+	add	hl, de
+	ld	b, 4
+p3_routine1:
+	ld	e, (hl)
+	inc	hl
+	ld	d, (hl)
+	inc	hl
+	push	de
+	djnz	p3_routine1
+	pop	hl
+	pop	de
+	pop	bc
+	pop	af
+	pop     ix
+	call    JPIX            ;Let's go!!
+	or      a
+	ret
+;	ds	2		;  for parameta AF
+;	ds	2		;  for parameta BC
+;	ds	2		;  for parameta DE
+;	ds	2		;  for parameta HL
+p3_routine_size equ     $-p3_routine
+				; 21 bytes at the moment...
+				; If FAST version,
+				;   this size must be #defined in
+				;   #include file like;
+				;
+				;   #define Sizeof_MATHINI 21
+				;
+
+;   Skeleton of error trap routine.
+error_trap:
+	ld      sp,??????
+	scf                     ;Say error has occurred.
+	ret                     ;Return with error code in [E].
+	ENDMODULE
+
+	MODULE	xdmove
+DAC	equ	0f7f6h
+ARG	equ	0f847h
+VALTYP	equ	0f663h
+;  xdouble move module
+;  move (hl) to dac  &  set VALTYP
+;  af, bc, de  modified
+	public	ptodac@
+ptodac@:
+	ld	de, DAC
+ptop8:
+	ld	a, 8
+	ld	(VALTYP), a	;  DAC is double!!!!
+ptop:
+	ld	bc, 8
+	push	hl
+	ldir
+	pop	hl
+	ret
+
+;  move (hl) to arg
+	public	ptoarg@
+ptoarg@:
+	ld	de, ARG
+	jr	ptop8		;  move and set VALTYP
+
+;  move dac to (hl)
+;  don't modify VALTYP
+	public	dactop@
+dactop@:
+	ex	de, hl		;  move destination address;hl to de 
+	ld	hl, DAC
+	jr	ptop
+	.comment %
+*/
+}
+
+XDOUBLE	*
+xdcpy(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  move (de) to (hl)
+	public	xdcpy@
+xdcpy@:
+	push	hl
+	ex	de, hl
+	call	ptop
+	pop	hl
+	ret
+
+	ENDMODULE
+
+;  STATUS
+;  math2(add, ?, ?, ans, p1, p2)
+;  STATUS	(*add)();
+;  ans, p1, p2 is in back regs
+	MODULE	math2
+	extrn	ptodac@, ptoarg@, dactop@, calmath@
+	public	math2@
+math2@:
+;  *p1 -> dac, *p2 -> arg
+	exx
+	push	hl
+	push	bc			;  save p2
+	ex	de, hl			;  ld hl, de
+	call	ptodac@			;  copy *p1 to dac
+	pop	hl			;  restore p2 in hl
+	call	ptoarg@			;  copy *p2 to arg
+	exx
+;  hl has jump address
+	call	calmath@
+	pop	hl
+	call	nc, dactop@		;  if no error, copy dac to *ans
+	sbc	a, a			;  extend cy flag(return STATUS)
+	ret
+	.comment %
+*/
+}
+
+VOID	mathu(hl, de, bc, add)
+unsigned	hl, de, bc;
+STATUS		(*add)();
+{
+/* %
+	public	mathu@
+mathu@:
+	exx
+	ld	hl, 2
+	add	hl, sp
+	ld	e, (hl)
+	inc	hl
+	ld	d, (hl)
+	ex	de, hl
+	jp	calmath@
+	ENDMODULE
+
+;  2 parameta functions
+	.comment %
+*/
+}
+
+STATUS
+xdadd(ans, p1, p2)
+XDOUBLE	*ans, *p1, *p2;
+{
+/* %
+;  *ans = *p1 + *p2;  in xdouble type
+	MODULE	xdadd
+	extrn	math2@
+DECADD	equ	269ah
+	public	xdadd@
+xdadd@:
+	exx
+	ld	hl, DECADD		;  Math-Pack 269ah
+	jp	math2@
+	.comment %
+*/
+}
+
+STATUS
+xdsub(ans, p1, p2)
+XDOUBLE	*ans, *p1, *p2;
+{
+/* %
+;  *ans = *p1 - *p2;  in xdouble type
+;	extrn	math2@
+DECSUB	equ	268ch
+	public	xdsub@
+xdsub@:
+	exx
+	ld	hl, DECSUB		;  Math-Pack 268ch
+	jp	math2@
+	.comment %
+*/
+}
+
+STATUS
+xdmul(ans, p1, p2)
+XDOUBLE	*ans, *p1, *p2;
+{
+/* %
+;  *ans = *p1 * *p2;  in xdouble type
+;	extrn	math2@
+DECMUL	equ	27e6h
+	public	xdmul@
+xdmul@:
+	exx
+	ld	hl, DECMUL		;  Math-Pack 27e6h
+	jp	math2@
+	.comment %
+*/
+}
+
+STATUS
+xddiv(ans, p1, p2)
+XDOUBLE	*ans, *p1, *p2;
+{
+/* %
+;  *ans = *p1 * *p2;  in xdouble type
+;	extrn	math2@
+DECDIV	equ	289fh
+	public	xddiv@
+xddiv@:
+	exx
+	ld	hl, DECDIV		;  Math-Pack 289fh
+	jp	math2@
+	ENDMODULE
+	.comment %
+*/
+}
+
+STATUS
+xdpow(ans, p1, p2)
+XDOUBLE	*ans, *p1, *p2;
+{
+/* %
+;  *ans = pow(*p1, *p2);  in xdouble type
+	MODULE	xdpow
+	extrn	math2@
+DBLEXP	equ	37d7h
+	public	xdpow@
+xdpow@:
+	exx
+	ld	hl, DBLEXP		;  Math-Pack 37d7h
+	jp	math2@
+
+;  1 parameta functions
+	.comment %
+*/
+}
+
+STATUS
+xdsqrt(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = (XDOUBLE)sqrt((*p1));  in xdouble type
+;	extrn	math2@
+SQR	equ	2affh
+	public	xdsqrt@
+xdsqrt@:
+	exx
+	ld	hl, SQR			;  Math-Pack 2affh
+	jp	math2@
+	ENDMODULE
+	.comment %
+*/
+}
+
+STATUS
+xdneg(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = -(*p1);  in xdouble type
+	MODULE	xdneg
+	extrn	math2@
+NEG	equ	2e8dh
+	public	xdneg@
+xdneg@:
+	exx
+	ld	hl, NEG			;  Math-Pack 2e8dh
+	jp	math2@
+	.comment %
+*/
+}
+
+STATUS
+xdfabs(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = (XDOUBLE)fabs((*p1));  in xdouble type
+	extrn	math2@
+ABSFN	equ	2e82h
+	public	xdfabs@
+xdfabs@:
+	exx
+	ld	hl, ABSFN		;  Math-Pack 2e82h
+	jp	math2@
+	ENDMODULE
+	.comment %
+*/
+}
+
+int
+xdsgn(p1)
+XDOUBLE	*p1;
+{
+/* %
+;  {
+;  if(*p1 > 0)        return(1);
+;  else if(*p1 == 0)  return(0);
+;  else if(*p1 < 0 )  return(-1);
+;  }
+	MODULE	xdsgn
+	extrn	ptodac@, ptoarg@, calmath@
+DAC	equ	0f7f6h
+SGN	equ	2e97h
+	public	xdsgn@
+xdsgn@:
+	call	ptodac@
+	ld	hl, SGN			;  Math-Pack 2e97h
+	call	calmath@
+	ld	hl, (DAC+2)		;  get result
+	ret
+	.comment %
+*/
+}
+
+int
+xdcmp(p1, p2)
+XDOUBLE	*p1, *p2;
+{
+/* %
+;  {
+;  if(*p1 > *p2)        return(1);
+;  else if(*p1 == *p2)  return(0);
+;  else if(*p1 <  *p2)  return(-1);
+;  }
+XDCOMP	equ	2f5ch
+	public	xdcmp@
+xdcmp@:
+	push	de
+	call	ptodac@
+	pop	hl
+	call	ptoarg@
+	ld	hl, XDCOMP
+	call	calmath@
+	ld	l, a
+	rla
+	sbc	a, a
+	ld	h, a
+	ret
+	ENDMODULE
+	.comment %
+*/
+}
+
+STATUS
+xdfix(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = (XDOUBLE)fix((*p1));  in xdouble type
+	MODULE	xdfix
+	extrn	math2@, calmath@, dactop@
+FIXER	equ	30beh
+FRCDBL	equ	303ah
+	public	xdfix@
+xdfix@:
+	push	hl
+	exx
+	ld	bc, FIXER		;  Math-Pack 30beh
+
+xdfix1:
+	ld	h, b
+	ld	l, c
+	call	math2@
+	ld	hl, FRCDBL
+	call	nc, calmath@		;  if no error, cnvrt into xdouble
+	pop	hl
+	call	nc, dactop@
+	sbc	a, a
+	ret
+	.comment %
+*/
+}
+
+STATUS
+xdfloor(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = (XDOUBLE)floor((*p1));  in xdouble type
+VINT	equ	30cfh
+FRCDBL	equ	303ah
+	public	xdfloor@
+xdfloor@:
+	push	hl
+	exx
+	ld	bc, VINT		;  Math-Pack 30cfh
+	jr	xdfix1
+	ENDMODULE
+	.comment %
+*/
+}
+
+STATUS
+xdceil(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = (XDOUBLE)ceil((*p1));  in xdouble type
+;  ceil(x) = ((floor(x) == x ? floor(x) : floor(x)+1);
+	MODULE	xdceil
+	extrn	math2@, calmath@, dactop@
+	extrn	xdcmp@, xdadd@
+VINT	equ	30cfh
+FRCDBL	equ	303ah
+	dseg
+xdck1:
+	db	41h, 10h, 0, 0, 0, 0, 0, 0	;  1#
+	cseg
+	public	xdceil@
+xdceil@:
+	push	de
+	push	hl
+	exx
+	ld	hl, VINT		;  Math-Pack 30cfh
+	call	math2@
+	ld	hl, FRCDBL
+	call	nc, calmath@		;  if no error, cnvrt into xdouble
+	pop	hl
+	push	hl
+	call	nc, dactop@
+	sbc	a, a
+	jr	c, xdceil1
+	pop	hl		;  ans  (floor(x))
+	pop	de		;  adjust
+	push	de
+	push	hl
+	call	xdcmp@			;  floor(x) == x ?
+	ld	a, h
+	or	a
+	jr	z, xdceil1	;  floor(x)==x   /*  *ans == x  */
+;  floor(x) != x		returns(floor(x)+1)
+	pop	hl		;  ans  (floor(x))
+	pop	de		;  adjust
+	ld	b, h
+	ld	c, l
+	ld	de, xdck1	;  constant 1
+	jp	xdadd@		;  xdadd(ans, 1#, floor(x))
+				;    floor(x) is in ans
+;  returns error status or floor(x)
+xdceil1:
+	pop	hl
+	pop	de
+	ret
+	ENDMODULE
+	.comment %
+*/
+}
+
+STATUS
+xdsin(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = (XDOUBLE)sin((*p1));  in xdouble type
+	MODULE	xdsin
+	extrn	math2@
+SIN	equ	29ach
+	public	xdsin@
+xdsin@:
+	exx
+	ld	hl, SIN			;  Math-Pack 29ach
+	jp	math2@
+	.comment %
+*/
+}
+
+STATUS
+xdcos(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = (XDOUBLE)cos((*p1));  in xdouble type
+;	extrn	math2@
+COS	equ	2993h
+	public	xdcos@
+xdcos@:
+	exx
+	ld	hl, COS			;  Math-Pack 2993h
+	jp	math2@
+	.comment %
+*/
+}
+
+STATUS
+xdtan(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = (XDOUBLE)tan((*p1));  in xdouble type
+;	extrn	math2@
+TAN	equ	29fbh
+	public	xdtan@
+xdtan@:
+	exx
+	ld	hl, TAN			;  Math-Pack 29fbh
+	jp	math2@
+	.comment %
+*/
+}
+
+STATUS
+xdatn(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = (XDOUBLE)atn((*p1));  in xdouble type
+;	extrn	math2@
+ATN	equ	2a14h
+	public	xdatn@
+xdatn@:
+	exx
+	ld	hl, ATN			;  Math-Pack 2a14h
+	jp	math2@
+	ENDMODULE
+	.comment %
+*/
+}
+
+STATUS
+xdlog(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = (XDOUBLE)log((*p1));  in xdouble type
+	MODULE	xdlog
+	extrn	math2@
+LOG	equ	2a72h
+	public	xdlog@
+xdlog@:
+	exx
+	ld	hl, LOG			;  Math-Pack 2a72h
+	jp	math2@
+	.comment %
+*/
+}
+
+STATUS
+xdexp(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = (XDOUBLE)exp((*p1));  in xdouble type
+;	extrn	math2@
+EXP	equ	2b4ah
+	public	xdexp@
+xdexp@:
+	exx
+	ld	hl, EXP			;  Math-Pack 2b4ah
+	jp	math2@
+	ENDMODULE
+	.comment %
+*/
+}
+
+STATUS
+xdrnd(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = (XDOUBLE)rnd((*p1));  in xdouble type
+	MODULE	xdrnd
+	extrn	math2@
+RND	equ	2bdfh
+	public	xdrnd@
+xdrnd@:
+	exx
+	ld	hl, RND			;  Math-Pack 2bdfh
+	jp	math2@
+	ENDMODULE
+	.comment %
+*/
+}
+
+STATUS
+xdnrm(ans, p1)
+XDOUBLE	*ans, *p1;
+{
+/* %
+;  *ans = (XDOUBLE)(*p1);  in xdouble type
+	MODULE	xdnrm
+	extrn	math2@
+DECNRM	equ	26fah
+	public	xdnrm@
+xdnrm@:
+	exx
+	ld	hl, DECNRM		;  Math-Pack 26fah
+	jp	math2@
+	ENDMODULE
+	.comment %
+*/
+}
+
+STATUS
+atoxd(ans, s)
+XDOUBLE	*ans;
+char	*s;		/*  string s must be terminated '\0'  */
+{
+/* %
+	MODULE	atoxd
+	extrn	dactop@, calmath@
+FIN	equ	3299h
+FRCDBL	equ	303ah
+BUF	equ	0f55eh
+	public	atoxd@
+atoxd@:
+	push	hl
+	ex	de, hl
+	bit	7, h
+	jr	nz, atoxd3
+	ld	de, BUF
+	push	de
+	ld	b, 0		;  max length is 256
+atoxd1:
+	ld	a, (hl)
+	ld	(de), a
+	inc	hl
+	inc	de
+	and	a
+	jr	z, atoxd2
+	djnz	atoxd1
+	ld	(hl), 0
+atoxd2:
+	pop	hl
+atoxd3:
+	ld	a, (hl)
+;  set argument for math pack
+	ex	af, af'
+	exx
+	ld	hl, FIN
+	call	calmath@
+	ld	hl, FRCDBL
+	call	nc, calmath@
+	pop	hl
+	call	nc, dactop@
+	sbc	a, a
+	ret
+	ENDMODULE
+	.comment %
+*/
+}
+
+char		*
+xdtoa(s, p1, digits)
+char	*s;		/*  asciz string store buffer  */
+XDOUBLE	*p1;
+TINY	digits;		/*  width of frac part  and  fix or float  */
+{						/*   c7=0   c7=1   */
+/* %
+	MODULE	xdtoa
+	extrn	ptodac@, calmath@
+PUFOUT	equ	3426h
+VALTYP	equ	0f663h
+	public	xdtoa@
+xdtoa@:
+	push	hl		;  save return string store buffer
+	push	bc
+	ex	de, hl		;  double value copy to dac
+	call	ptodac@		;  force type into double type
+	pop	bc
+;  make format for pufout
+	ld	b, 0
+	bit	7, c
+	jr	z, xdtoaf
+	set	0, b
+xdtoaf:
+	res	7, c
+	ld	a, c
+	and	a
+	jr	z, xdtoaz
+	inc	c		;  width of fractional part(including .)
+xdtoaz:
+	push	bc		;  use after conversion for subst 'E' to 'e'
+	ld	a, b
+	or	80h		;  using format
+	ld	b, 2		;  2 is fit for integer part
+;  call math-pack
+	ex	af, af'
+	exx
+	ld	hl, PUFOUT
+	call	calmath@
+	pop	bc		;  conversion format
+	jr	c, xdtoae	;  conversion error,  return NULL pointer
+	bit	0, b		;  specified floating point?
+	jr	z, xdtoa1	;  fixed point presion
+;  floating point was specified
+;  substitute 'E' to 'e'
+	ld	b, 0		;  c has total of fractional part and dec point
+	inc	c		;  add 1 for sign char
+	inc	c		;  add 1 for integer part char
+	push	hl		;  converted string pointer
+	add	hl, bc
+	ld	(hl), 'e'	;  exponent sign is usually an 'e'
+	pop	hl
+xdtoa1:
+;  suppress '%' and ' '   these are only one
+	ld	a, (hl)
+	cp	' '		;  not necessaly for printf
+	jr	z, xdtoa2
+	cp	'%'		;  '%' is Error char for BASIC user
+	jr	nz, xdtoa3	;  matching for printf
+xdtoa2:
+	inc	hl
+xdtoa3:
+;  hl has pointer to return string
+	pop	de		;  restore return string store buffer
+	ld	a, d
+	or	e
+	jr	z, xdtoa5	;  if 1st arg is NULL, not copy
+	push	de		;  for return value
+xdtoa4:
+	ld	a, (hl)
+	ld	(de), a
+	inc	hl
+	inc	de
+	and	a		;  string ascii terminated '\0'
+	jr	nz, xdtoa4
+	pop	hl
+xdtoa5:
+	ret
+xdtoae:
+	pop	hl		;  store address
+	ld	hl, 0		;  if error is ocurred, NULL pointer is returned
+	ret
+	ENDMODULE
+	.comment %
+*/
+}
+
+STATUS
+itoxd(ans, i)
+XDOUBLE	*ans;
+int	i;
+{
+/* %
+	MODULE	itoxd
+	extrn	dactop@, calmath@
+	extrn	ptodac@
+FRCDBL	equ	303ah
+VALTYP	equ	0f663h
+DAC	equ	0f7f6h
+	public	itoxd@
+itoxd@:
+	push	hl
+	ld	(DAC+2), de
+	ld	a, 2		;  DAC has integer
+	ld	(VALTYP), a
+	ld	hl, FRCDBL
+	call	calmath@
+	pop	hl
+	call	nc, dactop@
+	sbc	a, a
+	ret
+	.comment %
+*/
+}
+
+STATUS
+xdtoi(ans, p1)
+int	*ans;
+XDOUBLE	*p1;
+{
+/* %
+FRCINT	equ	2f8ah
+	public	xdtoi@
+xdtoi@:
+	push	hl
+	ex	de, hl
+	call	ptodac@		;  DAC has xdouble
+	ld	hl, FRCINT
+	call	calmath@
+	pop	hl
+	ld	de, (DAC+2)
+	ld	(hl), e
+	inc	hl
+	ld	(hl), d
+	sbc	a, a
+	ret
+	ENDMODULE
+	.comment %
+*/
+}
+
+STATUS
+sltoxd(ans, p1)
+XDOUBLE	*ans;
+SLONG	*p1;
+{
+/* %
+	MODULE	sltoxd
+	extrn	sltoa@, atoxd@
+BUF	equ	0f55eh
+	public	sltoxd@
+sltoxd@:
+	ld	c, 0ah		;  radix, signed long only
+ltoxd:
+	push	hl
+	ld	hl, BUF
+	call	sltoa@
+	ex	de, hl		;  ascii string in de
+	pop	hl		;  pointer to xdouble variable
+	call	atoxd@
+	sbc	a, a
+	ret
+	.comment %
+*/
+}
+
+STATUS
+ultoxd(ans, p1)
+XDOUBLE	*ans;
+SLONG	*p1;
+{
+/* %
+	public	ultoxd@
+ultoxd@:
+	ld	c, 8ah		;  radix, unsigned long only
+	jr	ltoxd
+	ENDMODULE
+	.comment %
+*/
+}
+
+STATUS
+xdtosl(ans, p1)
+SLONG	*ans;
+XDOUBLE	*p1;
+{
+/* %
+	MODULE	xdtosl
+	extrn	xdtoa@, atosl@
+BUF	equ	0f55eh
+DAC	equ	0f7f6h
+	public	xdtosl@
+xdtosl@:
+	push	hl
+	ld	hl, 0		;  NULL; make string in system area
+	ld	c, 6		;  avoid rounding
+	call	xdtoa@
+	ex	de, hl
+	pop	hl
+	call	atosl@		;  fractional part is cut off
+	xor	a		;    by decimal point
+	ret
+	ENDMODULE
+
+	end
+*/
+}
+
+         

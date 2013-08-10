@@ -1,0 +1,168 @@
+Path: lilith.uab.es!diable.upc.es!news.rediris.es!scsing.switch.ch!news.belwue.de!fu-berlin.de!news.mathworks.com!newsfeed.internetmci.com!howland.reston.ans.net!EU.net!news.eunet.fi!news.netppl.fi!news
+From: Harri.Meriruoko@pp.netppl.fi (Harri Meriruoko)
+Newsgroups: comp.sys.msx
+Subject: Re: Snatcher SCC
+Date: Sun, 14 Jan 1996 14:57:36 GMT
+Organization: Net People
+Lines: 155
+Message-ID: <4db6hl$nuc@backup.netppl.fi>
+References: <4d2okn$c24@tuegate.tue.nl>
+NNTP-Posting-Host: meriruok.inet.opoy.fi
+X-Newsreader: Forte Free Agent 1.0.82
+
+mth@stack.urc.tue.nl (Maarten ter Huurne) wrote:
+
+>I am looking for info on the cartridge that belongs with the Snatcher. I
+>know it contains a different SCC (a better one) and some RAM, but I would
+>like to know exactly how it works.
+Hi,
+I have used the SD-Snatcher cartridge (SCC+ as they call it). I know
+nothing about the RAM in it, but I have always thought the sound in
+SCC+ is equivalent to the SCC. Some years ago MSX-Magazine released an
+MML (music macro language) compiler called MuSICA. MuSICA was able to
+play both FM,PSG and SCC+ at the same time. But I modified the
+MuSICA's SCC+ slot "autodetection routine" and now it works on normal
+SCC also and I haven't heard ANY difference between SCC+ and SCC after
+that (but someone said SCC+ creates less noise, I don't know about
+that). If the SCC+ has more channels (or something) than the SCC, why
+did not the author of MuSICA support the "specialties" of SCC+?
+(MuSICA's SCC+ autodetection routine was specially made for SCC+
+because it tried to found a header string or something from the
+cartridge. ROM-game cartridges didn't have it.) Well, perhaps nobody
+can answer that, but I think it's worth thinking about unless there is
+somebody who knows better.
+
+>So I would like to know the following things:
+....
+There was an article about Konami SCC in japanese MSX-Magazine
+(9/1990, pages 66-67). There were some photos of Snatcher and
+SD-Snatcher cartridges. I think that the article concerned especially
+(SD) Snatcher cartridges, but the information has been worked(?) with
+my game cartridges also (Nemesis 3, F1-Spirit). I have studied
+Japanese language a bit, but I know only about 50-100 Kanji characters
+in addition to the hiragana/katakana syllables so I may have done some
+mistakes(I was too lazy to use my dictionaries). Hopefully someone
+will correct possible mistakes.
+
+Greetings,
+Harri
+
+File:SCC.TXT
+SCC Register Table (MSX Magazine 9/1990, page 67)
+=================================================
+
+Translated (less literally) by Harri Meriruoko, meriruok@pp.netppl.fi
+If you know any corrections to this file, please email me.
+
+
+According to the article, the SCC register page should be 3Fh with
+both
+Snatcher and SD-Snatcher SCC cartridges (as well as with other games
+like
+F1-Spirit, Space Manbow etc. I think there is no difference between
+SCC+ 
+and SCC cartridges (except RAM). Can anyone confirm this? - Harri).
+The page 
+switch should be in address 9000H.
+
+                             Memory map
+                             ----------
+
+
+Wave memory (samples)               Tone Generator Control Register
+WM0  9800H - 981FH                  R0   9880H
+WM1  9820H - 983FH                  R1   9881H
+WM2  9840H - 985FH                  R2   9882H
+WM3  9860H - 987FH                  R3   9883H
+                                    R4   9884H
+                                    R5   9885H
+                                    R6   9886H
+Amplitude Control Register          R7   9887H
+R10  988AH                          R8   9888H
+R11  988BH                          R9   9889H
+R12  988CH                                   
+R13  988DH                          Port Enable Control Register
+R14  988EH                          R15  988FH
+
+
+
+1. Wave memory
+The SCC seem to have 5 channels, but only the first 3 channels can be
+played "multi-timbrally". Channel 1 plays wave WM0, channel 2 plays
+wave WM1
+and channel 3 plays wave WM2 but both channels 4 and 5 are playing the
+wave WM3 (combined). Channels 4 and 5 have individual tone value,
+though.
+
+One wave (=sample) is constructed from 32 bytes:
+
+        7F|         /\
+          |        /  \
+          |       /    \
+          |      /      \
+         0______/________\_______   >20H
+        FF|    /          \
+          |   /            \
+          |  /              \
+          | /                \
+        80|/                  \
+
+
+
+2. Tone Generator Control Register
+
+(I am a bit unsure about this. Could anyone from Japan help and
+translate the
+original description if I send a photocopy or a scanned picture (by
+email) of 
+the text? - Harri)
+
+There is an individual 12-bit "tone value" for each channel:
+        
+                           R1                         R0
+                 b7 b6 b5 b4 b3 b2 b1 b0    b7 b6 b5 b4 b3 b2 b1 b0
+Channel 1 tone:  XX XX XX XX 11 10  9  8     7  6  5  4  3  2  1  0 
+
+                 XX=don't care
+
+(R2 and R3 for channel 2 etc.)
+
+(I didn't figure how to calculate the "frequency" for each note. Does
+anyone
+(of you SCC gurus) know the value for each note (or some kind of
+formula)? 
+- Harri)
+
+
+3. Amplitude Control Register (=volume)
+
+There is a 4-bit value for each channel (or "port", as they wrote in
+the  
+MSX-Magazine):
+
+            b7 b6 b5 b4 b3 b2 b1 b0
+        R10  X  X  X  X  3  2  1  0  port 1 level (0-15)
+
+             X=don't care
+
+        R11                          port 2 level (0-15)
+        R12                          port 3 level (0-15)
+        R13                          port 4 level (0-15)
+        R14                          port 5 level (0-15)
+
+
+4. Port Enable Control Register
+
+There is one bit for each channel which determines if the sound of a
+channel
+should be enabled or not:
+
+        R15  b7 b6 b5 b4 b3 b2 b1 b0
+                       |  |  |  |  +-  Port 1 (0=ON 1=OFF)
+                       |  |  |  +----  Port 2 (0=ON 1=OFF)
+                       |  |  +-------  Port 3 (0=ON 1=OFF)
+                       |  +----------  Port 4 (0=ON 1=OFF)
+                       +-------------  Port 5 (0=ON 1=OFF)
+
+
+.

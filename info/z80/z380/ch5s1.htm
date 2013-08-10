@@ -1,0 +1,2100 @@
+<HTML><BODY>
+<BR><P><BR><P>
+<H5><A name="p20"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-20:</A></H5>
+<BR><P>
+<H3>ADC<BR>
+ADD WITH CARRY (BYTE)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>ADC A,src<TD>src = R, RX, IM, IR, X</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     A := A + src + C
+</PRE>
+<BR><P>
+The source operand together with the Carry flag is added to the accumulator and the sum
+is stored in the accumulator. The contents of the source is unaffected. Two's complement
+addition is performed.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the result is negative; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the result is zero; cleared otherwise</TR>
+<TR><TD>H: <TD>Set if there is a carry from bit 3 of the result; cleared otherwise</TR>
+<TR><TD>V: <TD>Set if arithmetic overflow occurs, that is, if both operands cleared otherwise</TR>
+<TR><TD>N: <TD>Cleared</TR>
+<TR><TD>C: <TD>Set if there is a carry from the most significant bit of the result; cleared otherwise</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>ADC A,R  <TD>10001-r-  <TD>2 <TD> </TR>
+<TR><TD>RX: <TD>ADC A,RX  <TD>11y11101 1000110w  <TD>2 <TD> </TR>
+<TR><TD>IM: <TD>ADC A,n  <TD>11001110 -n-  <TD>2 <TD> </TR>
+<TR><TD>IR: <TD>ADC A,(HL)  <TD>10001110  <TD>2+r <TD> </TR>
+<TR><TD>X: <TD>ADC A,(XY+d)  <TD>11y11101 10001110 ----d--  <TD>4+r <TD>I <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>r: <TD>per convention</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+<TR><TD>w: <TD>0 for high byte, 1 for low byte</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p21"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-21:</A></H5>
+<BR><P>
+<H3>ADC<BR>
+ADD WITH CARRY (WORD)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>ADC HL,src<TD>dst = HL</TR>
+<TR><TD></TD><TD>     src = BC, DE, HL, SP</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     HL( 15..0) := HL(15..0) + src(15..0) + C
+</PRE>
+<BR><P>
+The source operand together with the Carry flag is added to the HL register and the sum is
+stored in the HL register. The contents of the source are unaffected. Two's complement
+addition is performed.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the result is negative; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the result is zero; cleared otherwise</TR>
+<TR><TD>H: <TD>Set if there is a carry from bit 11 of the result; cleared otherwise</TR>
+<TR><TD>V: <TD>Set if arithmetic overflow occurs, that is, if both operands are of the same sign and     the result is of the opposite sign; cleared otherwise
+</TR>
+<TR><TD>N: <TD>Cleared</TR>
+<TR><TD>C: <TD>Set if there is a carry from the most significant bit of the result; cleared otherwise</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>ADC HL,R  <TD>11101101 01rr1010  <TD>2 <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>rr: <TD>00 for BC, 01 for DE, 10 for HL, 11 for SP</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p22"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-22:</A></H5>
+<BR><P>
+<H3>ADCW<BR>
+ADD WITH CARRY (WORD)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>ADCW [HL,]src<TD>src = R, RX, IM, X</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     HL(15..0) := HL(15..0) + src(15..0) + C
+</PRE>
+<BR><P>
+The source operand together with the Carry flag is added to the HL register and the sum is
+stored in the HL register. The contents of the source are unaffected. Two's complement
+addition is performed.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the result is negative; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the result is zero; cleared otherwise</TR>
+<TR><TD>H: <TD>Set if there is a carry from bit 11 of the result; cleared otherwise</TR>
+<TR><TD>V: <TD>Set if arithmetic overflow occurs, that is, if both operands are of the same sign and     the result is of the opposite sign; cleared otherwise
+</TR>
+<TR><TD>N: <TD>Cleared</TR>
+<TR><TD>C: <TD>Set if there is a carry from the most significant bit of the result; cleared otherwise</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>ADCW [HL,]R  <TD>11101101 100011rr  <TD>2 <TD> </TR>
+<TR><TD>RX: <TD>ADCW [HL,]RX  <TD>11y11101 10001111  <TD>2 <TD> </TR>
+<TR><TD>IM: <TD>ADCW [HL,]nn  <TD>11101101 10001110 --n-- --n--  <TD>2 <TD> </TR>
+<TR><TD>X: <TD>ADCW [HL,](XY+d)  <TD>11y11101 11001110 ----d--  <TD>4+r <TD>I <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>rr: <TD>00 for BC, 01 for DE, 11 for HL</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p23"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-23:</A></H5>
+<BR><P>
+<H3>ADD<BR>
+ADD (BYTE)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>ADD A,src<TD>src = R, RX, IM, IR, X</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     A := A + src
+</PRE>
+<BR><P>
+The source operand is added to the accumulator and the sum is stored in the accumulator.
+The contents of the source are unaffected. Two's complement addition is performed.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the result is negative; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the result is zero; cleared otherwise</TR>
+<TR><TD>H: <TD>Set if there is a carry from bit 3 of the result; cleared otherwise</TR>
+<TR><TD>V: <TD>Set if arithmetic overflow occurs, that is, if both operands are of the same sign and     the result is of the opposite sign; cleared otherwise
+</TR>
+<TR><TD>N: <TD>Cleared</TR>
+<TR><TD>C: <TD>Set if there is a carry from the most significant bit of the result; cleared otherwise</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>ADD A,R  <TD>10000-r-  <TD>2 <TD> </TR>
+<TR><TD>RX: <TD>ADD A,RX  <TD>11y11101 1000010w  <TD>2 <TD> </TR>
+<TR><TD>IM: <TD>ADD A,n  <TD>11000110 ----n--  <TD>2 <TD> </TR>
+<TR><TD>IR: <TD>ADD A,(HL)  <TD>10000110  <TD>2+r <TD> </TR>
+<TR><TD>X: <TD>ADD A,(XY+d)  <TD>11y11101 10000110 ----d--  <TD>4+r <TD>I <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>r: <TD>per convention</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+<TR><TD>w: <TD>0 for high byte, 1 for low byte</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p24"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-24:</A></H5>
+<BR><P>
+<H3>ADD<BR>
+ADD (WORD)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>ADD dst,src<TD>dst = HL; src = BC, DE, HL, SP, DA</TR>
+<TR><TD></TD><TD>          or</TR>
+<TR><TD></TD><TD>               dst = IX; src = BC, DE, IX, SP</TR>
+<TR><TD></TD><TD>          or</TR>
+<TR><TD></TD><TD>               dst = IY; src = BC, DE, IY, SP</TR>
+</TABLE>
+<P><BR>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     If (XM) then begin
+          dst(31..0) := dst(31..0) + src(31..0)
+          end
+     else begin
+          dst(15..0) := dst(15..0) + src(15..0)
+          end
+</PRE>
+<BR><P>
+The source operand is added to the destination and the sum is stored in the destination. The
+contents of the source are unaffected. Two's complement addition is performed. Note that
+the length of the operand is controlled by the Extended/Native mode selection, which is
+consistent with the manipulation of an address by the instruction.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Set if there is a carry from bit 11 of the result; cleared otherwise</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Cleared</TR>
+<TR><TD>C: <TD>Set if there is a carry from the most significant bit of the result; cleared otherwise</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>ADD HL,R  <TD>00rr1001  <TD>2 <TD>X <TD> </TR>
+<TR><TD>RX: <TD>ADD XY,R  <TD>11y11101 00rr1001  <TD>2 <TD>X <TD> </TR>
+<TR><TD>DA: <TD>ADD HL,(nn)  <TD>11101101 11000110 --n-- --n--  <TD>2+r <TD>I,X <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>rr: <TD>00 for BC, 01 for DE, 10 for register to itself, 11 for SP</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p25"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-25:</A></H5>
+<BR><P>
+<H3>ADD<BR>
+ADD TO STACK POINTER (WORD)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>ADD SP,srcsrc<TD>= IM</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     if (XM) then begin
+          SP(31..0) := SP(31..0) + src(31..0)
+          end
+     else begin
+          SP(15..0) := SP(15..0) + src(15..0)
+          end
+</PRE>
+<BR><P>
+<P><BR>
+The source operand is added to the SP register and the sum is stored in the SP register. This
+has the effect of allocating or allocating space on the stack. Two's complement addition is
+performed.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Set if there is a carry from bit 11 of the result; cleared otherwise</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Cleared</TR>
+<TR><TD>C: <TD>Set if there is a carry from the most significant bit of the result; cleared otherwise</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>IM: <TD>ADD SP,nn  <TD>11101101 10000010 --n-- --n--  <TD>2 <TD>I,X <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p26"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-26:</A></H5>
+<BR><P>
+<H3>ADDW<BR>
+ADD (WORD)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>ADDW [HL,]src<TD>src = R, RX, IM, X</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     HL(15..0) := HL(15..0) + src(15..0)
+</PRE>
+<BR><P>
+The source operand is added to the HL register and the sum is stored in the HL register. The
+contents of the source are unaffected. Two's complement addition is performed.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the result is negative; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the result is zero; cleared otherwise</TR>
+<TR><TD>H: <TD>Set if there is a carry from bit 11 of the result; cleared otherwise</TR>
+<TR><TD>V: <TD>Set if arithmetic overflow occurs, that is, if both operands are of the same     sign and the result is of the opposite sign; cleared otherwise
+</TR>
+<TR><TD>N: <TD>Cleared</TR>
+<TR><TD>C: <TD>Set if there is a carry from the most significant bit of the result; cleared otherwise</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>ADDW [HL,]R  <TD>11101101 100001rr  <TD>2 <TD> </TR>
+<TR><TD>RX: <TD>ADDW [HL,]RX  <TD>11y11101 10000111  <TD>2 <TD> </TR>
+<TR><TD>IM: <TD>ADDW [HL,]nn  <TD>11101101 10000110 --n-- --n--  <TD>2 <TD> </TR>
+<TR><TD>X: <TD>ADDW [HL,](XY+d)  <TD>11y11101 11000110 --d--  <TD>4+r <TD>I <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>rr: <TD>00 for BC, 01 for DE, 11 for HL</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p27"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-27:</A></H5>
+<BR><P>
+<H3>AND<BR>
+AND (BYTE)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>AND [A,]src<TD>src = R, RX, IM, IR, X</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     A := A AND src
+</PRE>
+<BR><P>
+A logical AND operation is performed between the corresponding bits of the source operand
+and the accumulator and the result is stored in the accumulator. A 1 is stored wherever the
+corresponding bits in the two operands are both 1s; otherwise a 0 is stored. The contents
+of the source are unaffected.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the most significant bit of the result is set; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if all bits of the result are zero; cleared otherwise</TR>
+<TR><TD>H: <TD>Set</TR>
+<TR><TD>P: <TD>Set if the parity is even; cleared otherwise</TR>
+<TR><TD>N: <TD>Cleared</TR>
+<TR><TD>C: <TD>Cleared</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>AND [A,]R  <TD>10100-r-  <TD>2 <TD> </TR>
+<TR><TD>RX: <TD>AND [A,]RX  <TD>11y11101 1010010w  <TD>2 <TD> </TR>
+<TR><TD>IM: <TD>AND [A,]n  <TD>11100110 ----n--  <TD>2 <TD> </TR>
+<TR><TD>IR: <TD>AND [A,](HL)  <TD>10100110  <TD>2+r <TD> </TR>
+<TR><TD>X: <TD>AND [A,](XY+d)  <TD>11y11101 10100110----d--  <TD>4+r <TD>I <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>r: <TD>per convention</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+<TR><TD>w: <TD>0 for high byte, 1 for low byte</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p28"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-28:</A></H5>
+<BR><P>
+<H3>ANDW<BR>
+AND (WORD)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>ANDW [HL,]src<TD>src = R, RX, IM, X</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     HL(15..0) := HL(15..0) AND src(15..0)
+</PRE>
+<BR><P>
+A logical AND operation is performed between the corresponding bits of the source operand
+and the HL register and the result is stored in the HL register. A 1 is stored wherever the
+corresponding bits in the two operands are both 1s; otherwise a 0 is stored. The contents
+of the source are unaffected.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the most significant bit of the result is set; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if all bits of the result are zero; cleared otherwise</TR>
+<TR><TD>H: <TD>Set</TR>
+<TR><TD>P: <TD>Set if the parity is even; cleared otherwise</TR>
+<TR><TD>N: <TD>Cleared</TR>
+<TR><TD>C: <TD>Cleared</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>ANDW [HL,]R  <TD>11101101 101001rr  <TD>2 <TD> </TR>
+<TR><TD>RX: <TD>ANDW [HL,]RX  <TD>11y11101 10100111  <TD>2 <TD> </TR>
+<TR><TD>IM: <TD>ANDW [HL,]nn  <TD>11101101 10100110 --n-- --n--  <TD>2 <TD> </TR>
+<TR><TD>X: <TD>ANDW [HL,](XY+d)  <TD>11y11101 11100110 ----d--  <TD>4+r <TD>I <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>rr: <TD>00 for BC, 01 for DE, 11 for HL</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p29"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-29:</A></H5>
+<BR><P>
+<H3>BIT<BR>
+BIT TEST</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>BIT b,dst<TD>dst = R, IR, X</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     Z := NOT dst(b)
+</PRE>
+<BR><P>
+The specified bit b within the destination operand is tested, and the Zero flag is set to 1 if
+the specified bit is 0, otherwise the Zero flag is cleared to 0. The contents of the destination
+are unaffected. The bit to be tested is specified by a 3-bit field in the instruction; this field
+contains the binary encoding for the bit number to be tested. The bit number b must be
+between 0 and 7.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Set if the specified bit is zero; cleared otherwise</TR>
+<TR><TD>H: <TD>Set</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Cleared</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>BIT b,R  <TD>11001011 01bbbrrr  <TD>2 <TD> </TR>
+<TR><TD>IR: <TD>BIT b,(HL)  <TD>11001011 01bbb110  <TD>2+r <TD> </TR>
+<TR><TD>X: <TD>BIT b,(XY+d)  <TD>11y11101 11001011 ----d-- 01bbb110  <TD>4+r <TD>I <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>rrr: <TD>per convention</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p30"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-30:</A></H5>
+<BR><P>
+<H3>BTEST<BR>
+BANK TEST</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>BTEST</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     S := SR(16)
+     Z := SR(24)
+     V := SR(0)
+     C := SR(8)
+</PRE>
+<BR><P>
+The Alternate Register bits in the Select Register (SR) are transferred to the flags. This allows
+the program to determine the state of the machine.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the alternate bank IX is in use; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the alternate bank IY is in use; cleared otherwise</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Set if the alternate bank AF is in use; cleared otherwise</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Set if the alternate bank of BC, DE and HL is in use; cleared otherwise</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> BTEST  <TD>11101101 11001111  <TD>2 </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p31"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-31:</A></H5>
+<BR><P>
+<H3>CALL<BR>
+CALL</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>CALL [cc,]dst<TD>dst = DA</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     if (cc is TRUE) then begin
+          if (XM) then begin
+               SP := SP - 4
+               (SP) := PC(7..0)
+               (SP+1) := PC(15..8)
+               (SP+2) := PC(23..16)
+               (SP+3) := PC(31..24)
+               PC(31..0) := dst(31..0)
+               end
+          else begin
+               SP := SP - 2
+               (SP) := PC(7..0)
+               (SP+1) := PC(15..8)
+               PC(15..0) := dst(15..0)
+               end
+          end
+</PRE>
+<BR><P>
+<P><BR>
+A conditional Call transfers program control to the destination address if the setting of a
+selected flag satisfies the condition code "cc" specified in the instruction; an Unconditional
+Call always transfers control to the destination address. The current contents of the Program
+Counter (PC) are pushed onto the top of the stack; the PC value used is the address of the
+first instruction byte following the Call instruction. The destination address is then loaded
+into the PC and points to the first instruction of the called procedure. At the end of a
+procedure a Return instruction (RET) can be used to return to the original program.
+<P><BR>
+Each of the Zero, Carry, Sign, and Overflow Flags can be individually tested and a call
+performed conditionally on the setting of the flag.
+<P><BR>
+The operand is not enclosed in parentheses with the CALL instruction.
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>DA: <TD>CALL CC, addr  <TD>11-cc100 --a(low) --a(high)  <TD>Note <TD>I,X <TD> </TR>
+<TR><TD></TD><TD>    CALL addr  <TD>11001101 --a(low) --a(high)  <TD>4+w <TD>I,X </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>cc: <TD>000 for NZ, 001 for Z, 010 for NC, 011 for C,    100 for PO or NV, 101 for PE or V, 110 for P or NS, 111 for M or S
+</TR>
+</TABLE>
+<BR><P>
+
+
+Note: 2 if CC is false, 4+w if CC is true
+<P><BR>
+<BR><P><BR><P>
+<H5><A name="p32"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-32:</A></H5>
+<BR><P>
+<H3>CALR<BR>
+CALL RELATIVE</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>CALR [cc,]dst<TD>dst = RA</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     if (cc is true) then begin
+          dst := SIGN EXTEND dst
+          if (XM) then begin
+               SP := SP -4
+               (SP) := PC(7..0)
+               (SP+1) := PC(15..8)
+               (SP+2) := PC(23..16)
+               (SP+3) := PC(31..24)
+               PC(31..0) := PC(31..0) + dst(31..0)
+               end
+          else begin
+               SP := SP -2
+               (SP) := PC(7..0)
+               (SP+1) := PC(15..8)
+               PC(15..0) := PC(15..0) + dst(15..0)
+               end
+          end
+</PRE>
+<BR><P>
+A conditional Call transfers program control to the destination address if the setting of a
+selected flag satisfies the condition code "cc" specified in the instruction; an unconditional
+call always transfers control to the destination address. The current contents of the Program
+Counter (PC) are pushed onto the top of the stack; the PC value used is the address of the
+first instruction byte following the Call instruction. The destination address is then loaded into
+the PC and points to the first instruction of the called procedure. At the end of a procedure
+a RETurn instruction is used to return to the original program. These instructions employ
+either an 8-bit, 16-bit, or 24-bit signed, two's complement displacement from the PC to
+permit calls within the range of -126 to + 129 bytes, -32,765 to +32,770 bytes or -8,388,604
+to +8,388,611 bytes from the location of this instruction.
+<P><BR>
+Each of the Zero, Carry, Sign, and Overflow flags can be individually tested and a call
+performed conditionally on the setting of the flag.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>RA: <TD>CALR CC,addr  <TD>11101101 11-cc100 --disp--  <TD>Note <TD>X <TD> </TR>
+<TR><TD></TD><TD>    CALR addr  <TD>11101101 11001101 --disp--  <TD>4+w <TD>X </TR>
+<TR><TD></TD><TD>    CALR CC,addr  <TD>11011101 11-cc100 --d(low) --d(high)  <TD>Note <TD>X </TR>
+<TR><TD></TD><TD>    CALR addr  <TD>11011101 11001101 --d(low) --d(high)  <TD>4+w <TD>X </TR>
+<TR><TD></TD><TD>    CALR CC,addr  <TD>11111101 11-cc100 --d(low) --d(mid) --d(high)  <TD>Note <TD>X </TR>
+<TR><TD></TD><TD>    CALR addr  <TD>11111101 11001101 -d(low) --d(mid) --d(high)  <TD>4+w <TD>X </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>cc: <TD>000 for NZ, 001 for Z, 010 for NC, 011 for C,     100 for PO or NV, 101 for PE or V, 110 for P or NS, 111 for M or S
+</TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+Note: 2 if CC is false, 4+w if CC is true
+<P><BR>
+<BR><P><BR><P>
+<H5><A name="p33"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-33:</A></H5>
+<BR><P>
+<H3>CCF<BR>
+COMPLEMENT CARRY FLAG</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>CCF</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     C := NOT C
+</PRE>
+<BR><P>
+The Carry flag is inverted.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>The previous state of the Carry flag</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Cleared</TR>
+<TR><TD>C: <TD>Set if the Carry flag was clear before the operation; cleared otherwise</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> CCF  <TD>00111111  <TD>2 </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p34"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-34:</A></H5>
+<BR><P>
+<H3>CP<BR>
+COMPARE (BYTE)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>CP [A,]src<TD>src = R, RX, IM, IR, X</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     A - src
+</PRE>
+<BR><P>
+The source operand is compared with the accumulator and the flags are set accordingly.
+The contents of the accumulator and the source are unaffected. Two's complement
+subtraction is performed.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the result is negative; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the result is zero; cleared otherwise</TR>
+<TR><TD>H: <TD>Set if there is a borrow from bit 4 of the result; cleared otherwise</TR>
+<TR><TD>V: <TD>Set if arithmetic overflow occurs, that is, if the operands are of different signs     and the result is of the same sign as the source; cleared otherwise
+</TR>
+<TR><TD>N: <TD>Set</TR>
+<TR><TD>C: <TD>Set if there is a borrow from the most significant bit of the result; cleared otherwise</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>CP [A,]R  <TD>10111-r- <TD>2 <TD> </TR>
+<TR><TD>RX: <TD>CP [A,]RX  <TD>11y11101 1011110w  <TD>2 <TD> </TR>
+<TR><TD>IM: <TD>CP [A,]n  <TD>11111110 ----n--  <TD>2 <TD> </TR>
+<TR><TD>IR: <TD>CP [A,](HL)  <TD>10111110  <TD>2+r <TD> </TR>
+<TR><TD>X: <TD>CP [A,](XY+d)  <TD>11y11101 10111110 ----d--  <TD>4+r <TD>I <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>r: <TD>per convention</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+<TR><TD>w: <TD>0 for high byte, 1 for low byte</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p35"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-35:</A></H5>
+<BR><P>
+<H3>CPW<BR>
+COMPARE (WORD)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>CPW [HL,]src<TD>src = R, RX, IM, X</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     HL(15..0) - src(15..0)
+</PRE>
+<BR><P>
+The source operand is compared with the HL register and the flags are set accordingly. The
+contents of the HL register and the source are unaffected. Two's complement subtraction
+is performed.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the result is negative; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the result is zero; cleared otherwise</TR>
+<TR><TD>H: <TD>Set if there is a borrow from bit 12 of the result; cleared otherwise</TR>
+<TR><TD>V: <TD>Set if arithmetic overflow occurs, that is, if the operands are of different signs and     the result is of the same sign as the source; cleared otherwise
+</TR>
+<TR><TD>N: <TD>Set</TR>
+<TR><TD>C: <TD>Set if there is a borrow from the most significant bit of the result; cleared otherwise</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>CPW [HL,]R  <TD>11101101 101111rr  <TD>2 <TD> </TR>
+<TR><TD>RX: <TD>CPW [HL,]RX  <TD>11y11101 10111111  <TD>2 <TD> </TR>
+<TR><TD>IM: <TD>CPW [HL,]nn  <TD>11101101 10111110 --n-- --n--  <TD>2 <TD> </TR>
+<TR><TD>X: <TD>CPW [HL,](XY+d)  <TD>11y11101 11111110 ----d--  <TD>4+r <TD>I <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>rr: <TD>00 for BC, 01 for DE, 11 for HL</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p36"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-36:</A></H5>
+<BR><P>
+<H3>CPD<BR>
+COMPARE AND DECREMENT (BYTE)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>CPD</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     A := (HL)
+     if (XM) then begin
+               HL(31..0) := HL(31..0) - 1
+               end
+          else begin
+               HL(15..0) := HL(15..0) - 1
+               end
+     BC(15..0) := BC(15..0) - 1
+</PRE>
+<BR><P>
+<P><BR>
+This instruction is used for searching strings of byte data. The byte of data at the location
+addressed by the HL register is compared with the contents of the accumulator and the Sign
+and Zero flags are set to reflect the result of the comparison. The contents of the accumulator
+and the memory bytes are unaffected. Two's complement subtraction is performed. Next
+the HL register is decremented by one, thus moving the pointer to the previous element in
+the string. The BC register, used as a counter, is then decremented by one.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the result is negative; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the result is zero, indicating that the contents of the accumulator and the     memory byte are equal; cleared otherwise
+</TR>
+<TR><TD>H: <TD>Set if there is a borrow from bit 4 of the result; cleared otherwise</TR>
+<TR><TD>V: <TD>Set if the result of decrementing BC is not equal to zero; cleared otherwise</TR>
+<TR><TD>N: <TD>Set</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> CPD  <TD>11101101 10101001  <TD>3+r <TD>X </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p37"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-37:</A></H5>
+<BR><P>
+<H3>CPDR<BR>
+COMPARE, DECREMENT AND REPEAT (BYTE)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>CPDR</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     Repeat until (BC= 0 OR match) begin
+          A := (HL)
+          if (XM) then begin
+               HL(31..0) := HL(31..0) - 1
+               end
+          else begin
+               HL(15..0) := HL(15..0) - 1
+               end
+          BC(15..0) := BC(15..0) - 1
+          end
+</PRE>
+<BR><P>
+<P><BR>
+This instruction is used for searching strings of byte data. The bytes of data starting at the
+location addressed by the HL register are compared with the contents of the accumulator
+until either an exact match is found or the string length is exhausted becuase the BC register
+has decremented to zero. The Sign and Zero flags are set to reflect the result of the
+comparison. The contents of the accumulator and the memory bytes are unaffected. Two's
+complement subtraction is performed.
+<P><BR>
+After each comparison, the HL register is decremented by one, thus moving the pointer to
+the previous element in the string.
+<P><BR>
+The BC register, used as a counter, is then decremented by one. If the result of decrementing
+the BC register is not zero and no match has been found, the process is repeated. If the
+contents of the BC register are zero at the start of this instruction, a string length of 65,536
+is indicated.
+<P><BR>
+This instruction can be interrupted after each execution of the basic operation. The PC value
+at the start of this instruction is pushed onto the stack so that the instruction can be resumed.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the last result is negative; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the last result is zero, indicating a match; cleared otherwise</TR>
+<TR><TD>H: <TD>Set if there is a borrow from bit 4 of the last result; cleared otherwise</TR>
+<TR><TD>V: <TD>Set if the result of decrementing BC is not equal to zero; cleared otherwise</TR>
+<TR><TD>N: <TD>Set</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> CPDR  <TD>11101101 10111001  <TD>Nx(3+r) <TD>X </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p38"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-38:</A></H5>
+<BR><P>
+<H3>CPI<BR>
+COMPARE AND INCREMENT (BYTE)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>CPI</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     A -(HL) if (XM) then begin
+               HL(31..0) := HL(31..0) + 1
+               end
+          else begin
+               HL(15..0) := HL(15..0) + 1
+               end
+     BC(15..0) := BC(15..0) -1
+</PRE>
+<BR><P>
+<P><BR>
+This instruction is used for searching strings of byte data. The byte of data at the location
+addressed by the HL register is compared with the contents of the accumulator and the Sign
+and Zero flags are set to reflect the result of the comparison. The contents of the accumulator
+and the memory bytes are unaffected. Two's complement subtraction is performed. Next the
+HL register is incremented by one, thus moving the pointer to the next element in the string.
+The BC register, used as a counter, is then decremented by one.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the result is negative; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the result is zero, indicating that the contents of the accumulator and the     memory byte are equal; cleared otherwise
+</TR>
+<TR><TD>H: <TD>Set if there is a borrow from bit 4 of the result; cleared otherwise</TR>
+<TR><TD>V: <TD>Set if the result of decrementing BC is not equal to zero; cleared otherwise</TR>
+<TR><TD>N: <TD>Set</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> CPI  <TD>11101101 10100001  <TD>3+r <TD>X </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p39"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-39:</A></H5>
+<BR><P>
+<H3>CPIR<BR>
+COMPARE, INCREMENT AND REPEAT (BYTE)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>CPIR</TR>
+<TR><TD></TD><TD>Operation:</TR>
+<TR><TD></TD><TD>     Repeat until (BC = 0 OR match) begin</TR>
+<TR><TD></TD><TD>          A := (HL)</TR>
+<TR><TD></TD><TD>          if (XM) then begin</TR>
+<TR><TD></TD><TD>               HL(31..0) := HL(31..0) + 1</TR>
+<TR><TD></TD><TD>               end</TR>
+<TR><TD></TD><TD>          else begin</TR>
+<TR><TD></TD><TD>               HL(15..0) := HL(15..0) + 1</TR>
+<TR><TD></TD><TD>               end</TR>
+<TR><TD></TD><TD>          BC(15..0) := BC(15..0) -1</TR>
+<TR><TD></TD><TD>          end</TR>
+</TABLE>
+<P><BR>
+<P><BR>
+This instruction is used for searching strings of byte data. The bytes of data starting at the
+location addressed by the HL register are compared with the contents of the accumulator
+until either an exact match is found or the string length is exhausted becuase the BC register
+has decremented to zero. The Sign and Zero flags are set to reflect the result of the
+comparison. The contents of the accumulator and the memory bytes are unaffected.
+Two's complement subtraction is performed.
+<P><BR>
+After each comparison, the HL register is incremented by one, thus moving the pointer to
+the next element in the string. The BC register, used as a counter, is then decremented by
+one. If the result of decrementing the BC register is not zero and no match has been found,
+the process is repeated. If the contents of the BC register are zero at the start of this
+instruction, a string length of 65,536 is indicated.
+<P><BR>
+This instruction can be interrupted after each execution of the basic operation. The PC value
+at the start of this instruction is pushed onto the stack so that the instruction can be resumed.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the last result is negative; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the last result is zero, indicating a match; cleared otherwise</TR>
+<TR><TD>H: <TD>Set if there is a borrow from bit 4 of the last result; cleared otherwise</TR>
+<TR><TD>V: <TD>Set if the result of decrementing BC is not equal to zero; cleared otherwise</TR>
+<TR><TD>N: <TD>Set</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> CPIR  <TD>11101101 10110001  <TD>Nx(3+r) <TD>X </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p40"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-40:</A></H5>
+<BR><P>
+<H3>CPL<BR>
+COMPLEMENT BITS ACCUMULATOR</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>CPL [A]</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     A := NOT A
+</PRE>
+<BR><P>
+The contents of the accumulator are complemented (one's complement); all 1s are changed
+to 0 and vice-versa.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Set</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Set</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> CPL [A]  <TD>00101111  <TD>2 </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p41"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-41:</A></H5>
+<BR><P>
+<H3>CPLW<BR>
+COMPLEMENT HL REGISTER (WORD)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>CPLW [HL]</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     HL(15..0) := NOT HL(15..0)
+</PRE>
+<BR><P>
+The contents of the HL register are complemented (ones complement); all 1s are changed
+to 0 and vice-versa.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Set</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Set</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> CPLW [HL]  <TD>11011101 00101111  <TD>2 </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p42"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-42:</A></H5>
+<BR><P>
+<H3>DAA<BR>
+DECIMAL ADJUST ACCUMULATOR</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>DAA</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     A := Decimal Adjust A
+</PRE>
+<BR><P>
+The accumulator is adjusted to form two 4-bit BCD digits following a binary, two's
+complement addition or subtraction on two BCD-encoded bytes. The table below indicates
+the operation performed for addition (ADD, ADC, INC) or subtraction (SUB, SBC, DEC,
+NEG).
+<P><BR>
+<TABLE BORDER>
+<TR><TD>Operation
+<TD>C<BR>Before<BR>DAA
+<TD>Hex Value<BR>Upper Digit<BR>(Bits 7-4)
+<TD>H<BR>Before<BR>DAA
+<TD>Hex Value<BR>Lower Digit<BR>(Bits 3-0)
+<TD>Number<BR>Added<BR>to Byte
+<TD>C<BR>After<BR>DAA
+<TD>H<BR>After<BR>DAA</TR>
+
+<TR><TD></TD><TD>0<TD>0-9<TD>0<TD>0-9<TD>00<TD>0<TD>0 </TR>
+<TR><TD></TD> <TD>0<TD>0-8<TD>0<TD>A-F<TD>06<TD>0<TD>1 </TR>
+<TR><TD>ADD <TD>0<TD>0-9<TD>1<TD>0-3<TD>06<TD>0<TD>0 </TR>
+<TR><TD>ADC <TD>0<TD>A-F<TD>0<TD>0-9<TD>60<TD>1<TD>0 </TR>
+<TR><TD>INC <TD>0<TD>9-F<TD>0<TD>A-F<TD>66<TD>1<TD>1 </TR>
+<TR><TD>(N=0)<TD>0<TD>A-F<TD>1<TD>0-3<TD>66<TD>1<TD>0 </TR>
+<TR><TD></TD> <TD>1<TD>0-2<TD>0<TD>0-9<TD>60<TD>1<TD>0 </TR>
+<TR><TD></TD> <TD>1<TD>0-2<TD>0<TD>A-F<TD>66<TD>1<TD>1 </TR>
+<TR><TD></TD> <TD>1<TD>0-3<TD>1<TD>0-3<TD>66<TD>1<TD>0 </TR>
+<TR><TD>SUB<br>SBC <TD>0<TD>0-9<TD>0<TD>0-9<TD>00<TD>0<TD>0 </TR>
+<TR><TD>DEC <TD>0<TD>0-8<TD>1<TD>6-F<TD>FA<TD>0<TD>1 </TR>
+<TR><TD>NEG <TD>1<TD>7-F<TD>0<TD>0-9<TD>A0<TD>1<TD>0 </TR>
+<TR><TD>(N=1)<TD>1<TD>6-F<TD>1<TD>6-F<TD>9A<TD>1<TD>1 </TR>
+</TABLE>
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the most significant bit of the result is set; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the result is zero; cleared otherwise</TR>
+<TR><TD>H: <TD>See table above</TR>
+<TR><TD>P: <TD>Set if the parity of the result is even; cleared otherwise</TR>
+<TR><TD>N: <TD>Not affected</TR>
+<TR><TD>C: <TD>See table above</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> DAA  <TD>00100111  <TD>3 </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p43"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-43:</A></H5>
+<BR><P>
+<H3>DDIR<BR>
+DECODER DIRECTIVE</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>DDIR mode<TD>mode = W or LW, IB or IW</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     None, decoder directive only
+</PRE>
+<BR><P>
+This is not an instruction, but rather a directive to the instruction decoder.
+The instruction decoder may be directed to fetch an additional byte or word of immediate
+data or address with the instruction, as well as tagging the instruction for execution in either
+Word or Long Word mode. All eight combinations of the two options are supported, as shown
+in the encoding below. Instructions which do not support decoder directives are assembled
+by the instruction decoder as if the decoder directive were not present.
+<P><BR>
+The IB decoder directive causes the decoder to fetch an additional byte immediately after
+the existing immediate data or direct address, and in front of any trailing opcode bytes (with
+instructions starting with DD-CB or FD-CB, for example).
+<P><BR>
+Likewise, the IW decoder directive causes the decoder to fetch an additional word
+immediately after the existing immediate data or direct address, and in front of any trailing
+opcode bytes.
+<P><BR>
+Byte ordering within the instruction follows the usual convention; least significant byte first,
+followed by more significant bytes. More-significant immediate data or direct address bytes
+not specified in the instruction are taken as all zeros by the processor.
+<P><BR>
+The W decoder directive causes the instruction decoder to tag the instruction for execution
+in Word mode. This is useful while the Long Word (LW) bit in the Select Register (SR) is set,
+but 16-bit data manipulation is required for this instruction.
+<P><BR>
+The LW decoder directive causes the instruction decoder to tag the instruction for execution
+in Long Word mode. This is useful while the LW bit in the SR is cleared, but 32-bit data
+manipulation is required for this instruction.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> DDIR mode  <TD>11w11101 110000im  <TD>0 </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>wim: <TD>000 W Word mode     001 IB, W Immediate byte, Word mode
+     010 IW, W Immediate word, Word mode
+     011 IB Immediate byte
+     100 LW Long Word mode
+     101 IB, LW Immediate byte, Long Word mode
+     110 IW, LW Immediate word, Long Word mode
+     111 IW Immediate word
+</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p44"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-44:</A></H5>
+<BR><P>
+<H3>DEC<BR>
+DECREMENT (BYTE)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>DEC dst<TD>dst = R, RX, IR, X</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     dst := dst - 1
+</PRE>
+<BR><P>
+The destination operand is decremented by one and the result is stored in the destination.
+Two's complement subtraction is performed.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Set if the result is negative; cleared otherwise</TR>
+<TR><TD>Z: <TD>Set if the result is zero; cleared otherwise</TR>
+<TR><TD>H: <TD>Set if there is a borrow from bit 4 of the result; cleared otherwise</TR>
+<TR><TD>V: <TD>Set if arithmetic overflow occurs, that is, if the destination was 80H; cleared     otherwise
+</TR>
+<TR><TD>N: <TD>Set</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>DEC R  <TD>00-r-101  <TD>Note <TD> </TR>
+<TR><TD>RX: <TD>DEC RX  <TD>11y11101 0010w101  <TD>2 <TD> </TR>
+<TR><TD>IR: <TD>DEC (HL)  <TD>00110101  <TD>2+r+w <TD> </TR>
+<TR><TD>X: <TD>DEC (XY+d)  <TD>11y11101 00110101 ----d--  <TD>4+r+w <TD>I <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>r: <TD>per convention</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+<TR><TD>w: <TD>0 for high byte, 1 for low byte</TR>
+</TABLE>
+<BR><P>
+
+
+Note: 2 for accumulator, 3 for any other register
+<P><BR>
+<BR><P><BR><P>
+<H5><A name="p45"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-45:</A></H5>
+<BR><P>
+<H3>DEC[W]<BR>
+DECREMENT (WORD)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>DEC[W] dst<TD>dst = R, RX</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     if (XM) then begin
+          dst(31..0) := dst(31..0) - 1
+          end
+     else begin
+          dst(15..0) := dst(15..0) - 1
+          end
+</PRE>
+<BR><P>
+The destination operand is decremented by one and the result is stored in the destination.
+Two's complement subtraction is performed. Note that the length of the operand is
+controlled by the Extended/Native mode selection, which is consistent with the manipulation
+of an address by the instruction.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>DEC[W] R  <TD>00rr1011  <TD>2 <TD>X <TD> </TR>
+<TR><TD>RX: <TD>DEC[W] RX  <TD>11y11101 00101011  <TD>2 <TD>X <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>rr: <TD>00 for BC, 01 for DE, 10 for HL, 11 for SP</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p46"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-46:</A></H5>
+<BR><P>
+<H3>DI<BR>
+DISABLE INTERRUPTS</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>DI [n]</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     if (n is present) then begin
+          for i= 1 to 4 begin
+               if (n(i) = 1) then begin
+                    IER(i-1) := 0
+                    end
+               end
+          if (n(0) = 1) then begin
+               SR(5) := 0
+               end
+          end
+     else begin
+          SR(5) := 0
+          end
+</PRE>
+<BR><P>
+If an argument is present, disable the selected interrupts by clearing the appropriate enable
+bits in the Interrupt Enable Register, and then clear the Interrupt Enable Flag (IEF1) in the
+Select Register (SR) if the least-significant bit of the argument is set, disabling maskable
+interrupts. Bits 7-5 of the argument are ignored.
+<P><BR>
+If no argument is present, IEF1 in the SR is set to 0, disabling maskable interrupts.
+Note that during execution of this instruction the maskable interrupts are not sampled.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> DI  <TD>11110011  <TD>2 </TR>
+<TR><TD></TD><TD> DI n  <TD>11011101 11110011 --n----  <TD>2 </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p47"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-47:</A></H5>
+<BR><P>
+<H3>DIVUW<BR>
+DIVIDE UNSIGNED (WORD)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>DIVUW [HL,]src<TD>src = R, RX, IM, X</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     HL(15..0) := HL / src
+     HL(31..16) := remainder
+</PRE>
+<BR><P>
+<P><BR>
+The contents of the the HL register (dividend) are divided by the source operand (divisor)
+and the quotient is stored in the lower word of the HL register; the remainder is stored in the
+upper word of the HL register. The contents of the source are unaffected. Both operands are
+treated as unsigned, binary integers. There are three possible outcomes of the DIVUW
+instruction, depending on the division and the resulting quotient:
+<P><BR>
+Case 1: If the quotient is less than 65536, then the quotient is left in the HL register, the Overflow and Sign flags are cleared to 0, and the Zero flag is set according to the value of the quotient.
+<P><BR>
+Case 2: If the divisor is zero, the HL register is unchanged, the Zero and Overflow flags are set to 1, and the Sign flag is cleared to 0.
+<P><BR>
+Case 3: If the quotient is greater than or equal to 65536, the HL register is unchanged, the Overflow flag is set to 1, and the Sign and Zero flags are cleared to 0.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Cleared</TR>
+<TR><TD>Z: <TD>Set if the quotient or divisor is zero; cleared otherwise</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Set if the divisor is zero or if the computed quotient is greater than or equal     to 65536; cleared otherwise
+</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>DIVUW [HL,]R  <TD>11101101 11001011 101110rr  <TD>20 <TD> </TR>
+<TR><TD>RX: <TD>DIVUW [HL,]RX  <TD>11101101 11001011 1011110y  <TD>20 <TD> </TR>
+<TR><TD>IM: <TD>DIVUW [HL,]nn  <TD>11101101 11001011 10111111 --n-- --n--  <TD>20 <TD> </TR>
+<TR><TD>X: <TD>DIVUW [HL,](XY+d)  <TD>11y11101 11001011 ----d-- 10111010  <TD>22+r <TD>I <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>rr: <TD>00 for BC, 01 for DE, 11 for HL</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p48"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-48:</A></H5>
+<BR><P>
+<H3>DJNZ<BR>
+DECREMENT AND JUMP IF NON-ZERO</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>DJNZ dst<TD>dst = RA</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     B := B-1
+     If (B <> 0) then begin
+          dst := SIGN EXTEND dst
+          if (XM) then begin
+               PC(31..0) := PC(31..0) + dst(31..0)
+               end
+          else begin
+               PC(15..0) := PC(15..0) + dst(15..0)
+               end
+          end
+</PRE>
+<BR><P>
+<P><BR>
+The B register is decremented by one. If the result is non-zero, then the destination address
+is calculated and then loaded into the Program Counter (PC). Control then passes to the
+instruction whose address is pointed to by the PC. When the B register reaches zero, control
+falls through to the instruction following DJNZ. This instruction provides a simple method of
+loop control.
+<P><BR>
+The destination address is calculated using Relative addressing. The displacement in the
+instruction is added to the PC; the PC value used is the address of the instruction following
+the DJNZ instruction.
+<P><BR>
+These instructions employ either an 8-bit, 16-bit, or 24-bit signed, two's complement
+displacement from the PC to permit jumps within a range of -126 to + 129 bytes, -32,765 to
++32,770 bytes, or -8,388,604 to + 8,388,611 bytes from the location of this instruction.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>RA: <TD>DJNZ addr  <TD>00010000 --disp--  <TD>Note <TD>X <TD> </TR>
+<TR><TD></TD><TD>    DJNZ addr  <TD>11011101 00010000 -d(low) --d(high)  <TD>Note <TD>X </TR>
+<TR><TD></TD><TD>    DJNZ addr  <TD>11111101 00010000 -d(low) --d(mid) --d(high)  <TD>Note <TD>X </TR>
+</TABLE>
+<BR><P>
+
+
+Note: 3 if branch not taken, 4 if branch taken
+<P><BR>
+<BR><P><BR><P>
+<H5><A name="p49"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-49:</A></H5>
+<BR><P>
+<H3>EI<BR>
+ENABLE INTERRUPTS</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>EI [n]</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     if (n is present) then begin
+          for i= 1 to 4 begin
+               if (n(i) = 1) then begin
+                    IER(i-1) := 1
+                    end
+               end
+          if (n(0) = 1) then begin
+               SR(5) := 1
+               end
+          end
+     else begin
+          SR(5) := 1
+          end
+</PRE>
+<BR><P>
+If an argument is present, enable the selected interrupts by setting the appropriate enable
+bits in the Interrupt Enable Register, and then set the Interrupt Enable Flag (IEF1) in the
+Select Register (SR) if the least-significant bit of the argument is set, enabling maskable
+interrupts. Bits 7-5 of the argument are ignored.
+<P><BR>
+If no argument is present, IEF1 in the SR is set to 1, enabling maskable interrupts.
+Note that during the execution of this instruction and the following instruction, maskable
+interrupts are not sampled.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> EI n  <TD>11011101 11111011 --n----  <TD>2 </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p50"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-50:</A></H5>
+<BR><P>
+<H3>EX<BR>
+EXCHANGE ACCUMULATOR/FLAG WITH ALTERNATE BANK</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>EX AF,AF'</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     SR(0) := NOT SR(0)
+</PRE>
+<BR><P>
+Bit 0 of the Select Register (SR), which controls the selection of primary or alternate bank
+for the accumulator and flag register, is complemented, thus effectively exchanging the
+accumulator and flag registers between the two banks.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>New value in F'</TR>
+<TR><TD>Z: <TD>New value in F'</TR>
+<TR><TD>H: <TD>New value in F'</TR>
+<TR><TD>V: <TD>New value in F'</TR>
+<TR><TD>N: <TD>New value in F'</TR>
+<TR><TD>C: <TD>New value in F'</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> EX AF,AF'  <TD>00001000  <TD>3 </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p51"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-51:</A></H5>
+<BR><P>
+<H3>EX<BR>
+EXCHANGE ADDRESSING REGISTER WITH TOP OF STACK</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>EX (SP),dst<TD>dst = HL, IX, IY</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     if (LW) then begin
+          (SP+3) {-exchange-} dst(31..24)
+          (SP+2) {-exchange-} dst(23..16)
+          end
+     (SP+1) {-exchange-} dst(15..8)
+     (SP) {-exchange-} dst(7..0)
+</PRE>
+<BR><P>
+<P><BR>
+The contents of the destination register are exchanged with the top of the stack. In Long
+Word mode this exchange is two words; otherwise it is one word.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>EX (SP),HL  <TD>11100011  <TD>3+r+w <TD>L <TD> </TR>
+<TR><TD>EX <TD>(SP),XY  <TD>11y11101 11100011  <TD>3+r+w <TD>L <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p52"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-52:</A></H5>
+<BR><P>
+<H3>EX<BR>
+EXCHANGE REGISTER (WORD)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>EX dst,src<TD>dst = R, RX</TR>
+</TABLE>
+<P><BR>
+src = R, RX
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     if (LW) then begin
+          dst(31..0) {-exchange-} src(31..0)
+          end
+     else begin
+          dst(15..0) {-exchange-}  src(15..0)
+          end
+</PRE>
+<BR><P>
+The contents of the destination are exchanged with the contents of the source.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>EX BC,DE  <TD>11101101 00000101  <TD>3 <TD>L <TD> </TR>
+<TR><TD></TD><TD>   EX BC,HL  <TD>11101101 00001101  <TD>3 <TD>L </TR>
+<TR><TD></TD><TD>   EX DE,HL  <TD>11101011  <TD>3 <TD>L </TR>
+<TR><TD>RX: <TD>EX R,RX  <TD>11101101 00rry011  <TD>3 <TD>L <TD> </TR>
+<TR><TD></TD><TD>    EX IX,IY  <TD>11101101 00101011  <TD>3 <TD>L </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>rr: <TD>00 for BC, 01 for DE, 11 for HL</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p53"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-53:</A></H5>
+<BR><P>
+<H3>EX<BR>
+EXCHANGE REGISTER WITH ALTERNATE REGISTER (BYTE)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>EX dst,src<TD>src = R</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     dst {-exchange-} src
+</PRE>
+<BR><P>
+The contents of the destination are exchanged with the contents of the source, where the
+destination is a register in the primary bank and the source is the corresponding register in
+the alternate bank
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>EX R,R'  <TD>11001011 00110-r-  <TD>3 <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+Field Encoding:
+r: per convention
+<P><BR>
+<BR><P><BR><P>
+<H5><A name="p54"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-54:</A></H5>
+<BR><P>
+<H3>EX<BR>
+EXCHANGE REGISTER WITH ALTERNATE REGISTER (WORD)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>EX dst,src<TD>src = R, RX</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     if (LW) then begin
+        dst(31..0) {-exchange-} src(31..0)
+          end
+     else begin
+          dst(15..0) {-exchange-} src(15..0)
+          end
+</PRE>
+<BR><P>
+The contents of the destination are exchanged with the contents of the source, where the
+destination is a word register in the primary bank and the source is the corresponding word
+register in the alternate bank.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>EX R,R'  <TD>11101101 11001011 001100rr  <TD>3 <TD>L <TD> </TR>
+<TR><TD>RX: <TD>EX RX,RX'  <TD>11101101 11001011 0011010y  <TD>3 <TD>L <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>rr: <TD>00 for BC, 01 for DE, 11 for HL</TR>
+<TR><TD>y: <TD>0 for IX, 1 for IY</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p55"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-55:</A></H5>
+<BR><P>
+<H3>EX<BR>
+EXCHANGE WITH ACCUMULATOR</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>EX A,src<TD>src = R, IR</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     dst {-exchange-} src
+</PRE>
+<BR><P>
+The contents of the accumulator are exchanged with the contents of the source.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD>R: <TD>EX A,R  <TD>11101101 00-r-111  <TD>3 <TD> </TR>
+<TR><TD>IR: <TD>EX A,(HL)  <TD>11101101 00110111  <TD>3+r+w <TD> </TR>
+</TABLE>
+<BR><P>
+
+
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Field<BR> Encodings:</TR>
+<TR><TD>r: <TD>per convention</TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p56"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-56:</A></H5>
+<BR><P>
+<H3>EXALL<BR>
+EXCHANGE ALL REGISTERS WITH ALTERNATE BANK</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>EXALL</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     SR(24) := NOT SR(24)
+     SR(16) := NOT SR(16)
+     SR(8) := NOT SR(8)
+</PRE>
+<BR><P>
+<P><BR>
+Bits 8, 16, and 24 of the Select Register (SR), which control the selection of primary or
+alternate bank for the BC, DE, HL, IX, and IY registers, are complemented, thus effectively
+exchanging the BC, DE, HL, IX, and IY registers between the two banks.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> EXALL  <TD>11101101 11011001  <TD>3 </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p57"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-57:</A></H5>
+<BR><P>
+<H3>EXTS<BR>
+EXTEND SIGN (BYTE)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>EXTS [A]</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     L := A
+     if (L(7)= 0) then begin
+          H = 00h
+          if (LW) then begin
+               HL(31..16) := 0000h
+               end
+          end
+     else begin
+          H = FFh
+               if (LW) then begin
+               HL(31..16) := FFFFh
+               end
+          end
+</PRE>
+<BR><P>
+<P><BR>
+The contents of the accumulator, considered as a signed, two's complement integer, are
+sign-extended to 16 bits and the result is stored in the HL register. The contents of the
+accumulator are unaffected. This instruction is useful for conversion of short signed
+operands into longer signed operands.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> EXTS [A]  <TD>11101101 01100101  <TD>3 <TD>L </TR>
+</TABLE>
+<BR><P>
+
+
+<BR><P><BR><P>
+<H5><A name="p58"
+Z380 tm USER'S MANUAL
+DC-8297-03 ZILOG>page 5-58:</A></H5>
+<BR><P>
+<H3>EXTSW<BR>
+EXTEND SIGN (WORD)</H3>
+<P><BR>
+<TABLE BORDER>
+<TR><TD>EXTSW [HL]</TR>
+</TABLE>
+<P><BR>
+<STRONG>Operation:</STRONG><BR>
+<PRE>
+     If (HL(15) = 0) then begin
+          HL(31..16) := 0000h
+          end
+     else begin
+          HL(31..16) := FFFFh
+          end
+</PRE>
+<BR><P>
+<P><BR>
+The contents of the low word of the HL register, considered as a signed, two's complement
+integer, are sign-extended to 32 bits in the HL register. This instruction is useful for
+conversion of 16-bit signed operands into 32-bit signed operands.
+<P><BR>
+<TABLE BORDER>
+<TR><TH>Flags:</TR>
+<TR><TD>S: <TD>Unaffected</TR>
+<TR><TD>Z: <TD>Unaffected</TR>
+<TR><TD>H: <TD>Unaffected</TR>
+<TR><TD>V: <TD>Unaffected</TR>
+<TR><TD>N: <TD>Unaffected</TR>
+<TR><TD>C: <TD>Unaffected</TR>
+</TABLE>
+<BR><P>
+<TABLE BORDER>
+<TR><TH>Addressing<BR> Mode <TH>Syntax <TH>Instruction Format
+        <TH>Execute Time <TH>Note </TR>
+<TR><TD></TD><TD> EXTSW [HL]  <TD>11101101 01110101  <TD>3 </TR>
+</TABLE>
+<BR><P>
+</BODY></HTML>
+
+
+<!-- <SERVICE NAME="pop"> -->
+<SCRIPT LANGUAGE="javascript">
+<!-- 
+var cuid= "10197"; var keywords= "none"; 
+// -->
+</SCRIPT>
+<SCRIPT LANGUAGE="javascript" SRC="http://adforce.imgis.com/?addyn|2.0|25|12998|1|16|key=none;misc=242006832;">
+<!--
+var urlOfNewPop= "http://www.geocities.com/ad_container/pop.html?cuid="+cuid+"&keywords="+keywords; oldPop= window.open(urlOfNewPop, '_popIt', 'width=515,height=125'); if (oldPop.location.href != urlOfNewPop) {  if ((navigator.appName == "Netscape") && (parseInt(navigator.appVersion) == 3)) { setTimeout("oldPop.close()", 750); setTimeout("window.open(urlOfNewPop, '_popIt', 'width=515,height=125')", 1700); } else { oldPop.close(); setTimeout("window.open(urlOfNewPop, '_popIt', 'width=515,height=125')", 1000); } } 
+// -->
+</SCRIPT>
+<!-- </SERVICE> -->
+
+<!-- <SERVICE NAME="watermark"> -->
+<DIV CLASS="GeoBrandingV2" ID="GeoBrandingV2" STYLE="position:absolute;top:1;display:none;" ALIGN="right"><A HREF="http://www.geocities.com/?source=watermark&browser=MSIE" TARGET="_top"><IMG SRC="http://pic.geocities.com/images/watermark/v1/geocities.gif" ALT="Click Here!" WIDTH="107" HEIGHT="41" BORDER="0"></A></DIV><DIV CLASS="nh1" ID="nh1" STYLE="position:absolute;display:none;height:105;font-family:arial,helvetica,sans-serif;background-color:cccccc;color:cccccc;text-align:left;border-style:solid;border-color:ffffff;border-width:2;"><STYLE TYPE="text/css"><!--a.menu {color:000000;}a.menu:hover {color:cc0000;}--></STYLE><DIV ID="nada" STYLE="position:absolute;display:none;height:19;top:1;color:ffffff;font-weight:bold;font-family:arial,helvetica,sans-serif;font-size:14px;text-align:center;"><A HREF="http://www.geocities.com/join/?source=watermark&browser=MSIE" style="color:ffffff;" onMouseOver="window.status='';return true;" onMouseOut="window.status='';return true;" target="_top">Build Your Free Home Page</a></DIV><DIV ID="hr" STYLE="position:absolute;display:none;height:19;top:1;color:000000;font-weight:bold;font-size:14px;text-align:center;">Visit&nbsp;other&nbsp;great&nbsp;pages&nbsp;on:</DIV><DIV STYLE="position:absolute;display:none;height:19;top:1;font-family:arial,helvetica,sans-serif;color:000000;font-size:12px;font-weight:normal;font-style:normal;"><A CLASS="menu" HREF="http://www.geocities.com/Avenues/Computers_and_Technology/?source=watermark&browser=MSIE" onMouseOver="window.status='';return true;" onMouseOut="window.status='';return true;" target="_top">Computers & Technology</a></div>Computers & Technology</DIV>
+<SCRIPT LANGUAGE="javascript1.2" SRC="http://www.geocities.com/include/watermark/v2/ms.js">
+</SCRIPT>
+<!-- </SERVICE> -->

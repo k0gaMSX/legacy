@@ -1,0 +1,52 @@
+;Offset Size Contents           Normal FCB Fields
+;
+;            зддд©
+; +0      1  ЁDrvЁ drive ID (before open: 0=default,1=A,etc; after: 0=A,1=B,etc.)
+;            цдддаддддддддддддддддддддддддддд©
+; +1      8  Ё'F' 'I' 'L' 'E' 'N' 'A' 'M' 'E'Ё Filename; 1 to 8 characters,
+;            цдддадддадддедддадддадддадддаддды    left-justified, blank-padded
+; +9      3  Ё'E' 'X' 'T'Ё                     Extension; 0 to 3 characters,
+;            цдддадддеддды                        left-justified, blank-padded
+;+0cH     2  ЁCurBlk Ё                         current block number
+;            цдддаддд╢
+;+0eH     2  ЁRecSizeЁ                         logical record size (bytes)
+;            цдддадддедддбддд©
+;+10H     4  Ёfile size      Ё                 length of file (low word first)
+;            цдддддддедддаддды
+;+14H     2  Ё date  Ё                         modified date in filetime format
+;            цдддадддаддддддддддддддддддддддддддддддд©
+;+16H    0aH Ё           DOS reserved area           Ё
+;            цдддадддедддадддадддадддадддадддадддаддды
+;+20H     2  ЁCurRec Ё           block-relative record number (0-7fH)
+;            цдддадддадддб д ©
+;+21H     4  ЁRandomRec  |   |   file-relative record number (for Random files)
+;            юдддадддаддда д ы  (the last byte is used only when rec_size < 64)
+;25H         size of an Open FCB
+;
+;Notes:
+;Ч before opening a file, you need only supply the Drv field and the 11 bytes
+;  of the filename and extension (eg: db 0,'MYFILE  TXT') and leave room for
+;  DOS to fill in the other fields.
+;
+;  An 'Unopened' FCB is the first 12 bytes (Drv, Filename, Ext) plus enough
+;  room for the other fields.  An 'Open' FCB has had the other fields filled-
+;  in.  If the Drv field was 0, DOS sets it to the drive number of the current
+;  drive (0=A, 1=B, etc.)
+;
+;    Offset Size Contents           Extended FCB Fields
+;                зддд©
+;     -7      1  ЁffHЁ                       flag indicated extended FCB
+;                цдддаддддддддддддддддддд©
+;     -6      5  Ё   DOS reserved area   Ё
+;                цдддедддадддадддадддаддды
+;     -1      1  Ё   Ё                       file attribute
+;                цддда д д д дддддддд©
+;     +0     25H Ё Normal FCB Fields Ё       the rest is the same as above
+;                юддда д д д адддаддды
+;
+;Notes:
+;Ч all functions which will accept an FCB will also accept an Extended FCB.
+;  The address of the FCB is the same; if FCB-7 is 0ffH, an Extended FCB is
+;  assumed.
+;Ч use an Extended FCB if you want to specify the file attribute of a file that
+;  you are opening, creating, renaming, or searching via the FCB functions

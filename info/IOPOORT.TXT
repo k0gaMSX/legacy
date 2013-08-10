@@ -1,0 +1,180 @@
+Overicht van alle gebruikte I/O poorten op MSX (alle getallen in hex)
+==============================================
+
+N.B. Deze lijst is verre van compleet!!
+Wie er meer weet: zet deze A.U.B. in een berichtje neer. Misschien 
+krijgen we ooit nog eens een complete lijst, zo.
+Ook weet ik van veel dingen de betekenis niet eens...
+
+Origineel waren de poorten 0-40 vrij voor eigen toepassingen. De rest 
+was gereserveerd.
+
+Opm: als er een Telcom modem in de computer aanwezig is, kunnen alle poorten 
+0-7F vreemde waarden geven!
+
+
+00-03   Fac MIDI interface  (niet precies bekend welke poorten.
+00-04   Music Module MIDI    alleen dat er door deze uitbreidingen poorten
+00-02   MIDI saurus          in deze gebieden worden gebruikt, is zeker.)
+
+00-07   MT Telcom modem
+
+18/19   Philips Barcode Reader NMS1170/20
+
+20-28   tweede instelling Philips NMS 1251 modem
+                          Miniware M4000 modem
+
+28-2F   tweede instelling Philips NMS 1210 RS232 interface
+
+30-38   NMS 1251 modem
+        Miniware M4000 modem
+        GREEN/MAK SCSI-interface
+        CD-ROM interface
+
+40      Maker ID poort
+
+41      Adresregisters 00-0F       }
+42      Data registers             }   waar is dit van???
+46      Voor- en achtergrondkleur  }
+47      Bitpatroon voor kleuren    }
+
+64-?    V9990-board, zoals de H„ndlergemeinschaft het verkoopt
+         (I/O poorten zijn instelbaar)
+
+70      MIDI Saurus
+
+7C/7D   MSX-Music:
+ 7C        O    register schrijfpoort
+ 7D        O    data schrijfpoort
+
+80-87   RS232C (Spectravideo):
+ 80-83   USART 8251:
+ 80      I/O    dataregister 
+ 81      I/O    status-/commandoregister
+ 82      I      status v.d. verbinding 
+ 83        O    interruptmasker
+ 84-87   programmable timer 8253:
+ 84      I/O    teller 1
+ 85      I/O    teller 2
+ 86      I/O    teller 3
+ 87      I/O    instelling
+
+88-8B   MSX-1 adapter van VDP
+
+8C-8D   Sony modem
+
+90-91   printerpoort:
+ 90      I/O  I bit 1 = printer busy
+              O bit 0 = strobe (negative logic)
+ 91        O    data
+
+98-9B   Video Display Processor (MSX1 en hoger):
+ 98      I/O    Video RAM lezen/schrijven
+ 99      I/O  I statusregister leespoort
+              O VDP-register/data schrijfpoort
+              O Video RAM adres schrijfpoort
+ 9A        O    palet schrijfpoort
+ 9B        O    indirect access schijfpoort
+
+A0-A3   Programmable Sound Generator (AY-3-8910):
+ A0        O    register schrijfpoort
+ A1        O    data schrijfpoort
+ A2      I      data leespoort
+ A3             ?
+
+A4/A5   Turbo R sampler:                                        T
+ A4        O    bit 0-4 grens geluidsniveau??
+         I      bit 0/1 teller 16 kHz, gebruikt door sampler
+ A5        O    bit 1 = geluid uit
+                bit 3 = alle opgenomen geluid wordt direkt weer naar de 
+                geluidsuitgang gestuurd
+A6              ?                                               T
+A7         O    bit 1 = pause LED    (ook input??????)          T
+                bit 7 = turbo LED
+
+A8-AB   MSX-Engine:
+ A8      I/O    slotselectie-register
+ A9      I      toetsenbordrij lezen
+ AA      I/O    besturing o.a. toetsenbord/cassette
+ AB        O    commando-register
+
+AC-AF   MSX motor (= ??? Dubbele poorten voor Engine?)
+
+B0-B3   extern geheugen (Sony data cartridge 8255):
+ B0             adreslijnen A0-A7
+ B1             adreslijnen A8-A10, A13-A15, CONTROL, R/W
+ B2             adreslijnen A11-A12, datalijnen D0-D7
+
+B4-B5   klokchip (RP-5C01):
+ B4             adresregister
+ B5             data lezen/schrijven
+
+B6/B7   card reader (= ???)
+
+B8-BB   lichtpen Sanyo
+
+BC-BF   Videocontroller JVC
+
+C0/C1   MSX-Audio:
+ C0      I/O  I statusregister leespoort
+              O register schrijfpoort
+ C1        O    data schrijfpoort
+
+C2/C3   Zelfde functies voor evt. 2e MSX Audio
+
+C8-CF   VDP van MSX2 module voor MSX1
+
+D0-D7   Floppy disk controller.
+         (Wordt i.h.a. nooit via deze poorten aangesproken.)
+
+D8-DB   KANJI-ROM:
+ D8        O    adreslijnen A5-A0 (minst significant)
+ D9      I/O  I datalijnen D7-D0
+              O adreslijnen A5-A0 (meest significant)
+
+E4/E5   verschillende functies:                                 T
+ E4        O    register
+ E5      I/O    data
+
+E6/E7    I/O    16 bits teller, frequentie 250 kHz, E6=LSB      T
+
+E9       I/O    bit 0 = MIDI OUT enable                         T
+                bit 1 = MIDI timer enable
+                bit 2 = MIDI IN enable
+                bit 5 = enable interrupt als MIDI-byte ontvangen
+
+EE/EF   heeft met GT-MIDI te maken. In ieder geval kan je de MIDI-teller 
+        er mee instellen.
+
+F5      Systeem controle, hier kan in aangegeven worden wat er aanwezig 
+        is: (write only) (<- wat heb je er dan aan?)
+        bit 0 - KANJI-ROM
+            1   gererserveerd   
+            2   MSX-Audio
+            3   Super impose
+            4   MSX-interface
+            5   RS232C-interface
+            6   lichtpen
+            7   kalender-klok
+N.B. Is deze poort later weer uit de standaard verwijderd? In ieder 
+geval vult de Muziekmodule bit 2 niet in.
+
+F6      color bus I/O
+
+F7      A/V control
+        bit 0 - audio rechts
+            1   audio links
+            2   video input select
+            3   video input sense (lezen)
+            4   A/V-control
+            5   Ym control
+            6   Ys control
+            7   Video Select
+
+FC-FF   Memory mappers op page 0-3
+
+
+informatie uit: MSX2 zakboekje
+                MSX-Handboek voor gevorderden
+                Artikel uit MCCM 65
+T = alleen Turbo R

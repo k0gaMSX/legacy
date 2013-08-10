@@ -1,0 +1,249 @@
+;
+;                      TimeCurb.SMM
+;
+;          "Time Curb" Source Game Music Module
+;
+; Version Amalthea-1-0 (1st Ver., 1st Release, No Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =TimeCurb.SMM
+;   L80 TimeCurb,TimeCurb.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Time Curb" game mapping:
+;
+;                 7200 74FF
+;   0400       4EFF  | |AE00   BBFF
+;      |M|?|?|M|?|?|?|M|?|?|M|M|?|?|?|?|
+;   0000                               FFFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+; Program addresses and constants.
+
+HOLD8  equ  0F806H
+EBTb0  equ  HOLD8
+Where  equ  EBTb0+039H
+
+LINTTB equ  0FBB2H
+SysDB  equ  LINTTB
+SavHok equ  SysDB+010H
+
+HKEYI  equ  0FD9AH
+HTIMI  equ  0FD9FH
+
+
+; MSX PSG constants.
+
+PSGAdr equ  0A0H
+PSGWrP equ  0A1H
+PSGRdP equ  0A2H
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '           Time Curb            '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   0C000H
+GMPNam:db   'Yawara  C00'
+OpenMN:db   000H
+StrtSE:db   000H
+ChATDD:dw   0E011H
+ChBTDD:dw   0E01CH
+ChCTDD:dw   0E027H
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'TimCurb0Sc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'TimCurb1Sc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00000010B
+
+SetupR:jr   z,Start
+
+       ld   de,04002H
+       ld   a,(de)
+       ld   (SavHok),a
+       inc  de
+       ld   a,(de)
+       ld   (HTIMI),a
+
+       ld   hl,08000H        ; Restore BIOS.
+       ld   de,00000H
+       ld   bc,02700H
+       ldir
+       ret
+
+Start: ld   a,(04000H)
+       or   a
+       jr   z,SilnRt
+
+       ld   hl,00000H        ; Save BIOS.
+       ld   de,08000H
+       ld   bc,02700H
+       ldir
+
+       ld   hl,02700H        ; Move game block.
+       ld   de,00400H
+       ld   bc,04B00H
+       ldir
+
+       xor  a
+       ld   c,0C9H
+       ld   hl,04000H
+       ld   (hl),a           ; Set main flag.
+       inc  hl
+       ld   (hl),a
+
+       ex   de,hl            ; Save old and reset hooks.
+       inc  de
+       ld   hl,SavHok
+       ld   a,(hl)
+       ld   (de),a
+       ld   (hl),c
+       inc  de
+       ld   hl,HTIMI
+       ld   a,(hl)
+       ld   (de),a
+       ld   (hl),c
+
+       ld   a,0C9H
+       ld   (048DBH),a
+       ld   (048F4H),a
+       ld   (04B05H),a
+       ld   (04BB7H),a
+       ld   (073CBH),a
+       ld   (073DDH),a
+       ld   (073EFH),a
+       ld   (07401H),a
+
+       call Where            ; Set new interruption handler.
+Here:  ld   de,There-Here
+       add  hl,de
+       ld   de,00038H
+       ld   bc,GmBlNm-There
+       ldir
+
+       ld   a,0C3H           ; Set new WRTPSG and RDPSG routines.
+       ld   hl,04C07H
+       ld   (00093H),a
+       ld   (00094H),hl
+       ld   hl,04C10H
+       ld   (00096H),a
+       ld   (00097H),hl
+       ld   hl,0AE00H
+       call 04AD9H
+
+SilnRt:xor  a
+
+StMsRt:ld   b,a
+       ld   a,(04001H)
+       ld   (04008H),a
+       ld   a,b
+       ld   (04001H),a
+       or   a
+       jp   z,04B9AH
+       dec  a
+       ld   hl,04D7DH
+       jp   z,04AE1H
+       dec  a
+       ld   hl,04D83H
+       jp   z,04AE1H
+       ld   b,a
+       ld   a,(04008H)
+       ld   (04001H),a
+       ld   a,b
+       dec  a
+       jp   z,072D0H
+       jp   072D5H
+
+PlayRt:ld   a,(04001H)
+       or   a
+       ret  z
+       ld   a,(04AC3H)
+       or   a
+       ret  z
+       jp   04B18H
+
+There: push hl
+       push de
+       push bc
+       push af
+       exx
+       ex   af,af'
+       push hl
+       push de
+       push bc
+       push af
+       push iy
+       push ix
+       call HKEYI
+
+GmBlNm:db   'TimeCurb000'
+GmBlSz:dw   04B00H
+LoadAd:dw   02700H
+GmBlN1:db   'TimeCurb001'
+GmBlS1:dw   00300H
+LoadA1:dw   07200H
+GmBlN2:db   'TimeCurb002'
+GmBlS2:dw   00D00H
+LoadA2:dw   0AE00H
+       dw   0FFFFH
+MusicT:db   001H,'     Toccata e Fuga    '
+       db   002H,'Toccata e Fuga, Reprise'
+       db   0FFH,0FFH
+EffctT:db   000H,'       Silence...      '
+       db   003H,'         Ti...         '
+       db   004H,'       Time Curb       '
+       db   005H,'      World War...     '
+       db   006H,'        ... One        '
+       db   007H,'        ... Two        '
+       db   008H,'       Korean...       '
+       db   009H,'        ... War        '
+       db   00AH,'       Modern...       '
+       db   00BH,'       Future...       '
+       db   00CH,'       ... Times       '
+       db   00DH,'       Game Over       '
+       db   0FFH,0FFH
+
+       end

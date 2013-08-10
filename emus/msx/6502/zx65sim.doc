@@ -1,0 +1,83 @@
+				ZX65SIM
+
+This file documents the updates made to the 6502 simulator
+for CP/M developed by R.M Kruse, and released to the public
+in an article published by Doctor Dobb's Joural, August, 1981
+issue.
+
+---------------
+
+   As distributed, ZX65 was difficult to "bring up", due to
+its hard-wired linkages to the CP/M BIOS, along with the customized
+loader modification necessary to relocate the package to high mem-
+ory.  Also, the simulator contained a relatively large amount of
+code to provide a built-in DOS, to allow the page-zero CP/M area
+to be overwritten by the 6502 code being simulated (restricting the
+use of page 0  extracts a cost in efficiency, since the 6502 has such
+"cheap" page-zero addressing modes).
+
+   It occured to me that the memory limitations could be circumvented
+by remapping all 6502 memory references into Z80 memory.  This required
+major modification of the simulator (basically, I had to find all of the
+code that addressed 6502 memory, and change these to external subroutine
+calls), as well as a new module (ZX65HOST.MAC) that could be linked in
+with the simulator.  This new module may be rewritten for different users
+that may have different needs (in fact, I have three locally for hardware
+development I'm doing).  The distributed version simply remaps 6502
+references into the free space above the program (using the L80 $MEMRY
+variable to locate the free area); the initialization entry point is
+used to load a binary file (see the source file for syntax); this could
+be modified, however, to provide such things as hardware initialization
+for, say, a hardware in-circuit-emulator to be used in conjunction with
+the simulator program.
+
+   I also added a crude "traceback" feature, that displays the last n
+pc's executed ('n' is specified via an equate in ZX65SIM.MAC); these are
+stored in a circular buffer within the simulator, and accessible via the
+'H' command.
+
+   I removed the built-in DOS, since binary files may now be loaded via
+the initialization subroutine within ZX65HOST.  I know that this circumvents
+the author's original SAVE FILE command, but I never really saw a need for
+such a command.  Perhaps someone will add it back in using the CP/M BDOS...
+
+   Finally, I modified the simulator to assemble using Microsoft's M80/
+L80 combination (instead of the obscure SDS assembler formerly used).  Since
+not everyone is likely to have this wonderful set of software tools, I've
+included the linked object code in the distribution set.  To reassamble and
+link, use the following sequences:
+
+		M80 =ZX65SIM		 (to assemble the main module)
+		M80 =ZX65HOST		 (to assemble the remapper)
+		L80 ZX65SIM,ZX65HOST,ZX65HOST /N/E
+					 (to link the two, and produce
+					  ZX65SIM.COM)
+
+   I should note that the 6502 fetch and store routines within ZX65HOST
+must NOT modify any registers (of course, FETCHA must return the fetched
+byte in the accumulator).  AINIT (the initialization routine) may modify all.
+
+   Here is a breakdown of the files included with the package:
+
+	ZX65SIM.COM	-- the assembled and linked object code
+	ZX65SIM.MAC	-- source for the simulator
+	ZX65HOST.MAC	-- source for the remapper
+	ZX65SIM.DOC	-- the file you're reading
+	ZXART.DOC	-- the DDH article as originally published in DDJ
+	ZXTABLES.DOC	-- tables that were published with the article
+	ZX65HINTS.DOC	-- original author's post-publication comments
+
+   Note that none of the original documention has been modified; therefore
+you should be aware that some of it may be inapplicable in this new release
+(such as those files that reference the built-in DOS).
+
+   If you have any questions regarding this package (at least insofar as
+concern the changes that I've made), I may be reached via the FORT FONE FILE
+FOLDER, an RCPM system located in Fort Atkinson, Wisconsin (phone number:
+(414) 563-9932).
+
+			Happy simulations!
+
+			Ron Fowler
+			Dec 17, 1982
+

@@ -1,0 +1,110 @@
+
+
+                           BMPSAVE.DOC versie 1.00
+                  (Deze file altijd bij BMPSAVE.TSR leveren)   
+                   Documentatie bij BMPSAVE.TSR versie 1.00
+
+                                   BMPSAVE      
+               Een ASWERT-soft Public Domain programma voor MSX 2
+
+   *  1. Introductie
+      Met   dit programma  is het  mogelijk om screen 5,7 en 8 plaatjes 
+      weg te  schrijven naar  disk in  het .BMP (BitMaP) formaat, zodat 
+      deze  plaatjes kunnen  worden ingelezen  op een  PC. Bijvoorbeeld 
+      Windows en  Graphic Work  Shop op  een PC  maken gebruik  van dit 
+      file-formaat.
+      Het  programma is  Public Domain  en mag  dus vrij  gekopi‰erd en 
+      gebruikt worden. Enige voorwaarde bij de verspreiding is, dat bij 
+      het bestand  BMPSAVE.TSR altijd deze handleiding BMPSAVE.DOC moet 
+      worden geleverd!
+      Voor informatie,  vragen, suggesties, e.d. kunt u zich wenden tot 
+      de programmeur:
+         Johan Meuwissen
+         Past.Janssenstr.36a
+         6141 AN  Limbricht
+         tel. 046-517549
+      Ook  kunt u  hier terecht voor informatie over andere ASWERT-soft 
+      TSR's (zowel SHAREWARE als PD TSR's).
+
+   *  2. Het laden van BMPSAVE
+      BMPSAVE  iss een  TSR programma. Het werkt onder MEMMAN (het proú 
+      gramma is ontwikkeld onder MEMMAN versie 2.31) en kan op dezelfde 
+      manier als andere TSR's geladen worden, namelijk:
+
+      - Onder DOS met het commando:
+        A>TL BMPSAVE
+        Natuurlijk dient de file TL.COM dan ook op de disk te staan.
+
+      - Onder BASIC
+        CMD TL ("BMPSAVE",t)
+
+      Voordat BMPSAVE  op deze manieren geladen kan worden moet natuurú 
+      lijk wel eerste MEMMAN ge‹nstalleerd zijn!
+
+      Nadat   BMPSAVE  geladen   is,  is  er  een nieuw  BASIC commando 
+      aanwezig, namelijk:
+      CMD BMPSAVE [/2 /Q] ("filenaam")
+      De handleiding zal dit commando nu behandelen.
+
+
+   *  3. Het wegschrijven van een plaatje in het .BMP formaat.
+      Het wegschrijven  van een  plaatje in  het .BMP  formaat gaat als 
+      volgt:
+      U  zorgt  ervoor  dat  uw  plaatje  op  het scherm  staat. In  uw 
+      programma voegt u dan het volgende toe:
+      CMD BMPSAVE ("filenaam")
+      De  extentie .BMP  hoeft u niet bij de filenaam op te geven, deze 
+      extentie wordt vanzelf toegevoegd.
+      Voorbeeld: Stel  u heeft  een disk  met het  MSX screen 8 plaatje 
+      "DEMO.PIC".  Een klein  programmaatje om uw file weg te schrijven 
+      in het .BMP formaat zou er dan als volgt uit kunnen zien:
+
+      10 screen 8: bload "DEMO.PIC",s
+      20 CMD BMPSAVE ("DEMO")
+
+      Als u  dit programma  heeft geRUNd,  bevat u  disk na  afloop het 
+      bestand "DEMO.BMP". Deze file kunt u dan op een PC inladen.
+      Opmerking:  Zorg er  wel voor,  dat de  floppy disk genoeg ruimte 
+      bevat en dat deze niet beschermd is tegen schrijven.
+
+      Tot  slot is  het ook  nog mogelijk  om de  paramameter /2  op te 
+      geven. Deze  parameter zorgt  ervoor dat  alleen de  bovenste 200 
+      rijen  pixels naar  de BMP-file worden geschreven. Hierdoor wordt 
+      het mogelijk om de screen 5 en 8 BMP files, die dan een resolutie 
+      van 256*200  pixels hebben,  op een  PC op  het MCGA scherm in te 
+      laden.
+      Voorbeeld:  Het  volgende  programma  zorgt  ervoor  dat  de file 
+      "DEMO.PIC"   met   een   resolutie  van   256*200  pixels   wordt 
+      weggeschreven in plaats van de normale 256*212 pixels:
+      10 screen 8: bload "DEMO.PIC",s
+      20 CMD BMPSAVE /2 ("DEMO")
+
+
+   *  4. De parameter /Q
+      Bij het  commando CMD  BMPSAVE is het mogelijk de parameter /Q op 
+      te geven. Deze parameter staat voor Quiet en zorgt ervoor, dat er 
+      geen gegevens naar het tekstscherm worden geschreven.
+
+
+   *  5. Extra foutmeldingen
+      Als  u met het gebruik van dit programma op een Unprintable error 
+      stuit, dan  kunt u  het beste  even de  foutcode opvragen met het 
+      BASIC commando:
+      PRINT ERR
+      Nu  verschijnt  er  een  getal  op het  scherm. Er  zijn nu  twee 
+      mogelijkheden:
+      -  Het getal  is 100 (Wrong screen type): BMPSAVE werkt alleen op 
+      screen 5,7  en 8.  Indien een  ander scherm  actief is en u roept 
+      BMPSAVE aan, dan krijgt u deze foutmelding.
+      - Het getal is 101 (No free page of 16 KB): Dit betekent dat u te 
+      weinig geheugen heeft om het programma te laten lopen. U kunt dit 
+      verhelpen door  bijvoorbeeld uw  printerbuffer of ramdisk te verú 
+      kleinen.
+      - Het getal is 104 (Disk output error): Er is een fout opgetreden 
+      bij  het schrijven  van een bestand. Meestal duidt dit op de fout 
+      "Disk full"
+
+
+
+           ***************** Einde BMPSAVE.DOC *****************
+

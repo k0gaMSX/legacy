@@ -1,0 +1,32 @@
+;
+;       ck.mac  MSX-C ultra main program (Ver 1.1)
+;
+
+	public  xmain
+
+WBOOT   equ     0000h           ;MSX-DOS warm boot entry
+
+xmain:
+	ld      hl,(6)
+	ld      sp,hl
+	ld      hl,WBOOT        ;push return address on the stack
+	push    hl
+
+	ld      hl,0080h
+	ld      a,(hl)          ;get size of command argument
+	inc     hl
+	push    hl
+	add     a,l
+	ld      l,a
+	ld      (hl),0          ;null terminate the command argument
+	pop     hl
+	jp      @main@
+
+?ck:    defb    "MSX-C ver 1.1 CK"
+
+	extrn   @main@
+	extrn   ?clib
+	extrn   ?crun
+
+	end     xmain
+

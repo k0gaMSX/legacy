@@ -1,0 +1,221 @@
+;
+;                      Stardust.SMM
+;
+;           "Stardust" Source Game Music Module
+;
+; Version Amalthea-1-1 (1st Ver., 1st Release, 1st Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =Stardust.SMM
+;   L80 Stardust,Stardust.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Stardust" game mapping:
+;
+;                   C000     EE24H
+;      |?|?|?|?|?|?|?|?|M|M|M|?|
+;   4000                       FFFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+; MSX standard addresses and constants.
+
+FNKSTR equ  0F87FH
+LINTTB equ  0FBB2H
+HTIMI  equ  0FD9FH
+SysDB  equ  LINTTB
+EBDBnk equ  FNKSTR
+SavHok equ  SysDB+010H
+SaveSP equ  EBDBnk+0000FH
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '            Stardust            '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   06000H
+GMPNam:db   'Yawara  600'
+OpenMN:db   000H
+StrtSE:db   000H
+ChATDD:dw   0ED7BH
+ChBTDD:dw   0EDA9H
+ChCTDD:dw   0EDD7H
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'Stardst0Sc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'Stardst1Sc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00010010B
+
+SetupR:jr   z,Start
+       ld   de,08001H
+       ld   a,(de)
+       ld   (SavHok),a
+       inc  de
+       ld   a,(de)
+       ld   (HTIMI),a
+       pop  hl
+       ld   sp,(SaveSP)
+       jp   (hl)
+
+Start: ld   a,(08000H)
+       or   a
+       jr   z,SilnRt
+       pop  ix
+       ld   sp,0BFFFH
+       ld   hl,08000H        ; Move game block.
+       ld   de,0C000H
+       ld   bc,02E24H
+       ldir
+       push ix
+       xor  a
+       ld   c,0C9H
+       ld   de,08000H
+       ld   (de),a
+       inc  de
+       ld   hl,SavHok
+       ld   a,(hl)
+       ld   (de),a
+       ld   (hl),c
+       inc  de
+       ld   hl,HTIMI
+       ld   a,(hl)
+       ld   (de),a
+       ld   (hl),c
+
+       ld   hl,0E327H        ; Disable restart routine, avoiding the
+       ld   (0E490H),hl      ; music to repeat over and over...
+       ld   hl,0E483H
+       ld   a,001H
+       ld   (hl),a
+       inc  hl
+       xor  a
+       ld   (hl),a
+       inc  hl
+       ld   (hl),a
+       inc  hl
+       ld   (hl),a
+       inc  hl
+       ld   (hl),a
+       inc  hl
+       ld   (hl),a
+
+SilnRt:xor  a
+       ld   de,00000H
+       call 0E1BCH
+       inc  a
+       call 0E1BCH
+       inc  a
+       jp   0E1BCH
+
+StMsRt:or   a
+       jr   z,SilnRt
+       dec  a
+       jr   nz,StSnd1
+StSnd0:ld   a,080H
+       ld   de,0EB00H
+       call 0E1BCH
+       inc  a
+       ld   de,0EB12H
+       call 0E1BCH
+       ld   a,002H
+       ld   de,0EB21H
+       jp   0E1BCH
+
+StSnd1:dec  a
+       jr   nz,StSnd2
+       ld   a,080H
+       ld   de,0EAAAH
+       call 0E1BCH
+       inc  a
+       ld   de,0EAC9H
+       call 0E1BCH
+       inc  a
+       ld   de,0EAE5H
+       jp   0E1BCH
+
+StSnd2:dec  a
+       jr   nz,StSnd3
+       ld   a,000H
+       ld   de,0EB2CH
+       jp   0E1BCH
+
+StSnd3:dec  a
+       jr   nz,StSnd4
+       ld   a,080H
+       ld   de,0EB38H
+       call 0E1BCH
+       inc  a
+       ld   de,0ED61H
+       call 0E1BCH
+       ld   a,002H
+       ld   de,0ED6BH
+       jp   0E1BCH
+
+StSnd4:ld   a,080H
+       ld   de,0EB52H
+       call 0E1BCH
+       inc  a
+       ld   de,0EC4AH
+       call 0E1BCH
+       ld   a,002H
+       ld   de,0ECCBH
+       jp   0E1BCH
+
+PlayRt:jp   0E1F5H
+
+GmBlNm:db   'Stardust000'
+GmBlSz:dw   02E24H
+LoadAd:dw   08000H
+       dw   0FFFFH
+MusicT:db   005H,'        Stardust       '
+       db   0FFH,0FFH
+EffctT:db   000H,'       Silence...      '
+       db   001H,'           01          '
+       db   002H,'           02          '
+       db   003H,'           03          '
+       db   004H,'           04          '
+       db   0FFH,0FFH
+
+       end

@@ -1,0 +1,16 @@
+void ejectTape(void);
+void setTapeName(char*);
+char* getTapeName(void);
+void setTapePath(char*);
+char* getTapePath(void);
+int getTapeStatus(void);
+int openTape(void);
+void saveTape(void);
+void rewindTape(void);
+void windTape(void);
+void updateTape(void);
+void closeTape(void);
+int tapeWrite(int);
+int tapeRead(void);
+int tapeFindProg(void);
+int tapeFirstProg(void);

@@ -1,0 +1,34 @@
+
+caldos	equ	0f37dh
+arytab	equ	0f6c4h
+dac	equ	0f7f6h
+
+	org	0d000h
+
+	jr	read
+	jr	write
+
+read@:	call	setdma
+	ld	h,1
+	jr	jpdos
+
+read:	call	setdma
+	jr	jpdos
+
+write:	call	setdma
+	inc	c
+jpdos:	jp	caldos
+
+setdma:	ld	hl,(arytab)
+	ld	de,12
+	add	hl,de
+	ex	de,hl
+	ld	c,1ah
+	call	caldos
+	ld	de,(dac+2)
+	ld	hl,1800h
+	ld	c,2fh
+	ret
+
+	end
+

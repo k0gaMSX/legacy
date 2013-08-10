@@ -1,0 +1,199 @@
+VAR.TSR - Extended variables for MSX-Basic
+===========================================
+
+(C) 1991 - M.J. Vriend
+MSX Software Team / MSX Computer Magazine
+
+========================================
+PRE-RELEASED VERSION - DO NOT DISTRIBUTE
+========================================
+
+
+Halve handleiding vervat in een poging tot Engels taalgebruik:
+
+
+Syntax
+======
+
+Extended variables always start with the @-sign. This is to make them 
+distinguishable for the factor evaluator from conventional BASIC 
+variables and expressions. The @-sign is followed by the variable's name, 
+enclosed in parenthesis `()'. The name of the variable can be any string 
+expression, up to 255 bytes long. The first twelve characters of the 
+variable name are significant.
+
+One of the optional type identifiers %, !, # or $ can follow the variable 
+name. Variables are double precision (#) by default.
+
+
+Array variables
+===============
+
+[1,2,3,...,10] or (1,2,3,...,10) behind it.
+
+
+Evaluation
+==========
+
+Extended Variables are being evaluated by the factor evaluator exactly 
+the same as BASIC functions. Values can only be assigned to a extended 
+variable using the CMD LET statement.
+
+Alllowed:	PRINT SIN(@("angle")!/(45/atn(1)))
+
+Not allowed:	INPUT @("A")
+		LINE INPUT @("A")$
+		FOR @("A") = 1 TO 2: NEXT
+
+
+MemMan
+======
+
+Extended variables are stored in memory segments outside the Basic 64 kB 
+of memory which is used by MSX-Basic and MSX-DOS. These segments are 
+allocated through MemMan. Memory segments are allocated in a dynamic way. 
+Extra memory segments are allocated when needed, free segments will 
+automatically be freed and returned to MemMan.
+
+
+Recursion
+=========
+
+When using complex variable-expressions, the "recursion-depth" item in 
+the CFGMMAN configuration program should be set properly. For each 
+recursion in a variable name definition, two units of recursion depth 
+should be installed. Also add a standard offset of 4 units as a safety 
+margin, which are needed to make function calls to MemMan.
+
+For expample, the `recursion depth' for the program below should at least 
+be set to 10, because three recursive calls to the formula evaluator - 
+and MemMan - are made in line 30. These three recursive calls require 
+2*3=6 units, which makes 10 including the standard offset of 4 units.
+
+Note that this number should even be higher when other TSR programs are 
+installed. If one or more TSR's are installed at the interrupt hook, the 
+standard offset should be increased to 7 or 8 units.
+
+Ex.:	10 CMD LET @("A")$ = "B"
+	20 CMD LET @("B")$ = "C"
+	30 CMD LET @(@(@("A")$)$)$ = @(@("A")$)$: END
+depth:	       1     2 3       2 1   2 3     2 1  0
+
+
+Available commands and statements
+=================================
+
+STATEMENT: CMD CLEAR
+
+SYNTAX:    CMD CLEAR { @ } | { <variable name> [, ...] }
+
+PURPOSE:   Removes a variable from memory.
+
+COMMENT:   The statement CMD CLEAR @ clears all variables and arrays from 
+	   memory. All allocated MemMan memory segments will be freed.
+
+	   When a variable name is specified, only that particular 
+	   variable will be removed.
+
+NOTE:	   If a specified variable does not exist, no error will occur.
+
+EXAMPLE:   10 CMD CLEAR @
+	   20 CMD @("string")$ = "Hi"
+	   30 CMD CLEAR @("string")$, @("another variable")
+	   40 CMD @("string")$ = "Hi there"
+
+
+STATEMENT: CMD DEFDBL @
+
+SYNTAX:    CMD DEFDBL @
+
+PURPOSE:   Set the default variable type to double precision.
+
+
+STATEMENT: CMD DEFINT @
+
+SYNTAX:    CMD DEFINT @
+
+PURPOSE:   Set the default variable type to integer
+
+
+STATEMENT: CMD DEFSNG @
+
+SYNTAX:    CMD DEFSNG @
+
+PURPOSE:   Set the default variable type to single precision.
+
+
+STATEMENT: CMD DEFSTR @
+
+SYNTAX:    CMD DEFSTR @
+
+PURPOSE:   Set the default variable type to string.
+
+
+STATEMENT: CMD DIM
+
+SYNTAX:    CMD DIM <variable name> [MAX(<maxlen>)] ([<low bound> TO] 
+	     <high bound> [, ...])
+
+PURPOSE:   Specifies the size of array variables.
+
+COMMENTS:  <maxlen> should only be included when an array of strings is 
+	   specified. See the CMD LET statement for further details about 
+	   the maximum string length.
+
+	   <low bound> and <high bound> specify the range of each dimenú 
+	   sion. The default value for <low bound> is 0. If the low bound 
+	   is greater than the high bound, a "subscript out of range" 
+	   error occurs. A subscription may range from -2147483648 up to 
+	   2147483647.
+
+	   The maximum number of dimensions is 10.
+
+NOTE:	   The dimension-range specification may be enclosed between 
+	   either parenthesis `()' or brackets `[]'.
+
+EXAMPLE:   10 CMD DIM @("double")# (2), @("integer")% [-100000 TO -10]
+	   20 CMD DIM @("string")$ MAX(100) (1 TO 2000, 10 TO 20)
+	   30 CMD @("single")# [0] = 1.34
+	   40 CMD @("integer")% [-20] = 1.34
+	   50 CMD @("string")$ [100,15] = "MemMan"
+	   60 PRINT @("single")! (0), @("integer")% (-20),
+	   70 PRINT @("string")$ [100,15]
+
+
+STATEMENT: CMD ERASE
+
+SYNTAX:    CMD ERASE <variable name> [, ...]
+
+PURPOSE:   Removes an array variable from memory.
+
+NOTE:	   If the array variable does not exist, no error will occur.
+
+EXAMPLE:   10 CMD DIM @("A")[100], @("B")%[200]
+	   20 CMD ERASE @("A"), @("B")%
+
+
+STATEMENT: CMD LET
+
+SYNTAX:    CMD [LET] <variable name> [MAX(<maxlen>)] = <expression>
+
+PURPOSE:   Assigns the value of an expression to a variable.
+
+COMMENTS:  <maxlen> is an integer expression which, if included, sets the 
+	   maximium string length. By default the maximum string length 
+	   is the set to the length of <expression>. The maximum string 
+	   length may range from 1 to 255 characters.
+	   Once a string variable is in memory, it's maximum length canú 
+	   not be changed. Therfore, a second CMD LET statement does not need 
+	   to include the MAX specification.
+
+NOTE:	   Use the CMD CLEAR statement to remove a variable from memory.
+	   Also note that the word LET is optional.
+
+EXAMPLE:   10 CMD LET @("string")$ MAX(10) = "Hi"
+	   20 CMD @("string")$ = @("string")$ + " there!"
+	   30 CMD @("pi")! = ATN(1)*4
+	   40 PRINT @("string")$, @("pi")!
+
+

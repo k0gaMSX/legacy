@@ -1,0 +1,139 @@
+;
+;                      Outrun1.SMM
+;
+;         "Outrun (MSX)" Source Game Music Module
+;
+; Version Amalthea-1-0 (1st Ver., 1st Release, No Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =Outrun1.SMM
+;   L80 Outrun1,Outrun1.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Outrun (MSX)" game mapping:
+;
+;       2F00   3EFF
+;      |?|?|M|M|?|?|?|?|?|?|?|?|?|?|?|?|
+;   0000                               FFFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '          Outrun (MSX)          '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   07000H
+GMPNam:db   'Yawara  700'
+OpenMN:db   000H
+StrtSE:db   000H
+ChATDD:dw   0E011H
+ChBTDD:dw   0E01CH
+ChCTDD:dw   0E027H
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'Outrun10Sc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'Outrun11Sc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00000010B
+
+SetupR:jr   z,Start
+       ld   hl,08000H        ; Restore BIOS.
+       ld   de,00000H
+       ld   bc,04000H
+       ldir
+       ret
+
+Start: ld   a,(04000H)
+       cp   003H
+       jr   nz,SilnRt
+
+       ld   hl,00000H        ; Save BIOS.
+       ld   de,08000H
+       ld   bc,04000H
+       ldir
+
+       ld   hl,04000H        ; Move game block.
+       ld   de,02F00H
+       ld   bc,01000H
+       ldir
+
+       xor  a
+       ld   hl,04000H
+       ld   (hl),a
+       inc  hl
+       ld   (hl),a
+
+SilnRt:ld   a,0FFH
+StMsRt:ld   (04001H),a
+       cp   0FFH
+       jp   nz,030A9H
+       ld   hl,0336AH
+       ld   de,0336BH
+       ld   bc,0000CH
+       ld   (hl),000H
+       ldir
+       ld   a,0BFH
+       ld   (03371H),a
+       ld   bc,007A0H
+       out  (c),b
+       out  (0A1H),a
+       ret
+
+PlayRt:ld   a,(04001H)
+       inc  a
+       ret  z
+       jp   02FA6H
+
+GmBlNm:db   'Outrun1 000'
+GmBlSz:dw   01000H
+LoadAd:dw   04000H
+       dw   0FFFFH
+MusicT:db   001H,'  Outrun - Opening BGM '
+       db   000H,'       Outrunning      '
+       db   0FFH,0FFH
+EffctT:db   0FFH,'       Silence...      '
+       db   002H,'           03*         '
+       db   0FFH,0FFH
+
+       end

@@ -1,0 +1,1159 @@
+; **** Subroutines for DEBUG.COM (ver.0.41) ****
+;
+; reg_view	( 15)
+; reg_save	( 67)
+; reg_load	( 91)
+; put_filename	(116)
+; load_file	(158)
+; write_file	(217)
+; get_sector	(282)
+; unasm_main	(328)
+; get_codelen	(359)
+; unasm_nym	(488)
+
+
+reg_view:
+	ld	hl,reg_area
+	ld	de,reg_mes
+	ld	b,10
+reg_v2:	call	putlin
+	ld	c,(hl)
+	inc	hl
+	ld	a,(hl)
+	inc	hl
+	call	puthex
+	ld	a,c
+	call	puthex
+	call	putspc
+	call	putspc
+	djnz	reg_v2
+	call	putlin
+	ld	hl,0
+	add	hl,sp
+	ld	a,h
+	call	puthex
+	ld	a,l
+	call	puthex
+	call	putlin
+	ld	hl,reg_area	; F reg
+	ld	bc,2000h+'N'	; B:spc,C:'N'
+	bit	6,(hl)	; Z
+	jr	nz,reg_vz
+	print	c
+reg_vz:	print	'Z'
+	print	b
+	bit	0,(hl)	; Cy
+	jr	nz,reg_vc
+	print	c
+reg_vc:	print	'C'
+	print	b
+	print	'P'
+	ld	a,'E'
+	bit	2,(hl)
+	jr	nz,reg_vp
+	add	a,'O'-'E'
+reg_vp:	call	putch
+	print	b
+	bit	7,(hl)
+	ld	a,'M'
+	jr	nz,reg_vs
+	add	a,'P'-'M'
+reg_vs:	call	putch
+	print	')'
+	call	putret
+	jp	comlin
+
+
+reg_save:
+	exx
+	ex	af,af'
+	push	iy
+	push	hl
+	push	de
+	push	bc
+	push	af
+	exx
+	ex	af,af'
+	push	ix
+	push	hl
+	push	de
+	push	bc
+	push	af
+	ld	hl,0
+	add	hl,sp
+	ld	de,reg_area
+	ld	bc,20
+	ldir
+	ld	sp,hl
+	ret
+
+
+reg_load:
+	ld	hl,-20
+	add	hl,sp
+	ld	sp,hl
+	ex	de,hl
+	ld	hl,reg_area
+	ld	bc,20
+	ldir
+	pop	af
+	pop	bc
+	pop	de
+	pop	hl
+	pop	ix
+	exx
+	ex	af,af'
+	pop	af
+	pop	bc
+	pop	de
+	pop	hl
+	pop	iy
+	exx
+	ex	af,af'
+	ret
+
+
+put_filename:
+	ld	a,'"'
+	call	putch
+	ld	hl,fcb
+	ld	a,(hl)
+	inc	hl
+	or	a
+	jr	z,name_put2
+	add	a,'@'
+	call	putch
+	ld	a,':'
+	call	putch
+name_put2:
+	ld	b,8
+name_put3:
+	ld	a,(hl)
+	inc	hl
+	cp	32
+	jr	z,name_put4
+	call	putch
+	djnz	name_put3
+name_put4:
+	ld	hl,fcb+9
+	ld	a,(hl)
+	cp	32
+	jr	z,name_put6
+	ld	a,'.'
+	call	putch
+	ld	b,3
+name_put5:
+	ld	a,(hl)
+	inc	hl
+	cp	32
+	jr	z,name_put6
+	call	putch
+	djnz	name_put5
+name_put6:
+	ld	a,'"'
+	call	putch
+	ret
+
+
+load_file:
+	ex	de,hl
+file_load:			; DE:DMA  005c:FCB
+	push	de
+	ld	c,1ah
+	call	5
+	call	put_filename
+	ld	de,fcb
+	ld	c,0fh
+	call	5
+	pop	de
+	inc	a
+	jr	z,load_err1	; not found
+	ld	hl,1
+	ld	(fcb+14),hl
+	dec	hl
+	ld	(fcb+33),hl
+	ld	(fcb+35),hl
+	ld	hl,(fcb+18)
+	ld	a,h
+	or	l
+	jr	nz,load_err2	; too large
+	ld	hl,(fcb+16)
+	dec	hl
+	add	hl,de
+	jr	c,load_err2
+	call	putspc
+	call	putspc
+	ld	a,d
+	call	puthex
+	ld	a,e
+	call	puthex
+	ld	a,'-'
+	call	putch
+	ld	a,h
+	call	puthex
+	ld	a,l
+	call	puthex
+	call	putspc
+	ld	hl,(fcb+16)
+	call	put10
+	ld	de,load_mes
+	call	yesno
+	ld	de,fcb
+	ld	c,27h
+	call	5
+	ld	de,mes_back
+	call	putlin
+	ld	de,mes_ed
+load_3:	call	putlin
+	jp	comlin
+load_err1:
+	ld	de,load_errmes1
+	jr	load_3
+load_err2:
+	ld	de,load_errmes2
+	jr	load_3
+
+
+write_file:		; BC:start HL:end
+	push	hl
+	or	a
+	sbc	hl,bc
+	pop	de
+	jp	c,error	; start>end
+	inc	hl	; HL:length
+	push	hl
+	push	de
+	push	bc
+	call	put_filename
+	pop	bc
+	pop	de
+	pop	hl
+	call	putspc
+	call	putspc
+	ld	a,b
+	call	puthex
+	ld	a,c
+	call	puthex
+	ld	a,'-'
+	call	putch
+	ld	a,d
+	call	puthex
+	ld	a,e
+	call	puthex
+	call	putspc
+	call	put10
+	push	hl
+	ld	de,write_mes
+	call	yesno
+	ld	de,fcb
+	ld	c,13h
+	call	5	; delete
+	ld	de,fcb
+	ld	c,16h
+	call	5	; make
+	or	a
+	jr	nz,write_error
+	ld	hl,0
+	ld	(fcb+35),hl
+	ld	(fcb+33),hl
+	inc	hl
+	ld	(fcb+14),hl
+	pop	hl
+	ld	de,fcb
+	ld	c,026h
+	call	5	; write
+	or	a
+	jr	nz,write_error
+	ld	de,fcb
+	ld	c,10h	; close
+	call	5
+	ld	de,mes_back
+	call	putlin
+	ld	de,mes_ed+1
+	call	putlin
+	jp	comlin
+write_error:
+	pop	hl
+	ld	de,write_errmes
+	call	putlin
+	jp	comlin
+
+
+get_sector:			; CY on:OK off:error
+	call	getwrd
+	or	a
+	ret	z	; no more
+	cp	255
+	ret	z	; no drive
+	ld	a,h
+	or	a
+	ret	nz	; over 255
+	ld	a,l
+	cp	8
+	ret	nc	; over 7
+	push	de
+	 push	hl
+	  ld	c,18h
+	  call	5
+	 pop	bc
+	 ld	a,c
+	 inc	a
+get_sec_loop:
+	 rr	l
+	 dec	a
+	 jr	nz,get_sec_loop
+	pop	de
+	ret	nc	; not online
+	push	bc
+	 call	getwrd	; HL:sector
+	pop	bc	; C:drive
+	or	a
+	ret	z	; no more
+	cp	255
+	ret	z	; no sector
+	push	hl
+	 push	bc
+	  call	getwrd	; get length
+	 pop	bc
+	 ld	h,l	; H:length
+	 ld	l,c	; L:drive
+	pop	bc
+	cp	255
+	ret	z	; no length
+	ld	e,c
+	ld	d,b	; DE:sector
+	scf
+	ret		; L:drive DE:sector H:length CY=1
+
+unasm_main:
+	ld	a,h
+	call	puthex
+	ld	a,l
+	call	puthex
+	call	putspc
+	call	putspc
+	push	hl
+	 call   get_codelen	; > B:len (1-4,b7=1>error)
+	pop	hl
+	ld	c,b
+	res	7,b
+	push	hl
+unasm_putcode:
+	ld	a,(hl)
+	inc	hl
+	call	puthex
+	djnz	unasm_putcode
+	pop	hl
+	call	puttab
+	bit	7,c
+	jr	nz,unasm_error
+	jp	unasm_nym
+unasm_error:
+	res	7,c
+	ld	b,0
+	add	hl,bc
+	ld	de,?err
+	jp	putlin
+
+
+get_codelen:
+	ld	a,(hl)
+	samejr	0ddh,get_code_xy	; DD
+	samejr	0fdh,get_code_xy	; FD
+	samejr	0edh,code_ed		; ED
+get_co:	cp	040h
+	jr	c,code_00		; 00-3F
+	cp	0c0h
+	ld	b,1
+	ret	c			; 40-BF
+	jr	code_c0			; C0-FF
+get_code_xy:
+	inc	hl
+	ld	a,(hl)
+	ld	b,2+128
+	sameret	0ddh
+	sameret	0edh
+	sameret	0fdh
+	push	af
+	call	get_co
+	pop	af
+	inc	b
+	sameret	39h
+	cp	30h
+	ret	c
+	cp	0e0h
+	ret	nc
+	inc	b
+	ret
+code_c0:
+	ld	b,3
+	sameret	0c3h	; C3
+	sameret	0cdh	; CD
+	and	7
+	sameret	2	; x2,xA
+	ld	b,1
+	ret	c	; x0,x1,x8,x9
+	ld	b,3
+	sameret	4	; x4,xC
+	dec	b
+	sameret	6	; x6,xE
+	dec	b
+	ret	nc	; x7,xF
+	sameret	5	; x5
+	bit	5,(hl)
+	ret	nz	; E3,EB,F3,FB
+	inc	b
+	ret		; D3,DB
+code_00:
+	and	7
+	ld	b,2
+	cp	6
+	ret	z	; x6,xE
+	dec	b
+	cp	3
+	ret	nc	; x3,x4,x5,x7,xB,xC,xD,xF
+	cp	1
+	jr	z,code01
+	jr	c,code00
+	bit	5,(hl)
+	ret	z	; 02,0A,12,1A
+	ld	b,3
+	ret		; 22,2A,32,3A
+code01:	bit	3,(hl)
+	ret	nz	; 09,19,29,39
+	ld	b,3
+	ret		; 01,11,21,31
+code00:	ld	a,(hl)
+	cp	10h
+	ret	c	; 00,08
+	inc	b
+	ret		; 10,18,20,28,30,38
+code_ed:
+	inc	hl
+	ld	a,(hl)		; 2nd byte
+	ld	c,a
+	ld	b,2+128
+	cp	40h
+	ret	c		; ED 0x,1x,2x,3x
+	cp	0c0h
+	jr	nc,code_ed_c0	; ED Cx,Dx,Ex,Fx
+	cp	0a0h
+	jr	nc,code_ed_a0	; ED Ax,Bx
+	cp	080h
+	ret	nc		; ED 8x,9x
+	sameret	71h	; ED 71
+	and	7
+	ld	b,2
+	cp	3
+	ret	c	; ED 40,41,42,48,,,,,,72,78,79,7A
+	ld	b,4
+	ret	z	; ED 43,4B,53,5B,63,6B,73,7B
+	ld	a,c
+	ld	b,2
+	cp	48h
+	ret	c	; ED 44,45,46,47
+	ld	b,2+128
+	cp	70h
+	ret	nc	; ED 74,75,76,77,7C,7D,7E,7F
+	and	7
+	sameret	4	; ED 4C,54,5C,64,6C
+	ld	b,2
+	sameret	7	; ED 4F,57,5F,67,6F
+	ld	a,c
+	sameret	4dh	; ED 4D
+	sameret	56h	; ED 56
+	sameret	5eh	; ED 5E
+	ld	b,2+128
+	ret		; ED 4E,55,5D,65,66,6D,6E
+code_ed_c0:
+	and	15
+	ld	b,2
+	cp	1
+	ret	z	; ED C1
+	cp	3
+	ret	z	; ED C3
+	cp	9
+	ret	z	; ED C9
+	ld	b,2+128
+	ret
+code_ed_a0:
+	and	7
+	ld	b,2
+	cp	4
+	ret	c
+	ld	b,2+128
+	ret
+
+
+unasm_nym:
+	ld	a,(hl)
+	ld	(@ixiy),a
+unasm3:	ld	a,(hl)
+	inc	hl
+	ld	c,a
+	cp	040h
+	jr	c,unasm4
+	cp	080h
+	jp	c,un@40
+	sub	0c0h
+	jp	c,un@80
+	and	0fh
+	add	a,10h
+	jr	unasm5
+unasm4:	and	0fh
+unasm5:	push	hl
+	ld	hl,unadrs
+	add	a,a
+	add	a,l
+	ld	l,a
+	ld	a,h
+	adc	a,0
+	ld	h,a
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	pop	hl
+	ld	a,c
+	push	de
+	ret		; jp (de)
+un1end:	call	putlin
+unend:	call	putret
+	ret
+
+un@40:				;40-7F:	LD HALT
+	ld	de,?halt
+	cp	76h
+	jp	z,un1end
+	call	ldnym
+	call	putr
+	call	putcon
+	ld	a,c
+	call	putreg
+	jp	unend
+
+un@80:	and	38h		;80-BF:	ADD a,r ... CP r
+	rrca
+	ld	de,?math
+	add	a,e
+	ld	e,a
+	ld	a,d
+	adc	a,0
+	ld	d,a
+	call	lintab
+	ld	a,c
+	cp	0a0h
+	jr	nc,un@80c
+	sub	090h
+	cp	008h
+	jr	c,un@80c
+un@80b:	push	af
+	ld	de,?acon
+	call	putlin
+	pop	af
+un@80c:	call	putreg
+	jp	unend
+
+unnop:	rrca				;00:08:	NOP EX DJNZ JR
+	rrca
+	rrca
+	ld	de,?nop
+	and	7
+	jp	z,un1end		; nop
+	ld	de,?exaf
+	dec	a
+	jp	z,un1end		; ex af,af'
+	ld	de,?djnz
+	dec	a
+	jr	z,unnop2
+	ld	de,?jr
+unnop2:	call	lintab
+	bit	5,c
+	jr	z,unnop4
+	res	5,c
+	call	putcc			; jr cc,e
+	call	putcon
+unnop4:	ld	a,(hl)			; jr e ; djnz e
+	inc	hl
+	ld	d,a
+unlop5:	add	a,l
+	ld	e,a
+	ld	a,h
+	adc	a,0
+	bit	7,d
+	jr	z,unlop6
+	dec	a
+unlop6:	call	puthex
+	ld	a,e
+	call	puthex
+	ld	a,'h'
+	call	putch
+	jp	unend
+
+unld2:	call	ldnym			;01:	LD rr,nn
+	call	putrr
+	call	putcon
+	call	putad
+	jp	unend
+
+unld3:	call	ldnym			;02:	LD(rr),a LD(nn),hl LD(nn),a
+	ld	a,'('
+	call	putch
+	ld	a,c
+	cp	20h
+	push	af
+	call	c,putrr		; LD (BC),A	LD (DE),A
+	pop	af
+	call	nc,putad	; LD (nn),HL	LD (nn),A
+	ld	a,')'
+	call	putch
+	call	putcon
+	ld	a,c
+	cp	22h
+	jr	z,unld3g
+	ld	a,'A'
+	jr	unld3h
+unld3g:	ld	a,'H'
+	call	putch
+	ld	a,'L'
+unld3h:	call	putch
+	jp	unend
+
+uninc2:	ld	de,?inc			;03:	INC rr
+	jr	unded2
+undec2:	ld	de,?dec			;0B:	DEC rr
+unded2:	call	lintab
+	call	putrr
+	jp	unend
+
+uninc1:	ld	de,?inc			;04:	INC r
+	jr	unded1
+undec1:	ld	de,?dec			;05:	DEC r
+unded1:	call	lintab
+	call	putr
+	jp	unend
+
+unld4:	call	ldnym			;05:	LD r,n
+	call	putr
+	call	putcon
+	ld	a,(hl)
+	inc	hl
+	call	puthex
+	ld	a,'h'
+	call	putch
+	jp	unend
+
+unrlca:	rrca				;07:0F	RLCA ... RRA DAA CPL SCF CCF
+	rrca
+	rrca
+	and	7
+	ld	d,a
+	add	a,a
+	add	a,a
+	add	a,d
+	ld	de,?rlca
+	add	a,e
+	ld	e,a
+	ld	a,d
+	adc	a,0
+	ld	d,a
+	jp	un1end
+
+unadd2:	ld	de,?math		;09:	ADD hl,rr
+	call	lintab
+	ld	a,29h
+	call	putrr@
+	call	putcon
+	call	putrr
+	jp	unend
+
+unld5:	call	ldnym			;0A:	LD a,(bc) a,(de) hl,(nn) a,(nn)
+	ld	a,c
+	cp	2ah
+	jr	z,unld5c
+	ld	a,'A'
+	jr	unld5e
+unld5c:	ld	a,'H'
+	call	putch
+	ld	a,'L'
+unld5e:	call	putch
+	call	putcon
+	ld	a,'('
+	call	putch
+	ld	a,c
+	cp	20h
+	push	af
+	call	c,putrr
+	pop	af
+	call	nc,putad
+	ld	a,')'
+	call	putch
+	jp	unend
+
+unretc:	ld	de,?ret		;C0:C8	RET cc
+	call	lintab
+	call	putcc
+	jp	unend
+
+unpop:	ld	de,?pop		;C1	POP
+	call	lintab
+	call	putrr
+	jp	unend
+
+unjpcc:	ld	de,?jp		;C2:CA	JP cc,nn
+	jr	unjccc
+uncalc:	ld	de,?call	;C4:CC	CALL cc,nn
+unjccc:	call	lintab
+	call	putcc
+	call	putcon
+	call	putad
+	jp	unend
+
+unjp:	and	38h			;C3:CB:	JP CB; OUT IN EX DI EI
+	rrca
+	rrca
+	rrca
+	dec	a
+	jr	z,un@cb
+	dec	a
+	jr	z,un@d3
+	dec	a
+	jr	z,un@db
+	dec	a
+	jr	z,un@e3
+	ld	de,?exdh
+	dec	a
+	jp	z,un1end
+	ld	de,?di
+	dec	a
+	jp	z,un1end
+	ld	de,?ei
+	dec	a
+	jp	z,un1end
+un@c3:	ld	de,?jp	; JP
+	call	lintab
+	call	putad
+	jp	unend
+un@d3:	ld	de,?out	; OUT (n),a
+	call	lintab
+	ld	a,'('
+	call	putch
+	ld	a,(hl)
+	inc	hl
+	call	puthex
+	ld	de,?out2
+	jp	un1end
+un@db:	ld	de,?in	; IN a,(n)
+	call	lintab
+	ld	de,?acon
+	call	putlin
+	ld	a,'('
+	call	putch
+	ld	a,(hl)
+	inc	hl
+	call	puthex
+	ld	a,'h'
+	call	putch
+	ld	a,')'
+	call	putch
+	jp	unend
+un@e3:	ld	de,?exsh	;EX (sp),hl
+	call	putlin
+	call	putrr
+	jp	unend
+un@cb:	ld	a,(@ixiy)	;RLC ... BIT SET RES
+	cp	0ddh
+	jr	z,un@cb1
+	cp	0fdh
+	jr	z,un@cb1
+	ld	a,(hl)
+	inc	hl
+	jr	un@cb2
+un@cb1:	inc	hl
+	ld	a,(hl)
+	dec	hl
+un@cb2:	ld	c,a
+	cp	40h
+	jr	nc,unbit
+	and	38h
+	rrca
+	ld	de,?rlc
+	add	a,e
+	ld	e,a
+	ld	a,d
+	adc	a,0
+	ld	d,a
+	call	lintab
+	ld	a,c
+	call	putreg
+	jr	un@cb8
+unbit:	and	0c0h
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	de,?bit-4
+	add	a,e
+	ld	e,a
+	ld	a,d
+	adc	a,0
+	ld	d,a
+	call	lintab
+	ld	a,c
+	and	38h
+	rrca
+	rrca
+	rrca
+	add	a,'0'
+	call	putch
+	call	putcon
+	ld	a,c
+	call	putreg
+un@cb8:	ld	a,(@ixiy)
+	cp	0ddh
+	jr	z,un@cb9
+	cp	0fdh
+	jr	z,un@cb9
+	jp	unend
+un@cb9:	inc	hl
+	jp	unend
+
+unpush:	ld	de,?push		;C5:	PUSH
+	call	lintab
+	call	putrr
+	jp	unend
+
+unadd3:	ld	a,c			;C6:CE:	ADD a,n ... CP n
+	and	38h
+	rrca
+	ld	de,?math
+	add	a,e
+	ld	e,a
+	ld	a,d
+	adc	a,0
+	ld	d,a
+	call	lintab
+	ld	a,c
+	cp	0d6h
+	jr	z,unsub3
+	cp	0e6h
+	jr	nc,unsub3
+	ld	a,'A'
+	call	putch
+	ld	a,','
+	call	putch
+unsub3:	ld	a,(hl)
+	inc	hl
+	call	puthex
+	ld	a,'h'
+	call	putch
+	jp	unend
+
+unrst:	ld	de,?rst			;C7:CF:	RST
+	call	lintab
+	ld	a,c
+	and	38h
+	call	puthex
+	ld	a,'h'
+	call	putch
+	jp	unend
+
+unret:	ld	de,?ret			;C9:	RET EXX JP(hl) LDsp,hl
+	cp	0c9h
+	jp	z,un1end; ret
+	ld	de,?exx
+	cp	0d9h
+	jp	z,un1end; exx
+	cp	0e9h
+	jr	nz,un@f9
+	ld	de,?jp	; jp (hl)
+	call	lintab
+	ld	a,'('
+	call	putch
+	call	putrr
+	ld	a,')'
+	call	putch
+	jp	unend
+un@f9:	ld	de,?ldsh; ld sp,hl
+	call	putlin
+	ld	a,0e9h
+	call	putrr@
+	jp	unend
+
+uncall:	cp	0edh			;CD:	CALL IX; IY; { ED; }
+	jr	z,un@ed
+	cp	0cdh
+	jp	nz,unasm3
+	ld	de,?call; call
+	call	lintab
+	call	putad
+	jp	unend
+
+un@ed:	ld	a,(hl)			;ED:	...
+	inc	hl
+	ld	c,a
+	cp	0c0h
+	jp	nc,unmul	; MULUB A,r / MULUW HL,rr
+	cp	0a0h
+	jr	nc,unldi	; LDI / CPI / -- / INDR / OTDR
+	and	7
+	jp	z,unin		; IN r,(C)
+	dec	a
+	jp	z,unout		; OUT (C),r
+	dec	a
+	jp	z,unsbc		; SBC HL,rr / ADC HL,rr
+	dec	a
+	jp	z,unld6		; LD (nn),rr / LD rr,(nn)
+	dec	a
+	jp	z,unneg		; NEG
+	dec	a
+	jp	z,unretn	; RETN / RETI
+	dec	a
+	jp	z,unim		; IM 0 / IM 1 / IM 2
+unld8:	bit	5,c
+	jr	nz,unrrd	; RRD / RLD
+	call	ldnym
+	ld	a,'A'		; LD I,A / LD R,A / LD A,I / LD A,R
+	bit	4,c
+	jr	nz,unld8b
+	ld	a,'I'
+	bit	3,c
+	jr	z,unld8b
+	ld	a,'R'
+unld8b:	call	putch
+	ld	a,','
+	call	putch
+	ld	a,'A'
+	bit	4,c
+	jr	z,unld8c
+	ld	a,'I'
+	bit	3,c
+	jr	z,unld8c
+	ld	a,'R'
+unld8c:	call	putch
+	jp	unend
+unrrd:	ld	a,'R'
+	call	putch
+	ld	a,'R'
+	bit	3,c
+	jr	z,unrrd@
+	ld	a,'L'
+unrrd@:	call	putch
+	ld	a,'D'
+	call	putch
+	jp	unend
+unldi:	cp	0a3h	; ldi - otdr
+	jr	z,unldi1
+	cp	0abh
+	jr	nz,unldi2
+unldi1:	inc	a
+unldi2:	and	7
+	ld	e,a
+	add	a,a
+	add	a,e
+	ld	de,?ld
+	add	a,e
+	ld	e,a
+	ld	a,d
+	adc	a,0
+	ld	d,a
+	call	putlin
+	ld	a,'I'
+	bit	3,c
+	jr	z,unldi3
+	ld	a,'D'
+unldi3:	call	putch
+	bit	4,c
+	jp	z,unend
+	ld	a,'R'
+	call	putch
+	jp	unend
+unin:	ld	de,?in
+	call	lintab
+	ld	de,?reg
+	ld	a,c
+	rrca
+	rrca
+	rrca
+	and	7
+	ld	b,a
+unin1:	inc	de
+	djnz	unin1
+	ld	a,(de)
+	call	putch
+	ld	de,?in@
+	jp	un1end
+unout:	ld	de,?out@
+	call	putlin
+	call	putr
+	jp	unend
+unsbc:	ld	de,?sbc@
+	bit	3,c
+	jr	z,unsbc2
+	ld	de,?adc@
+unsbc2:	call	putlin
+	call	putrr
+	jp	unend
+unld6:	call	ldnym
+	bit	3,c
+	jr	nz,unld7
+	ld	a,'('
+	call	putch
+	call	putad
+	ld	a,')'
+	call	putch
+	ld	a,','
+	call	putch
+	call	putrr
+	jp	unend
+unld7:	call	putrr
+	call	putcon
+	ld	a,'('
+	call	putch
+	call	putad
+	ld	a,')'
+	call	putch
+	jp	unend
+unneg:	ld	de,?neg
+	jp	un1end
+unretn:	ld	de,?ret
+	call	putlin
+	ld	a,'N'
+	bit	3,c
+	jr	z,unren2
+	ld	a,'I'
+unren2:	call	putch
+	jp	unend
+unim:	ld	de,?im
+	call	lintab
+	ld	a,'0'
+	bit	4,c
+	jr	z,unim@
+	inc	a
+	bit	3,c
+	jr	z,unim@
+	inc	a
+unim@:	call	putch
+	jp	unend
+unmul:	bit	1,c
+	jr	nz,unmulW
+	ld	de,?mulub
+	call	putlin
+	call	putr
+	jp	unend
+unmulw:	ld	de,?muluw
+	call	putlin
+	res	7,c
+	call	putrr
+	jp	unend
+
+
+; ** UNASM SUB **
+
+putr:	ld	a,c		; C [5-3]
+putr@:	rrca			; A [5-3]
+	rrca
+	rrca
+putreg:	and	7		; A [2-0]
+	cp	6
+	jr	z,puthl
+	ld	de,?reg
+	add	a,e
+	ld	e,a
+	ld	a,d
+	adc	a,0
+	ld	d,a
+	ld	a,(de)
+	call	putch
+	ret
+
+puthl:	ld	a,'('
+	call	putch
+	ld	a,20h
+	call	putrr@
+	ld	a,(@ixiy)
+	cp	0ddh
+	jr	z,putxy
+	cp	0fdh
+	jr	nz,puthl@
+putxy:	ld	e,'+'
+	ld	a,(hl)
+	inc	hl
+	bit	7,a
+	jr	z,putxy@
+	ld	e,'-'
+	neg
+putxy@:	push	af
+	ld	a,e
+	call	putch
+	pop	af
+	call	puthex
+	ld	a,'h'
+	call	putch
+puthl@:	ld	a,')'
+	jp	putch
+
+putrr:	ld	a,c		; C [5-4]
+putrr@:	bit	5,a		; A [5-4]
+	jr	z,putrr0
+	bit	4,a
+	jr	z,putrr2
+putrr5:	ld	e,5	  ; SP AF
+	cp	0f0h
+	jr	c,putrr6
+	inc	e
+putrr6:	ld	a,e
+	jr	putrr9
+putrr2:	ld	a,(@ixiy) ; HL IX IY
+	ld	e,4
+	cp	0fdh
+	jr	z,putrr6
+	dec	e
+	cp	0ddh
+	jr	z,putrr6
+	dec	e
+	jr	putrr6
+putrr0:	rrca		 ; BC DE
+	rrca
+	rrca
+	rrca
+	and	1
+putrr9:	ld	de,?rr
+	jr	putcc_
+
+putcc:	ld	a,c		; C:[5-3]
+putcc@:	ld	de,?cc		; A:[5-3]	nz,z,nc,c,po,pe,p,m
+	rrca
+	rrca
+	rrca
+	and	7
+putcc_:	push	bc	; put (de+a*3)-
+	ld	b,a
+	add	a,a
+	add	a,b
+	add	a,e
+	ld	e,a
+	ld	a,d
+	adc	a,0
+	ld	d,a
+	call	putlin
+	pop	bc
+	ret
+
+putad:	inc	hl
+	ld	a,(hl)
+	call	puthex
+	dec	hl
+	ld	a,(hl)
+	call	puthex
+	inc	hl
+	inc	hl
+	ld	a,'h'
+	jp	putch
+
+ldnym:	ld	de,?ld
+
+lintab:	call	putlin
+	jp	puttab
+
+
+

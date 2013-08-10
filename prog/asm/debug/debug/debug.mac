@@ -1,0 +1,484 @@
+;	DEBUG commannd	V0.41	Nov.1993
+
+samejr	macro	x,y
+	cp	x
+	jr	z,y
+	endm
+samejp	macro	x,y
+	cp	x
+	jp	z,y
+	endm
+sameret	macro	x
+	cp	x
+	ret	z
+	endm
+jrdez	macro	x
+	ld	a,d
+	or	e
+	jr	z,x
+	endm
+jrhlz	macro	x
+	ld	a,h
+	or	l
+	jr	z,x
+	endm
+jpdez	macro	x
+	ld	a,d
+	or	e
+	jp	z,x
+	endm
+jphlz	macro	x
+	ld	a,h
+	or	l
+	jp	z,x
+	endm
+
+print	macro	x
+	ld	a,x
+	call	putch
+	endm
+getaf	macro
+	ld	hl,(reg_area)
+	push	hl
+	pop	af
+	endm
+regmac	macro	x,y
+	cp	x
+	jr	z,y
+	inc	hl
+	endm
+
+
+_	equ	0
+calslt	equ	0001ch
+fcb	equ	0005ch
+chget	equ	0009fh
+chput	equ	000a2h
+inifnk	equ	0003eh
+fnksb	equ	000c9h
+erafnk	equ	000cch
+dspfnk	equ	000cfh
+fnkstr	equ	0f87fh
+exptbl	equ	0fcc1h
+
+	.z80
+	aseg
+	org	100h
+main_adres equ	08000h
+
+install:
+	ld	hl,start
+	ld	de,main_adres
+	ld	bc,last-start
+	ldir
+	ld	(reg_sp@),sp
+	pop	hl
+	ld	(stack_top),sp
+	push	hl
+
+	ld	a,(fcb+1)
+	cp	32
+	jp	z,comlin
+	ld	de,0100h
+	jp	file_load
+
+start:	.phase	main_adres
+
+comlin:	jr	command_line
+
+adres_prog:	defw	0100h
+stack_top:	defw	0000h
+reset_adres:	defw	0000h
+break_point:	defs	10*3+2
+
+command_line:
+	print	'-'
+	ld	de,128
+	ld	a,126
+	ld	(de),a
+	ld	c,0ah
+	call	5
+	print	10
+
+	ld	hl,129
+	ld	a,(hl)
+	inc	l
+	add	a,l
+	ld	l,a
+	ld	(hl),0
+	ld	de,130
+
+com_jump:
+	ld	a,(de)
+	inc	de
+	or	a
+	jr	z,comlin
+	cp	' '
+	jr	z,com_jump
+	cp	'?'
+	jp	z,help
+	or	32
+	cp	'w'+1
+	jp	nc,error1
+	sub	'a'
+	jp	c,error1
+	add	a,a
+	ld	hl,com_table
+	add	a,l
+	ld	l,a
+	ld	a,h
+	adc	a,0
+	ld	h,a
+	ld	c,(hl)
+	inc	hl
+	ld	b,(hl)
+	ld	a,b
+	or	c
+	jp	z,error1
+	push	bc
+	ret
+
+
+; ****  INCLUDE FILES  ****
+
+include DEBUG1.MAC	; subroutines
+include DEBUG2.MAC	; commands
+
+
+; **** error *****
+
+error1:	inc	de
+error0:	ld	hl,-131
+	add	hl,de
+	ld	b,l
+	ld	c,2
+error2:	push	bc
+	ld	e,32
+	call	5
+	pop	bc
+	djnz	error2
+	ld	de,errmes
+error3:	ld	c,9
+	call	5
+	ld	sp,(reg_sp@)
+	jp	comlin
+error:	ld	de,errmes+2
+	jr	error3
+
+
+; ****  Sub roiutines  ****
+
+get_range:
+	call	getwrd
+	inc	a
+	jr	z,error
+	push	hl
+	call	getwrd
+	pop	bc
+	inc	a
+	jr	z,error
+	or	a
+	sbc	hl,bc
+	jr	c,error
+	inc	hl
+	ret
+
+putwrd:	ld	a,h
+	call	puthex
+	ld	a,l
+	call	puthex
+	print	'h'
+	ret
+
+putlin:	ld	a,(de)
+	inc	de
+	cp	'$'
+	ret	z
+	call	putch
+	jr	putlin
+
+putstr:	print	(de)
+	inc	de
+	djnz	putstr
+	ret
+
+puttab:	ld	a,9
+	jr	putch
+putcon:	ld	a,','
+	jr	putch
+hexspc:	call	puthex		; put hex & space
+putspc:	ld	a,32		; put space
+putch:	ld	ix,chput
+putch2:	ld	iy,(exptbl-1)
+	jp	calslt
+
+getch:	ld	ix,chget
+	jr	putch2
+
+hexout:	push	af		; put hex
+	rra
+	rra
+	rra
+	rra
+	call	hexou1
+	pop	af
+hexou1:	and	15
+hexput:	add	a,'0'
+	cp	'9'+1
+	jr	c,putch
+	add	a,'@'-'9'
+	jr	putch
+
+puthex:	push	hl
+	push	de
+	push	bc
+	call	hexout
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+put10:	push	hl
+	push	de
+	push	bc
+	exx
+	ld	hl,put10dat
+	exx
+	ld	de,chrwrk
+put10a:	exx
+	ld	c,(hl)
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+	push	bc
+	exx
+	pop	bc
+	xor	a
+put10b:	inc	a
+	add	hl,bc
+	jr	c,put10b
+	sbc	hl,bc
+	add	a,'0'-1
+	ld	(de),a
+	inc	de
+	ld	a,b
+	and	c
+	inc	a
+	jr	nz,put10a
+	ld	a,'$'
+	ld	(de),a
+	ld	de,chrwrk
+put10c:	ld	a,(de)
+	inc	de
+	cp	'0'
+	jr	z,put10c
+	cp	'$'
+	jr	nz,put10d
+	dec	de
+put10d:	dec	de
+	call	putlin
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+putbin:	push	bc
+	ld	b,8
+putbin@:rlca
+	ld	c,a
+	ld	a,'0'
+	adc	a,0
+	call	putch
+	ld	a,c
+	djnz	putbin@
+	pop	bc
+	ret
+
+getwrd:	ld	hl,0
+getwr1:	ld	a,(de)
+	inc	de
+	cp	32
+	jr	z,getwr1
+	or	a
+	ld	a,255
+	ret	z	; no parameter = 255
+	dec	de
+getwr2:	ld	a,(de)	; not space
+	or	a
+	ret	z	; end mark = 0
+	inc	de
+	cp	32
+	ret	z	; space = 32
+;	cp	9
+;	ret	z	; tab = 9
+	call	hexcheck
+	jr	c,get_e
+	add	hl,hl
+	jr	c,get_e
+	add	hl,hl
+	jr	c,get_e
+	add	hl,hl
+	jr	c,get_e
+	add	hl,hl
+	jr	c,get_e
+	add	a,l
+	ld	l,a
+	jr	getwr2
+get_e:	pop	hl
+	jp	error1
+
+hexcheck:		; hex > CY=0;A=0-15 , not hex > CY=1
+	cp	'0'
+	ret	c
+	cp	'9'+1
+	jr	c,hexch3
+	or	32
+	cp	'a'
+	ret	c
+	cp	'f'+1
+	jr	c,hexch2
+	scf
+	ret
+hexch2:	sub	'a'-'9'-1
+hexch3:	sub	'0'
+	ret
+
+putret:	print	13
+	print	10
+	ret
+
+yesno:	call	putlin
+	ld	de,yesno_mes
+	call	putlin
+	ld	c,07h
+	call	5
+	cp	13
+	jr	z,yesno0
+	or	32
+	cp	'y'
+	jr	z,yesno0
+	ld	de,no_mes
+	call	putlin
+	ld	sp,(reg_sp@)
+	jp	comlin
+yesno0:	ld	de,yes_mes
+	jp	putlin
+
+upper:	cp	'a'
+	ret	c
+	cp	'z'+1
+	ret	nc
+	sub	32
+	ret
+
+
+; ****  Work area  ****
+
+com_table:	defw	_,	_,	comp,	dump,	enter,	fill	; abcdef
+		defw	go,	hex,	input,	_,	key,	load	; ghijkl
+		defw	move,	name,	output,	_,	quit,	register; mnopqr
+		defw	search,	trace,	unasm,	_,	write		; stuvw
+
+unadrs:	defw	unnop,unld2,unld3,uninc2,uninc1,undec1,unld4,unrlca
+	defw	unnop,unadd2,unld5,undec2,uninc1,undec1,unld4,unrlca
+	defw	unretc,unpop,unjpcc,unjp,uncalc,unpush,unadd3,unrst
+	defw	unretc,unret,unjpcc,unjp,uncalc,uncall,unadd3,unrst
+
+adres:		defw	0100h
+last_port:	defb	0
+@ixiy:		defb	0
+print_line:	defb	8
+put10dat:	defw	-10000,-1000,-100,-10,-1
+errmes:		defm	'^ Error'
+return:		defb	13,10,'$'
+yesno_mes:	defm	' OK?>$'
+yes_mes:	defm	'Yes$'	
+no_mes:		defb	'N','o',13,10,'$'
+quit_mes:	defb	'Quit$'
+mes_back:	defb	1dh,1dh,1dh,1dh,1dh,1dh,1dh,1dh,1bh,'K','$'
+
+reg_area:	defw	0,0,0,0,0	; AF BC DE HL IX
+		defw	0,0,0,0,0	; AF'BC'DE'HL'IY
+reg_sp@:	defw	0c200h		; SP
+reg_mes:	defm	'AF $BC $DE $HL $IX $'
+		defb	13,10,'A','F',27h,'$BC',27h,'$DE',27h,'$HL',27h,'$'
+		defb	'IY $',13,10
+		defm	'SP $   Flag ($'
+
+?err:	defb	'???',13,10,'$'
+?out2:	defm	'h),A$'
+?sbc@:	defm	'SBC	HL,$'
+?adc@:	defm	'ADC	HL,$'
+?out@:	defm	'OUT	(C),$'
+?exaf:	defm	"EX	AF,AF'$"
+?exdh:	defm	'EX	DE,HL$'
+?exsh:	defm	'EX	(SP),$'
+?ldsh:	defm	'LD	SP,$'
+?cc:	defm	'NZ$Z$ NC$C$ PO$PE$P$ M$'
+?rr:	defm	'BC$DE$HL$IX$IY$SP$AF$'
+?reg:	defm	'BCDEHLF'
+?acon:	defm	'A,$'
+?in@:	defm	',(C)$'
+
+?mulub:	defb	'MULUB',9,'A,$'
+?muluw:	defb	'MULUW',9,'HL,$'
+?ret:	defm	'RET$'
+?neg:	defm	'NEG$'
+?exx:	defm	'EXX$'
+?ld:	defm	'LD$CP$'
+?in:	defm	'IN$OT$'
+?out:	defm	'OUT$'
+?im:	defb	'IM$'
+?push:	defm	'PUSH$'
+?pop:	defm	'POP$'
+?inc:	defm	'INC$'
+?dec:	defm	'DEC$'
+?math:	defm	'ADD$ADC$SUB$SBC$AND$XOR$OR$ CP$ '
+?rst:	defm	'RST$'
+?bit:	defm	'BIT$SET$RES$'
+?rlc:	defm	'RLC$RRC$RL$ RR$ SLA$SRA$SLL$SRL$'
+?rlca:	defm	'RLCA$RRCA$RLA$	RRA$ DAA$ CPL$ SCF$ CCF$'
+?djnz:	defm	'DJNZ$'
+?jp:	defm	'JP$'
+?jr:	defm	'JR$'
+?call:	defm	'CALL$'
+?halt:	defm	'HALT$'
+?di:	defm	'DI$'
+?ei:	defm	'EI$'
+?nop:	defm	'NOP$'
+
+write_errmes:	defb	' Writing error!',13,10,'$'
+load_errmes1:	defb	' is not found',13,10,'$'
+load_errmes2:	defb	' is too large',13,10,'$'
+load_mes:	defm	' Bytes load$'
+write_mes:	defm	' Bytes write$'
+mes_ed:		defb	'ed',13,10,'$'
+
+help_mes:	defb	'AS.DEBUG Ver.0.41  AriakiraSoft',13,10
+		defb	' hele     ?',13,10
+;		defb	' assemble A [addres]',13,10
+		defb	' compare  C range addres',13,10
+		defb	' dump     D [range]',13,10
+		defb	' enter    E [addres [value...]]',13,10
+		defb	' fill     F range [value]',13,10
+		defb	' go       G addres',13,10
+		defb	' hex      H [value [value...]]',13,10
+		defb	' input    I [port [number]]',13,10
+		defb	' key      K {no function | on | off | !}',13,10
+		defb	' load     L addres [drive sector number]',13,10
+		defb	' move     M range addres2',13,10
+		defb	' name     N [[drive:]filename[.type]]',13,10
+		defb	' output   O port value [value...]',13,10
+		defb	' register R [resister value]',13,10
+		defb	' search   S range',13,10
+;		defb	' trace    T addres [number]',13,10
+		defb	' unasm    U [addres]',13,10
+		defb	' write    W {range | addres drive sector number}',13,10
+		defb	' quit     Q',13,10,'$'
+chrwrk:
+
+	.dephase
+
+last:	end
+
+

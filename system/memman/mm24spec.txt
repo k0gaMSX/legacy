@@ -1,0 +1,776 @@
+File: MM24SPEC.ENG
+Date: 19 september 1992
+By  : Ries Vriend / Ramon van der Winkel - (c) MST
+
+Unauthorized translation by Arnold Metselaar, 1 April 1996 
+----------------------------------------------------------
+
+  This text contains the information neccessary to write  application
+programs for MemMan 2.4. For the specifications regarding  prgramming
+TSR's we point to the technical documentation that can  be  found  on
+the   `TSR-Development   disk'.   This   disk   contains   the   full
+specifications on TSR's and some development tools. It can be ordered
+from the MST, see the `LezersService' of `MSX Computer Magazine'  for
+more information.
+
+Contents
+--------
+
+Changes in MemMan 2.3 with respect to version 2.2
+Updates from MemMan 2.30 to MemMan 2.31
+Changes in MemMan 2.4 with respect to version 2.3
+
+Used terminology
+Why MemMan 2.4?
+
+The basics
+
+Appendix 1: BIOS-calls under Turbo Pascal
+Appendix 2: Hints and directions for programmers
+
+MEMMAN versie 2.4 - specifications
+==================================
+
+Changes in MemMan 2.3 with respect to version 2.2
+-------------------------------------------------
+
+-      The function XTsrCall has been added. This function  works  in
+       the same way as TsrCall (63), the only difference  being  that
+       the Tsr-ID is expected in register  IX  instead  of  BC.  This
+       makes BC avaible for passing an argument.
+
+-      The function Info (50) can be used to  obtain  the  address  at
+       which XTsrCall can be called directly.
+
+-      The function Status is improved. The total  amount  of  usable
+       memory is reported correctly, even under MSX-DOS2.
+
+-      The function Alloc (10) now also recognizes  the  memory  that
+       becomes available when the DOS2 RAMdisk is removed or  shrunk!
+       It does not matter whether the RAMdisk was installed before or
+       after MemMan wss installed. 
+
+-      The internal stack of MemMan that is used to process  function
+       calls is enlarged from 160 to 240 bytes. The stack  of  MemMan
+       proved to be too small to process nested "TsrCalls".
+
+Updates from MemMan 2.30 to MemMan 2.31
+---------------------------------------
+
+-      A bug turned up in TL.COM, that caused problems  when  loading
+       TSR's under DOS1. The error was in the parsing of the  command
+       line and was known and solved the day after the fair.
+
+-      The second bug was more complicated, en  was  revealed  during
+       experiments with new TSR's. It was not reported before. It was
+       about CMD TL. Thet command did not perform an IniChk,  due  to
+       which the CurSeg function of MemMan did not work well  either.
+       TSR's that used CurSeg and  switched  memory  in  page  2  got
+       stuck. The printerbuffer was (is?) the only TSR to do so.  The
+       problem did not occur when loading a TSR with  TL.COM  because
+       TL.COM does perform an IniChk. This bug is also solved.
+
+Changes in MemMan 2.4 with respect to version 2.3
+-------------------------------------------------
+
+-      The function GetTPA (33) is added, making it possible  to  use
+       the 32 kB RAM behind the BIOS and the  BASIC  ROM  under  disk
+       BASIC. Many people asked for this!
+
+-      CMD HELP is now supported by the standard TSR `MST  TsrUtils'.
+       This command puts a small overview of the extra BASIC commands
+       on  the  screen.  Look  at  the  hints  and   directions   for
+       programmers for more information on CMD HELP. 
+
+-      TL.COM uses the environment item  TL,  to  locate  the  TSR's.
+       Owners of a harddisk only need  to  put  `SET  TL=A:\TSRS'  in
+       their  AUTOEXEC.BAT  and  to  place  all  the  TSR's  in   the
+       subdirectory A:\TSRS can allways be found by  TL.  giving  the
+       path is than no longer neccessary.
+
+-      TV.COM also shows in which  segment  the  TSR's  reside.  This
+       makes it easy to free a segment by removing all the  TSR's  in
+       them. TSR segment 0 is the MemMan  segment,  the  memory  left
+       over in that segment can only be used by TSR's, not  by  other
+       programs.
+
+-      Two functions have been added read and set the  stack  pointer
+       of MemMan's internal stack. That is neccessary  if  a  program
+       calls the expression evaluator in the BASIC ROM and  wants  to
+       handle errors itself. This is because ExpEval may  call a  TSR
+       that calls ExpEval and an error may than occur. In  that  case
+       junk will be left on the stack. If  the  errorhandler  of  MSX
+       BASIC is used after such errors, there  is  no  problem:  then
+       MemMan itself clears its stack.
+
+-      In  all  MemMan  TSR-segments  the  MemMan  function  handling
+       routine starts at &h4002. Therefore MemMan can be called  from
+       a TSR with a quick and simple `call &H4002'.
+
+-      A new version (1.04) of the filecopier BK  is  delivered  that
+       makes no errors if more than 4 MB  is  available.  In  version
+       1.02 a counter would overflow causing a  wrong  indication  on
+       screen of the amount of memory.
+
+-      IniChk gives the address of the MemMan function handler in  HL.
+       This saves a call to the Info function.
+
+
+Why MemMan 2.4?
+---------------
+
+  In fact there was little reason for a releasing new  version  after
+the updates. The differences between 2.3 and 2.4 are small. All known
+bugs had been solved and there are no  big  extensions,  just  a  few
+small extras. 
+  Apart from what is new now, we have and had more and bigger  plans.
+We still work on them but we did not want to wait with releasing  2.4
+untill the other things had  been  finished  and  tested.  Especially
+because more and more programmers  encountered  an  design  error  in
+MemMan: It was impossible to switch the 32  kB  RAM  behind  the  ROM
+under disk BASIC using MemMan. That has been solved: From now on  All
+switching can be done neatly using MemMan, even  if  a  program  runs
+under disk BASIC and really wants to use all the memory.
+  All other extensions are nice but could have waited. On  the  other
+hand there are some wishes amongst the further plans that are in fact
+quite important. But they all require a considerable  change  in  the
+internal structure of MemMan and that takes time. 
+ 
+Used terminology
+----------------
+
+Page     Part of the addressing space. The addressing  space  of  the
+         Z80 is divided into 4 pages of 16  k,  starting  at  &h0000,
+         &h4000, &h8000 and &hC000 respectively.
+
+Segment  Memory block 16 kB in size. There are two types of segments;
+         pagebound and flexible segments. The flexible  segments  can
+         can be switched on page 0, 1 and 2. There are three sorts of
+         pagebound segments: PSEG0000, PSEG4000  and  PSEG8000.  They
+         can be switched on page 0, 1 and 2 respectively.
+
+Heap     Memory area in page 3 (somewhere between &hC000 and &hFFFF).
+         MemMan aplication programs can allocate a piece and  use  it
+         freely. The size can be set with the confioguration  program
+         CFGMMAN.
+
+FastUse  Equal to Use, called directly in  page  3.  There  are  also
+         other routines that can be called directly,  which  benefits
+         the speed.
+
+Uncrash  To prevent allocated  segments  from  never  being  released
+         because a program crashed, the IniChk  routine  performs  an
+         UnCrash. This releases all segments.  One  can  prevent  the
+         UnCrashing of a segment by giving it  the  Reserved  status.
+         This can be done with the  function  SetRes.  In  general  a
+         segment does not need be given the Reserved status.
+
+TPA      `Transient Program Area'. Originally this meant the piece of
+         memory from &h0100 untill the first byte  of  the  operating
+         system under CP/M or MSX DOS. That was the area  where  user
+         programs could be loaded. In this text the term TPA is  used
+         for the four segments (64 kB) that are switched on under MSX
+         DOS. The upper two of them are also switched  on  under  MSX
+         BASIC.
+
+The basics
+----------
+
+  MemMan divides the memory into segments of 16 kB. Before a  segment
+may be used it must be allocated. After use  it  should  be  released
+again. There are two types of segments:  the  pagebound  segments  or
+PSEG's end the flexible FSEG's.
+  PSEG's are segments that are requested for use in a specific  page,
+e.g. &h4000-&h7FFF or &h8000-&hBFFF. When a PSEG is requested, MemMan
+will allocate a segment that is not in a memory mapper, if  possible.
+FSEG's are segments that can be used on any page. These allways  come
+from memory-mappers.
+  Whatever type of segment is requested MemMan will return a  16-bits
+`segmentcode'. This segmentcode is needed for switching or  releasing
+the segment. Those who only need memeory in the area from  &h8000  to
+&hBFFF, can best request PSEG's. MemMan than first uses  memory  from
+`old' 16 and 64 kB modules before it starts using the mapper.
+  Using MemMan eliminates the need to serach for memory. Just request
+a page, use it and release it in the end. It's as simple as that.
+  However there is a page that MemMan can not switch. Page 3 contains
+a part of the MemMan code the stack (in most  cases)  and  a  lot  of
+system variables. Switching all that is quite tricky business.
+
+Description of MemMan 2.4 funtions
+----------------------------------
+
+  One can execute MemMan functions by calling the `Extended BIOS'  or
+EXTBIO hook, on address &hFFCA. The device ID of MemMan -`M' or  &h4D-
+should be placed in register D. Register E should contain the  MemMan
+function code. After calling a MemMan function all registers  can  be
+altered unless the description states otherwise.
+  MemMan can also be called directly, the address  where  it  can  be
+called, can be asked for using the info function  (50)  and  is  also
+returned by IniChk (30). This way the disadvantages of calling MemMan
+via a hook  are  avoided.  Look  at  the  hints  and  directions  for
+programmers for more information.
+  The state of interupts remains unchanged after a MemMan function in
+most cases. Some  functions,  like  the  FastUse  functions,  disable
+interupts. When MemMan was called with interupts  disables,  it  will
+never return with interupts enabled. 
+  This feature is important for e.g. TSR programs that  only  have  a
+very small stack. As long  as  interupts  are  disabled,  all  MemMan
+functions can be processed without problems. However  with  interupts
+enabled a big stack is required, as the interupt handler puts tens of
+bytes on the stack.
+
+Name:        Use0
+Number:      0
+Purpose:     Switch a segment on page 0 (addresses &h0000-&h3FFF) 
+In:          HL           = Segmentcode
+Out:         A            = Exit status (-1 = Faillure, 0 = Succes)
+
+             Switching a segment in page 0 is only  possible  if  the
+             segment  contains  the  standard  MSX  slotswitch  entry
+             points.
+
+Remark:      This function may not be called  via  the  EXTBIO  hook.
+             This function may only be executed after a  direct  call
+             to the MemMan function handler or the FastUse0 function.
+             One can ask for the addresses where these functions  can
+             be called directly, using the function Info (50).
+
+
+Name:        Use1
+Number:      1
+Purpose:     Switch a segment on page 0 (addresses &h4000-&h7FFF) 
+In:          HL           = Segmentcode
+Out:         A            = Exit status (-1 = Faillure, 0 = Succes)
+
+Remark:      This function may not be called  via  the  EXTBIO  hook.
+             This function may only be executed after a  direct  call
+             to the MemMan function handler or the FastUse1 function.
+             One can ask for the addresses where these functions  can
+             be called directly, using the function Info (50).
+
+
+Name:        Use2
+Number:      2
+Purpose:     Switch a segment on page 0 (addresses &h0000-&h3FFF)
+In:          HL           = Segmentcode
+Out:         A            = Exit status (-1 = Faillure, 0 = Succes)
+
+Remark:      This function may not be called  via  the  EXTBIO  hook.
+             This function may only be executed after a  direct  call
+             to the MemMan function handler or the FastUse1 function.
+             One can ask for the addresses where these functions  can
+             be called directly, using the function Info (50).
+
+
+Name:        Alloc
+Number:      10
+Purpose:     Request a segment
+In:          B            = Segment preference code
+             Bit 0 and 1: 00 = PSEG0000
+                          01 = PSEG4000
+                          10 = PSEG8000
+                          11 = FSEG
+             Bit 2 til 5: Unused. Must be 0.
+             Bit 6:       1 = Prefer TPA or the standard  MSXDOS  RAM
+                          slot. This results in faster switching  but
+                          probably  also  in  not  cooperating   with
+                          non-MemMan TSR's that put themselves in the
+                          TPA slot.
+             Bit 7:       1 = Prefer unexpanded (thus fast) slot. The
+                          same things as for bit six hold  for  this.
+                          Unexpanded slots era switched  faster,  but
+                          have a bigger change of  being  in  use  by
+                          non-MemMan applications.
+Out:         HL           = Segmentcode. (&h0000 = No free segment 
+                            left)
+             B            = Type of segment (-1 = FSeg, 0 = PSeg)
+
+             If a PSEG is requested, but not available, an FSEG, that
+             can replace the PSEG,  is allocated instead.
+
+
+Name:        SetRes
+Number:      11
+Purpose:     Give a segment the Reserved status
+In:          HL           = Segmentcode
+
+             Gives a segment the `Reserved-status' preventing it from
+             being released automatically after a call to the  IniChk
+             function. In general programs do not  need  to  set  the
+             reserved status, unless a  program  -e.g.  a  RAM  disk-
+             wants to secure a segment for its own use.
+
+
+Name:        DeAlloc
+Number:      20
+Purpose:     Releasing a segment
+In:          HL           = Segmentcode
+
+             On exiting a program this function  should  be  used  to
+             release all allocated  segments.  DeAlloc  automatically
+             unsets  the  reserved  status  of  the   segment   being
+             released.
+             DeAlloc will make segments that are also administered by
+             DOS2, available for DOS2 again.
+
+
+Name:        ClrRes
+Number:      21
+Purpose:     Clear the reserved status of a segment
+In:          HL           = Segmentcode
+
+             It is not neccessary to call this function  just  before
+             calling DeAlloc. DeAlloc clears the reserved status of a
+             segment itself.
+
+
+Name:        IniChk
+Number:      30
+Purpose:     Initializes MemMan for a program
+In:          A            = Check code
+Out:         A            = Check code + "M"
+             DE           = Version number (format: Version #D.E)
+             HL           = Starting from version 2.4: address of  the
+                            MemMan function  handler  (Look  at  Info
+                            (50) for more information.)
+
+             This routine adds the ASCII-value of the letter  "M"  to
+             the contents of register A. This makes  it  possible  to
+             chack the presence of  MemMan.  Further  an  UnCrash  is
+             performed en the segmentcodes of the currently  switched
+             segments are computed and stored for use by CurSeg.
+             The function IniChk may only  be  called  once  by  each
+             MemMan application program. This should be  done  before
+             any other MemMan function is called.  TSR  programs  may
+             never call the IniChk function.
+
+Name:        Status
+Number:      31
+Purpose:     Get status data of MemMan
+Out:         HL           = Number of present segments
+             BC           = Number of free segments
+             DE           = Number of segments administered by both 
+                            DOS2 and MemMan
+             A            = Connected Status of the connected
+                            hardware.
+                            Bit 0: 1 if the DOS2 Mapper Support
+                            Routines are present, 0 otherwise
+                            Bit 1-7: Reserved, allways 0.
+
+       If bit 0 of the Connected  status  is  set,  the  Mapper
+             Support functions of DOS 2.20 are present. The number of
+             free segments can be lower than stated in  register  bc,
+             because  some  segments  are  used  by  DOS2  after  the
+             installation of MemMan -e.g. to install a RAMdisk.  
+
+
+Name:        CurSeg
+Number:      32
+Purpose:     Ask for the segmentcode of a switched segment 
+In:          B            = Pagenumber (0,1,2,3)
+Out:         HL           = Segmentcode
+             A            = Type of segment (255 = FSeg, 0 = Pseg)
+
+             This routine returns the segmentcode of one of the  four
+             pages. 
+             TSR's may not use this function to determine the current
+             segment in page 0. To save some time this setting is not
+             automatically computed and stored when a TSR is  called.
+             The current segments in the pages 1 and  2  however  are
+             computed at each call to a  hook,  and  can  allways  be
+             asked for using this function. The segment  in  page  3,
+             allways being the same, can also be  asked  for  at  all
+             times. 
+             There is also a FastCurSeg  that  does  the  same  thing
+             faster. One can ask for  the  address  where  it  can  be
+             called directly, using the function Info (50).
+
+
+Name:        GetTPA
+Number:      33
+Purpose:     Ask for the@segmentcode of a TPA segment
+In:          B            = Page number (0,1,2,3)
+Out:         HL           = Segmentcode
+             A            = Type of segment (255 = FSeg, 0 = Pseg)
+
+             The purpose of this function is to make it  possible  to
+             use the lower 32 kB of the TPA from a program under Disk
+             BASIC. MemMan normally does not use these as they  might
+             contain RAMcartridges, or BASIC's RAMdisk. Use  at  your
+             own risk. Do check whether the segments are  FSEG's,  if
+             neccessary. Note that the TPA  segments  should  not  be
+             passed to DeAlloc.
+
+
+Name:        StoSeg
+Number:      40
+Purpose:     Store the current setting of segments
+In:          HL           = Adress of a buffer (9 bytes)
+
+             The segmentcodes known  to  MemMan  are  stored  in  the
+             buffer. These codes are normally computed by IniChk  and
+             subsequently updated by the Use  functions.  The  stored
+             settings are not the current setting but the settings as
+             known to  MemMan.  Therefore  TSR's  can  not  use  this
+             function to store the current settings.
+
+Remark:      This function may not be called  via  the  EXTBIO  hook.
+             This function may only be executed after a  direct  call
+             to the MemMan function handler.  One  can  ask  for  the
+             addresses where these functions can be called  directly,
+             using the function Info (50). Of  course  the  functions
+             (Fast)CurSeg can also be used to  ask  for  the  current
+             segment settings.
+
+
+Name:        RstSeg
+Number:      41
+Purpose:     Make stored segment settings active
+In:          HL           = Address of buffer
+
+             The settings stored in the buffer are made active  again
+             and are stored for future use by CurSeg.
+
+Remark:      This function may not be called  via  the  EXTBIO  hook.
+             This function may only be executed after a  direct  call
+             to the MemMan function handler.  One  can  ask  for  the
+             addresses where these functions can be  called  directly,
+             using the function Info (50). Of  course  the  functions
+             (Fast)Use can also be used to restore segment settings.
+
+
+Name:        Info
+Number:      50
+Purpose:     Give information about amongst others call addresses  of
+             MemMan functions
+In:          B            = Information number (0..8)
+Out:         HL           = Information
+
+             Information number overview. Between parentheses are the
+             equivalent MemMan function codes:
+             0 - Call address of FastUse0 (function 0)
+             1 - Call address of FastUse1 (function 1)
+             2 - Call address of FastUse2 (function 2)
+             3 - Call address of TsrCall (function 63)
+             4 - Call address of BasicCall
+             5 - Call address of FastCurSeg (function 32)
+             6 - Call address of MemMan, the function handler
+             7 - Versienummer van MemMan, format: Versie #H.L
+             8 - Call address of XTsrCall (function 61)
+             9 - Call address of GetMMSP
+             10 - Call address of SetMMSP
+
+             The  call  addresses  mentioned  above  may  be   called
+             directly by an application program or a  TSR.  All  call
+             addresses are garantied to be in page 3.
+             The functions are performed quickly because  the  MemMan
+             call to the EXTBIO hook is omitted and function codes in
+             D and E need not be parsed. Another  advantage  is  that
+             arguments can also be passed using register DE, this  is
+             especially  important  for  the  functions  TsrCall  and
+             BasicCall.
+             E.g. the initializing routine of a TSR can ask  for  the
+             calladdresses of the needed functions using the function
+             Info and store them in the TSR program  code  for  later
+             use, which can greatly benefit the speed of the TSR.
+             An exact description of the functions above can be found
+             at the MemMan function of  which  the  number  is  given
+             between paretheses. One should however bear in mind that
+             the `fast' functions differ  from  the  ordinary  MemMan
+             functions in the following ways: 
+
+FastUse?:    Switches a segment in a specific memory  page.  Look  at
+             the description at the MemMan `Use' functions.
+
+TsrCall:     Register DE is passed to the TSR unchanged. In  contrast
+             with  function  (TsrCall),  in  that  case  DE   already
+             contains the MemMan function code.
+
+XTsrCall:    All main registers are passed to the TSR unchanged.  The
+             TSR-Id code  should be placed in register IX.
+
+BasicCall:   Does not have a MemMan function code.
+Purpose:     Call a routine in the BASIC ROM.
+In:          IX           = Call address in page 0 or 1
+             AF,HL,BC,DE  = dataregisters for the BASIC-ROM
+Out:         AF,HL,BC,E   = dataregisters from the BASIC-ROM
+             Interrupts disabled
+
+             Via this function TSR's can call a  routine  in  page  0
+             and/or 1 of the BASIC-ROM.  The  bios  must  already  be
+             switched in page 0. The BASIC ROM is switched by  MemMan
+             in page 1
+             This is neccessary for instance to  call  the  math-pack
+             routine that are in page 0 of the  BASIC  ROM  but  call
+             some routines in page 1 in the mean time.
+             The H.STKE (stack error) hook is changed, to  clear  the
+             internal stacks of MemMan if a BASIC error occurs.
+
+fastCurSeg:  The returned value  in  register  A  is  undefined.  The
+             function CurSeg (32) indicates whether a  segment  is  a
+             PSEG or an FSEG 
+
+MemMan:      Does not have MemMan function code
+Purpose:     Call a MemMan function directly
+In:          E            = MemMan function code
+             AF,HL,BC     = Dataregisters depending on  the  function
+                            to be called.
+Out:         AF,HL,BC,DE  = Dataregisters  depending  on  the  called
+                            function.
+
+             A call to this routine has the same effect as calling  a
+             MemMan function via the EXTBIO hook. Because the calling
+             of the EXTBIO is omitted  other  extensions  using  this
+             hook are not called. Due to this,  the  usage  of  stack
+             stays limited en the processing speed is increased.
+
+GetMMSP:     Does not have MemMan function code
+Purpose:     Ask for the internal MemMan Stack Pointer
+In:          Nothing
+Out:         HL           = Internal stack pointer of the
+                            TSR-Manager.
+
+SetMMSP:     Does not have MemMan function code
+Purpose:     Set the internal MemMan Stack Pointer
+In:          HL           = New value for the Internal stack pointer
+                            of the TSR-Manager.
+Out:         Nothing
+
+             TSR's can  use  these  two  functions  to  ask  for  the
+             internal stack pointer of MemMan and restore it  when  a
+             TSR has not returned neatly to the return address of  the
+             TSR-Manager.
+             That is neccessary if a programm  calls  the  Expression
+             Evaluator in the BASIC ROM and wants  to  handle  errors
+             itself. The situation may occur  that  ExpEval  calls  a
+             TSR, that itself calls ExpEval resulting  in  an  error.
+             That would leave junk on  the  MemMan  stack.  If  after
+             such errors the error handler  of  MSX  BASIC  is  used,
+             there is no problem: then MemMan itself will  clear  its
+             own stack.  
+
+             Example:
+             ; This is an example of a good invocation of the
+             ; expression evaluator in the BASIC ROM, like it
+             ; can occur in a program.
+             ...
+             ld (saveSP),sp          ;Store SP of TSR-program
+             call getMMSP
+             ld (saveMMSP),hl        ;Store SP of MemMan
+             invocation frmEval      ;Evaluate expression (BIOS)
+             ...
+             jp main
+
+             ; This routine is connected to H.ERRO
+             ; it is called if there was an error
+             ; in the expression
+             ld sp,(saveSP)          ;Restore the TSR-stack
+             ld hl,(saveMMSP)
+             call setMMSP            ;Restore the MemMan stack
+             jp main                 ;Act as if nothing  happened
+
+
+Name:        XTsrCall
+Number:      61
+Purpose:     Call the driver-entry of a TSR
+In:          IX           = ID code of the TSR to be called
+             AF,HL,BC,DE  = passed unchanged to the TSR
+Out:         AF,HL,BC,DE  = returned unchanged from the TSR
+
+             This function is an improved  version  of  the  function
+             TsrCall  (63).  Because  with  the  function  all   main
+             registers can  be  used  for  passing  arguments  it  is
+             recommendable to use this funcion  instead  of  function
+             63.
+
+Remark:      This function may not be called  vie  the  EXTBIO  hook,
+             because the IX register is altered when a call to EXTBIO
+             is made. Call this function directly or use  the  MemMan
+             function handler. One can ask for  the  addresses  where
+             these  functions  can  be  called  directly,  using  the
+             function Info (50). 
+
+
+Name:        GetTsrID
+Number:      62
+Purpose:     Determine TSR ID code
+In:          HL           = Pointer to the TsrName (12 characters).
+                            Fill unused positions with spaces.
+Out:         Carry        = Clear (NC) if the TSR is found,  Set  (C)
+                            if the TSR is not found,
+             BC           = TSR ID code
+
+
+Name:        TsrCall
+Number:      63
+Purpose:     Call the driver-entry of a TSR
+In:          BC           = ID code of the TSR to be called
+             AF,HL,DE     = passed unchanged to the TSR.
+Out:         AF,HL,BC,DE  = returned unchanged from the TSR.
+
+             Note that though DE is passed unchanged to the  TSR,  it
+             can not be used  to  pass  arguments  to  the  TSR.  The
+             Extended BIOS function code of MemMan (D='M' E=63)  must
+             be placed in this register. This is not the case for the
+             Fast-TsrCall routine; one can ask  for  the  address  of
+             this routine using the function Info (50)
+
+
+Name:        HeapAlloc
+Number:      70
+Purpose:     Request space in the heap
+In:          HL           = requested size of the space (in bytes)
+Out:         HL           = &h0000 if there was insufficient space,
+                            else the starting address of the space.
+
+             One can allocate a piece of memory using this  function.
+             The memory block is garantied to be in page 3.
+             The heap is primarily of use to  TSR-programs  That  can
+             use  it  as  temporary  or  permanent  dikbuffer.  Other
+             buffers - that really must be in page 3 - can be  placed
+             in the heap as well. Allocated blocks in the heap remain
+             unusable to  other  programs  untill  a  HeapDeAlloc  is
+             executed (function 71).
+             One can set the size of the heap using the configuration
+             programm CFGMMAN.
+
+
+Name:        HeapDeAlloc
+Number:      71
+Purpose:     Release allocated space in the heap
+In:          HL           = Startadres of the space
+
+
+Name:        HeapMax
+Number:      72
+Purpose:     Return the length of the largest free block in the heap.
+Out:         HL           = Length of the largest free block
+
+
+Appendix 1: BIOS-calls under Turbo Pascal
+  If interslot-calls to the BIOS are used in  a  program  written  in
+Turbo Pascal it is important that the stack is in page  2  or  3.  In
+that case MemMan can safely activate a TSR  when  the  BIOS  calls  a
+hook. The position of the stack is dependent of thye maximum  program
+address to which Turbo Pascal is  configured.  In  Turbo  Pascal  the
+stack is directly below the memory used for variables. Therefore  the
+memory for variables should be placed well above address &h8000.
+  If no source is available, one can still change the  stack  address
+of  programs  written  in  Turbo  Pascal  using   a   debugger.   The
+initiallizing code of a TP program looks as follows:
+
+  start: jp init
+         ...
+         ...
+  init:  ld sp,100h
+         ld hl,nn
+         ld de,nn
+         ld bc,nn
+         call yy
+         ld hl,nn
+         ld de,stack    ;DE contains the stack address, this
+         ld bc,nn       ; only needs to be changed if it is 
+         call zz        ; lower than &h80A0
+         ...
+
+The stack address in register DE can be set to e.g. &hC100. 
+
+
+Appendix 2: Hints and directions for programmers
+  Because the EXTBIO hook is used for various system extensions  like
+KANJI and RS232 interfaces, it is possible that MemMan function calls
+are processed very slowly. One can  increase  the  performance  of  a
+MemMan application significantly by calling the function  handler  of
+MemMan directly instead of the EXTBIO  hook.  One  can  ask  for  the
+address where the function handler can be called, using the  function
+Info (50). Starting from version 2.4 the function IniChk also returns
+the  address  of  the  function  handler  in  HL,  this  address  can
+immediatedly be stored in the program.
+  Most MemMan functions reside in a special memory segment in page 1.
+These functions switch to an internal  stack,  due  to  which  MemMan
+applications can have a relatively small  stack.  A  MemMan  function
+places at most twenty bytes on the stack of an application.  This  is
+only valid if the function is called directly or by a direct call  to
+the MemMan function handler. A function call via the EXTBIO hook  can
+require a very big stack. This is because all  extensions  linked  to
+the EXTBIO hook call eachother untill  one  of  them  recognizes  the
+call. When interupts have to be handled in the same time,  the  Stack
+use can rise a lot. This is another reason to use the MemMan function
+handler instead of the EXTBIO hook.
+
+  MemMan version 1.1 contains some bugs that are solved in version 2.
+The advantage of MemMan 1.1 is that it does not use an extra segment,
+and therefore works on computers  with  only  64  kB  memory.  It  is
+however not worth the trouble to keep MemMan 1.1 up to date for  this
+limited group. To make a program work on a 64 kB computer  we  advise
+to switch and use 64 kB in  the  program  itself  if  MemMan  is  not
+present. One could even use the whole mapper. Under DOS MemMan is not
+needed to use 64 kB and under MSX Basic it can  not  be  done  neatly
+with MemMan 1.1.  MemMan  version  1.1  will  not  be  developed  any
+further.
+
+  When programming TSR's one can use, starting from version 2.4,  the
+MemMan function handler on address &h4002  that  is  present  in  all
+TSR-segments. This makes the code TSR's fasters and  much  easier  to
+read.
+
+  Allways use the BIOS-routines when writing to  the  VDP  registers.
+This keeps the system variables in page 3 up to date and  some  TSR's
+(CurBlink, screensavers, debuggers, memory  viewers)  use  these.  To
+determine e.g. the the active screen  mode  or  the  address  of  the
+sprite-tables. Writing to the palette registers should also  be  done
+using the BIOS to keep the information in the VRAM up to  date.  Only
+when the VRAM is really needed for other things (e.g. in  case  of  a
+VDP(24)-scroll) one has to do otherwise.
+
+  Disable interupts when sending of block of data to the VRAM. It  is
+possible that a TSR that activated in the  mean  time,  accesses  the
+VRAM, changing the read/write pointer in the VDP. Be aware that  some
+BIOS routines anable interupts themselves. In these cases one can use
+the interupt enable bit in the VDP in the main program (or in  a  TSR
+but than this bit should be read and restored afterwards).  Resetting
+this bit stops interupts from being generated by the VDP. A DI should
+still beused as there are also cartridges  that  generate  interupts,
+but it is somewhat safer.
+
+  Requesting a segment (ALLOC) from an  interupt  routine  can  cause
+hanging the machine. This is because DOS2 is not reentrant.  If  DOS2
+is active at the time of an interupt and DOS2 is  called  again  from
+the interupt routine, the  internal  stack  of  DOS2,  amongst  other
+things, is overwritten. And  ALLOC  calls  the  DOS2  Mapper  support
+routines (if DOS2 is present). This problem  presumably  occurs  with
+DEALLOC in the same way. Experience with the printerbuffer has  shown
+that USE causes no problem at all.
+
+  Limit the number of  segments  a  program  requests  to  a  certain
+maximum. There are 4MB Memory Mappers, and it is not too  complicated
+to connect eight of them to one MSX using  two  slot-expanders.  This
+gives a total memory of over 32 MB (2048 segments).  Requesting  more
+segments than necessary only wastes time and space. By  the  way,  BK
+for instance has a limit as well,  it  requests  at  most  4  MB.  In
+version 1.02 however things still go wrong if these 4 MB are actually
+available... The solution is to install a  RAMdisk  or  printerbuffer
+that is big enough to make the available memory less  than  4MB.  The
+wordprocessor TED does it right it requests at most 2 MB from MemMan.
+   
+  It is practical to let TSR's  that  extend  BASIC  in  one  way  or
+another, recognize `CMD HELP' and  print  a  small  overview  of  the
+possibilities. Do not set the `QuitHook'-flag  and  leave  the  stack
+unchanged to have the CMD HELP's of other TSR's (and finally the  one
+of `MST TsrUtils', that  suppresses  the  error  messages  of  BASIC)
+executed as well.
+
+  Never forget to test for the  presence  and  (also  in  TSR's)  the
+version number of MemMan. Require at least 2.3(1),  or  even  better:
+2.4. This version can be spread together with the program so it  need
+not be a limitation.
+
+  It is often convenient to put the current segment  in  page  2  and
+(for programs under Disk Basic) the TPA-segments 0 and  1,  that  can
+now be determined with the function GetTPA, in the table of segments.
+Note that DeAlloc should not be called  for  these  segments.  MemMan
+does not check the segmentcodes passed to DeAlloc and  starts  making
+errors.
+
+** End **
+

@@ -1,0 +1,941 @@
+; ****	DEBUG.COM   Ver.0.41
+;
+;		Quit ?help Ent Hex Key Inp Out Load Write Name
+;		   5    12  19 142 173 248 285  307   326  357
+;		Go,Unasm,Trace,Reg,Fill,Dump,Move,Compare,Search
+;		459  498   511 538  578  598  664     692    868
+
+
+; ** QUIT **
+
+quit:	ld	de,quit_mes
+	call	yesno
+	jp	0
+
+
+; ** HELP **
+
+help:	ld	de,help_mes
+	call	putlin
+	jp	comlin
+
+
+; ** ENTER **
+
+enter:	call	getwrd		; get addres
+	or	a
+	jr	z,ent_inp	; no data =0
+	inc	a
+	jr	z,ent_cnt	; no addres =255
+	ld	b,h
+	ld	c,l
+enter1:	call	getwrd		; line entering
+	or	a
+	push	af
+	ld	a,l
+	ld	(bc),a
+	inc	bc
+	ld	(adres),bc
+	pop	af
+	jp	z,comlin	; no more data
+	jr	enter1
+
+ent_cnt:ld	hl,(adres)
+ent_inp:ld	a,h		; put "xxxx:xx>"
+	call	puthex
+	ld	a,l
+	call	puthex
+	ld	a,':'
+	call	putch
+	ld	a,(hl)
+	call	puthex
+	ld	a,'>'
+	call	putch
+ent_input:
+	push	hl
+	ld	c,08h
+	call	5
+	pop	hl
+	cp	'^'
+	jr	z,ent_back
+	cp	13		; [RETURN]
+	jr	z,ent_next
+	cp	30		; up
+	jr	z,ent_back
+	cp	31		; down
+	jr	z,ent_next
+	cp	27		; [ESC]
+	jr	z,ent_exit2
+	cp	'.'		; pieliod
+	jr	z,ent_exit
+;	cp	'"'		; line
+;	jr	z,ent_chara
+	ld	e,a
+	call	hexcheck
+	jr	c,ent_input
+	push	hl
+	push	af
+	ld	c,02h
+	call	5
+ent_hex2:
+	ld	c,08h
+	call	5
+	cp	8
+	jr	z,ent_hex4
+	cp	13
+	jr	z,ent_hex3
+	ld	e,a
+	call	hexcheck
+	jr	c,ent_hex2
+	push	af
+	ld	c,02h
+	call	5
+	pop	bc
+	pop	af
+	add	a,a
+	add	a,a
+	add	a,a
+	add	a,a
+	add	a,b
+	push	af
+ent_hex3:
+	pop	hl
+	pop	hl
+	ld	(hl),a
+	inc	hl
+	push	hl
+	call	putret
+	pop	hl
+	jr	ent_inp
+ent_hex4:
+	ld	e,a
+	ld	c,02h
+	call	5
+	pop	af
+	pop	hl
+	jr	ent_input
+
+ent_back:
+	push	hl
+	ld	e,'^'
+	ld	c,02h
+	call	5
+	call	putret
+	pop	hl
+	dec	hl
+	jp	ent_inp
+ent_next:
+	push	hl
+	call	putret
+	pop	hl
+	inc	hl
+	jp	ent_inp
+
+ent_exit:
+	push	hl
+	ld	e,a
+	ld	c,02h
+	call	5
+	pop	hl
+ent_exit2:
+	call	putret
+	ld	(adres),hl
+	jp	comlin
+
+
+; ** HEX **
+
+hex:	ld	hl,0
+hex1:	push	hl
+	call	getwrd
+	pop	bc
+	add	hl,bc
+	inc	a
+	jr	z,hex2
+	dec	a
+	jr	nz,hex1
+hex2:	call	putspc
+	ld	a,h
+	call	puthex
+	ld	a,l
+	call	puthex
+	ld	a,'h'
+	call	putch
+	ld	a,':'
+	call	putch
+	call	put10
+	ld	a,':'
+	call	putch
+	ld	a,h
+	call	putbin
+	ld	a,l
+	call	putbin
+	call	putret
+	jp	comlin
+
+
+; ** KEY **
+
+key:	ld	a,(de)
+	inc	de
+	cp	' '
+	jr	z,key
+	cp	'O'
+	jr	z,onoff
+	cp	'o'
+	jr	z,onoff
+	cp	'!'
+	jr	z,keynew
+	cp	48+10
+	jp	nc,error
+	sub	'0'
+	jp	c,error
+	jr	nz,func1
+	add	a,10
+func1:	dec	a
+	add	a,a
+	add	a,a
+	add	a,a
+	add	a,a
+	ld	l,a
+	ld	h,0
+	ld	bc,fnkstr
+	add	hl,bc
+	push	hl
+	ld	b,16
+func2:	ld	(hl),0
+	inc	hl
+	djnz	func2
+	pop	hl
+func3:	ld	a,(de)
+	inc	de
+	cp	' '
+	jr	z,func3
+	cp	9
+	jr	z,func3
+	dec	de
+	ld	b,15
+func4:	ld	a,(de)
+	inc	de
+	cp	';'
+	jr	z,func6
+	ld	(hl),a
+	or	a
+	jr	z,keyput
+func5:	inc	hl
+	djnz	func4
+	jr	keyput
+func6:	ld	(hl),13
+	jr	func5
+onoff:	ld	a,(de)
+	cp	'F'
+	jr	z,keyoff
+	cp	'f'
+	jr	z,keyoff
+	cp	'N'
+	jr	z,keyon
+	cp	'n'
+	jp	nz,error
+keyon:	ld	ix,dspfnk
+	jr	calbas
+keyoff:	ld	ix,erafnk
+	jr	calbas
+keynew:	ld	ix,inifnk
+	ld	iy,(exptbl-1)
+	call	calslt
+keyput:	ld	ix,fnksb
+calbas:	ld	iy,(exptbl-1)
+	call	calslt
+	jp	comlin
+
+
+; ** Input **
+
+input:	call	getwrd
+	inc	a
+	jr	nz,input2
+	ld	hl,(last_port)
+	ld	h,0
+input2:	ld	a,h
+	or	a
+	jp	nz,error
+	ld	c,l
+	call	getwrd
+	ld	b,l
+	inc	a
+	jr	nz,input3
+	ld	b,1
+input3:	ld	a,h
+	or	a
+	jp	nz,error
+input4:	in	a,(c)
+	ld	l,a
+	call	puthex
+	ld	a,'/'
+	call	putch
+	ld	a,l
+	call	putbin
+	ld	a,'/'
+	call	putch
+	ld	a,l
+	call	put10
+	call	putret
+	djnz	input4
+	ld	a,c
+	ld	(last_port),a
+	jp	comlin
+
+
+; ** Output **
+
+output:	call	getwrd
+	inc	a
+	jp	z,error		; no port
+	ld	a,h
+	or	a
+	jp	nz,error
+	ld	c,l
+	call	getwrd
+	inc	a
+	jp	z,error		; no first data
+outp_2:	ld	a,h
+	or	a
+	jp	nz,error
+	out	(c),l
+	call	getwrd
+	inc	a
+	jr	nz,outp_2	; more data
+	jp	comlin
+
+
+; ** LOAD **
+
+load:	call	getwrd
+	or	a
+	jp	z,load_file
+	inc	a
+	jp	z,error
+	push	de
+	ex	de,hl
+	ld	c,1ah
+	call	5	; set start
+	pop	de
+	call	get_sector
+	jp	nc,error
+	ld	c,2fh
+	call	5
+	jp	comlin
+
+
+; ** WRITE **
+
+write:	call	getwrd
+	inc	a
+	cp	2
+	jp	c,error
+	push	de
+	push	hl
+	 push	de
+	  ex	de,hl
+	  ld	c,1ah
+	  call	5	; set start
+	 pop	de
+	 call	getwrd	; HL=end(?)
+	pop	bc	; BC=start
+	pop	de
+	or	a
+	jp	z,write_file
+	inc	a
+	jp	z,error
+	call	get_sector
+	jp	nc,error
+	ld	c,30h
+	call	5
+	jp	comlin
+
+
+; ** NAME **
+
+name_put:	call	put_filename
+		call	putret
+		jp	comlin
+name:	ld	a,(de)
+	inc	de
+	or	a
+	jr	z,name_put
+	cp	32
+	jr	z,name
+	cp	'"'
+	jr	nz,name1
+	inc	de
+name1:	ld	a,(de)
+	dec	de
+	cp	':'
+	ld	a,0
+	jr	nz,name3
+	ld	a,(de)
+	inc	de
+	inc	de
+	or	32
+	sub	'a'
+	jp	c,error
+	cp	8
+	jp	nc,error
+	inc	a
+	push	de
+	push	af
+	ld	c,18h
+	call	5
+	pop	af
+	ld	b,a
+name2_loop:
+	rr	l
+	djnz	name2_loop
+	pop	de
+	jp	nc,error	; not online
+name3:	ld	hl,fcb
+	ld	(hl),a	; set drive
+	inc	hl
+	push	hl
+	ld	b,11
+name4:	ld	(hl),32	; fill on space
+	inc	hl
+	djnz	name4
+	pop	hl
+name5:	ld	a,(de)	; file name (8)
+	inc	de
+	or	a
+	jp	z,comlin
+	cp	'"'
+	jp	z,comlin
+	cp	'.'
+	jr	z,name7
+	cp	'*'
+	jr	z,name?8
+	call	upper
+	ld	(hl),a
+	inc	hl
+	ld	a,l
+	cp	fcb+9
+	jr	nz,name5
+name6:	ld	a,(de)
+	inc	de
+	or	a
+	jp	z,comlin
+	cp	'"'
+	jp	z,comlin
+	cp	'.'
+	jr	nz,name6
+name7:	ld	hl,fcb+9
+name9:	ld	a,(de)	; type (3)
+	inc	de
+	or	a
+	jp	z,comlin
+	cp	'"'
+	jp	z,comlin
+	cp	'*'
+	jr	z,name?3
+	call	upper
+	ld	(hl),a
+	inc	hl
+	ld	a,l
+	cp	fcb+12
+	jr	c,name9
+	jp	comlin
+name?8:	ld	(hl),'?'
+	inc	hl
+	ld	a,l
+	cp	fcb+9
+	jr	nz,name?8
+	jr	name6
+name?3:	ld	(hl),'?'
+	inc	hl
+	ld	a,l
+	cp	fcb+12
+	jr	c,name?3
+	jp	comlin
+
+
+; ** GO **
+
+go:	call	getwrd
+	inc	a
+	jp	z,error
+	ld	(go_jmp+1),hl
+	ld	de,(1)
+	ld	hl,go_ret
+	xor	a
+	sbc	hl,de
+	jrhlz	go_5
+	ld	(reset_adres),de
+go_5:	ld	hl,go_ret
+	ld	(1),hl
+	call	reg_load
+go_jmp:	jp	0
+
+go_ret:	ld	(reg_sp@),sp
+	call	reg_save
+	ld	hl,(reset_adres)
+	ld	(1),hl
+go_re2:	pop	hl		; if RST 00h
+	push	hl
+	dec	hl
+	ld	a,(hl)
+	cp	0c7h
+	jr	nz,go_re3
+	pop	hl
+	ld	(reg_sp@),sp
+go_re3:	or	a		; if RET
+	ld	hl,(stack_top)
+	sbc	hl,sp
+	jr	nz,go_end
+	push	hl
+go_end:	jp	reg_view
+
+
+; ** UNASM **
+
+unasm:	call	getwrd
+	inc	a
+	jr	nz,unasm1
+	ld	hl,(adres)
+unasm1:	ld	bc,(print_line-1)
+unasm2:	push	bc
+	call	unasm_main
+	pop	bc
+	djnz	unasm2
+	ld	(adres),hl
+	jp	comlin
+
+
+; ** TRACE **
+
+trace:	call	getwrd
+	inc	a
+	jr	nz,trace2
+	ld	hl,(adres_prog)
+trace2:	push	hl
+	call	unasm_main
+	pop	hl
+	push	hl
+	call	get_codelen
+	pop	hl
+	bit	7,b
+	jp	nz,comlin
+	ld	c,b
+	ld	de,trace_program+3
+	xor	a
+	ld	b,3
+trace3:	ld	(de),a
+	dec	de
+	djnz	trace3	; B:0,DE:trace_program
+	ldir
+	ld	(adres_prog),hl
+	ld	(adres),hl
+	ld	de,(trace_program)
+	ld	a,e
+	samejp	010h,trace_djnz
+	samejp	018h,trace_jr
+	samejp	0c3h,trace_jp
+	samejp	0c9h,trace_ret
+	samejp	0cdh,trace_call
+	samejp	0e9h,trace_jphl
+	samejp	0ddh,trace_jpxy
+	samejp	0fdh,trace_jpxy
+	and	0e7h
+	samejp	020h,trace_jrcc
+	and	0c7h
+	samejp	0c2h,trace_jpcc
+	samejp	0c4h,trace_callcc
+	samejp	0c0h,trace_retcc
+	samejp	0c7h,trace_rst
+
+trace6:		call	reg_load
+trace_program:	defs	4
+		call	reg_save
+trace_return:	ld	(reg_sp@),sp
+		jp	comlin
+
+trace_jpxy:
+	ld	a,d
+	cp	0e9h
+	jr	nz,trace6
+	ld	ix,(reg_area+ 8)
+	ld	iy,(reg_area+18)
+	ld	a,e
+	ld	(traxy2),a	; DD or FD > ix,iy
+traxy2:	push	ix
+trace_ret:
+	pop	hl
+trace9:	ld	(adres_prog),hl
+	ld	(adres),hl
+	jr	trace_return
+
+trace_retcc:
+	ld	a,e
+	or	002h
+	ld	(tracc3),a
+	getaf
+tracc3:	jp	nz,trace_ret
+	jr	trace_return
+
+trace_rst:
+	ld	a,e
+	and	038h
+	ld	hl,(adres_prog)
+	push	hl
+	ld	l,a
+	ld	h,0
+	jr	trace9
+
+trace_jpcc:
+	ld	a,e
+	xor	08h
+	ld	(tracc2),a
+	getaf
+tracc2:	jp	nz,trace_return	; jp (not)cc,...
+trace_jp:
+	ld	hl,(trace_program+1)
+	jr	trace9
+trace_jphl:
+	ld	hl,(reg_area+6)
+	jr	trace9
+
+trace_jrcc:
+	ld	a,e
+	ld	(tracc1),a
+	getaf
+tracc1:	jr	nz,trace_jr	; jr cc,...
+	jr	trace_return
+trace_djnz:
+	ld	hl,reg_area+3	; B
+	dec	(hl)
+	jr	z,trace_return
+trace_jr:
+	rlc	d
+	sbc	a,a	; A=0or255
+	rrc	d
+	ld	e,d
+	ld	d,a
+	ld	hl,(adres_prog)
+	add	hl,de
+	jr	trace9
+
+trace_callcc:
+	ld	a,e
+	and	038h
+	xor	008h
+	or	0c2h
+	ld	(tracc4),a
+	getaf
+tracc4:	jp	nz,trace_return
+trace_call:
+	ld	hl,(adres_prog)
+	push	hl
+	ld	hl,(trace_program+1)
+	jr	trace9
+
+
+; ** REG **
+
+register:
+	ld	a,(de)
+	inc	de
+	or	a
+	jp	z,reg_view
+	cp	' '
+	jr	z,register
+	or	32
+	ld	hl,reg_area
+	ld	b,'f'
+	regmac	b,reg_8
+	regmac	'a',reg_1a
+	regmac	'c',reg_8
+	regmac	'b',reg_16
+	regmac	'e',reg_8
+	regmac	'd',reg_16
+	ld	b,'l'
+	regmac	b,reg_8
+	regmac	'h',reg_1a
+	inc	hl
+	cp	'i'
+	jr	z,reg_xy
+	cp	's'
+	jr	z,reg_sp
+	jp	error
+
+reg_sp:	ld	a,(de)
+	inc	de
+	or	32
+	cp	'p'
+	jp	nz,error
+	call	getwrd
+	inc	a
+	jp	z,error
+	ld	(reg_sp@),hl
+	ld	sp,hl
+	jp	comlin
+
+reg_16:	ld	b,a
+	inc	b
+reg_1a:	ld	a,(de)
+	or	32
+	cp	b
+	jr	nz,reg_8
+	inc	de
+	call	regsub
+reg_w:	ld	a,h
+	ld	(bc),a
+	dec	bc
+	ld	a,l
+	ld	(bc),a
+	jp	comlin
+
+reg_8:	call	regsub
+	ld	a,h
+	or	a
+	jp	nz,error
+	ld	a,l
+	ld	(bc),a
+	jp	comlin
+
+reg_xy:	ld	a,(de)
+	inc	de
+	or	32
+	cp	'x'
+	jr	z,reg_i2
+	ld	bc,10
+	add	hl,bc
+	cp	'y'
+	jp	nz,error
+reg_i2:	call	regsu2
+	jr	reg_w
+
+regsub:	ld	a,(de)
+	cp	27h
+	jr	nz,regsu2
+	inc	de
+	ld	bc,10
+	add	hl,bc
+regsu2:	push	hl
+	call	getwrd
+	pop	bc
+	inc	a
+	ret	nz
+	pop	bc	; kill stack
+	jp	error
+
+
+; ** FILL **
+
+fill:	call	get_range
+	push	bc
+	 push	hl
+	  call	getwrd
+	  inc	a
+	  jr	nz,fill1
+fill0:	  ld	l,0
+fill1:	  ld	a,l	; C
+	 pop	bc	; bc:B-A
+	pop	hl	; hl:A
+	ld	(hl),a
+	ld	d,h
+	ld	e,l
+	inc	de
+	ldir
+	jp	comlin
+
+
+; ** DUMP **
+
+dump:	call	getwrd
+	inc	a
+	jr	z,dump2	; no start addres
+	push	hl
+	call	getwrd
+	pop	de
+	ld	b,8
+	inc	a
+	jr	z,dump1	; no end addres
+	xor	a
+	sbc	hl,de
+	jp	c,error
+	ld	a,l
+	rr	h
+	rra
+	rr	h
+	rra
+	rr	h
+	rra
+	rr	h
+	rra
+	ld	b,a
+	inc	b
+dump1:	ex	de,hl
+	jr	dumplp
+dump2:	ld	hl,(adres)
+dump3:	ld	b,8
+dumplp:	push	bc	; dump main loop
+	ld	a,h
+	call	puthex	; put addres-high
+	ld	a,l
+	call	hexspc	; put addres-low
+	call	putspc
+	push	hl
+	ld	b,16
+dump5:	xor	a
+	ld	a,(hl)
+	call	hexspc
+	inc	hl
+	djnz	dump5
+prtchr:	ld	b,16
+	pop	hl
+	ld	de,chrwrk
+dump7:	ld	a,(hl)
+	cp	32
+	jr	c,dump7a
+	cp	127
+	jr	nz,dump7b
+dump7a:	ld	a,'.'
+dump7b:	ld	(de),a
+	inc	de
+	inc	hl
+	djnz	dump7
+	call	putspc
+	ld	de,chrwrk
+	ld	b,16
+	call	putstr	; put charactor
+	call	putret
+	pop	bc
+	djnz	dumplp
+	ld	(adres),hl
+	jp	comlin
+
+
+; ** MOVE **
+
+move:	call	get_range
+	push	hl
+	push	bc
+	call	getwrd
+	ex	de,hl	; de = addres2
+	pop	hl	; hl = addres1
+	pop	bc	; bc = long
+	inc	a
+	jp	z,error	; no addres2
+	push	hl
+	or	a
+	sbc	hl,de
+	pop	hl
+	jr	c,move2	; addres1 < addres2
+	ldir
+	jp	comlin
+move2:	add	hl,bc
+	dec	hl
+	ex	de,hl
+	add	hl,bc
+	ex	de,hl
+	dec	de
+	lddr
+	jp	comlin
+
+
+; ** COMPARE **
+
+comp:	call	get_range
+	push	hl
+	push	bc
+	call	getwrd	; HL:object
+	pop	de	; DE:sourece
+	pop	bc	; BC:length
+	inc	a
+	jp	z,error
+complp:	ld	a,b
+	or	c
+	jp	z,comlin
+	ld	a,(de)
+	inc	de
+	cpi
+	jp	z,complp ; same
+	ex	de,hl
+	call	putwrd
+	ex	de,hl
+	ld	a,':'
+	call	putch
+	dec	de
+	ld	a,(de)
+	inc	de
+	call	puthex
+	call	putspc
+	call	putch
+	dec	hl
+	ld	a,(hl)
+	inc	hl
+	call	puthex
+	ld	a,':'
+	call	putch
+	call	putwrd
+	call	putret
+	jr	complp
+
+
+; ** SEARCH **
+
+search:	call	get_range
+	push	hl	; length
+	push	bc	; start addres
+	 ld	bc,chrwrk+1
+	 xor	a
+sear1:	 push	af
+	  call	getwrd	; get value
+	  inc	a
+	  jr	z,sear2	; no more
+	  ld	a,h
+	  or	a
+	  jp	nz,error ; over 255
+	  ld	a,l
+	  ld	(bc),a
+	  inc	bc
+	 pop	af
+	 inc	a
+	 jr	sear1
+sear2:	 pop	af	; string
+	 or	a
+	 jp	z,error	; no data
+	 ld	(chrwrk),a
+sear3:	 pop	hl	; addres
+	pop	bc	; length
+	ld	a,c
+	or	b
+	jr	z,sear9
+	ld	de,chrwrk+1
+	ld	a,(de)	; first byte
+	cpir
+	jr	nz,sear9	; not found
+	push	bc
+	 push	hl
+	  dec	hl
+	  ld	bc,(chrwrk)
+	  ld	b,0
+sear4:	  ld	a,(de)
+	  inc	de
+	  cpi
+	  jr	nz,sear3	; diffarent
+	  jp	pe,sear4
+sear5:	 pop	hl
+	 dec	hl
+	 ld	a,h
+	 call	puthex
+	 ld	a,l
+	 call	puthex
+	 ld	a,'h'
+	 call	putch
+	 call	puttab
+	 inc	hl
+	 push	hl
+	 jr	sear3
+sear9:	call	putret
+	jp	comlin
+
+
+

@@ -1,0 +1,187 @@
+
+Ausschluáerkl„rung:
+Der  Autor dieses Programmes bernimmt keinerlei Gew„hr der Eignung  dieser  -
+Software fr einen bestimmten Verwendungszweck noch fr irgendwelche  Sch„den, 
+gleich  welcher Art, die durch die Verwendung dieser Software  eventuell  auf-
+treten k”nnten.
+
+
+PHYSCOPY.COM  ist ein Sektorkopierprogramm fr MSXDOS(2). Diese Anleitung  er-
+l„utert die Version 1.16, alle vorhergehenden Versionen werden ab sofort nicht 
+mehr untersttzt. Ferner weise ich darauf hin, daá dieses Programm nicht  ohne 
+Zustimmung  des Autors kommerziell vertrieben werden darf. Die  Weitergabe  an 
+Mitglieder  des  SVI/MSX Computerclubs ist gestattet, sofern  diese  Anleitung 
+mitgegeben und die Copyrightnotiz im Programmes nicht ver„ndert wird.
+
+
+Aufruf:
+PHYSCOPY <SOURCEDRIVE:> <DESTINATIONDRIVE:> [/FORMAT /1../3] [/M] [/X]
+
+Formatparameter und gleichzeitig die zur Zeit untersttzten Diskettenformate:
+
+/1 = Einseitige      3«" 360K Diskette 891 MediaID F8
+/2 = Doppelseitige   3«" 720K Diskette 892 MediaID F9
+/3 = Doppelseitige   5¬" 360K Diskette 492 MediaID FD (SVI 707)
+
+Wenn  kein Formatparameter in der Kommandozeile vorhanden ist,  dann  versucht 
+das  Programm die Disketten, mittles der MSXDOS Funktion 1Bh, zu  identifizie-
+ren.  Es  werden aber auch dann nur die oben  genannten  Diskettenformate  un-
+tersttzt.
+
+Andere optionale Kommandozeilenparameter:
+-----------------------------------------
+
+/M   Mapper benutzen, falls einer da und frei ist. Ansonsten wird nur die  ge-
+samte freie TPA als Kopierbuffer benutzt. Das Programm benutzt bei eingesteck-
+ten MSXDOS2-Cartridge die DOS2-Mapperroutinen.
+
+/X    Sofort nach Programmstart mit dem Kopieren beginnen ohne Gelegenheit  zu 
+einen eventuellen Diskwechsel.
+
+Beispiele:
+----------
+
+PHYSCOPY A: B:
+
+Kopiert  eine  Diskette von A: nach B:, hierbei versucht PHYSCOPY  das  Format 
+selbst  zu  ermitteln. Falls es sich um unter MSXDOS nicht  lesbare  Disketten 
+handelt  (z.B. kein ID-Byte) steigt das Programm mit  einer  DOS-Fehlermeldung 
+aus (z.B. Unsupported Media Type Error oder Not a DOS-Disk).
+
+PHYSCOPY A: B:/2
+
+Kopiert eine doppelseitige 3«" 720K Diskette von Laufwerk A: nach B:.  Hierbei 
+findet  keinerlei  Formatberprfung  statt. Der Anwender muá  wissen  was  er 
+macht.
+
+PHYSCOPY A: B:/M/2
+
+Kopiert  ebenfalls eine doppelseitige 3«" Diskette von A: nach B: siehe  oben. 
+Allerdings wird hier mittels /M die Benutzung des Mappers erbeten.
+
+PHYSCOPY A: B:/3/M/X
+
+Kopiert  eine 5¬" Diskette im 707-Format von A: nach B:, mittels /X  wird  das 
+Programm  angewiesen  sofort mit dem Kopieren anzufangen und  nicht  erst  ir-
+gendwelche Diskwechsel abzuwarten.
+
+PHYSCOPY B:
+
+Kopiert von B: zum Defaultdrive. Aufruf fr Tippfaule.
+
+
+
+Allgemeines:
+------------
+Auf vielfachen Wunsch aus den Reihen der SONY HB-F700 Besitzer habe ich  PHYS-
+COPY jetzt, neben anderen Verbesserungen, mit Mapperroutinen ausgestattet. Der
+Kopiergeschwindigkeit ist das, auf obigen Rechnermodellen, ganz gut  bekommen. 
+Bei  Rechnern  mit zwei Diskettenlaufwerken und einem  vernnftigen  Diskbasic 
+(das  900er ist es in Punkto Tempo bei Multisektortransfer nicht!) ist es  al-
+lerdings,  nach wie vor, empfehlenswert die Mapperbenutzung zu vermeiden.  Wer 
+es nicht glaubt, ein Blick auf die Stopuhr wirkt vielleicht berzeugender.
+
+Unter  DOS1  muá  der Mapper so initialisiert sein  wie  es  der  MSX-Standart 
+vorschreibt.  Zur Erinnerung Port FCh=03,FDh=02,FEh=01,FFh=00. Dies  ist  nach 
+dem Einschalten oder Reset auf MSX2(+) Maschinen immer gew„hrleistet. Bei MSX1 
+Rechnern mit Mapperspeicher, wer weiá?
+Das  Programm greift NICHT lesend auf die Mapperports zu um die korrekte  Map-
+perstellung  zu  prfen, dies geschieht mit Rcksicht  auf  eventuelle  andere 
+Mapper  im Rechner. Beim SONY 700 zb. fhrt das Lesen der Mapperports bei  ex-
+ternen Mapperspeicher ber 512K, unter Umst„nden, zu fr die  Rechnerhardware, 
+kritischen  Buskonflikten. Daher ist es dem Anwender berlassen fr eine  kor-
+rekte Mapperstellung zu sorgen. Falls das Paket noch komplett sein sollte, ist 
+noch  ein Programm namens SETMAP.COM dabei. Dieses Programm setzt  den  Mapper 
+ohne Reset wieder gerade.
+
+Falls man noch irgendwelche Speicherresidenten Utilitys wie z.b. Freekick oder 
+den  SONY-Ramdisktreiber,  der nicht vom Club bearbeitet wurde, nutzt  ist  es 
+ebenfalls nicht unkritisch den Mapper zu benutzen.
+Also,  im Zweifel /M weglassen. Unter DOS1 wird der Mapper nicht benutzt  wenn 
+in  der  Speicherstelle  SLTWRK  (FD09h) Bit 5  gesetzt  ist.  Dies  ist  eine 
+Clubinterne Vereinbarung um zu signalisieren, daá der Mapper unter DOS1  nicht 
+mehr frei ist.
+
+Wer meint, er msse unter MSXDOS2 unbedingt den Mapper benutzen, sollte  viel-
+leicht  wissen, daá dann die TPA keinesfalls als Buffer fr  PHYSCOPY  benutzt 
+wird.  Sondern nur die freien Mappersegmente auch wenn nur eines mit 16K  frei 
+ist. In diesen Falle also auch /M weglassen oder die RAMDISK verkleinern  bzw. 
+entfernen.
+Im  Gegensatz  zu  den  DOS1 Mapperroutinen wird hier  der  ganze  freie  Map-
+perspeicher in ALLEN Slots benutzt (max. 720K). Unter DOS1 wird lediglich  der 
+TPA-Mapper  genutzt.  Fr externe Mapper besteht unter  MSXDOS1  leider  keine 
+M”glichkeit festzustellen ob dieser Speicher noch frei benutzbar ist.
+
+Die  MSXDOS2  Ausfhrungen gelten auch unter MSXDOS1 mit  eingestecktem  DOS2-
+Cartridge!!
+
+
+Falls  beim Kopieren ein Diskerror auftritt ert”nt der Rechnerpieps und  PHYS-
+COPY   setzt  beim  n„chsten  nutzbaren  Sektor  wieder  auf.  Ausnahme,   der 
+Schreibschutz  auf der Zieldiskette ist gesetzt, dann bricht das Programm  mit 
+einer Fehlermeldung ab.
+Am  Programmende wird noch mal eine Liste der eventuell aufgetretenen  Disket-
+tenfehler ausgegeben.
+
+Das Diskettenformat der Quell- und der Zieldiskette muá bereinstimmen. 
+Ausnahme: 
+Einseitige  3«"  360K Diskette auf Doppelseitige 3«" 720K Diskette  (die  wird 
+dann automatisch, aus der Sicht des Rechners, zu einer Einseitigen).
+
+Es werden KEINE Formatprfungen auf den Disketten vorgenommen wenn man in  der 
+Kommandozeile einen Formatparameter bergeben hat!
+Dadurch ist es m”glich, Disketten ohne ID-Informationen zu vervielf„ltigen die 
+mit  den  normalen DOS-Befehlen nicht zu kopieren sind. Das  heiát  allerdings 
+noch  lange nicht, das es damit m”glich ist, kopiergeschtzte Disketten  lauf-
+f„hig zu kopieren.
+
+Falls  man einen Kopierlauf frhzeitig beenden will, CTRL-C  solange  gedrckt 
+halten  bis der DOS-Prompt kommt. Von PHYSCOPY belegte  Mappersegmente  werden 
+unter  DOS2 trotzdem freigegeben und bei DOS1 wird der Mapper wieder auf  Ein-
+schaltwerte gestellt.
+
+Abschluábemerkungen:
+====================
+
+Kaum  war  dieses Programm fertiggestellt, kam schon das  erste  Gen”rgel  von 
+diversen Leuten (sie hatten das Programm noch nicht gesehen oder gar benutzt).
+"Kann  man das nicht so machen, daá ich in meine Megabyte  Speichererweiterung
+eine komplette Diskette reinladen kann und dann beliebig viele Kopien aus  dem
+Speicher ziehen kann?"
+
+Klar  k”nnte  man.  Nur wieso sollte ich  kommerzielles  (Raub?)-Kopieren  un-
+tersttzen?  Und dann auch noch zum Nulltarif. Wer meint ein  solches  Feature 
+sei  dringend  erforderlich, kann mit einem entsprechenden  Geldangebot  sowie 
+Bereitstellung der erforderlichen Hardware bei mir anfragen.
+
+Ich  habe  zwar versucht das Programm fehlerfrei zu erstellen, aber  bei  ber 
+1000 Zeilen Assemblerquelltext máte, nach Murphy, noch mindestens ein  Fehler 
+drinsein. Wer ihn findet oder mir gar was Spenden m”chte, kann sich unter fol-
+gender Adresse melden:
+
+
+	Rolf Witt
+	Herderstr. 38
+        D-4600 Dortmund 1
+
+oder via PC-NET
+      
+	ROWI;FORUM (0231 - 35 60 30)
+	ROWI;PENTA (0234 - 41 22 40)
+
+                                 ***  EOF ***     
+Neuerungen bei der Version 1.17b:
+
+o Der optionale Kommandozeilenparameter /C weist PHYSCOPY an, den Kommando-
+  interpreter (COMMAND.COM) unter MSXDOS1 unbesch„digt im Speicher zu lassen.
+  Bei DOS2 keine Wirkung.
+
+o Der Programmabruch ist jetzt auch mit der ESC-Taste m”glich.
+
+o Bei der Benutzung des Mappers wird jetzt die Gr”áe des von PHYSCOPY benutzten
+  Mapperspeichers in KBytes ausgegeben.
+
+o Der Fehler, daá unter MSXDOS2 bei mehr als 720KB Mapper das Programm abstrzt
+  ist behoben.
+
+                  

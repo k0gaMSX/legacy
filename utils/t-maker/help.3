@@ -1,0 +1,451 @@
+	                 	              	              	                                                                                                                                                                                                                                                           
++ 1 DB
+               *  Relational DataBase Management Help Menu  *
+ 
+ 
+ 
+            Commands                                    Starting Out
+     .........................         .....................................
+     |  UPDATE     ORDER     |         |  DBM     ||  DataBase Management  |
+     |  SELECT     GROUP     |         |  RECORD  ||  Record Definition    |
+     |  SET        COMPLETE  |         |  FORM    ||  Form   Definition    |
+     |.......................|         |  RULES   ||  Rules  Definition    |
+                                       |  EQ      ||  Rule  Equations      |
+                                       |..........||.......................|
+ 
+ 
+     Getting Around A DataBase                     Other Stuff
+.....................................  .....................................
+|  DBKS  || DataBase Keystrokes     |  |  CDB    || Changing DB Structure  |
+|  RR    || Revising Records        |  |  RG     || Report Generation      |
+|  SE    || Searching a DataBase    |  |  LINK   || Linking DataBases      |
+|........||.........................|  |.........||........................|
++ 1 UPDATE
+1/1 WHAT NEXT?  <UPDATE>
+ 
+ 
+UPDATE  is  used to input or revise information into a database.
+ 
+UPDATE will allow you to use almost all of your standard editing
+keystrokes only in the areas as defined in the FORM  and  RECORD
+DEFINITION -that is, in the FIELD areas between the {  and   } .
+ 
+ 
+ 
+<CTRL-Q> (<SELECT>)   Exit T/Maker UPDATE Editor
+ 
+ 
+ 
+ 
+Warning:  T/Maker will not automatically  save your  update.  To
+SAVE your UPDATE session, leave the editor and type: SAVE
++ 2 DBM
+A DATABASE is nothing more than a structured way of storing information, and
+is very similar to a filing cabinet.
+ 
+We  will use  the  EDIT  command  to  build  our  electronic  filing system.
+ 
+After our electronic filing cabinet "structure" is built,  we'll use  UPDATE
+to enter  &  view information in file records.
+ 
+............................................................................
+ 
+A  T/Maker database is made up of many RECORDS.
+ 
+1) The RECORD DEFINITION describes the information you wish to file & store-
+   an "example" record of sorts. (Pieces of information are called "fields".)
+ 
+        * Every database must have a Record Definition.
+ 
+2) A FORM DEFINITION allows you to personally create Record-viewing screens.
+ 
+3) A RULES DEFINITION allows you to perform math on and between data fields.
++ 2 RECORD
+RECORD DEFINITION    ( How Information is stored within T/Maker )
+ 
+ 
+*  A  Record Definition always begins with ... <RECORD>
+                    and always ends   with ... <END>
+ 
+*  " Fields " are placed in between these two markers.
+   A  Record Definition  can contain up to 100  different Fields.
+ 
+                             *  "Fields" are surrounded by BRACES
+..........................      and are up to 80 characters wide.
+|Example: Address Record |
+|........................|   *  Every line begins with a  unique,
+|<RECORD>                |      two digit line label or number.
+|01 {lastname         }  |
+|02 {firstname        }  |   *  Every line in a Record Def'n gets
+|03 {address          }  |      a line label, even blank lines.
+|04 {zip}                |
+|<END>                   |
+|........................|     (See  FIELDS for more on Fields)
++ 2 FORM
+FORM DEFINITION   ( How Information is viewed on the screen )
+ 
+ 
+While the Record Definition describes the basic storage layout of information,
+the  FORM DEFINITION  allows us to present  our  Records  on the screen in any
+order, manner, and design we wish.
+ 
+ 
+*  A Form Definition always begins  with ...  <FORM>
+                  and  always ends  with ...  <END>
+ 
+*  Fields can be placed  anywhere  on the screen.
+ 
+*  A FORM can be a maximum of:   80 characters wide and 24 rows long.
+ 
+*  You can attach up to  7  different  FORMS to one database.
+ 
+*  A Form Definition is defined before the Rules and Record Definitions.
+ 
+*  You can insert as much "design-text" as you wish.
++
+<FORM>
+......................... EXAMPLE ADDRESS CARD ........................
+ 
+ Last Name: {lastname }   FirstName: {firstname}
+ 
+ Address: {address             }
+ 
+ City: {city                }     State: {state}    Zip Code: {zip}
+.......................................................................
+<END>
+ 
+<RECORD>
+01 {lastname }
+02 {firstname}
+03 {address             }
+04 {city                }
+05 {state}
+06 {zip}
+<END>
++ 2 RULES
+RULES DEFINITION  ( Math Relationship between fields )
+ 
+ 
+We can turn our database in to a  type of  "spreadsheet"  by defining
+"RULES" between different FIELDS in our database.
+ 
+The RULES DEFINITION expresses the relationships that we want to SET.
+ 
+The SET command "sets" the RULES in motion.
+                                                  A RULES DEFINITION:
+...................................
+| Example: Calculating Sales Tax  |    * Always begins with...<RULES>
+|.................................|
+|<RULES>                          |    * Always ends   with ...<END>
+|Tax = (Quantity * Price) * 0.065 |
+|Total = (Quantity * Price) + Tax |    * Always is defined:
+|<END>                            |        Before a Record Definition
+|.................................|        After  a Form Definition.
+ 
+  (See SET for more on command; See EQ for more on Rules Equations)
++ 2 EQ
+RULE EQUATIONS
+ 
+ 
+A  "RULE"  will  define  or  calculate  the  value  of  a  Field  in relation
+to other Fields in a database.  A rule is "SET" in motion by the SET command.
+ 
+Defining  a  "relationship"  is  just like  writing  a  simple  (or  complex)
+formula on a chalkboard.
+ 
+        *  The following operators may be used for Rule Equations  *
+.............................................................................
+ +   addition        |   <   less than     |   <=   less  than  or  equal to
+ -   subtraction     |   >   greater than  |   >=   greater than or equal to
+ *   multiplication  |   =   equal to      |
+ /   division        |  <>   not equal to  |
+.....................|.....................|.................................
+  contains    e.g. "the" contains "h"    |   not    logical "not"
+  within      e.g. "h" within "the"      |   and    logical "and"
+  among       e.g. "A" among " A  B"     |   or     logical "or"
+.........................................|...................................
++ 3 WHEN
+WHEN STATEMENTS
+ 
+A WHEN statement allows you to "selectively" calculate database
+RULES "if" certain conditions or criteria are met.
+ 
+The WHEN condition is the "situation" that  must be  "true"  in
+order to carry out the first part of the equation.
+ 
+ 
+<RULES>
+   Price 9,999.99 = Price
+   Tax = (Qty * Price) * 0.065   WHEN State =  CA
+   Tax = 0                       WHEN State <> CA
+   Total 999,999 = (Qty * Price) + Tax + Shipping
+   Comment = "Great Sale!"  WHEN Total > 1000
+<END>
+ 
+ 
+NOTES: That we can specify "format" and "accuracy" of numerical
+       fields by putting a "Model Number" after the field name.
++ 2 SET
+1/1 WHAT NEXT?   <SET>
+ 
+ 
+ 
+ 
+SET "sets" in motion the numeric or character equations as defined
+in the RULES DEFINITION.
+ 
+ 
+ 
+ 
+ 
+            ( See  RULES  for Rules Examples )
++ 2 FIELDS
+DATABASE FIELDS
+ 
+A FIELD is a piece of information.  It is defined by a FIELD NAME
+surrounded  by  BRACES.
+ 
+Field Justifiers can be placed anywhere between the  {  and   } .
+.....
+| > |  Defines  numerical field  and is right justified.
+| < |  Defines  character field  and is left  justified.
+| - |  This symbol will  center  information in a field.
+|...|
+If you do not specify a field "type", the default is:
+ 
+(1) a char field,   or  (2) To the previously defined field type.
+ 
+Examples:
+ 
+{<lastname}     is char field for last name and is 10 chars wide.
+ 
+{>total}    is numeric field for value total and is 8 chars wide.
++ 2 DBKS
+* T/MAKER DATABASE KEYSTROKES *
+ 
+<ESC>  >  (<F5>)      Insert Record
+<ESC>  <  (<SFT-F5>)  Delete Record
+ 
+<ESC> <up>            Record Up
+<ESC><down>           Record Down
+ 
+<ESC> A (<ESC> T)     Move to First Record
+<ESC> Z (<ESC> B)     Move to Last  Record
+ 
+<CTRL-P> (<F4>)       Advance to Next Word
+<TAB>                 Advance to Next Field
+<ESC> <TAB>           Previous Field
+ 
+<RETURN>              First Field, Next Line
+<ESC> <RETURN>        Next Record, First Field
++
+CHANGING SCREEN FORMS
+ 
+You can display data with up to 7 different types of Screen Forms.
+ 
+<ESC> <F>    Scrolls through each Form Definition.
+ 
+................................................
+|<FORM>                                        |   * Example: Name Entry *
+|       Form 1: Enter First Name: {firstname}  |
+|<END>                                         |     In UPDATE Mode, type:
+|                                              |
+|<FORM>                                        |     [ESC] F to view FORM 2,
+|       Form 2: Enter Last Name : {lastname }  |     [ESC] F to return to 1.
+|<END>                                         |
+|                 .............................|
+|<RECORD>         |
+|01 {firstname}   |
+|02 {lastname }   |
+|<END>            |
+|.................|
++ 2 RR
+*  INSERTING & DELETING & MOVING & COPYING RECORDS  *
+ 
+ 
+<ESC>  > (<F5>)      Insert A Record  (Inserts a blank Record)
+ 
+ 
+<ESC>  < (<SFT-F5>)  Delete A Record  (Deletes the currently displayed Record)
+ 
+ 
+<CTRL-F> (<SFT-F1>)  Copy to the Buffer
+                                             NOTE:
+                                                The Buffer will only
+<CTRL-G> (<SFT-F2>)  Move to the Buffer         hold  one   complete
+                                                record.   Also,  the
+                                                Buffer automatically
+<CTRL-D> (<SFT-F3>)  Insert (Dump) Buffer       empties   when   you
+                                                exit the UPDATE mode.
+ 
+<CTRL-C> (<SFT-F4>)  Clear Buffer
++ 2 SE
+SEARCHING A DATABASE
+ 
+ 
+ 
+<ESC> ' (<ESC> <SFT-F1>)   Search for a string
+ 
+ 
+<ESC> & (<ESC> <SFT-F2>)   Continue the search
+ 
+ 
+ 
+ 
+ 
+Note:  Always Home the Screen before searching a database.
++ 2 SELECT
+1/1 WHAT NEXT?   <SELECT>
+ 
+SELECT  allows  you to extract particular information from  a  database.
+ 
+ Options:
+   *  FILE-NAME  (or choose IT when SELECTing from  current work space.)
+   *  LIST       (To list all  possible Field Names you can  SELECT  on).
+   *  WHEN       (SELECT conditionally - that is, using WHEN statement.)
+ 
+                 ( See help topic WHEN for more information.)
+............................................................................
+Example:
+ 
+1/1 WHAT NEXT?    SELECT IT WHEN REGION = West and REVENUES > 5500 END
+ 
+ 
+NOTE:  SELECT "cuts out" the un-SELECTED records from current work space.
+Therefore,  never  do a SAVE after a SELECT unless you RENAME the current
+work space first (else you will lose the "temporarily" discarded Records).
++ 2 CDB
+CHANGING A DATABASE
+ 
+ 
+Accomplish changes to the structure of a database by using the SELECT Command.
+ 
+ 
+    Step-by-Step:
+ 
+1)  Make sure you have the database SAVEd on disk.
+ 
+2)  GET database file and jump into the editor.  Make appropriate
+    changes to the  Record Definition  and  Forms Definition.
+ 
+3)  Move your cursor to the <END> line of  Record Definition, and
+    Exit the Editor.   ( <END>  should be at Top of your Screen.)
+ 
+4)  Type:    CLIP AFTER  1/1
+ 
+5)  Type:    SELECT (filename) END
++ 2 RG
+REPORT GENERATION
+ 
+ 
+ 
+* Set up report as a Record Definition.(These reports don't take up much space)
+ 
+* Make sure all field names in all Record Definitions match exactly.
+ 
+* Use the SELECT command to  select the information from an existing
+  database into your "custom-made" report.
+ 
+ 
+ 
+ 
+NOTE:   The resulting report should be RENAMEd and SAVEd if you want
+        to use the report "mask" to create future reports.
++ 2 LINK
+LINKING DATABASES
+ 
+ 
+You can "link" identical  databases together with the <CONTINUE> filename
+option.  With the CONTINUE, you can SELECT and COMPLETE across databases.
+ 
+      *  Database Record Definitions must be identical.
+ 
+      *  The last line of each file will contain <CONTINUE> and the  name
+         of database that is next in line.
+ 
+ 
+ 
+Example:
+.....................
+|So this will be    |      To  "link"  DBASE1  and  DBASE2 together,
+|the end of this    |      at  the  end  of  DBASE1,    include  the
+|file.              |      <continue>  [filename to be continued to]
+|<CONTINUE> DBASE2  |      marker.
+|...................|
++
+ -----  LINKING CON'T
+ 
+To SELECT certain information from "linked" databases, type:
+ 
+ 
+1/1 WHAT NEXT?   SELECT (filename) when ...    to begin the process.
+ 
+ 
+(When using  SELECT  with  the  IT instead of specifying a filename,
+the  <CONTINUE>  request is ignored.)
+ 
+ 
+When you  SELECT across databases, the resulting database  or report
+MUST  fit in the  work  file.   If you  still need more  space,  try
+SELECTing in blocks.   Here's an example:
+ 
+ 
+ 1/1 WHAT NEXT?   SELECT (filename) from 1 to 100 when CITY = CA end
+ 
+                  SELECT (filename) from 101 to 200 when CITY = CA end
++ 2 ORDER
+1/1 WHAT NEXT?   <ORDER>
+ 
+ 
+ 
+Use ORDER to sort a database.
+ 
+ 
+ 
+T/Maker will prompt you for the following information:
+ 
+   ascending or descending?
+   numerical or characters?
+   field name?    (field to be "ordered" on)
+ 
+ 
+ 
+Because you can abbreviate these answers,  never  use
+A, D, N, or  C  as the name of a database Field.
++ 2 COMPLETE
+1/1 WHAT NEXT?   <COMPLETE>
+ 
+ 
+ 
+COMPLETE links information from two or more separate  database  files.
+It brings in  data  into the work file on the basis  of  a  KEY FIELD.
+ 
+ 
+If you have partial  data  in one file that can  be  "COMPLETED"  with
+the  data in another file, simply specify the name of that other file,
+and the key field that is common to both files.
+ 
+ 
+ 
+        ( See Reference Manual under "COMPLETE" for examples. )
++ 2 GROUP
+1/1 WHAT NEXT?   <GROUP>
+ 
+ 
+GROUP  summarizes data in a database work file and presents a report of
+its results.
+ 
+* For numerical values, GROUP will "total" the values in the key field.
+* For character values, GROUP will simply present the  key field label.
+ 
+GROUP on as many key fields as you wish. (LIST displays all keyfields.)
+ 
+ 
+Note:
+   Always RENAME a GROUP report if you intend to SAVE it, or else  you
+   will lose the database Records that made up the report.
+ 
+   Always enter names in the exact same way they are spelled.
+ 
+             ( See Reference Manual for GROUP Examples. )
+

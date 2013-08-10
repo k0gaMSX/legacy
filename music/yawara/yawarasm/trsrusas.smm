@@ -1,0 +1,205 @@
+;
+;                      TrsrUsas.SMM
+;
+;       "Treasure Of Usas" Source Game Music Module
+;
+; Version Amalthea-1-1 (1st Ver., 1st Release, 1st Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =TrsrUsas.SMM
+;   L80 TrsrUsas,TrsrUsas.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Treasure of Usas" cartridge mapping:
+;
+;    4000 5FFF                 6000     BFFF
+;   00000 01FFF               1A000     1FFFF
+;       |M|?|?|?|?|?|?|?|?|?|?|?|?|M|M|M|
+;   00000                               1FFFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '        Treasure of Usas        '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   0C200H
+GMPNam:db   'Yawara  C20'
+OpenMN:db   000H
+StrtSE:db   000H
+ChATDD:dw   0C01CH
+ChBTDD:dw   0C044H
+ChCTDD:dw   0C06CH
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'TrsUsas0Sc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'TrsUsas1Sc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00010010B
+
+SetupR:ret  nz
+       ld   hl,04000H
+       xor  a
+       ld   (hl),a
+       inc  hl
+       ld   (hl),a
+       ld   hl,0C000H
+       ld   de,0C001H
+       ld   bc,001FFH
+       ld   (hl),000H
+       ldir
+SilnRt:ld   a,(0569CH)
+       cp   03EH
+       ld   a,0C9H
+       jr   z,SilnR1
+       ld   (05446H),a
+       ld   (0546FH),a
+       jp   0567FH
+
+SilnR1:ld   (05465H),a
+       ld   (0548EH),a
+       jp   0569CH
+
+StMsRt:push hl
+       push de
+       push bc
+       push af
+       ld   a,(0569CH)
+       cp   03EH
+       jr   z,StMsR1
+       pop  af
+       jp   056EAH
+
+StMsR1:pop  af
+       jp   05707H
+
+PlayRt:jp   06000H
+
+GmBlNm:db   'TrsrUsas000'
+GmBlSz:dw   02000H
+LoadAd:dw   04000H
+GmBlN1:db   'TrsrUsas001'
+GmBlS1:dw   06000H
+LoadA1:dw   06000H
+       dw   0FFFFH
+MusicT:db   080H,'           80          '
+       db   081H,'           81          '
+       db   082H,'           82          '
+       db   083H,'           83          '
+       db   084H,'           84          '
+       db   085H,'           85          '
+       db   086H,'           86          '
+       db   087H,'           87          '
+       db   088H,'           88          '
+       db   089H,'           89*         '
+       db   08AH,'           8A*         '
+       db   08BH,'           8B          '
+       db   08CH,'           8C*         '
+       db   08DH,'           8D*         '
+       db   08EH,'           8E*         '
+       db   0FFH,0FFH
+EffctT:db   001H,'           01          '
+       db   002H,'           02          '
+       db   003H,'           03*         '
+       db   004H,'           04          '
+       db   005H,'           05          '
+       db   006H,'           06          '
+       db   007H,'           07*         '
+       db   008H,'           08          '
+       db   009H,'           09*         '
+       db   00AH,'           0A          '
+       db   00BH,'           0B          '
+       db   00CH,'           0C          '
+       db   00DH,'           0D          '
+       db   00EH,'           0E*         '
+       db   00FH,'           0F          '
+       db   010H,'           10          '
+       db   011H,'           11          '
+       db   012H,'           12          '
+       db   013H,'           13          '
+       db   014H,'           14          '
+       db   015H,'           15          '
+       db   016H,'           16          '
+       db   017H,'           17*         '
+       db   018H,'           18*         '
+       db   019H,'           19          '
+       db   01AH,'           1A          '
+       db   01BH,'           1B          '
+       db   01CH,'           1C*         '
+       db   01DH,'           1D          '
+       db   01EH,'           1E          '
+       db   01FH,'           1F          '
+       db   020H,'           20          '
+       db   021H,'           21*         '
+       db   022H,'           22*         '
+       db   023H,'           23*         '
+       db   024H,'           24*         '
+       db   025H,'           25          '
+       db   026H,'           26          '
+       db   027H,'           27          '
+       db   028H,'           28          '
+       db   029H,'           29          '
+       db   02AH,'           2A          '
+       db   02BH,'           2B          '
+       db   02CH,'           2C          '
+       db   02DH,'           2D          '
+       db   02EH,'           2E          '
+       db   02FH,'           2F          '
+       db   032H,'           32          '
+       db   033H,'           33          '
+       db   040H,'           40*         '
+       db   041H,'           41          '
+       db   042H,'           42          '
+       db   043H,'           43          '
+       db   044H,'           44          '
+       db   06BH,'           6B?         '
+       db   06CH,'           6C?         '
+       db   06DH,'           6D?         '
+       db   06EH,'           6E?         '
+       db   0FDH,'         Pause!        '
+       db   0FEH,'    --- continue ---   '
+       db   0FFH,'    --- fade out ---   '
+       db   0FFH,0FFH
+
+       end

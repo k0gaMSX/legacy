@@ -1,0 +1,2973 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ____        ____        _______________________       _____
+       j8888b      j8888b     .@88888888888888888888888b     j88887
+      j888888b    j888888b    @8888888888888888888888888b   j88887     2222
+     j88888888b  j88888888b   @888(                 v8888b j88887     2    2
+    j88887v8888bj88887v8888b  `@88888888888888@.     v8888v88887          22
+   j88887  v888888887  v8888b   "888888888888888@.   j8888Y8888b        22
+  j88887    v8888887    v8888b_____________)88888@  j88887 v8888b     22
+ j88887      v88887      v8888888888888888888888@' j88887   v8888b    222222
+j88887        v887        v8888888888888888888@'  j88887     v8888b
+~~~~~~        ~~~~        ~~~~~~~~~~~~~~~~~~~     ~~~~~~     ~~~~~~
+
+                            MSX-2 emulator for MS-DOS
+                                  version 1.0b
+                                  (c) 1996 CJS
+                               All rights reserved
+     TABEL OF CONTENTS
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     A LITTLE WORD FROM THE AUTHORS  . . . . . . . . . . . . . . . . .    1
+
+     REGARDING THE 1.0b RELEASE AND OTHER NEWS . . . . . . . . . . . .    2
+       Bugs fixed  . . . . . . . . . . . . . . . . . . . . . . . . . .    3
+       What's new  . . . . . . . . . . . . . . . . . . . . . . . . . .    3
+       Known bugs  . . . . . . . . . . . . . . . . . . . . . . . . . .    4
+       Not working (yet) . . . . . . . . . . . . . . . . . . . . . . .    5
+       Not emulated  . . . . . . . . . . . . . . . . . . . . . . . . .    5
+       Programs that don't work  . . . . . . . . . . . . . . . . . . .    5
+
+     LICENSE AGREEMENT . . . . . . . . . . . . . . . . . . . . . . . .    6
+
+     FILES IN THE PACKAGE: FILES.DOC . . . . . . . . . . . . . . . . .    7
+
+     WHY/HOW-TO REGISTER . . . . . . . . . . . . . . . . . . . . . . .    8
+       MSX-2 Emulator Registration Form  . . . . . . . . . . . . . . .    9
+
+     MSX-2 EMULATOR SUPPORT AND DISTRIBUTION . . . . . . . . . . . . .   10
+
+     WHERE TO GET MSX SOFTWARE AND INFORMATION . . . . . . . . . . . .   10
+       Bulletin Board Systems (BBS) in The Netherlands . . . . . . . .   10
+       Bulletin Board Systems (BBS) outside The Netherlands  . . . . .   11
+       InterNet  . . . . . . . . . . . . . . . . . . . . . . . . . . .   12
+       FidoNet . . . . . . . . . . . . . . . . . . . . . . . . . . . .   12
+       Clubs . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   12
+       Magazines . . . . . . . . . . . . . . . . . . . . . . . . . . .   14
+
+     QUICK REFERENCE SHEET . . . . . . . . . . . . . . . . . . . . . .   16
+
+     REQUIREMENTS, INSTALLATION AND STARTING THE EMULATOR  . . . . . .   17
+
+     System requirements . . . . . . . . . . . . . . . . . . . . . . .   17
+
+     Installation  . . . . . . . . . . . . . . . . . . . . . . . . . .   17
+       Starting the emulator . . . . . . . . . . . . . . . . . . . . .   18
+       Command line switches . . . . . . . . . . . . . . . . . . . . .   19
+       Notes on Expanded Memory Managers . . . . . . . . . . . . . . .   20
+         Using EMM386.EXE  . . . . . . . . . . . . . . . . . . . . . .   20
+         Using QEMM  . . . . . . . . . . . . . . . . . . . . . . . . .   20
+       Note on SHARE/FCBS= . . . . . . . . . . . . . . . . . . . . . .   20
+
+     CONFIGURATION FILES . . . . . . . . . . . . . . . . . . . . . . .   21
+       Drive mappings  . . . . . . . . . . . . . . . . . . . . . . . .   21
+
+     Keyboard mappings . . . . . . . . . . . . . . . . . . . . . . . .   21
+
+     Emulator defaults . . . . . . . . . . . . . . . . . . . . . . . .   21
+
+     THE CTRL-BREAK MENU . . . . . . . . . . . . . . . . . . . . . . .   22
+
+     THE (MSX) KEYBOARD  . . . . . . . . . . . . . . . . . . . . . . .   23
+       Mapping of MSX keys to the PC keyboard  . . . . . . . . . . . .   23
+       Additional key functions  . . . . . . . . . . . . . . . . . . .   24
+
+     DISK EMULATION  . . . . . . . . . . . . . . . . . . . . . . . . .   25
+       High and low level disk I/O . . . . . . . . . . . . . . . . . .   25
+       DOS 2.20 emulation  . . . . . . . . . . . . . . . . . . . . . .   25
+       MSX booting sequence & CTRL/SHIFT while booting . . . . . . . .   26
+       Booting MSX-DOS from harddisk . . . . . . . . . . . . . . . . .   26
+       Drive mappings: DRIVES.TBL  . . . . . . . . . . . . . . . . . .   26
+
+     SUPPORTED MSX FLOPPY DISK TYPES . . . . . . . . . . . . . . . . .   27
+
+     MSX EMULATOR SPECIFIC BASIC COMMANDS  . . . . . . . . . . . . . .   28
+
+     MSX EMULATOR SPECIFIC MSX-DOS COMMANDS  . . . . . . . . . . . . .   28
+
+     MSX EMULATOR SPECIFIC SYSTEM CALLS  . . . . . . . . . . . . . . .   29
+
+     MegaROM/SCC . . . . . . . . . . . . . . . . . . . . . . . . . . .   30
+       The /E command line switch  . . . . . . . . . . . . . . . . . .   30
+       Converting MegaROMs to files  . . . . . . . . . . . . . . . . .   30
+       Loading other ROM (files) . . . . . . . . . . . . . . . . . . .   31
+
+     NOTES . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   32
+
+     SOME IMPORTANT MSX-BASIC COMMANDS . . . . . . . . . . . . . . . .   33
+
+     UTILITIES IN THE MSX EMULATOR PACKAGE . . . . . . . . . . . . . .   34
+       MSXDUMP . . . . . . . . . . . . . . . . . . . . . . . . . . . .   34
+       SS2DS . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   34
+       MSXBOOT . . . . . . . . . . . . . . . . . . . . . . . . . . . .   34
+       GETROM.BAS  . . . . . . . . . . . . . . . . . . . . . . . . . .   34
+       SPLITROM.EXE  . . . . . . . . . . . . . . . . . . . . . . . . .   34
+
+     GETTINGS PROGRAMS TO WORK . . . . . . . . . . . . . . . . . . . .   35
+
+     HOW THE HEX DOES IT WORK, EMULATING A (MSX) COMPUTER ?  . . . . .   36
+
+     MSX-1 FEATURES  . . . . . . . . . . . . . . . . . . . . . . . . .   37
+
+     MSX-2 FEATURES  . . . . . . . . . . . . . . . . . . . . . . . . .   38
+
+     FEATURES OFTEN FOUND IN MSX-2 . . . . . . . . . . . . . . . . . .   38
+
+     ADDITIONAL MSX EMULATOR FEATURES  . . . . . . . . . . . . . . . .   39
+
+     SLOT (MEMORY) LAYOUT  . . . . . . . . . . . . . . . . . . . . . .   40
+
+     MSX-BASIC REFERENCE . . . . . . . . . . . . . . . . . . . . . . .   42
+       The 'editor'  . . . . . . . . . . . . . . . . . . . . . . . . .   42
+       NB: To be completed in the next release
+
+     Constants and variables . . . . . . . . . . . . . . . . . . . . .   43
+       Operators . . . . . . . . . . . . . . . . . . . . . . . . . . .   43
+         Arithmic  . . . . . . . . . . . . . . . . . . . . . . . . . .   43
+         Relational  . . . . . . . . . . . . . . . . . . . . . . . . .   43
+         Logical . . . . . . . . . . . . . . . . . . . . . . . . . . .   43
+         Functions . . . . . . . . . . . . . . . . . . . . . . . . . .   43
+       MSX-BASIC Statements  . . . . . . . . . . . . . . . . . . . . .   43
+
+     TROUBLE SHOOTING GUIDE/QUESTIONS & ANSWERS  . . . . . . . . . . .   47
+     A LITTLE WORD FROM THE AUTHORS
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+                                                                
+     It's been a VERY  long time since you heard from us.  Many of you have
+     written us via E-mail, netmail and we even received tons of snailmail.
+     We're trying to write as much of you  back but don't get mad if you've
+     written us  and didn't/don't receive  a reply. Unfortunatly  I (Albert
+     here)  lost the major  part of the  mail archive I was  keeping of all
+     people who have  written me via E-mail of Fidonet. Sorry if you didn't
+     get an answer...
+
+     Anyways... here's the product many of you have been waiting for for so
+     long (we hope :-).  It still isn't what  we want but be put  aside our
+     perfectionist attitude  and are  releasing another  beta version.  The
+     last public release (0.99b1) contained some very annoying bugs. We did
+     fix  them quite fast but then  everything got jammed because all three
+     of  us got  involved in  various VERY  time consuming  projects, jobs,
+     study, etc.  The emulator is  still a hobby  project after all.  We do
+     continue to program on it but unfortunatly we have very little time to
+     spare. This version shows what we've been up to. We've written to some
+     of you in the last year that we were busy writing code when we had the
+     time. Many  of the code written has  been thrown away. This especially
+     is true for the  video code. To get some speed out  of the MSX-2 video
+     emulation many hours have been  spend of thinking, eating and drinking
+     in front of the screen. Also some parts have been partly or completely
+     rewritten to allow for more flexible support of various devices.
+
+     We hope that the product you now have is what you expected and we will
+     try to answer to  any response we will get. Please  use the msx@bnc.nl
+     E-mail address if possible. The other E-mail and Fidonet addresses are
+     checked less frequently.
+
+     Grtx from Groningen (emulator city), The Netherlands:
+       Albert Siersema (aka appie)
+       Ronald Gorter
+       Peter Kelders
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        1
+     REGARDING THE 1.0b RELEASE AND OTHER NEWS
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     We received tons of mail from all over the world and it's nice to  see
+     that some extra FTP/FSP/WWW-sites, BBS's  appeared. We try to reply to
+     all the mail we receive but it's possible that we missed some  of your
+     messages  or didn't have the time to  reply. We can't send you the ROM
+     files or any other (c)opyrighted program so please don't ask for it.
+
+     Speaking of  ROM files: we pestered ASCII with  mail and E-Mail and we
+     tried  other channels  for  information  but we  still  haven't got  a
+     license to distribute the ROM files.
+
+     We changed some things regarding registering the emulator:
+     ş We won't send you a laser  printed bound manual because there was  a
+       lot of confusion about it (what version, how many) and the prices to
+       send them overseas are much to steep.
+     ş There's no  difference anymore  between a  shareware and  commercial
+       registration. This caused a lot of confusion too and since we're not
+       planning on getting  rich on this product there's now  only one type
+       of registration fee.
+     For those  of you that think we're a  commercial company and that this
+     is a big  time project: we're just  three guys programming on  a hobby
+     project and the registration is merely a token of appreciation for our
+     work and  to compensate  for the  expenses we  made on  developing the
+     emulator. We're NOT making any profit whatsoever.
+
+     The video code  took a lot of  time to write.  Many methods have  been
+     tried and  many weren't  fast enough  or lacked features.  We are  now
+     detecting your VGA card or VESA BIOS and we hope that it works for all
+     VGA cards available. We have tested it on some cards (ET4000, Trident,
+     Paradise  and Diamond) but  we can't  test it  on all  possible cards.
+     That's another reason to release this beta version.
+
+     The sound emulation  is becoming better and better, but we still can't
+     start coding for  wave table soundcards (like GUS) if  we can't borrow
+     one from someone.
+
+     We thoroughly  experimented with  and studied  DOS 2.xx  emulation and
+     decided  to  drop  it.  There's  a  simple  and  restricted  DOS  2.20
+     emulation.  The  problems are  all  relates to  technical  details and
+     problems.  It basically  comes  down  to this:  whatever  DOS 2.xx  or
+     interface we would emulate (DOS  2.20, DOS 2.3x, BERT, other MSX-SCSI)
+     there's  still  a limit  in the  diskROM  code of  16 bits  for sector
+     addressing.  If the  sector  size stays  512  bytes (it  is  for every
+     interface we  know) then there is a 32Mb  maximum of a partition. This
+     would imply that you have to dedicate (or at least create) one or more
+     32Mb  partition(s) of  your harddisk  to the  MSX emulator.  The other
+     solution would be a 32Mb file on the harddisk.
+     Because the  current code  already  supports harddisks  (in fact:  all
+     devices using INT 021h (also  CD-ROM drives, high density disk drives,
+     etc.)) we decided to drop the research and development on DOS  2.xx or
+     SCSI interface emulation.
+     The above mentioned simple DOS 2.20 emulation only works with DOS 2.20
+     ROMs and on disk drives. The last  restriction is a result of the  DOS
+     2.20 ROMs themselves that can only operate via the sector I/O routines
+     in the original diskROM (you need this one too for DOS 2.20 to work).
+
+
+                                        2
+     Bugs fixed:
+
+     [ We've fixed a LOT of bugs and we didn't keep an exhaustive log of
+       what we did or didn't (sorry :-( so this list is far from complete ]
+
+     ş Symptom:
+       We received a lot of bug reports on especially F1 Spirit that wasn't
+       working like it  should. When we  fixed this bug  it did work.  Many
+       other programs probably suffered from this bug too.
+       Technical explanation:
+       The code contained two wrong memory referencing instructions causing
+       the emulation code to write in MSX memory.
+       This  caused some  very unpredictable  and  confusing results.  Some
+       people didn't suffer from the problem.  Some did, but not always and
+       some people didn't get any program running at all.
+     ş Symptom:
+       Got some programs working like Riverraid and Zoids.
+       Technical explanation:
+       Fixed emulation of Z80A IM 2 mode.
+     ş Weird timing problems on fast machines (80486DX2-66, Pentium) fixed.
+       On  fast machines the  MSX (without /T)  wasn't running  at 100% but
+       much faster.
+     ş Sprites appearing  in the  corner regions of  the screen  while they
+       shouldn't are now gone
+     ş Better error handling at startup
+     ş Better keyboard handling. E.g. CapsLock
+     ş Added some more inofficial Z80A instructions. We now think we've got
+       'm all (or at least nearly all of them :-)
+     ş MSXDUMP.COM now works correctly with commandline parameters
+     ş Extra program to  fetch ROM files. the GETROM.BAS  program still had
+       some problems.
+     ş Soundcard  detection routines  turned the CD-ROM  drive LED  on when
+       using a soundcard with a CD-ROM connected to it. Probably fixed.
+     ş Better  print routines  and detection  for  running PRINT.COM  print
+       jobs.
+     ş Doing a LOAD ""  in BASIC on a directory would  caus the emulator to
+       lock up. This is in fact a MS-DOS bug but we worked around it
+     ş Sound routines fixed and rewritten
+     ş Optimized some code for 80486.
+     ş and a lot more....
+
+     What's new:
+
+     ş Telephone number of main support BBS and E-mail address have changed
+     ş MSX-2 emulation (that's a huge one !)
+     ş Both 'Sony' and 'Philips' memory/slot layouts selectable: /S switch
+     ş SCC now both in slot 1 and 2.
+     ş DOS 2.20 emulation.  BUT: only with DOS 2.20 ROMs and only on disks:
+       /2 switch
+     ş MSX keypad (not on all MSX keyboards) emulation via numerical keypad
+     ş Activating NumLock  with the  [NumLock] key  enables numeric  keypad
+       cursor keys (and disables the MSX keypad emulation for 8, 6, 2, 4).
+       Most keyboards don't  support pressing two or more  (cursor) keys at
+       once. This is  very irritating in games when two or more cursor keys
+       have to be pressed at once. Activating NumLock and using  the cursor
+       keys on the numerical keypad fixes this.
+     ş Slow speed LED now on ScrollLock LED
+     ş The [Pause] key now stops the emulator temporarily (pause). Pressing
+
+                                        3
+       [Pause] again resumes it.
+     ş Slight speedup of megaROM emulation
+     ş Updated documentation. More addresses, BBS's, etc.
+     ş New commandline switch /P, /5, /N, /G and /Y
+     ş With shift-alt you can make a screendump to MSX2PICT.BMP .
+     ş Some people had problems with their VGA card: with the new /U option
+       only standard VGA modes are used.
+     ş With the /W command line option you can save PSG-music to a file.
+       Players are coming up soon. This fileformat is compatible with the
+       format of Marat F.
+     ş With the /I command line option you can use .DDI files as drive A:.
+     ş By pressing Shift and Alt, a screendump is made (MSX2PICT.BMP). This
+       only works in the 256/512 resolution modes (NOT with the /U option).
+
+     Known bugs:
+
+     ş Using DOS valid device names like CON,  PRN, AUX, etc is not trapped
+       properly in high level disk I/O mode. Doing a
+       COPY filename CON
+       in the emulator will dump <filename> to stdout of DOS.
+     ş It's possible that  the diskdrive rotation speed has  to be adjusted
+       for some disk formats in low level disk I/O mode.
+     ş GETALLO  does  not   return  ALL  parameters  (impossible   in  some
+       situations).
+     ş The low  level disk I/O  routines have been optimized  to read/write
+       more sectors at a time. It's possible  that this doesn't work on all
+       BIOS-es.  We've had  this experience  with  another program.  Please
+       report on this if you have any problems.
+     ş Some old  konami's such as tennis  and hypersports act  real slow in
+       the intro-screen but do work when you wait for the game.
+     ş Bug in VDP copy-commands (sometimes the requested data is not copied
+       completely)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        4
+     Not working (yet):
+
+     ş The mouse emulation still doesn't  work. We've tried several methods
+       and one did work for programs that seem to do the same thing as  the
+       BIOS does, but others (like EASE) don't work.
+       Because we've  tried several methods the current method doesn't work
+       at all. We will fix this later.
+     ş The keyboard is fixed on a international or USA keyboard layout.
+     ş Magnified sprites (bit 0 in VDP register 1) not implemented.
+     ş Sound emulation is not completely finished:
+       ş PSG envelopes won't work
+       ş Incomplete MSX-AUDIO/Philips Music Module support (no sample-ram).
+       ş SCC emulation doesn't support samples and it doesn't sound like we
+         would
+         want it to.
+     ş Joystick support not finished yet
+     ş Sprites in screen 6 and 7
+     ş VDP status register 0 bits 0-4 : fifth/ninth spritenumber
+     ş PSG register 14 bits 0 to 5 (joystick/mouse)
+     ş PSG register 15 bits 5 & 4 (puls 1, puls 2: joystick/mouse)
+
+     Not emulated (mostly because it's not necessary/usefull):
+
+     ş PPI-poort &HAB is  not emulated (no use to emulate: can't be changed
+       in MSX architecture).
+     ş VDP status register 1 bit 7,6 (FL,LPS): lightpen
+     ş VDP status register 2 bit 1 (EO): display field flag
+     ş VDP status register 3,4,5,6: sprite collision location, lightpen
+     ş VDP register 8 bit 7,6,4,0 (MS,LP,CB,BW): color-bus settings
+     ş VDP register 9 bit 5,4,3,2,1,0 (S1,S0,IL,EO,NT,DC): various settings
+     ş VDP register 18: display adjust register
+     ş VDP register 19 does not work in screen 0,1,2 and 3
+     ş Hardware tile function (sprites/background in screen 6)
+     ş PSG  register 7  bit 7,6  (port-direction (CAN'T  be changed  in MSX
+       architecture)
+     ş PSG register 14 bit 6 (keyboardmode)
+     ş PSG register 15 bit 7 (kana led)
+     ş Tape support is not working properly because of new timing
+
+
+     Programs that don't work properly (yet) as we know of:
+
+     ş Space manbow    : weird   behaviour.   There   are   more   than   1
+                         splitscreen-points on the screen
+     ş Breaker         : garbage on the screen (VDP copy-command bug)
+     ş Baseball        : pitcher-sprites are not displayed correctly
+     ş King's Valley 2 : crashes during game
+     ş Unkn. reality   : problems with split-screen emulation
+     ş Aleste          : crashes
+     ş Runemaster      : crashes
+     ş Feedback        : garbage on screen
+     ş World Golf II   : garbage on screen
+
+
+
+
+
+
+
+                                        5
+     LICENSE AGREEMENT
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     ş "MSX-2 emulator" and  "The MSX-2 emulator package" refer  to all the
+       files in the official MSX-2 emulator ShareWare distribution archive.
+       See FILES.DOC for a detailed description of the files in the package
+     ş The  COMPLETE MSX-2  emulator package  (as listed  in FILES.DOC)  is
+       copyrighted  1996  by the  CJS  and  may  be distributed  under  the
+       ShareWare  concept provided  no fee  is charged  and the  package is
+       unmodified
+     ş The MSX-2 emulator may only be used in accordance with the terms set
+       out in this license agreement
+     ş CJS is in no way responsible for any damage directly or
+       indirectly caused by the (use of the) MSX-2 emulator package.
+     ş The  MSX-2 emulator  package  is  distributed  under  the  ShareWare
+       concept  which  means  that  you   are  only  entitled  to  use  the
+       unregistered shareware version  for a trial period of  7 days. After
+       this period you MUST register  the MSX-2 emulator. For details about
+       registering see HOW TO REGISTER.
+       Remember that you  will violate federal laws if you  won't follow up
+       this  term and that  the support  for the  MSX-2 emulator  will only
+       exist if you register !
+     ş Registrations are valid  for the current and any  future versions of
+       the  MSX-2  emulator  subject to  any  special  licensing conditions
+       attached to future versions.
+     ş CJS is not  obligated to provide future  versions of or support  for
+       the MSX-2 emulator
+     ş Reverse-engineering  and/or  modifying  of  the  MSX-2  emulator  is
+       strictly prohibited
+     ş It is strictly  prohibited to  include the MSX-2  emulator in or  as
+       part of  a software library  which is distributed for  money without
+       prior written permission of the CJS
+     ş All brands and product names named in this documentation are
+       trademarks or registered trademarks of there respective holders
+     ş The MSX-2 emulator may not be used in any unlawfull manner
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        6
+     FILES IN THE PACKAGE: FILES.DOC
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     You should  at least have following  files. If not stop now  and get a
+     complete copy of the MSX emulator (read below for addresses).
+
+     DRIVES.TBL      Drive  mappings file (check it out before starting the
+                     emulator)
+     MENU.PAK        Digitized background image for the CTRL-BREAK menu
+     MSX2.EXE        MSX-2 emulator executable
+     MSX2EMUL.DOC    Documentation for the MSX-2 emulator
+     MSXBOOT.COM     Fix boot sector of MSX disks
+     MSXDUMP.COM     Dump raw images of MSX disks
+     WHATS.NEW       New features, missing features, bugs
+     SPLITROM.EXE    Split ROM files into 8Kb parts
+     SS2DS.COM       Fix single sided  (360Kb) 3.5" disks to  read/write in
+                     MS-DOS
+     REGISTER.FRM    Registration form: print it and fill it out
+     README.NL       Dutch manual (short)
+     PROBLEMS.DOC    Common problems & answers
+     FILES.DOC       File with listing  of the files in  the MSX-2 emulator
+                     package
+     GETROM.BAS      Copy ROMs from real MSX(-2) to emulator.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        7
+     WHY/HOW-TO REGISTER
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     The  MSX-2  emulator is  ShareWare.  As  can be  read  in  the LICENSE
+     AGREEMENT you have to register the emulator if you're  using it beyond
+     the 7 days trial period. We won't get rich by you registering,  but it
+     helps us repay the investments in MSX and other hardware we've done to
+     create  the MSX emulator. The MSX-2 emulator  cost us about four years
+     work to  really complete. Consider  (besided the  other reasons)  your
+     registration as a token of appreciation for our work and encouragement
+     for us to work on more features and possible bug fixes.
+
+     Registration fee:
+       DFL50 (Dutch guilders) or $30 (U.S. dollars) or equivalent for every
+       seperate MSX-2 emulator that is used (see LICENSE AGREEMENT)
+
+     ş Cheques and money orders should be made payable to:
+         Ronald Gorter
+         Kleine Bergstraat 31
+         9717 NA  Groningen
+         The Netherlands
+     ş Please  include either  a InterNet  or FidoNet  E-Mail address  or a
+       stamped, self-addressed envelope so that receipt of your payment can
+       be acknowledged.
+     ş Use the registration form on the next page (or use REGISTER.FRM) and
+       fill it out correctly. Send the form and the registration fee to:
+         Postbank giro number 7216165
+         Ronald Gorter
+         Kleine Bergstraat 31
+         9717 NA Groningen
+         The Netherlands
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        8
+                 ---=== MSX-2 Emulator Registration Form ===---
+
+         Name _______________________________________________________
+
+         Company Name _______________________________________________*
+
+           (Name and Company Name have a maximum length of 50 characters:
+            Name max. 50 chars and Company Name max 50 chars)
+
+         Voice telephone number(s) __________________________________
+
+         Postal Address :
+
+         ____________________________________________________________
+
+         ____________________________________________________________
+
+         ____________________________________________________________
+
+
+         E-Mail (InterNet/FidoNet) Address(es):
+
+         ____________________________________________________________
+
+
+         What is the latest version of the emulator you have:
+
+         ____________________________________________________________
+
+
+
+         Registration fee enclosed _______, for ______ copies
+
+
+     * if you're an indivual (not a company) leave this field blank
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        9
+     MSX-2 EMULATOR SUPPORT AND DISTRIBUTION
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     The latest shareware version of the MSX-2 emulator is always available
+     on our main support BBS and Internet  site (see below) and we will try
+     to distribute new versions as wide as possible.
+
+     Main support BBS:
+       Filosoft/PROGRAMMERS BBS
+       The Netherlands (Europe)
+       Sysop : Albert Siersema
+       (+31)50-5718269 (upto 28800bps)
+       Dutch readers : 050-5718269
+
+     InterNet:
+       E-mail  : msx@bnc.nl
+       NB: please try  to use this  address. The second E-mail  address and
+           our Fidonet  address  is  check  less frequently  and  they  may
+           disappear.
+       E-mail  : appie@prgbbs.idn.nl
+       WWW     : http://msx.bnc.nl/msx
+       FTP     : ftp://msx.bnc.nl/pub/msx
+
+     FidoNet:
+       Albert Siersema at 2:282/517
+
+     Our snailmail address is:
+       Ronald Gorter
+       Kleine Bergstraat 31
+       9717 NA  Groningen
+       The Netherlands
+
+     See also "WHERE TO GET MSX SOFTWARE AND INFORMATION" below.
+
+
+     WHERE TO GET MSX SOFTWARE AND INFORMATION
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     This  list  is still  very small.  We  intend to  expand it  with more
+     information but we need  your help on that. So if you  have a BBS that
+     supports MSX, InterNet addresses, Computerclub addresses, etc.: let us
+     know.
+
+     Bulletin Board Systems (BBS) in The Netherlands
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     ş RoefSoft (sysop: Ruud Doek)
+       +31-4760-76914 (for Dutch readers: 04760-76914)
+       FidoNet : 2:284/132
+       MSXnet  : 80:80/0
+
+     ş MSX BBS Hack Track (sysop: Wiebe Weikamp).
+       Online: 21:00-09:00 C.E.T.
+       +31-8340-33729 (for Dutch readers: 08340-33729)
+       Internet addresses sysop: wiebe@stack.urc.tue.nl or
+       msx-owner@stack.urc.tue.nl
+
+     ş BBS Waterland (sysop: Joop Stokvis)
+       +31-2990-40202 (for Dutch readers: 02990-40202)
+       FidoNet : 2:280/802
+
+                                       10
+     ş Miami Beach BBS (sysop:  Robert Bleumer)
+       +31-80-732083 (for Dutch readers: 080-732083)
+       FidoNet : 2:283/606
+
+     ş M.S. BBS Jos-Tel (sysop: Jos de.Boer)
+       +31-5149-1837 (for Dutch readers: 05149-1837)
+       FidoNet : 2:500/505
+
+     ş Nova BBS (sysop: Bert Kraaijenhagen)
+       +31-38-220722 (for Ducth readers: 038-220722)
+       FidoNet : 2:282/104
+
+     ş UMF #1 (sysop: Roald Andersen)
+       +31-23-5848741 (for Dutch readers: 023-5848741)
+       InterNet address of sysop: v942245@si.hhs.nl
+
+     ş Sunrise BBS (sysop: Haiko de Boer)
+       +31-5126-3458 (for Dutch readers: 05126-3458)
+
+     ş The Games BBS (sysop: ?)
+       +31-412-640358 (for Dutch readers: 0412-640358)
+
+     ş InfoDrome     (sysop: Roderik Muit)
+       +31-1859-13957 (for Dutch readers: 01859-13957)
+       300-9600 Bps, V42         
+       Internet address sysop: roderik@ripe.net
+
+     ş PCFE (sysop: Ramond de Vrede)
+       +31-43-638799
+       FidoNet: 2:284/311
+
+     Bulletin Board Systems (BBS) outside The Netherlands
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     ş NeXus MSX BBS (SPAIN, sysop: Angel Cortes).
+       +34-3-4252171
+       FidoNet : 2:343/134
+
+     ş MIX (BRAZIL, sysop: Raphael Silva)
+       Line #1 : +55-71-359-4659
+       Line #2 : +55-71-359-2257
+       FidoNet : 4:807/16
+
+     ş CAMELOT BBS
+       Fido 2:341/81Spanish Telephone
+       (91) 501-26-52
+       Madrid, Spain
+       
+     ş HISPANIA II
+       Fido 2:341/334
+       (91) 663-63-87
+       Madrid, Spain
+
+     ş ESPIRITU NAVIDENO
+       Fido 2:341/15.43
+       (91) 693-02-76
+       Madrid, Spain
+
+     ş LA CALAVERA FELIZ
+
+                                       11
+       Fido 2:341/78
+       (91) 813-81-61
+       Madrid, Spain
+
+
+     InterNet
+     ÄÄÄÄÄÄÄÄ
+     ş nic.funet.fi (A.K.A. ftp.funet.fi)
+       - Anonymous FTP. See directory /pub/msx
+       - FSP (port 21)
+       - ftp-by-mail available
+       Example for anonymous FTP:
+       - FTP to nic.funet.fi
+       - Login as ftp or anonymous
+       - Supply your e-mail address as password
+
+     ş MSX mailing list
+       Send mail to majordomo@stack.urc.tue.nl
+       Old entry (possible not working):
+       E-Mail to msx-request@stack.urc.tue.nl with help as the subject
+
+     ş MSX mailing list WWW (World Wide Web) page
+       hhtp://www.stack.urc.tue.nl/~wiebe
+
+     ş WWW (World Wide Web) page:
+       hhtp://www.cs.umd.edu/users/fms/MSX
+
+     ş alt.comp.msx UseNet newsgroup
+
+     ş comp.sys.msx UseNet newsgroup
+
+     ş riaph.irkutsk.su or 193.124.118.180
+       - Anonymous FTP
+       - FSP (connectionless FTP) on port 21
+       Contact oleg@riaph.irkutsk.su for more information
+
+     ş ftp://ftp.saitama-u.ac.jp/pub/msx/
+
+
+     FidoNet
+     ÄÄÄÄÄÄÄ
+     ş MSX.028 Dutch FidoNet echomail area
+     ş RU.MSX Russian FidoNet echomail area
+       Contact Vladimir Rybinsky (2:5020/112)
+
+
+     Clubs
+     ÄÄÄÄÄ
+     ş MSX Club Drechtsteden
+       Meetings every two weeks
+       Contact for information:
+         J.Th. Meijer
+         Slangenburg 138
+         3328 DR  Dordrecht
+         The Netherlands
+         Tel. 078-146378
+
+     ş MSX & PC Computer Club Nijmegen
+
+                                       12
+       Meetings every third (3) saturday of the month in:
+         "Wijkgebouw VillaNova"
+         3e van Hezewijkstraat 2
+         Nijmegen
+         The Netherlands
+       Contact for more information:
+         Ruud Bleumer
+         Kamerlingh Onnesstraat 11
+         6533 HK Nijmegen
+         Tel. 080-558939
+
+     ş CGG west brabant (C. Hopstaken)
+       Pijnboomstraat 10
+       4731 AT Oudenbosch
+       The Netherlands
+       Tel: 01652-12446
+       Meetings in:
+         Restaurant "de Beuk"
+         Beukenlaan 2
+         Oudenbosch
+         The Netherlands
+         Tel: 01652-14609
+
+     ş Stichting Sunrise
+       Magazine & latest MSX soft- and hardware
+         Stichting Sunrise
+         P.O. Box 178
+         1530 AD Wormer
+         The Netherlands
+       InterNet E-Mail: sboer@econ.vu.nl
+
+     ş MSX Avengers Doetinchem
+       Call 08346-62603 for information (Tonnie)
+
+     ş The Melbourne MSX-Spectravideo Computer Users Group
+       Meets monthly (about  10 active members?) with a  range of equipment
+       from SV328, SV738, Pioneer PX7  (we have members interested in video
+       titling) and  several MSX2  computers. In addition  we get  some IBM
+       compatibles  that sneak  in.  Interests  range  from  game  playing,
+       robotics,   Video production,  Science fiction, the  meaning of life
+       and how to relax for an afternoon. We  keep a Library of MSX and SVI
+       games and books.
+       John Halford
+       Phone 61 3 357 2580
+       Fax   61 3 359 0867
+       EMAIL J.Halford@BoM.GOV.AU
+       48 Shawlands Avenue
+       Blackburn South 3130
+       AUSTRALIA
+
+     ş Computerclub Limburg AST68000
+       Meetings every third (3) sunday of the month in:
+       "OASE"
+       Bachstraat 51
+       Sittard
+       The Netherlands
+       Tel. +31-46-744877 (voice)
+       FidoNet E-Mail: 2:284/311.8 (Ruud van den Brink)
+
+                                       13
+       InterNet E-Mail:
+       ast68000@p8.f311.n284.z2.fidonet.org
+       milo@stack.urc.tue.nl
+
+     Magazines
+     ÄÄÄÄÄÄÄÄÄ
+     ş MCCM
+       Publisher: Aktu Publications bv
+       Postbus 2545
+       1000 CM Amsterdam
+       The Netherlands
+       Tel 020-6242636
+       Fax 020-6240189
+       Editor: Frank H. Druijff
+       's-Gravendijkwal 5a
+       3021 EA Rotterdam
+       The Netherlands
+       Tel 010-4254275
+       Fax 010-4768876
+       Subscribtions: 8 editions, Hfl. 60, or 1200 Bfr, disks Hfl. 149,- or
+       3000Bfr.
+       For questions  you can reach us on  monday, wednesday or friday from
+       13:00 tot 15:00 on 020-6390050,
+       FidoNet: Arjan Steenbergen at 2:285/36
+
+     ş Sunrise diskmagazine
+       Information: sboer@econ.vu.nl (see also 'Clubs')
+
+     ş MSX User
+       Information: niels.hamelink@prgbbs.idn.nl
+
+     ş ChipChat
+       ChipChat is  the official magazine  of the 'MSX LINK'  Computer User
+       Group  of  England.   They  give  out  a   magazine  (6/year).  More
+       information about this magazine and how to subscribe (low budget) is
+       on  http://www.stack.urc.tue.nl/~wiebe/msxlink  (also  some  scanned
+       images)
+         Join in:       costs:
+         Jan/Feb        6 pounds
+         Mar/Apr        4.50 pounds
+         May/Jun        3 pounds
+         July/Aug       1.50 pounds
+       Please make cheques payable to MSX Link.
+       Their account is with the TSB, Westgate, Peterborough
+       77-72-16 61474260
+       Internet: MSXrlee@dds.nl
+       Snailmail:
+         MSX LINK
+         6 Main Street
+         Farcet
+         Peterborough
+         PE7 3AN
+         England
+
+     ş XSW-Magazine (MSX-NBNO)
+       Address     : Molenweg 17, 5342 TA Oss, the Netherlands
+       Information : (+31) (0)4120-30653 (Mari van den Broek)
+       Internet    : h.maas@hsbos.nl (Erik Maas)
+
+                                       14
+       MSX-Net     : 80:80/115 (Erik Maas) 
+
+     ş ROM Diskmagazine
+       Information: v942245@si.hhs.nl
+       Roald Andersen
+       Kleine Sparrenlaan 20
+       2121 CK Bennebroek
+       Holland
+       UMF #1 (supports ROM) Tel: +31-2502-47879 (300-14k4 Bps)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       15
+     QUICK REFERENCE SHEET
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Although  we  STRONGLY  recommend  that  you  read  the  rest  of  the
+     documentation here's a quick list of usefull things.
+
+     Installation
+     ÄÄÄÄÄÄÄÄÄÄÄÄ
+     ş Get MSX ROMs with GETROM.BAS.
+       ROMs used in previous versions of the emulator can be used again.
+       MSX-2 ROMs can also be used.
+     ş Be sure  that you have  installed a EMS  manager like EMM386.EXE  or
+       QEMM.  We advice  you to  read "Notes  on Expanded  Memory Managers"
+       below.
+
+     Commandline switches
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     ş /?  Show help screen
+     ş /D  Default to low level disk I/O
+     ş /Rx Installed memory mapper memory x=1..6: 1=128,2=256,3=512, etc
+     ş /V  Verbose: show debug information
+     ş /Mp Set mouse at MSX joystick port p (1 or 2), or p=0 for disable
+     ş /B  Boot MSX-DOS from harddisk (default drive)
+     ş /T  MSX-emulator on top-speed
+     ş /E  Load MegaROM. See the "MegaROM/SCC" section for details
+     ş /L  Enable low speed 'LED'
+     ş /S  Select SONY memory/slot layout
+     ş /2  MSX-DOS 2.20 emulation using DOS220-?.ROM files
+
+     ş /Px Connect MSX printer to PC port (x=1, 2 or 3)
+     ş /5  No fifth/ninth sprite flickering
+     ş /N  No sound emulation (silent mode)
+     ş /G  Undocumented feature
+     ş /Y  Dynamic screen refresh
+
+     MSX/Special keys
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     ş Function keys like MSX keyboard:
+       Non shifted               F1-F5 MSX keys
+       Shifted F1 to F5          F6-F10 MSX keys
+     ş GRAY PageDown             MSX SELECT key
+     ş BREAK/CTRL-BREAK          MSX STOP/CTRL-STOP keys
+     ş GRAY End                  MSX GRAPH key
+     ş GRAY PageUp               MSX CODE key
+     ş CTRL-ALT-DEL              Reboots the MSX
+     ş CTRL-ALT-INS              The same but reloads ROMs, cleans MSX RAM
+     ş F12                       Exit to MS-DOS
+     ş CTRL-BREAK                Invokes the menu (see "CTRL-BREAK MENU")
+     ş PAUSE                     Pause the emulator. Press again to resume
+     ş NUMLOCK                   Enable cursor  key emulation  on numerical
+                                 keypad
+
+
+
+
+
+
+
+
+                                       16
+     REQUIREMENTS, INSTALLATION AND STARTING THE EMULATOR
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     System requirements
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     The MSX-2 emulator needs at least:
+
+     ş 80386 CPU (or 80486 or Pentium)
+     ş MS-DOS 3.xx or higher
+     ş Installed Expanded Memory  Manager like EMM386.EXE  or QEMM or  real
+       EMS wih at least 384Kb free EMS memory
+     ş SuperVGA compatible display adapter
+     ş 1 diskdrive or harddisk
+
+     The MSX-2 emulator has support for:
+
+     ş AdLib or compatible soundcards (including SoundBlaster)
+     ş Mouse via mouse driver
+
+     We recommend at least a 40Mhz  80386-DX to get the MSX-1 video  at the
+     same speed as a real MSX. For MSX-2 video it's probably best to have a
+     80486DX at 66Mhz.
+
+
+     Installation
+     ÄÄÄÄÄÄÄÄÄÄÄÄ
+     To install the emulator follow these steps:
+
+     ş Unpack all the files in a directory (you probably already did that)
+     ş Get the ROM files
+     ş Check DRIVES.TBL
+     ş Make sure you have a EMS driver (like EMM386.EXE or QEMM) running or
+       add  them to your system  setup (see also  "Notes on Expanded Memory
+       Managers")
+
+     In more detail:
+
+     The MSX-2 emulator  needs the ROMs (Read Only  Memory) of the original
+     MSX to  work. The Basic I/O  System (BIOS), MSX-BASIC  and disk system
+     are  in those  ROMs. Because  these ROMs  are (c)  Copyrighted  and we
+     (still)  have no  license for  the distribution  of the  ROM we  can't
+     distribute the  ROM files with  the MSX-2 emulator package  (rumour is
+     however that some BBS's do distribute the ROM files, even those in the
+     list above).
+     NB: If you already have the ROM files for older versions of  the MSX-1
+         emulator there's no need to get new ROM files. You do however have
+         to get MSX-2 ROMs to get the MSX-2 part working.
+
+     We however wrote a MSX-BASIC program that you can use to 'extract' the
+     ROM files from a MSX machine.  For the BIOS and MSX-BASIC you can  now
+     also  use MSX-2 ROMs.  To get the  ROM files simply  run GETROM.BAS on
+     your  MSX and  copy the  files in  the same  directory where  MSX2.EXE
+     resides:
+
+     filename        meaning       for
+     =============== ============= ======================================
+       MSXBIOS.ROM   MSX BIOS      (MSX-1 or MSX-2)
+
+                                       17
+       MSXBASIC.ROM  MSX BASIC     (MSX-1 or MSX-2)
+       MSX2SUB.ROM   MSX-2 SUBROM  (MSX2, only for MSX-2 emulation)
+       MSXDISK.ROM   MSX DISKROM   (optional)
+
+     For DOS 2.20 support you also need the following files:
+       DOS220-0.ROM
+       DOS220-1.ROM
+       DOS220-2.ROM
+       DOS220-3.ROM
+
+     Check  DRIVES.TBL (see "DISK EMULATION").  DRIVES.TBL is a plain ASCII
+     file  that can  be edited  with e.g. EDIT.COM  and contains  the drive
+     mappings for the MSX emulator disk support.
+
+
+     Starting the emulator
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     Type
+
+       MSX2          [+Return]
+
+     (The [+Return] indicates pressing Return/Enter after typing MSX)
+     to start the emulator.
+
+     If the  emulator complains  that not  all ROMs  could be  loaded don't
+     panic right away:
+     ş It only  won't work  at all if  MSXBIOS.ROM and/or  MSXBASIC.ROM are
+       absent
+     ş When using MSX-2 ROMs MSX2SUB must be present. When using MSX-1 ROMs
+       MSX2SUB.ROM is not necessary.
+     ş MSXDISK.ROM isn't necessary but the  emulator will be quite  useless
+       without it (no disk support). 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       18
+     Command line switches
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     The exact format for starting the MSX-2 emulator is:
+
+       MSX2 [/?|D|Rx|V|Mp|Px|B|T|E|L|S|2|5|N|G|Y]
+
+     Where
+
+     ş /?  Show help screen
+     ş /D  Default to low level disk I/O
+           See "DISK EMULATION" for more details
+     ş /Rx Installed memory mapper memory x=1..6: 1=128,2=256,3=512, etc
+           Allows you to  specify the size of the  memory mapper (installed
+           RAM in your emulated MSX).
+           x can be:
+             1   128 Kb
+             2   256 Kb
+             3   512 Kb
+             4   1024 Kb (1 Mb)
+             5   2048 Kb (2 Mb)
+             6   4096 Kb (4 Mb)
+           If you have less free EMS then the specified size  requested the
+           emulator will  adjust the  memory mapper size  down to  the size
+           that does fit in the free EMS memory.
+           Default: 256 Kb.
+     ş /V  Verbose: show debug information
+     ş /Mp Set mouse at MSX joystick port p (1 or 2), or p=0 for disable
+     ş /B  Boot MSX-DOS from harddisk (default drive)
+           See "DISK EMULATION" for more details
+     ş /T  MSX-emulator on top-speed
+           Normally the MSX emulator starts at 100% MSX speed. Using /T you
+           can start the emulator in (T)op-speed mode.
+     ş /E  Load MegaROM. See the "MegaROM/SCC" section for details
+     ş /L  Enables the low speed  'LED'. This LED is the  ScrollLock led on
+           your keyboard  and is lit  when the emulator is  probably slower
+           then a normal MSX
+     ş /S  Select SONY memory/slot layout (see SLOT (MEMORY) LAYOUT)
+     ş /2  MSX-DOS  2.20  emulation  using  DOS220-?.ROM  files  (see  DISK
+           EMULATION for details)
+     ş /Px Connect MSX printer to PC port x.
+           x can be:
+           1   LPT1  (I/O address 0278h)
+           2   LPT2  (I/O address 0378h)
+           3   LPT3  (I/O address 03BCh)
+     ş /5  No fifth/ninth sprite flickering
+     ş /N  No sound emulation (silent mode)
+     ş /G  Undocumented feature
+     ş /Y  Dynamic screen refresh
+           On slower  computers the  video emulation will  take up  so much
+           time it'll  slow down  the MSX emulation  below 100%.  The video
+           code is  able to detect this  and can on  some computers correct
+           this 'problem' by skipping some  screen updates. By default this
+           feature is turned  off. You can  turn it on  with /Y. Top  speed
+           mode (/T) automatically disables the dynamic screen refresh.
+
+
+
+
+
+                                       19
+     Notes on Expanded Memory Managers
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     To be sure that the MSX-2 emulator works use EMM386.EXE (supplied with
+     MS-DOS) or QEMM (from Quarterdeck). We've tested these on a variety of
+     systems and they work.
+
+     Using EMM386.EXE
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     Insert this at the top of your CONFIG.SYS:
+
+       device=\dos\himem.sys
+       device=\dos\EMM386.EXE 4096 FRAME=E000
+       dos=high
+
+     \dos  is the  MS-DOS system  directory where HIMEM.SYS  and EMM386.EXE
+     are. If MS-DOS isn't installed in this directory on your system change
+     it. the 4096  parameter of EMM386.EXE is  the amount of EMS  memory in
+     kilobytes to install. Set it as high as possible.
+
+     Using QEMM
+     ÄÄÄÄÄÄÄÄÄÄ
+     Insert this at the top of your CONFIG.SYS:
+
+       device=\qemm\qemm386.sys
+       dos=high
+
+     \qemm  is the  directory where  you've installed  QEMM. If  QEMM isn't
+     installed in this directory on your system change it.
+     NB: 1)  _NEVER_ install HIMEM.SYS  and QEMM together and  _ALWAYS_ put
+             the DOS=HIGH after device=\qemm\qemm386.sys
+         2)  Don't use  the STEALTH features  of QEMM 7.xx: remove  the ST:
+             commandline option
+
+     Note on SHARE/FCBS=
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     If you're  using SHARE check  out your  CONFIG.SYS file for  the FCBS=
+     statements. FCBS has the following syntax:
+
+       FCBS=x,y
+
+     If the x parameter in your CONFIG.SYS is  less then 4 make it at least
+     four or delete  the FCBS= statement. Failure  to do so will  cause the
+     emulator to act strange in high level disk I/O mode.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       20
+     CONFIGURATION FILES
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Drive mappings
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     The MSX emulator allows you to map any MS-DOS supported drive to a MSX
+     drive. You  can't  map one  MS-DOS  drive to  two  MSX drives  or  two
+     different MS-DOS drives  to one MSX drive,  but you can map  e.g. your
+     MS-DOS drive B: to  MSX drive A: and MS-DOS drive C:  to MSX drive B:.
+     If  you only  map one  MSX drive  the MSX  disk system  will create  a
+     phantom drive B: (see "MSX booting sequence" above).
+
+     The  drive mappings  are in  DRIVES.TBL (a  plain ASCII file)  and the
+     format is very simple:
+
+     <MSX drive>=<PC drive>
+
+     E.g.
+       A=B   ;MSX drive A: is PC drive B: (floppy drive)
+       B=C   ;MSX drive B: is PC drive C: (hard disk)
+
+
+     Keyboard mappings
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Emulator defaults
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       21
+     THE CTRL-BREAK MENU
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Pressing CTRL-BREAK in the emulator will invoke a menu.
+     This menu allows you to change some emulator settings.
+     The screen shows a  digitized image on  the background and buttons  on
+     the  foreground. The  yellow  (highlighted)  options  are  the  active
+     choices.  Pressing  one of  the red  letters  in a  button  toggles an
+     option.
+     In  the next release  there will be  more options. At  the moment they
+     are:
+
+     ş P   Topspeed or 100% MSX speed (default: depends on the /T switch)
+
+     ş S   Sound ON/OFF (default: ON)
+
+     ş L   LDIR fast/slow (default: SLOW)
+           LDIR is  a Z80A block  move command. The  slow mode checks  if a
+           LDIR  overwrites  ROM  or  memory  mapped  I/O  while  the  fast
+           implementation doesn't.
+           Most programs won't LDIR to ROM and/or memory  mapped I/O so you
+           can speed up the emulation somewhat by setting this to fast.
+
+     ş D   Disk mode: low level/high level (default: depends on /D switch)
+           See "DISK EMULATION"
+
+     ş Q   Quit
+           Exits to MS-DOS (like F12)
+
+     ş C   Continue
+           Back to the emulator
+
+     ş R   Reset
+           Resets the MSX (like CTRL-ALT-DEL)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       22
+     THE (MSX) KEYBOARD
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     NB: The emulator uses a the layout of a International (USA) keyboard.
+
+     Mapping of MSX keys to the PC keyboard
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     The  MSX  keyboard is  pretty much  the  same as  the  conventional PC
+     keyboard. There  are however some  MSX keys that  had to be  mapped to
+     different keys on the PC keyboard:
+
+     ş The  10 function keys are  grouped in 5  keys. 'unshifted' they give
+       F1-F5. Pressing SHIFT together with a  function key (F1 to F5)  they
+       give F6-F10
+
+     ş SELECT
+       Has no function in MSX-BASIC but is used by some programs.
+       In the  emulator SELECT can be  found 'under' the  GRAY PageDown key
+       (the block of six grey keys including PageUp, PageDown, Home, etc)
+
+     ş GRAPH
+       Pressing this key together with another key gives one of the special
+       MSX graphical characters like a smiling face or a line character.
+       In the  emulator GRAPH can  be found 'under'  the GRAY End  key (the
+       block of six grey keys including PageUp, PageDown, Home, etc)
+
+     ş CODE
+       Pressing this key  together with another gives one  of the 'foreign'
+       characters like a french '‚'.
+       In the emulator CODE can be  found 'under' the GRAY PageUp key  (the
+       block of six grey keys including PageUp, PageDown, Home, etc)
+
+     ş STOP/CTRL-STOP
+       These keys  act like BREAK  and CTRL-BREAK. For  programming reasons
+       we've put them in the emulator  under the SCROLL LOCK key.  Pressing
+       SCROLL  LOCK is  like  pressing STOP.  When you  e.g.  LIST a  BASIC
+       program the output stops until you press STOP (SCROLL LOCK) again.
+       Pressing CTRL and STOP (SCROLL LOCK) together results in e.g. ending
+       (BREAKing) of a BASIC program
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       23
+     ş Numerical keypad
+       Some  MSX  keyboards have  a  numerical  keypad.  The  MSX  emulator
+       emulates this too via the numerical keypad on the PC keyboard.
+       Pressing [NumLock] disables the emulation of the 8, 6, 2 and  4 keys
+       on the keypad but enables emulation of cursor keys with these keys.
+       Most keyboards don't  support pressing two or more  (cursor) keys at
+       once. This is very irritating in games when two or more  cursor keys
+       have to be pressed  at once. Activating NumLock and using the cursor
+       keys on the numerical keypad fixes this.
+
+
+     Additional key functions
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     ş CTRL-ALT-DEL  Reboots the MSX
+     ş CTRL-ALT-INS  Reboots the MSX but cleans memory mapper RAM. Use this
+                     if a program keeps coming back after CTRL-ALT-DEL.
+     ş F12           Immediatly exits back to MS-DOS
+     ş CTRL-BREAK    Invokes the menu (see "CTRL-BREAK MENU")
+     ş PAUSE         Pause the emulator. Press again to resume
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       24
+     DISK EMULATION
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     The disk  emulation in  the MSX emulator  is a  very complex  piece of
+     code.  But you  as the  user won't  notice that  (we hope  :-). We  do
+     however have to bother you with some details.
+
+     High and low level disk I/O
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     There are two modes of disk operation: high level and low level:
+
+     ş High level disk I/O
+       Offers  support  for  EVERY  disk  related  device  MS-DOS  supports
+       (through interrupt 021h)  including hard disks, high  density floppy
+       drives, CD-ROM drives, network drives, SCSI drives, etc.
+       These routines  don't know anything  about sectors and  tracks. They
+       work  on the file-level:  opening a file,  reading it, etc.  This is
+       much more flexible but it  has one disadventage: there are  some MSX
+       disk formats not  supported by  MS-DOS. When trying  to e.g. open  a
+       file the  lower level  routines in  MS-DOS try  to read  sectors and
+       fail. Hence the second operation mode:
+
+     ş Low-level disk I/O
+       Simply provides  the MSX disk  system with routines for  reading and
+       writing sectors, formatting  a disk, etc. Since the  MSX disk system
+       (MSX-DOS 1.0) is somewhat  limited and has no support for  e.g. hard
+       drives you won't be  able to use them  in low level mode. But  it is
+       now  possible to  use disks  that  MS-DOS doesn't  support since  we
+       handle sector I/O  ourselves. One example of a  not supported format
+       are the 3.5" single sided (media ID: F8) 360Kb disks.
+
+     The emulator defaults  to high level disk  I/O when it starts  but you
+     can change that by  using the /D command  line switch or the _LOW  and
+     _HIGH MSX BASIC commands.
+     Note that directory names can't  be used in MSX-DISKBASIC. Instead use
+     the extra _CD/_MD/_RD MSX emulator BASIC commands.
+
+     DOS 2.20 emulation
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     As mentioned earlier the first MSX disk system (MSXDOS 1. NB:  not the
+     MS-DOS clone MSX-DOS)  was somewhat limited.  It couldn't e.g.  handle
+     directories  and didn't  support MSX-2  memory  mapper functions.  The
+     second release, DOS 2, fixed that. It still  doesn't contain code with
+     support for  larger harddisks then  32Mb and high density  drives etc.
+     There's more and due to  technical considerations we don't emulate all
+     kinds of  DOS 2  versions (see REGARDING  THE 0.99b3 RELEASE  AND MORE
+     NEWS for details).
+     We  did however  manage to get  DOS 2.20  to work. It  is unfortunatly
+     limited  to disk  drives. The  reason  for this  is that  it  uses the
+     original diskROM  for sector I/O  routines and this implies  low level
+     disk I/O. Furthermore:  you can only use  DOS 2.20 ROMs. We  tried DOS
+     2.31 ROMs but we couldn't get them to work.
+     We didn't  include a  program to  fetch  the ROMs  to avoid  a lot  of
+     confusion  about it. We  left the feature  in the  code though because
+     maybe  someone finds it  usefull. If you've  got DOS 2.20  and you are
+     desperate to try this feature and you don't know how to fetch the ROMs
+     contact us.
+
+
+                                       25
+     MSX booting sequence & CTRL/SHIFT while booting
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     When the MSX boots it first reads sector 0 of  drive A: (does not have
+     to be drive A: of your PC !).  If it succeeds it loads it and executes
+     the bootstrap  code there. If  it fails  it jumps  to MSX-BASIC  which
+     tries to  load AUTOEXEC.BAS.  If this fails  too MSX-BASIC  will enter
+     edit mode in which you can enter MSX-BASIC commands and/or programs.
+
+     Before the diskROM  tries to read sector  0 it scans the  keyboard for
+     the SHIFT and CTRL keys.If SHIFT is pressed the MSX will  not activate
+     the disk system and go to MSX "cassette" BASIC.
+     If CTRL is pressed it disables the phantom drive if there is one. This
+     frees up some memory. A phantom drive is a second drive to be used for
+     e.g. copying files  from one disk  to another on  systems with only  1
+     drive.  MS-DOS  creates one  too  if  you only  have  one  drive. When
+     referencing the second drive (B:) you'll get messages like:
+
+       Insert disk for drive B:
+       and press any key when ready
+
+     When  you only map  1 MSX drive (see  "Drive mappings: DRIVES.TBL" for
+     more details  about drive mappings) the MSX  disk system will create a
+     second one. Pressing CTRL until after a BEEP is heard will disable the
+     phantom drive. If you have mapped  more then one MSX drive there's  no
+     phantom drive and CTRL will do nothing.
+
+     After having checked the SHIFT and CTRL keys the diskROM sounds a BEEP
+     and executes boot  sequence mentioned at the start  of this paragraph.
+     You have  to press (and  hold down) the  SHIFT or CTRL key  before the
+     BEEP and you can release the key after you heard the BEEP.
+
+     N.B.: When booting from  a floppy disk  make sure the  disk has a  MSX
+           boot sector. MS-DOS formatted disks  will cause the MSX to crash
+           when it tries to execute the bootstrap code (which is 80x86 code
+           instead of Z80 code). 
+
+     Booting MSX-DOS from harddisk
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     If reading  sector  0 (the  boot sector)  of drive  A:  fails and  you
+     supplied the /B command line switch, the emulator will return a built-
+     in  boot  sector  to the  diskROM.  If  you also  have  MSXDOS.SYS and
+     COMMAND.COM  in the  MSX  emulator directory  the  emulator will  boot
+     these. This allows you to boot MSX-DOS from your harddisk.
+     This however only works if the drive on which MSX2.EXE, MSXDOS.SYS and
+     COMMAND.COM reside is mapped to a MSX drive.
+
+     Drive mappings: DRIVES.TBL
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     The MSX emulator allows you to map any MS-DOS supported drive to a MSX
+     drive. See the section "CONFIGURATION PROGRAM" for more details.
+
+
+
+
+
+
+
+
+
+                                       26
+     SUPPORTED MSX FLOPPY DISK TYPES
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     The MSX emulator supports all known MSX  type floppy disks. Only those
+     also supported by MS-DOS can be used in high level disk I/O mode.
+
+     The following table illustrates the disk types supported. It shows the
+     choice as displayed when formatting  a floppy disk (e.g. CALL FORMAT),
+     the ID code,  if it can be  used in high/level disk I/O  and it's size
+     and usage on the MSX.
+
+     Legenda for format choices:
+
+     SS  = Single Sided (1 head)
+     DS  = Double Sided (2 heads)
+     xS  = x sectors per track
+     yyT = yy tracks per side
+
+     Format choice ³ ID ³ MS-DOS ³ Used as MSX floppy format
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+      1-SS,9S,80T  ³ F8 ³   NO   ³ 360Kb 3.5"
+      2-DS,9S,80T  ³ F9 ³  YES   ³ 720Kb 3.5"
+      3-SS,8S,80T  ³ FA ³   NO   ³ 320Kb 5.25"
+      4-DS,8S,80T  ³ FB ³   NO   ³ 640Kb 3.5" (5.25" ?!)
+      5-SS,9S,40T  ³ FC ³  YES   ³ 180Kb 5.25"
+      6-DS,9S,40T  ³ FD ³  YES   ³ 360Kb 5.25"
+      7-SS,8S,40T  ³ FE ³  YES   ³ 160Kb 5.25"
+      8-DS,8S,40T  ³ FF ³  YES   ³ 320Kb 5.25"
+
+     NB: Although  the  size  (3.5"/5.25")  of the  floppy  disks  used  is
+         mentioned in  the table you're not  forced to use the  same floppy
+         disks.
+         You can e.g. format a 1.2Mb (high density) 5.25" disk  with format
+         2: 720Kb 3.5", or a 3.5" disk with format 8.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       27
+     MSX EMULATOR SPECIFIC BASIC COMMANDS
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     The MSX  emulator has some  extra BASIC commands  that can be  used by
+     typing CALL (or the underscore: _) and the command. If commands have a
+     parameter then using variables is allowed too. E.g.
+       A$="\MSX\GAMES"
+       _CHDIR(A$)
+
+     ş _LOW
+       Set low level disk I/O mode (see "DISK EMULATION")
+
+     ş _HIGH
+       Set high level disk I/O mode (see "DISK EMULATION")
+
+     ş _DRIVE("d:") or _CHDRV("d:")
+       Changes the default drive to d:
+       Example: _DRIVE("B:")
+
+     ş _CD("directory") or _CHDIR("directory")
+       Changes the current directory to "directory"
+       Examples: _CD("\MSX\PROGS")
+                 _CD("..")
+
+     ş _MD("directory") or _MKDIR("directory")
+       Creates a subdirectory "directory"
+       Example: _MD("\PROGS")
+
+     ş _RD("directory") or _RMDIR("directory")
+       Removes a subdirectory "directory"
+       Example: _RD("\PROGS")
+
+     Note that directory names can't be used in MSX-DISKBASIC. E.g.
+       LOAD "\MSX\APPS\MYPROG.BAS"
+     is _NOT_ allowed. Instead use the extra _CD/_MD/_RD MSX emulator BASIC
+     commands. The _CD, _MD and _RD commands can only be used in high level
+     disk I/O mode.
+
+
+     MSX EMULATOR SPECIFIC MSX-DOS COMMANDS
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Besides the directory related  MSX BASIC commands we've implemented  a
+     trick to be able to  change, create and remove directories in  MSX-DOS
+     (even in MSX-DOS 1).
+     There are three extra MSX-DOS 'commands' available:
+
+     ş CD <directory>
+       Changes the current directory to <directory>
+       Examples: CD \MSX\PROGS
+                 CD ..
+
+     ş MD <directory>
+       Creates a subdirectory <directory>
+       Example: MD PROGS
+
+     ş RD <directory>
+       Removes a subdirectory <directory>
+       Example: RD PROGS
+
+                                       28
+     NB: These commands can only be used in high level disk I/O mode.
+
+     It works like  this: when you type  a command in MSX-DOS  it'll search
+     for it by using  a system call "FINDFIRST". We let it  do it's job and
+     if it returns with an error we check if the command was  CD, MD or RD.
+     If so  we execute  that command. But  the FINDFIRST  still returns  an
+     error (otherwise MSX-DOS thinks there really is e.g. a CD.???). That's
+     why the commands all  return with a 'Bad command or  filename' even if
+     the command was completed successfully.
+
+
+     MSX EMULATOR SPECIFIC SYSTEM CALLS
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Concluding the directory related enhancements is a set of system calls
+     that  you can use as a  programmer. These calls are  only valid in the
+     MSX emulator, they don't work on real MSX machines.
+     There are four (extra) system calls available:
+
+     ş CD  : change directory
+     ş MD  : create directory
+     ş RD  : remove directory
+     ş PWD : get current directory
+
+     They can be accessed using the BDOS call 011h (11 HEX): FINDFIRST:
+
+     ş Set the drive field in the FCB to 0FFh
+     ş Set  the filename to  one of the  commands. Pad out  to 8 characters
+       with spaces
+     ş Fill the first two bytes of  the extension with an address (for  CD,
+       MD and RD  it's the address of the ASCIIZ  or 0-terminated directory
+       string, for PWD it's a 64 byte buffer for the current directory).
+
+     Example for CD (MD and RD are alike):     Example for PWD:
+
+       LD C,#11                                  LD C,#11
+       LD DE,FCB                                 LD DE,FCB
+       CALL #F37D                                CALL #F37D
+       RET                                       RET
+       FCB DB #HFF                               FCB DB #HFF
+       DM "CD      "                             DM "PWD     "
+       DW BUF                                    DW BUF
+       DS 28                                     DS 28
+       BUF DM "\MSX\PROGS"                       BUF DS 64
+
+     NB: ş A BDOS  entry is  located at address  5 in MSX-DOS  otherwise at
+           F37D
+         ş These commands can only be used in high level disk I/O mode
+
+
+
+
+
+
+
+
+
+
+
+                                       29
+     MegaROM/SCC
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     NB: The Konami SCC soundchip (normally only found  in Konami MegaROMs)
+         is also emulated when MegaROM emulation is _NOT_ active.
+
+     We included the megaROM emulation because we have some Konami MegaROMs
+     (like Nemesis 2 & 3, Salamander,  etc) that we would like to  use even
+     if possibly our  MSX machines die. These MegaROMs  are cartridges that
+     can  be put  in the  MSX  cartridge slot.  Since the  emulator  has no
+     hardware it emulates the megaROMs by loading them into the PC's memory
+     and emulating the hardware in the cartridge. This hardware consists of
+     a memory mapper and optional a soundchip (SCC).
+     The MegaROM  memory mapper  maps the  8Kb ROM  pages in  the cartridge
+     (totalling mostly 128  or 256Kb) to MSX  pages 1 and 2  (address range
+     04000h-0BFFF = 4 8Kb pages = 32Kb).
+
+     The /E command line switch
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     By  saving all those 8b pages to  seperate files they can be loaded in
+     the MSX emulator with the /E command line switch, like this:
+
+       MSX /E<filename>
+
+     Where <filename> is  a 8 character filename optionally  preceeded by a
+     path. E.g.:
+
+       MSX /Ec:\mega\salamand
+
+     NB: don't  put any  blanks  (spaces,  TABs, etc)  berween  /E and  the
+         filename.
+
+     When executed like this the emulator will check for SALAMAND.0?? files
+     in the C:\MEGA\ directory.
+
+     The extension (.0??)  consist of the part number  in hex (hexadecimal)
+     starting at 000. If a megaROM has  256Kb it has 32 8Kb pages and there
+     should be 32 files starting at <file>.000 and ending at <file>.01F.
+
+     The technique  used for  emulation MegaROMs is  quite slow.  On faster
+     machines (e.g. 486 DX-40) it'll probably work fine.
+
+     Converting MegaROMs to files
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     Getting the files involves the following steps:
+
+     ş Turn on your computer without the cartridge inserted
+
+     ş When in BASIC insert the cartridge in slot 1
+       We've done it  many times and  it never fails.  You only have to  be
+       sure that  the cartridge goes straight into the slot and that you're
+       doing it fast.
+       NB: Inserting  a  cartridge  while  the  MSX computer  is  on  isn't
+           completely  without risks and  we can't take  any responsibility
+           for any damage.
+
+
+
+
+                                       30
+     ş Type:
+         POKE &HF676,1
+         POKE &HF677,&HC0
+         POKE &HC000,0
+         NEW
+         OUT &HA8,(INP(&HA8) AND &B11001111) OR &B00010000
+       If you can't put  the cartridge in slot 1 for some reason change the
+       OR value:
+
+       OR &B00000000 is slot 0  (kinda stupid: no OR needed actually :-)
+       OR &B00010000 (like now) is slot 1
+       OR &B00100000 is slot 2
+       OR &B00110000 is slot 3
+
+     ş Check out  the size  of the  megaROM. If  it's 128Kb  you've got  16
+       parts. If it's 256 Kb you've got  32 parts, etc. The NR variable  on
+       line 10 (see below) has to be  adjusted to this value. It has to  be
+       the number of pages minus 1 (in  the listing below there would be 16
+       pages: a 128Kb megaROM).
+       Type:
+         10 NR=15
+         20 FOR I=0 TO NR
+         30 POKE &H8000,I:POKE &H9000,I
+         40 BSAVE "MEGAROM."+RIGHT$("000"+HEX$(I),3),&H8000,&H9FFF
+         50 NEXT
+
+         RUN
+
+     You can of course choose your own  filename. In the listing above it's
+     MEGAROM, but you can make  it anything you like as long as  it doesn't
+     exceed the 8 characters and there's . at the end of it.
+
+     To load the MegaROM saved with the above listing you could type:
+       MSX /Emegarom
+
+     Be sure  there's no other  file with the  same name in  the directory.
+     There can only be the <file>.0?? files with the name <file>. E.g. when
+     you have saved  the ROM to  the files MEGAROM.0??  be sure there's  no
+     MEGAROM.BAS, MEGAROM.LDR or something like that.
+
+     Loading other ROM (files)
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     The /E switch can also be  used to load a arbitrary 16Kb or  32Kb ROM.
+     As long as  the ROM is  split up into 8Kb  parts and a 7  bytes header
+     (contents  not important) is preceeding the file data you can load the
+     ROM with the /E switch.
+
+     The SPLITROM.EXE program  let's you split  up files  in 8Kb parts.  If
+     you've got e.g. a ROM saved to a 16Kb file (about 16384 bytes in size)
+     use SPLITROM.EXE to chop it up into 2 8Kb files. Be  sure the original
+     file  doesn't exist  when  you  use the  /E  switch or  otherwise  the
+     emulator thinks there are 3 parts instead of 2.
+     The same can be  done with 32Kb ROMs. If you've got  e.g. 2 16Kb files
+     chop  them up into 4  8Kb files, make sure  there numbered from 000 to
+     003 (where part 000 is the first 8Kb of the first 16Kb file and 002 is
+     the first 8Kb of the second 16Kb file).
+
+
+
+                                       31
+     NOTES
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     This section is  dedicated to some notes  that don't belong to  one of
+     the  other  sections  but can  be  of  concern when  you  use  the MSX
+     emulator.
+
+     ş High level disk I/O and device names
+       Using e.g.  CON, AUX,  LPT, etc  in high  level disk  I/O mode  will
+       probably have strange effects. It's extremly difficult (impossible?)
+       to get this to work properly so we didn't. Example:
+         COPY "file" TO "CON"
+       will probably mess up the screen for a  while in high level disk I/O
+       mode.
+
+     ş Crashes when booting: the boot sector
+       Disks  formatted in  MS-DOS have  a different  boot sector  then MSX
+       disks. The  file system is compatible,  but the bootstrap  code in a
+       MS-DOS formatted boot  sector is  80x86 code while  the MSX has  Z80
+       code there. When  you try  to boot  a MS-DOS formatted  disk in  the
+       emulator the MSX will probably  crash. Use MSXBOOT.COM or _FORMAT to
+       fix the problem.
+
+     ş Formatting/Using 1.44Mb disks at 720Kb
+       You need to cover the second hole in the disk (opposite to the write
+       protect tab). Use e.g. 5.25" write protect stickers.
+
+     ş CP/M from RVS Daten Technik for VG8235
+       This  CP/M operating  system is  not  written very  open minded.  It
+       assumes  you have  a VG8235  or compatible  memory layout.  You also
+       can't have more then 128Kb memory mapper RAM installed.
+       If you want to run it use the /D and /R1 command line switches
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       32
+     SOME IMPORTANT MSX-BASIC COMMANDS
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     ş FILES ["filename"]
+       Shows a  listing of files  on the current disk.  Using FILES without
+       parameter will list ALL files.
+       Using the parameter, e.g. FILES  "*.BAS" lists only specified files.
+       Acts like DIR in MS-DOS.
+       Common used file extensions are:
+       .BAS  (or no extension) BASIC programs. Use RUN or LOAD
+       .LDR  (mostly BASIC) loader of a program. Use RUN or LOAD
+       .BIN  BINary file: executable Z80 code. Use BLOAD
+       .BL   BLoadable file. See .BIN
+       .ML   Machine Language. See .BIN
+       .COM  MSX-DOS program. Can probably only be executed in MSX-DOS
+       .BAT  MSX-DOS batch program. Can only be executed in MSX-DOS
+
+     ş POKE -1,170
+       or
+       POKE -1,255
+       Most MSX-2  machines have another  layout then most  MSX-1 machines.
+       The same is true for the MSX emulator. Some programs however require
+       a typical MSX-1 layout. If a program crashes try, before loading the
+       program, POKE -1,170  if you didn't use the /S switch or POKE -1,255
+       if you did use.
+
+     ş RUN ["file"]
+       Only RUN will execute the current BASIC program in memory. Using the
+       file parameter will execute a MSX-BASIC program on disk (or cassette
+       :-).
+       Example: RUN "LOADER.BAS"
+
+     ş BLOAD "file"[,R]
+       Load a binary file. When the optional ,R parameter is used  the code
+       will be executed right after loading it.
+       Example: BLOAD "CODE.BIN",R
+
+     ş LOAD "file"
+       Load but do not run a BASIC program with filename file
+       Example: LOAD "PROGRAM.BAS"
+
+     ş KILL "file"
+       Erases file(s) from disk
+       Example: KILL "*.BAS"
+
+     ş CALL FORMAT or _FORMAT
+       Formats a disk. Follow instructions on the screen.
+
+     ş CALL SYSTEM or _SYSTEM
+       Boots from A:. Can be used to  load MSX-DOS. Tip: type POKE &HF346,1
+       before entering  CALL SYSTEM  if you haven't  already booted  from a
+       disk.
+
+     See also the "MSX EMULATOR SPECIFIC BASIC COMMANDS" section.
+
+
+
+
+
+                                       33
+     UTILITIES IN THE MSX EMULATOR PACKAGE
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Besided  the  emulator  itself  we  wrote  some utilities  that  we've
+     included in the MSX emulator package.
+
+     ş MSXDUMP
+       Can be used to copy entire disks to a file and vice versa.
+       Supports all MSX floppy disk types.
+       When you have a disk with a non MSX (MS-DOS) file system like e.g. a
+       CP/M bootdisk or a game that boots itself from disk you  can read it
+       into  a file  on your harddisk  (and write  it back to  another disk
+       later).
+       The commandline format is:
+
+         MSXDUMP <drive> <disktype> <filename>
+
+       <drive> can be either A: or B:
+       <disktype> is 1 to 8 for one of the MSX disk types or 0 for write
+       <filename> is the filename to write to/read from
+       If you leave  out a parameter or all parameters the program will ask
+       you for it. Try e.g. typing only MSXDUMP.
+
+     ş SS2DS
+       Normally you can't  read the 3.5" single sided (360  Kb) disk format
+       that MSX supports in MS-DOS. This is due  to the fact that the media
+       indentification byte (media ID) is F8  which is a media ID for  hard
+       disks in  MS-DOS. This  program fixes that  so you  can read  and/or
+       write this disk format.
+       If you want to use the disk  in a MSX machine (also in the emulator)
+       as a  single sided disk after using SS2DS  simply run SS2DS again on
+       the disk.
+       The commandline format is very simple:
+
+         SS2DS <drive>
+
+       E.g.:
+
+         SS2DS B:
+
+     ş MSXBOOT
+       Writes  a MSX boot  sector to a  disk. If you  try to  boot a MS-DOS
+       formatted disk in the emulator the MSX will crash.
+       Commandline syntax:
+
+         MSXBOOT <drive> <disktype>
+
+       <drive> can be A: or B:
+       <disktype> is 1 to 8 for all the MSX disk types.
+
+     ş GETROM.BAS
+       Fetches the needed ROMs from a MSX and dumps them to a file.
+       Run it on a MSX machine and read the messages displayed.
+
+     ş SPLITROM.EXE
+       See the "MegaROM/SCC" section
+
+
+
+                                       34
+     GETTINGS PROGRAMS TO WORK
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     If you've problems  with MSX programs to  get them working and  you've
+     read the complete manual read this section.
+
+     ş Read this manual COMPLETELY
+
+     ş Read the "TROUBLE SHOOTING GUIDE"
+
+     ş Read the "NOTES"
+
+     ş Read "SOME IMPORTANT BASIC COMMANDS"
+
+     ş Before loading the program:
+       Philips slot layout (default) : POKE -1,170
+       Sony slot layout (/S)         : POKE -1,255
+
+     ş Leave  out all the drives in DRIVES.TBL  except the drive you've got
+       the program on. Then  press CTRL while the MSX boots until a beep is
+       heard
+
+     ş Check out the BASIC loader of a program (if any) by loading it (e.g.
+       LOAD "file"  command) and typing  LIST (use ScrollLock to  pause the
+       listing). Look for a POKE -1 or POKE &HFFFF statement.
+       If  you're using  the Philips  memory layout  (default) and  this is
+       anything else then 170 or &HAA change it into 170 and run the  BASIC
+       loader again.
+       If  you're using  the Sony memory  layout (/S) and  this is anything
+       else then  255 or &HFF change  it into 255 and run  the BASIC loader
+       again.
+
+     ş If the program is  a bootable disk or  the program is on a  diskette
+       try _LOW or the /D command line switch before loading the program
+
+     ş Try other ROMs.  If you are running  with MSX-1 ROMs try  MSX-2 ROMs
+       and vice versa
+
+     ş Try the /R1 commandline switch (install only 128Kb memory mapper)
+
+     ş Try the /S commandline switch (Sony memory/slot layout)
+
+     ş Try  combinations of  the  above mentioned  solutions  (like e.g.  1
+       drive, CTRL key before BEEP, sony memory layout and POKE -1,255).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       35
+     HOW THE HEX DOES IT WORK, EMULATING A (MSX) COMPUTER ?
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     To explain the programming of an computer emulator you can better
+     rephrase the question in "how does a computer work ?".
+     A computer mainly consists of three parts:
+
+     ş Central Processing Unit (CPU)
+     ş Memory
+     ş I/O (video, sound, diskdrives, etc.)
+
+     Emulating a computer consists of emulating those three parts. This can
+     be done in two  ways. The first one  is to program an  interpreter for
+     the  CPU's  language:  machine  language.  The  second  way  is fairly
+     complicated. Instead  of interpreting  each instruction  you can  also
+     take a program and convert it straight away to the machine language of
+     the host machine  running the emulator. This is  very tricky since you
+     have to analyze what's machine code and what's data.
+
+     We've choosen to interpret the CPU's machine language. This is done by
+     doing the same thing that every CPU does:  reading an instruction that
+     has to  be executed  and  execute it.  Executing an  instruction in  a
+     emulator  means that every instruction  of the CPU  to emulate will be
+     emulated by  several machine  instructions of  the  host computer.  By
+     using a high performance algorithm and writing the emulator completely
+     in  80386 machine  language we've  manages to  squeeze the  maximum of
+     performance out of the Z80A machine language interpreter.
+
+     The next  step  is  emulating the  computer's  hardware.  Because  the
+     emulator  interprets every instruction you know when memory references
+     and Input/Output (I/O)  occurs. Memory references must be  split up in
+     reads and writes.  Writes to a  Read Only Memory  (ROM) area must  not
+     alter the  emulated memory  regions  that are  in fact  in the  Random
+     Access Memory (RAM)  of the host computer.  All I/O is trapped  to and
+     hardware connected to the I/O ports must be emulated.
+     Programming a  computer emulator is  building a computer,  although in
+     software instead of hardware.
+
+     The MSX-2 emulator emulates the following hardware:
+
+     ş Z80A micro processor (CPU) at 3.57Mhz or "top-speed"
+     ş Upto 4 MegaBytes of memory controlled by a "memory mapper"
+     ş Intel 8255 Programmable Periphal Interface (PPI)
+     ş Yamaha V9938 video processor (VDP)
+       (backwards  compatible  with  MSX-1  Texas  Instruments  9928A Video
+       Display Processor (VDP))
+     ş General Instruments AY-2-8910 Programmable Sound Generator (PSG)
+     ş MSX-AUDIO/Philips music module
+     ş Konami SCC sound chip
+     ş Disk interface (no real hardware emulation)
+     ş MSX printer interface
+     ş Clock IC RP-5C01
+     ş Mouse
+     ş Philips Music Module (MSX-AUDIO ?). Except samples.
+
+
+
+
+
+                                       36
+     MSX-1 FEATURES
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     For those of  you who are not  familiar with MSX-1 computers  here are
+     it's features:
+
+     ş Micro Processor (Central Processing Unit or CPU)
+       8 bit Z80A from Zilog. 
+       Address range: 64Kb
+     ş 64Kb user RAM
+     ş Video
+       Texas Instruments 9928A Video Display Processor (VDP).
+       Has it's own 16Kb VRAM (Video RAM).
+       Text modes:     40x24   1 foreground and background color out of 16
+                       32x24   per  8  characters seperate  foreground  and
+                               background colors (out of 16) plus sprites
+       Graphic modes:  256x192 per  8  pixels 1  foreground  and background
+                               color out of 16 and sprites
+                       64*48   per  'pixel'  (block  :-) 1  foreground  and
+                               background color out of 16 and sprites
+     ş Sound
+       General  Instruments AY-2-8910  Programmable Sound  Generator (PSG).
+       Supports 3 independant channels that can either play sound or noise.
+     ş Cassette interface
+       Programs and data can be saved and loaded to and from a normal audio
+       cassette. NOT IMPLEMENTED (YET).
+     ş Diskdrive(s)
+       Optional for  all MSX computers  (also MSX-2, although most  of them
+       have one). We can  emulate all kinds of MSX diskdrives  and via some
+       tricky programming  we have  built in support  for all  the hardware
+       MSDOS can talk to.
+     ş Printer I/O
+       Parallel printer
+     ş Joystick/mouse ports. NOT IMPLEMENTED (YET).
+       Two  ports  for  joystick,  mouse,  touchpad,  tablets,  trackballs,
+       lightpens, etc.
+     ş Cartridge slots
+       Two slots for  cartridges containing ROM programs, hardware or both.
+       We can't of course emulate this one :-).
+       Via  these cartridge slots  additional hardware can  be connected to
+       the MSX like modems, RS-232 interfaces, sample/sound hardware, video
+       digitizers, etc. There are also many games in ROM that can be put in
+       one of  the  two cartridges.  Even  BASIC programs  can run  from  a
+       cartridge.
+     ş 48Kb ROM
+       Consisting of 16Kb  BIOS (Basic I/O System), 16Kb  MSX-BASIC and the
+       optional 16Kb DISKBASIC/MSXDOS ROM.
+       Here's our problem at the moment: the ROM's are still copyrighted by
+       someone  (we  now  don't  really  know  by whom,  Microsoft,  ASCII,
+       Panasonic ?!) and we don't have a license (yet) to distribute  them.
+       So  you   have  to  get  the  ROMs  yourself.  See  the  chapter  on
+       installation
+
+
+
+
+
+
+
+                                       37
+     MSX-2 FEATURES
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Same as MSX-1 plus:
+     ş Extra 16Kb of MSX-2 subROM.
+     ş VDP  (video processor) Yamaha V9938 (backwards compatible with Texas
+       Instruments 9928A).
+       Has it's own RAM (64Kb upto 128Kb RAM (not included extended VRAM))
+       Screenmodes extra:
+       Textmodes:      80x24    (1 fore/background color out of 512)
+       Graphic modes:  screen 4 (256x212, 16 colors out of 512)
+                       screen 5 (256x212, 16 colors out of 512)
+                       screen 6 (256x212, 4 colors out of 512)
+                       screen 7 (512x212, 16 colors out of 512)
+                       screen 8 (256x212, 256 colors out of 512)
+       extra  features like  hardware  scroll,  extra  sprites  and  sprite
+       colors.
+
+     FEATURES OFTEN FOUND IN MSX-2
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     ş Memory mapper with  upto 4 megabytes  of RAM in  16Kb segments  (see
+       also the /R commandline switch)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       38
+     ADDITIONAL MSX EMULATOR FEATURES
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     Besides the previous mentioned features the emulator has:
+
+     ş Harddrive/MSDOS devices support
+       All the  devices MSDOS can  talk to via  INT 021h like  hard drives,
+       high density disks, SCSI drives, CD-ROM drives, network drives, etc.
+       can be accessed via the high level disk I/O mode of the emulator
+     ş Extra  (DOS 2.x-ish) CALL BASIC commands  for changing current drive
+       and directory, making and removing directories and switching between
+       high and low level disk I/O modes.
+     ş Loading and emulating MegaROMs in 'slot 1'.
+     ş Konami SCC music chip in 'slot 1' and 'slot 2'
+     ş MSX-AUDIO (Philips Music module)
+     ş Both  SONY  and  PHILIPS slot  layout  (see  section  "SLOT (MEMORY)
+       LAYOUT")
+     ş Both  MSX-1 and  MSX-2 ROMs  can be  used (not at  the same  time of
+       course)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       39
+     SLOT (MEMORY) LAYOUT
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     The Z80 has a 64Kb address range. The MSX architecture uses 'slots' to
+     map ROM and RAM  into the Z80 address range. A  slot (64Kb range split
+     up into  16Kb pages) can be expanded. A expanded  slot can hold upto 4
+     secondary slots.
+
+     The  MSX emulator  starts by  default with  a 'Philips'  slot (memory)
+     layout:
+
+              slot 0        slot 1         slot 2      slot 3
+      0000 ÚÄÄÄÄÄÄÄÄÄÄ¿  ÚÄÄÄÄÄÄÄÄÄÄ¿  ÚÄÄÄÄÄÄÄÄÄÄ¿ ÚÄÄÄÄÄÄÄÄÄÄ¿
+           ³   BIOS   ³  ³          ³  ³          ³ ³          ³
+      4000 ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´ ÃÄÄÄÄÄÄÄÄÄÄ´
+           ³   BIOS   ³  ³          ³  ³          ³ ³ EXPANDED ³
+      8000 ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´ ÃÄÄÄÄÄÄÄÄÄÄ´
+           ³  BASIC   ³  ³          ³  ³          ³ ³   SLOT   ³
+      C000 ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´ ÃÄÄÄÄÄÄÄÄÄÄ´
+           ³  BASIC   ³  ³          ³  ³          ³ ³          ³
+           ÀÄÄÄÄÄÄÄÄÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÙ ÀÄÄÄÄÄÄÄÄÄÄÙ
+                                                      /    \
+                                                     /      \
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ/        \ÄÄÄÄÄÄ¿
+     ³                                                              ³
+     ³       slot 3-0      slot 3-1      slot 3-2     slot 3-3      ³
+     ³0000 ÚÄÄÄÄÄÄÄÄÄÄ¿  ÚÄÄÄÄÄÄÄÄÄÄ¿  ÚÄÄÄÄÄÄÄÄÄÄ¿ ÚÄÄÄÄÄÄÄÄÄÄ¿    ³
+     ³     ³  SUBROM  ³  ³          ³  ³   RAM    ³ ³          ³    ³
+     ³4000 ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´ ÃÄÄÄÄÄÄÄÄÄÄ´    ³
+     ³     ³          ³  ³          ³  ³   VIA    ³ ³ DISKROM  ³    ³
+     ³8000 ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´ ÃÄÄÄÄÄÄÄÄÄÄ´    ³
+     ³     ³          ³  ³          ³  ³  MEMORY  ³ ³          ³    ³
+     ³C000 ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´ ÃÄÄÄÄÄÄÄÄÄÄ´    ³
+     ³     ³          ³  ³          ³  ³  MAPPER  ³ ³          ³    ³
+     ³     ÀÄÄÄÄÄÄÄÄÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÙ ÀÄÄÄÄÄÄÄÄÄÄÙ    ³
+     ³                                                              ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       40
+     Using the  /S commandline  switch will create  a 'Sony'  slot (memory)
+     layout:
+
+              slot 0        slot 1         slot 2      slot 3
+      0000 ÚÄÄÄÄÄÄÄÄÄÄ¿  ÚÄÄÄÄÄÄÄÄÄÄ¿  ÚÄÄÄÄÄÄÄÄÄÄ¿ ÚÄÄÄÄÄÄÄÄÄÄ¿
+           ³   BIOS   ³  ³          ³  ³          ³ ³          ³
+      4000 ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´ ÃÄÄÄÄÄÄÄÄÄÄ´
+           ³   BIOS   ³  ³          ³  ³          ³ ³ EXPANDED ³
+      8000 ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´ ÃÄÄÄÄÄÄÄÄÄÄ´
+           ³  BASIC   ³  ³          ³  ³          ³ ³   SLOT   ³
+      C000 ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´ ÃÄÄÄÄÄÄÄÄÄÄ´
+           ³  BASIC   ³  ³          ³  ³          ³ ³          ³
+           ÀÄÄÄÄÄÄÄÄÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÙ ÀÄÄÄÄÄÄÄÄÄÄÙ
+                                                      /    \
+                                                     /      \
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ/        \ÄÄÄÄÄÄ¿
+     ³                                                              ³
+     ³       slot 3-0      slot 3-1      slot 3-2     slot 3-3      ³
+     ³0000 ÚÄÄÄÄÄÄÄÄÄÄ¿  ÚÄÄÄÄÄÄÄÄÄÄ¿  ÚÄÄÄÄÄÄÄÄÄÄ¿ ÚÄÄÄÄÄÄÄÄÄÄ¿    ³
+     ³     ³  SUBROM  ³  ³          ³  ³          ³ ³   RAM    ³    ³
+     ³4000 ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´ ÃÄÄÄÄÄÄÄÄÄÄ´    ³
+     ³     ³ DISKROM  ³  ³          ³  ³          ³ ³   VIA    ³    ³
+     ³8000 ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´ ÃÄÄÄÄÄÄÄÄÄÄ´    ³
+     ³     ³          ³  ³          ³  ³          ³ ³  MEMORY  ³    ³
+     ³C000 ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´  ÃÄÄÄÄÄÄÄÄÄÄ´ ÃÄÄÄÄÄÄÄÄÄÄ´    ³
+     ³     ³          ³  ³          ³  ³          ³ ³  MAPPER  ³    ³
+     ³     ÀÄÄÄÄÄÄÄÄÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÙ ÀÄÄÄÄÄÄÄÄÄÄÙ    ³
+     ³                                                              ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+     NOTES:
+     ş The "RAM VIA MEMORY MAPPER"  is controlled via a memory mapper.  The
+       size of  the memory  mapper is configurable  via the  /R commandline
+       switch.
+     ş 0000-3FFF = MSX page 0
+       4000-7FFF = MSX page 1
+       8000-BFFF = MSX page 2
+       C000-FFFF = MSX page 3
+     ş Slot  1  and 2  are cartridge  slots on  a real  MSX with  this slot
+       layout. We use them for Konami SCC and MegaROM emulation
+     ş If DOS 2.20 emulation is activated the DOS 2.20 ROM files will be in
+       page 1 of slot 3-0 in the 'Philips layout' and slot 3-1 in the 'Sony
+       layout'.  DOS 2.20 uses  it's own memory  mapper to  switch the 16Kb
+       pages. The I/O port is at 06000h (07FF0h for DOS 2.31)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       41
+     MSX-BASIC REFERENCE
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     If the  MSX can't find any ROMs  or disks to boot it'll  end up in the
+     MSX-BASIC  interpreter. The MSX-BASIC  interpreter has a  sort of full
+     screen editor, that is: it's limited to the screen you see.
+
+     BASIC commands can be entered right away:
+       PRINT "Hello world"
+     or a program can be built using the (in)famous line numbers:
+       10 PRINT "Hello world"
+       20 GOTO 10
+
+     The 'editor'
+     ÄÄÄÄÄÄÄÄÄÄÄÄ
+     You  can  move  the cursor  using  the  cursor  keys.  There are  some
+     additional  control keys.  They all  consist of  a combination  of the
+     CONTROL (CTRL) key and one  of the keys listed in the table  below. If
+     you press CTRL, hold it and press  one of these keys (and release both
+     keys) one of the related functions will be performed.
+
+     Key Meaning
+     ÄÄÄ ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+      A  Graphic character header
+      B  Move cursor to beginning of previous word
+      C  Break while MSX-BASIC was waiting for input
+      D  -
+      E  Truncate: erase line
+      F  Move cursor to beginning of next word
+      G  Sounds a beep
+      H  (BACKSPACE) cursor one position back and erase character 
+      I  (TAB) Move cursor to next tab stop
+      J  Move cursor to next line
+      K  (HOME) Move cursor to home position
+      L  (CLS) Clear the screen
+      M  (RETURN) Enter programline
+      N  Move cursor to end of line
+      O  -
+      P  -
+      Q  -
+      R  (INSERT) Toggle insert/overwrite mode
+      S  -
+      T  -
+      U  -
+      V  -
+      W  -
+      X  (SELECT)
+      Y  -
+      Z  -
+      [  (ESC)
+      \  (CURSOR RIGHT) Move cursor one position to the right
+      ]  (CURSOR LEFT) Move cursor one position to the left
+      ^  (CURSOR UP) Move cursor one line up
+      -  (CURSOR DOWN) Move cursor one line down
+
+
+     The  DELETE key erases the  character under the  cursor (and moves the
+     rest of the line one position to the left).
+
+
+                                       42
+     NB: To be completed in the next release
+
+     Constants and variables
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     Operators
+     ÄÄÄÄÄÄÄÄÄ
+       Arithmic
+       ÄÄÄÄÄÄÄÄ
+       Relational
+       ÄÄÄÄÄÄÄÄÄÄ
+       Logical
+       ÄÄÄÄÄÄÄ
+       Functions (like SQR() and DEF FN)
+       ÄÄÄÄÄÄÄÄÄ
+     MSX-BASIC Statements
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     AUTO
+     AND
+     ABS
+     ATN
+     ASC
+     ATTR$
+     BASE
+     BSAVE
+     BLOAD
+     BEEP
+     BIN$
+     CALL
+     CLOSE
+     COPY
+     CONT
+     CLEAR
+     CLOAD
+     CSAVE
+     CSRLIN
+     CINT
+     CSNG
+     CDBL
+     CVI
+     CVS
+     CVD
+     COS
+     CHR$
+     CIRCLE
+     COLOR
+     CLS
+     CMD
+     DELETE
+     DATA
+     DIM
+     DEFSTR
+     DEFINT
+     DEFSNG
+     DEFDBL
+     DSKO$
+     DEF
+     DSKI$
+     DSKF
+
+                                       43
+     DRAW
+     ELSE
+     END
+     ERASE
+     ERROR
+     ERL
+     ERR
+     EXP
+     EOF
+     EQV
+     FOR
+     FIELD
+     FILES
+     FN
+     FRE
+     FIX
+     FPOS
+     GOTO
+     GO TO
+     GOSUB
+     GET
+     HEX$
+     INPUT
+     IF
+     INSTR
+     INT
+     INP
+     IMP
+     INKEY$
+     IPL
+     KILL
+     KEY
+     LPRINT
+     LLIST
+     LPOS
+     LET
+     LOCATE
+     LINE
+     LOAD
+     LSET
+     LIST
+     LFILES
+     LOG
+     LOC
+     LEN
+     LEFT$
+     LOF
+     MOTOR
+     MERGE
+     MOD
+     MKI$
+     MKS$
+     MKD$
+     MID$
+     MAX
+     NEXT
+     NAME
+     NEW
+
+                                       44
+     NOT
+     OPEN
+     OUT
+     ON
+     OR
+     OCT$
+     OFF
+     PRINT
+     PUT
+     POKE
+     POS
+     PEEK
+     PSET
+     PRESET
+     POINT
+     PAINT
+     PDL
+     PAD
+     PLAY
+     RETURN
+     READ
+     RUN
+     RESTORE
+     REM
+     RESUME
+     RSET
+     RIGHT$
+     RND
+     RENUM
+     SCREEN
+     SPRITE
+     STOP
+     SWAP
+     SET
+     SAVE
+     SPC(
+     STEP
+     SGN
+     SQR
+     SIN
+     STR$
+     STRING$
+     SPACE$
+     SOUND
+     STICK
+     STRIG
+     THEN
+     TRON
+     TROFF
+     TAB(
+     TO
+     TIME
+     TAN
+     USING
+     USR
+     VAL
+     VARPTR
+     VDP
+
+                                       45
+     VPOKE
+     VPEEK
+     WIDTH
+     WAIT
+     XOR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       46
+     TROUBLE SHOOTING GUIDE/QUESTIONS & ANSWERS
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     ş I used /B but the emulator doesn't boot MSXDOS
+       ş Be sure you have MSXDOS.SYS  and COMMAND.COM in the same directory
+         as the MSX emulator executable (MSX2.EXE).
+       ş Also check if the drive on which these files are located is mapped
+         to a MSX drive (check DRIVES.TBL).
+
+     ş The MSX crashed when it starts after checking MSX drive A:
+       ş Check if  the drive  contains a MS-DOS  formatted disk.  You can't
+         boot   MS-DOS  formatted  disks  because  the  bootstrap  code  is
+         different. Don't boot from the disk or use MSXBOOT.COM.
+       ş Check if the disk in  MSX drive A: is a 3.5"  single sided (360Kb)
+         formatted  disk. If  you didn't  start  the emulator  with the  /D
+         parameter press F12 and try that.
+
+     ş I try to load a program but it crashes the MSX
+       There are MANY possible reasons, but try the following before giving
+       up or starting to yell at us :-)
+       ş Type  POKE -1,170  (Philips memory  layout) or  POKE  -1,255 (Sony
+         memory layout) prior to loading the program.
+       ş Try to reduce the number of MSX drives (DRIVES.TBL).
+       ş If reduced  the number of  drives downto 1  try resetting the  MSX
+         (emulator) and pressing CTRL until the beep.
+       ş Try a SONY memory layout (/S switch)
+       ş If the program loads  using a BASIC loader (likely a  .BAS or .LDR
+         file) check the file for POKE -1,xxxx or POKE  &HFFFF,xxxx. If you
+         are in Philips memory layout  mode (default) and the listing reads
+         POKE -1,255  or POKE &HFFFF,255 or POKE &HFFFF,&HFF make it POKE -
+         1,170 or start the emulator with /S.
+         The other way around: if you used  /S and the listing reads POKE -
+         1,170  or POKE &HFFFF,&HAA  don't use the  /S switch  or change it
+         into POKE -1,255.
+       ş If the  program boots from disk check if  it's a single sided 3.5"
+         (360Kb) disk or just try the /D switch.
+       ş Try MSX-1 ROMs instead of MSX-2 ROMs or vice versa.
+       ş Try the /R1 switch
+       ş Try combinations of the above mentioned solutions.
+
+     ş I have a CP/M boot disk but it crash the MSX
+       See "NOTES"
+
+     ş I have ROMs but the emulator seem to crash on them
+       DiskROMs  from  Turbo-R  machines tend  to  crash  the emulator.  We
+       haven't been able to supply a solution.
+       ROMs from Spectra Video machines probably won't work. We've had lots
+       of reports on that and suspect that these ROMs won't work at all.
+
+     ş I have ROM files for the previous MSX emulator, can I use them ?
+       Yes. rename them:
+         REN MSX1ROMA.BIN MSXBIOS.ROM
+         REN MSX1ROMB.BIN MSXBASIC.ROM
+       But you have to use real MSX-2 ROMs to get MSX-2 emulation.
+
+     ş I'm getting 'Overseek errors' from PMEXT
+       Check  out  your  CoNFIG.SYS  file  for  the  FCBS=  statement.  See
+       "REQUIREMENTS, INSTALLATION  AND  STARTING THE  EMULATOR"  for  more
+       details.
+
+                                       47

@@ -1,0 +1,174 @@
+    INSTALL - Installation version of TO
+    Version 1.11
+    Containing TO.COM Version 1.5
+    Copyright (c) 1994 by C.P.U.
+
+
+    The program
+    -----------
+
+    INSTALL  has been  made to  install the  latest version of TO - this is 
+    version 1.5.
+
+    INSTALL offers the following installation possibilities:
+
+    - Install the main program TO.COM
+    - Install  the   batch  files  RD.BAT,  MD.BAT,  MKDIR.BAT,  MVDIR.BAT, 
+      RMDIR.BAT, RNDIR.BAT, MCD.BAT
+    - Install the help file TO.HLP
+    - Modify the  file COMMAND2.COM so that it won't recognize the commands 
+      RD,  MD, MKDIR,  MVDIR, RMDIR  and/or RNDIR  and make  it possible to 
+      replace this commands by batch files.
+
+
+    The expressions
+    ---------------
+
+    INSTALL needs  four expressions  in the  command-line. These  are - all 
+    four  of them  - drive/path  strings and indicate on which drive and in 
+    what directory something has to be installed.
+
+    The expressions are successively:
+
+    expression 1 - drive/path where to install the file TO.COM
+    expression 2 - drive/path where to find the file COMMAND2.COM
+    expression 3 - drive/path where to install the batch files
+    expression 4 - drive/path where to install the file TO.HLP
+
+    The  expression always have to be given in this sequence. If you do not 
+    want to install something, you can leave out the expression concerned.
+
+
+    The options
+    -----------
+
+    Apart  from this  expression, INSTALL  also needs  some options  in the 
+    command-line. These indicate what exactly has to be installed.
+
+    The options are successively:
+
+    /T  -  to install the file TO.COM
+    /Cx -  to modify the file COMMAND2.COM
+    /Bx -  to install the batch files
+    /H  -  to install the file TO.HLP
+
+    The  options do  not necessarily  have to  be given  in this particular 
+    sequence. But  they have  to be  given AFTER  the expressions,  and not 
+    before or between the expressions!
+
+    You  can replace  the x  in the option /Bx by the figures 1 to 7 and in 
+    the option /Cx by the figures 1 to 6.
+
+    The figures stand for the following commands or batch-files:
+
+    1 - RD
+    2 - MD
+    3 - MKDIR
+    4 - MVDIR
+    5 - RMDIR
+    6 - RNDIR
+    7 - MCD
+
+    You may  replace the  x by  more than one figure. In stead of a figure, 
+    you  can also replace it by the letter 'A'. This means that you want to 
+    install all six (or seven) commands (or batch files).
+
+    Examples:
+
+    Suppose  you want  to install  everything. You want to install the main 
+    program in  the directory  \UTILS on  drive A: and the help-file in the 
+    directory  \HELP on  drive C:. The file COMMAND2.COM can be found in de 
+    root-directory of drive A: and the batch files also have to be installú 
+    ed in de root-directory of drive A:. You enter the following:
+
+    A:\>INSTALL A:\UTILS A:\ A:\ C:\HELP /T /CA /BA /H
+
+    Suppose  you only want to install the commands RD, MD, MVDIR, RNDIR and 
+    MCD. You enter the following:
+
+    A:\>INSTALL A:\UTILS A:\ A:\ C:\HELP /T /C1246 /B12467 /H
+
+    You  don't trust  INSTALL to  modify the file COMMAND2.COM and you only 
+    want to install the files TO.COM and TO.HLP. You enter the following:
+
+    A:\>INSTALL A:\UTILS C:\HELP /T /H
+
+    N.B. 1: A back-up copy of COMMAND2.COM will always be made before it is 
+            modified. This back-up copy will be named COMMAND2.BAK
+    N.B. 2: INSTALL can both remove the commands from the file COMMAND2.COM 
+            and put  them back  in. When  the commands were available, they 
+            will  be removed  and when  they were removed, they will be put 
+            back.
+            So:
+
+            A:\>INSTALL A:\ /C1
+
+            will remove the command RD from the file COMMAND2.COM, and:
+
+            A:\>INSTALL A:\ /C1
+
+            will put the command RD back in the file COMMAND2.COM.
+    N.B. 3: INSTALL can only modify the file COMMAND2.COM version 2.20, but 
+            no checks  are done  to make sure that INSTALL is modifying the 
+            right  version! It is also possible to modify other versions of 
+            COMMAND2.COM but since I don't have other versions than version 
+            2.20, I  don't know how to modify them. But you can always conú 
+            tact me if you have an other version that needs to be modified.
+
+
+    New items in version 1.11
+    -------------------------
+
+    * The file  MD.BAT has been modified, so that a hidden directory can be 
+      created using the MD command, by adding the /H option.
+
+    New items in TO version 1.5
+    ---------------------------
+
+    * The environment  item TO_PATH  has replaced  the old environment item 
+      TO. This environment item refers to the drive and directory where the 
+      file TO.LST will be loaded from/saved to.
+    * The  environment item TO_DRIVES is a new one and refers to the drives 
+      that have  to be  scanned using the TO /S command. When this item was 
+      not found, TO /S will scan the current or specified drive.
+      To  take full  adventage of  this version of TO, it is recommended to 
+      set TO_DRIVES  so that  all partitions of the harddisk are supported. 
+      Additionally  TO_PATH has  to be set to specify on which drive and in 
+      which directory  TO.LST can  be found.  When the  latter was not set, 
+      then the file TO.LST will be searched for on the current drive, which 
+      means that all partitions need a TO.LST file. This is superfluous.
+    * The  file TO.LST  can contain the directories of more drives, so that 
+      only one  drive is  required. This  also means that you don't have to 
+      specify  a drive in the partial_subdir_name, because the partial_subú 
+      dir_name will automatically be searched for on all drives.
+    * Due to a minor error in version 1.41, the command TO -n only moved up 
+      one directory  level. TO  -n now moves up the specified amount of diú 
+      rectory levels.
+
+
+    Public Domain
+    -------------
+
+    The INSTALL.COM  program is  Public Domain and may be copied and spread 
+    freely by everyone, but only in its original, crunched form.
+
+    The file TO-V15.PMA contains the following files:
+
+    INSTALL.COM    the programs INSTALL version 1.11 and TO version 1.5
+    LEES.MIJ       this text file in Dutch
+    READ.ME        this text file in English
+
+
+    N.B.  Unlike other  C.P.U. programs,  the source-listing of INSTALL.COM 
+    and TO.COM  is not  Public Domain and is therefore not included in this 
+    .PMA file.
+
+
+    Copyright (c) 1994 by C.P.U.
+
+    Computer Programming Urk
+    F. Post
+    Waaiershoek 36
+    8321 BH Urk
+    Holland
+

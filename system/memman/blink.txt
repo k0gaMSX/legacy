@@ -1,0 +1,166 @@
+
+                                Blink TSR 1.1
+
+
+    1.1 Inleiding
+
+        Deze Memman-TSR zorgt ervoor dat het op een standaard MSX 2 
+        mogelijk wordt om op een redelijk eenvoudige wijze de zogenaamde 
+        inverse kleuren, of zoals het officieel heet de Blink attributes,  
+        te gebruiken in eigen Basic programma's.
+
+    1.2 Een overzicht van de commando's.
+                                
+        CMD BCLS
+
+        Met dit commando worden alle inverse kleuren gewist over het hele 
+        scherm.
+
+        vb. CMD BCLS
+
+
+        CMD BCOLOR <voorgrond>,<achtergrond>
+
+        Hiermee wordt de kleur ingesteld.
+
+        vb. CMD BCOLOR 15,3
+
+
+        CMD BLINE (<x,y>),<lengte>
+
+        Dit commando tekent een horizontale lijn op het scherm, deze 
+        begint op positie (x,y) en eindigt op positie (x+<lengte>,y). De   
+        positie linksboven in het scherm is positie (0,0). 
+        Als de lijn langer is dan de breedte van het scherm is dan gaat 
+        deze verder op de volgende regel.
+    
+        vb. CMD BLINE (10,3),25
+
+
+        CMD BOFF <tijd>
+
+        Met dit commando wordt de tijd ingesteld hoelang de inverse 
+        kleuren moeten verdwijnen. Samen met het commando CMD BON kan een
+        knipper effekt gemaakt worden.
+        In tabel 1 staan de waardes met daarnaast de daarbij behorende 
+        tijden.
+
+        vb. CMD BOFF 3
+
+
+        CMD BON <tijd>
+
+        Dit commando doet het tegenovergestelde van CMD BOFF, hiermee kan 
+        de tijd worden ingesteld hoelang de inverse kleuren zichtbaar 
+        moeten zijn. De inverse kleuren kunnen continu zichtbaar gemaakt 
+        worden met de volgende twee commando's: CMD BON 15 en CMD BOFF 0.
+    
+        vb. CMD BON 15
+
+
+        CMD BOX (<x,y>),<breedte>,<hoogte>
+
+        Dit commando tekent een gevuld vierkant op het scherm, dat 
+        vierkant begint op positie (x,y) en eindigt op positie 
+        (x+<breedte>,y+<hoogte>).
+
+        vb. CMD BOX (10,5),10,5
+
+
+        CMD CBOX (<x,y>),<breedte>,<hoogte>
+
+        Dit commando wist een 'gevuld' vierkant dat begint op positie 
+        (x,y) en eindigt op positie (x+<breedte>,y+<hoogte>).
+
+        vb. CMD CBOX (11,6),8,3
+
+
+        CMD CLINE (<x,y>),<lengte> 
+     
+        Dit commando wist een horizontale lijn die begint op positie (x,y) 
+        en eindigt op positie (x+<lengte>,y).
+    
+        vb. CMD CLINE (11,3),23
+
+
+        CMD SAVESCR (<x,y>),<breedte>,<hoogte>[,B]
+
+        Met dit commando kan een deel van het scherm worden bewaard, die 
+        deel begint op positie (x,y) en eindigt op positie 
+        (x+<lengte>,y+<hoogte>). 
+        Als er op het einde een ,B wordt meegegeven dan komt er op de 
+        plaats van het bewaarde schermdeel een blok, is deze ,B niet 
+        meegegeven dan wordt er niets aan het scherm veranderd.
+
+        Dit commando bewaart alleen de karakters van het scherm en NIET de 
+        inverse kleuren.
+
+        vb. CMD SAVESCR (3,3),12,8,B of CMD SAVESCR (3,3),12,8
+
+
+        CMD RESSCR
+
+        Dit commando herstelt het beeldscherm weer zoals het was voor het 
+        SAVESCR-commando. Als er nog geen SAVESCR commando is gegeven dan 
+        zal dit commando genegeerd worden. (Het heeft geen zin om meerdere 
+        SAVESCR-commando's achter elkaar te gebruiken, dit commando 
+        herstelt alleen de situatie van voor de laatste SAVESCR).      
+    
+        vb. CMD RESSCR        
+
+
+        CMD HELP
+        
+        Hiermee verschijnt er een lijst met alle mogelijk CMD commando's 
+        van de ingeladen Memman TSR's.
+
+    
+    Tabel 1
+
+    <tijd> (decimaal)                 werkelijke tijd (ms)
+
+        0                                       0.0
+        1                                     166.9
+        2                                     333.8
+        3                                     500.6
+        4                                     667.5
+        5                                     834.4
+        6                                    1001.3
+        7                                    1168.2
+        8                                    1335.1
+        9                                    1501.9
+       10                                    1168.2
+       11                                    1835.7
+       12                                    2002.6
+       13                                    2169.5
+       14                                    2336.3
+       15                                    2503.2
+
+    1.3 Enkele opmerkingen.
+        
+        - Bij deze TSR hoort een Basic-programma dat als voorbeeld dient 
+          voor de belangrijkste mogelijkheden.
+        - Bij het gebruiken van Blink TSR moet U er zeker van zijn dat de  
+          MSX in scherm 0 (width 80) staat. De andere schermen hebben de 
+          mogelijkheid van inverse kleuren namelijk niet (ook scherm 0 
+          (width 40) niet).
+        - Als U gebruik maakt van een scherm met 26.5 regels dan wordt de  
+          Pattern Name Table te lang en overschrijdt deze de Color Table.
+          Het beginadres van de Color Table moet dan verandert worden in   
+          &H0A00. Dit kan op de volgende manier:
+    
+                        10 VDP(3)=47: VDP(11)=0
+                        20 POKE &HF3B6,10: POKE &HF3B5,0
+                        30 VDP(10)=PEEK(&HFFE8)OR128
+
+
+    Verder hoop ik dat deze TSR vele MSX-Basic programma's zal verfraaien.
+
+    Meusesoft
+    WWWWWWWWWWWWWWWWWWWW
+    Rainier Maas
+    van Zeggelenlaan 301
+    2524 AK  Den Haag
+
+
+

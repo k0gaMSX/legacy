@@ -1,0 +1,2900 @@
+NestorBASIC beta version 0.07
+By Nestor Soriano (Konami Man), July 1.998
+
+
+1. WHAT IS NESTORBASIC?
+
+NestorBASIC is a set of machine code routines, integrated in a single file. 
+It's intended for MSX-BASIC programmers: without losing Turbo-BASIC 
+compatibility, NestorBASIC allows you to do the following:
+
+- Full access to all te available memory of the computer (all existing memory 
+  in the case of DOS 1, all free memory in the case of DOS 2), up to 4 Mb.
+- Access to VRAM, with data block exchange between VRAM and between RAM and 
+  VRAM feature.
+- Storage of BASIC programs in the mapped RAM, which can be executed without 
+  losing the existing variables.
+- Access to disk files and direct access to physical sectors, with read/write 
+  to RAM/VRAM feature. File search, directory management. 
+- Graphic compression and decompression.
+- Moonblaster music replay. Samplekit load.
+- PSG sound effects replay.
+- Machine code routines execution, from BIOS or from any RAM segment. User 
+  defined interrupts.
+
+All of these functions are available through a single USR and an integer 
+parameter array; because of this, they are full XBASIC compatibles. In fact, 
+the XBASIC compiler itself is included into the NestorBASIC file, and is 
+automatically loaded when NestorBASIC is installed.
+
+NestorBASIC is loaded in a RAM segment not used by BASIC, so only a small 
+amount of the BASIC main RAM (aprox. 500 bytes) is needed for a jump routine. 
+The rest of the BASIC main RAM keeps available for the user.
+
+
+2. SYSTEM REQUIREMENTS. LOADING NESTORBASIC
+
+NestorBASIC works in any MSX2/2+/Turbo-R with at least 128K of mapped RAM. 
+When DOS 2 is installed, at least one free segment is needed in the primary 
+mapper (at least two for use the music replayer. See section 8 for details).
+
+To load NestorBASIC, just do BLOAD"NBASIC.BIN",R. No previous nor further 
+CLEAR nor DEFUSR is needed. If the installation is completed successfully, 
+the following is then happened:
+
+- NestorBASIC and XBASIC have been loaded, each one in a different RAM 
+segment. Both are ready for use.
+- Free BASIC main RAM has been decreased in aprox. 500 bytes, which are 
+occuped by a jump routine to the NestorBASIC segment.
+- The first USR [USR0(parameter) or just USR(parameter)] points to the jump 
+routine mentioned above. This will be the entry point for using the 
+NestorBASIC functions.
+- The integer array P has been created. This array will be used for passing 
+parameters to, and returning results from the NestorBASIC functions. The 
+error codes will be returned by the USR command. (The file access function 
+and other functions like the ones for the string processing need its own 
+string array, which must be defined separately. See section 4 for details).
+- The first five elements of P have been initialised as following:
+
+P(0) = Number of available RAM segments, or error code
+P(1) = Main version of NestorBASIC
+P(2) = Secondary version of NestorBASIC, in BCD format (must be shown in 
+       hexadecimal format)
+P(3) = Main version of MSX-DOS
+P(4) = Secondary version of MSX-DOS, in BCD format (must be shown in 
+       hexadecimal format)
+
+The number of available RAM segments will be always at least 5. A smaller 
+number in P(0) means an error code that has aborted the installation of 
+NestorBASIC:
+
+0: The computer has not mapped RAM, or has only 64K of mapped RAM.
+1: Disk error when reading NestorBASIC or Turbo-BASIC from NBASIC.BIN.
+2: No free segments available in the primary mapper. This error may appear 
+   only under DOS 2.
+3: NestorBASIC was already installed. All variables have been initialized.
+4: Undefined in this version.
+
+After the installation of NestorBASIC, the CLEAR statement can be freely used 
+in order to reserve memory for load other machine code routines or user data 
+in the BASIC main RAM. However, due to the fact that NestorBASIC does 
+slot/segment switchings in page 2, and the BASIC interpreter puts the stack 
+in the BASIC main RAM below the area reserved with CLEAR, there is a lower 
+limit for the address that can be specified in the CLEAR statement. 
+Summarising, the lowest address that can be specified in the CLEAR statement 
+when NestorBASIC is installed is given by:
+
+&HC000 + (MAXFILES+1)*267 + FRE("") + 100
+
+Also, remember that the CLEAR statement, as well as the 
+load/erase/modification of any BASIC program, erase all the variables. In 
+such a case, the P array must be redefined with DEFINT P:DIM P(15), and this 
+must be done out of turbo-blocks. Also, the F array must be redefined if 
+needed (see section 4 for details about the array F). Watch out: if you need 
+to define the F array inside of a turbo-block, you must do it in the first 
+line of the turbo-block:
+
+10 'save"autoexec.bas"
+20 BLOAD"nbasic.bin",R:IF P(0)<5 THEN PRINT "Error!":END
+30 CLEAR 100:DEFINT P:DIM P(15)
+40 _TURBO ON(P())
+50 DIM F$(1) 'See section 4
+...
+65000 _TURBO OFF
+65010 RUN"next.bas"
+
+10 'save"next.bas"
+20 DEFINT P:DIM P(15)
+30 _TURBO ON(P())
+...
+65000 _TURBO OFF
+
+Also, remember that the first USR is always reserved for NestorBASIC. USR1 
+to USR9 remain available for the user.
+
+
+3. LOGIC SEGMENTS
+
+3.1. WHAT IS A LOGIC SEGMENT?
+
+The mapped RAM of the MSX computers is structured in 16K segment. Each RAM 
+slot contains a given number S of segments (numbered 0 to S-1), which are 
+accessibles when they are connected to the addressing space of the active RAM 
+slot through ports #FC to #FF.
+
+When NestorBASIC is installed, all the exisiting slots are scanned for 
+available RAM (all the existing RAM in the case of DOS 1, all the free RAM in 
+the case of DOS 2), and a segment table is built. In this table, all the 
+found segments are registered as a couple slot+segment number. NestorBASIC 
+identifies each of these couples with his order number in the table. This 
+number is termed logic segment number, and allows the user to manage all the 
+RAM segments in a easy and ordered way, careless of the slot(s) in which the 
+RAM is located and the physic segment numbers.
+
+For example, let's suppose a MSX with 128K of internal RAM (8 segments) and 
+an external mapper of 1024K (64 segments). Then, when NestorBASIC is 
+installed, and supposing DOS 1, the user has 72 logic segments available for 
+its own use. For using these segments, just specify a logic segment number 
+between 0 and 71 in the appropriate NestorBASIC functions, and don't care 
+about RAM slots nor physic segments number.
+
+The address range of a logic segment (just "segment" from now on) is #0000 to 
+#3FFF. If higher addresses are specified in the NestorBASIC functions, they 
+will be converted. That is, addresses #4000-#7FFF, #8000-#BFFF and 
+#C000-#FFFF are the same as #0000-#3FFF when accessing to RAM segments 
+through NestorBASIC. 
+
+All the segments are readable and writable, but there are important 
+restrictions according to the first six ones:
+
+- Segment 0 contains NestorBASIC itself, and only a small amount of RAM 
+remains available for the user at the end of the segment. Use function 1 to 
+obtain the beginning address of this free area (see section 9 for the 
+function description).
+- Segment 1 contains the Turbo-BASIC compiler. You can overwrite this segment 
+only if you will not use the compiler.
+- Segment 2 is used as a buffer by many NestorBASIC functions. It can be 
+written freely, but data stored here is not secure.
+- Segment 3 is always connected to page 3 (addresses #C000 to #FFFF), and 
+contains the MSX work area and part of the BASIC program variables. Be 
+careful when writing here.
+- Segment 4 is always connected to page 2 (addreses #8000 to #BFFF), and 
+contains the BASIC program being executed and maybe some variables.
+- If exists, segment 5 is initially free, and is not used by NestorBASIC. But 
+when the music replayer is loaded, it is stored in this segment. See section 
+8 for details.
+
+All other existing segments keep totally available for the user.
+
+When using the data block exchange functions, be careful for not surpassing 
+the address #3FFF when adding the block lenght to the destination address 
+(for example, don't try to transfer #2000 bytes specifying address #3000 as 
+destination address). In such a case, segment 0 or segment 3 is overwrited, 
+and then the result is unpredictable.
+
+
+3.2. USING VRAM AS LOGIC SEGMENTS
+
+NestorBASIC enables you to use the VRAM for emulate extra RAM segments. If 
+NestorBASIC founds a number S of segments, segment numbers 0 to S-1 refers to 
+RAM segments, as explained above. But segments S to S+7 or S+3 (according to 
+the VRAM capacity, 128K or 64K) are also available, and they refer to VRAM.
+
+Let's return to the previos sample. When installing NestorBASIC, the number 
+of available segments is 72. Then, segments 72 to 79 (if the computer has 
+128K VRAM) or 72 to 75 (if the computer has 64K VRAM) are available to access 
+VRAM.
+
+The correspondence between segments and VRAM address is reversed: the 
+segments with the lowest number refers to the highest VRAM addresses. This is 
+performed in this way in order to help the user when discarding the VRAM 
+segments corresponding to the screen visualization: these segments will be 
+the last ones when working in text mode, or when using the page 0 in graphic 
+modes.
+
+Let's return to the sample: the computer with 72 RAM segments and 128K VRAM. 
+If the program works in text mode, only the first 2000 bytes of VRAM are 
+used: this VRAM area corresponds to the last VRAM segment, the 79 one. Then, 
+the user can use freely the segments 72 to 78, and the range of available 
+segments becomex 0 to 78, without having to discard any intermediate segment. 
+If the program works in SCREEN 5 and uses only graphic page 0, the range is 0 
+to 77; in SCREEN 7, it is 0 to 75, and so on.
+
+Of course, NestorBASIC also includes functions for access VRAM with direct 
+addressing specification, useful when the VRAM must be treated as VRAM and 
+not as emulated RAM.
+
+WATCH OUT: VRAM segments can be used as normal RAM segments in order to store 
+data and BASIC programs; also, data block exchange functions and disk access 
+funtions are available when using VRAM segments. But note that the VRAM 
+segments can't be used for the following purposes:
+
+- Graphic compression/decompression
+- Machine code routines execution
+- User defined interrupt execution
+- PSG sound effects replay
+- Music replay
+
+If you try to use VRAM segments for any of these purposes, the called 
+function will return the "non existing segment" error.
+
+
+3.3. THE SEGMENT 255
+
+The logic segment number 255 has a special meaning. It don't refers to a 
+concrete RAM or VRAM segment, but to the BASIC main RAM, that is, the RAM 
+used by BASIC at addresses #8000 to #FFFF (in this case, addresses are not 
+converted to the range #0000-#3FFF). This segment number is useful in order 
+to exchange data between any segment and a BASIC variable or array, for 
+example:
+
+ 1 'Copy 10 bytes from segment 7, begin address #1000,
+ 2 'to integer array D.
+ 3 '(See section 9 for detailed functions specification)
+ 4 '
+10 DEFINT D:DIM D(4) '5 integer data = 10 bytes
+20 P(0)=7	     'Source segment
+30 P(1)=&H1000	     'Source begin address
+40 P(2)=255	     'Destination segment=BASIC main RAM
+50 P(3)=VARPTR(D(0)) 'Destination begin address=D array
+60 P(4)=10	     'Lenght
+70 J=USR(10)	     'Call to function 10 (block transfer between segments)
+
+
+3.4. SEGMENTS MAP
+
+Summarising this section, here is a list of the available segments and its 
+description. S is the number of available segments, given by NestorBASIC when 
+installing itself or when using the function 1.
+
+0: NestorBASIC segment
+1: Turbo-BASIC segment
+2: Buffer segment
+3: BASIC main RAM, page 3 (#C000-#FFFF)
+4: BASIC main RAM, page 2 (#8000-#BFFF)
+5 to S-1: Available RAM for the user (if S>5)
+   If the music replayer is loaded,
+   it is stored in segment 5. See section 8.
+S:   VRAM, addresses #1C000-#1FFFF (64K VRAM: #C000-#FFFF)
+S+1: VRAM, addresses #18000-#1BFFF (64K VRAM: #8000-#BFFF)
+S+2: VRAM, addresses #14000-#17FFF (64K VRAM: #4000-#7FFF)
+S+3: VRAM, addresses #10000-#13FFF (64K VRAM: #0000-#3FFF)
+S+4: VRAM, addresses #0C000-#0FFFF (not available with 64K VRAM)
+S+5: VRAM, addresses #08000-#0BFFF (not available with 64K VRAM)
+S+6: VRAM, addresses #04000-#07FFF (not available with 64K VRAM)
+S+7: VRAM, addresses #00000-#03FFF (not available with 64K VRAM)
+
+S+8 to 254: Not available (if S+8<255)
+255: BASIC main RAM (#8000-#FFFF)
+
+
+3.5. ERRORS
+
+All the functions which perform RAM and/or VRAM access returns the error code 
+-1 if any non existing RAM segment or VRAM address (addresses above #FFFF in 
+computers with 64K VRAM) is specified in any input parameter, or if any VRAM 
+segment or the 255 segment is specified and the function supports only normal 
+RAM segments.
+
+
+4. DISK ACCESS
+
+NestorBASIC has functions for disk files management and for access to other 
+MSX-DOS capabilities:
+
+* Create/delete/rename/search files.
+* Read/write files to/from RAM or VRAM.
+* Under DOS 2, move files and get/set file attributes.
+* Read/write disk sectors to/from RAM or VRAM.
+* Get/set the default drive/directory.
+* Obtain the disk size and free space.
+* Under DOS 2, get size/set the RAM disk.
+
+4.1. THE ARRAY F$
+
+For pass filenames and pathnames to these functions, a string array named F$ 
+is used. For search, rename and move files, and for parse a pathname, two 
+strings are needed, so F$ must be defined with two elements [DIM F$(1)]. The 
+rest of disk access functions need only one string; then, if none of the four 
+actions mentioned are needed, it is recommended to define the array with only 
+one element [DIM F$(0)]. This is beacuse of the string storing method of 
+Turbo-BASIC: each string uses 256 bytes in RAM, regardless of its real 
+lenght.
+
+Also, remember that if you define a turbo-block, the array F$ must be defined 
+in the first line:
+
+1000 _TURBO ON(P())
+1010 DIM F$(1) or DIM F$(0)
+...
+65000 _TURBO OFF
+
+IMPORTANT: String variables defined outside a turboblock, as well as the 
+other variables, are not usable from inside the turboblock, and are restored 
+when it finishes. For example:
+
+10 A$="Outside"
+20 _TURBO ON
+30 A$="Inside":PRINT A$
+40 _TURBO OFF
+50 PRINT A$
+run
+Inside
+Outside
+
+With NestorBASIC this still being true, but F$() strings need an additional 
+caution. If F$ array has been used outside the turboblock and it will be used 
+again inside, the following line must be placed before CALL TURBO ON:
+
+F$(0)=F$(0)+"":F$(1)=F$(1)+""
+
+This caution is not needed if you don't care about the old contents of F$, or 
+if F$ will not be defined inside the turboblock.
+
+Another restriction of F$(0) and F$(1) is its lenght, limited to 80 
+characters; excess characters will just be ignored by NestorBASIC functions 
+having these strings as input parameters. All these restrictions are not 
+present for indexes higher than 1 if F$ is defined with more elements; that 
+is, you can define F$ with more than two elements and use F$(2), F$(3)... in 
+a normal way.
+
+
+4.2. ERRORS
+
+In addition to error -1, described in section 3, the disk access functions 
+have its own error codes.
+
+The following errors can appear only under DOS 1:
+
+1: General error code of MSX-DOS 1. It can be caused by the following error 
+conditions:
+
+   - File not found.
+   - Invalid filename.
+   - File already exists (when renaming).
+   - Invalid drive (when being part of a filename).
+   - End of file found when reading from a file.
+   - Disk full.
+   - Root directory full.
+   - Function not available under DOS 1.
+
+Under DOS 2, each one of these errors has its own error code, which is never 
+the 1.
+
+2: Invalid file number (no opened file has this number assigned).
+3: Too many opened files. The maximum number of files that can be opened 
+simultaneously under DOS 1 can be checked by using the function 1.
+
+The following errors can appear under DOS 1 and DOS 2, and have the same 
+error code that the BASIC equivalents:
+
+60: Bad FAT.
+62: Invalid drive (when changing the default drive).
+68: Write protected disk.
+69: Physical disk error.
+70: Disk offline.
+
+The DOS 2 error codes are the following ones:
+
+222: Not enough free DOS 2 internal memory to create the RAM disk or to open 
+a file.
+219: Invalid drive (when being part of a filename or pathname).
+218: Invalid filename.
+217: Invalid pathname.
+215: File not found.
+214: Directory not found.
+213: Root directory full.
+212: Disk full.
+211: File already exists (when renaming or moving a file).
+210: Invalid directory movement operation (a directory can't be moved into 
+one of its descendants).
+209: Read only file (when writing into a file).
+208: The directory is not empty (when deleting a directory).
+207: Invalid attributes (when changing the attributes of a file/directory).
+206: Invalid "." or ".." operation.
+205: System file exists (when creating a file, any previous existing file is 
+automatically deleted, except the files having the system attribute set).
+204: System directory exists (same as above).
+203: File already exists (when creating a directory).
+202: File is open (when deleting, renaming or moving a file, or when changing 
+the file attribute with direct filename specification).
+199: End of file is found (when reading from a file).
+196: Too many opened files (when opening a file).
+195: Invalid file number (greatest than 63).
+194: Invalid file number (never assigned to an opened file).
+188: RAM disk already exists (when creating RAM disk).
+187: RAM disk don't exists (when removing RAM disk).
+
+
+5. GRAPHIC COMPRESSION AND DESCOMPRESSION
+
+NestorBASIC includes functions for the compression of graphic data from VRAM 
+to RAM, and decompression from RAM to VRAM. The compression format is the 
+same as the one used by Sunrise in the logo appearing routine, it works in 
+bytes and is the following:
+
+- Unrepeated bytes (up to 63):
+
+  &B00nnnnnn &Hdd .. &Hdd
+
+  &Bnnnnnn is the number of bytes, &Hdd are the bytes
+
+- Repeated byte (up to 63 times):
+
+  &B01nnnnnn &Hdd
+
+  &Bnnnnnn is the number of times that the byte is repeated, &Hdd is the
+  repeated byte
+
+- Repeated byte (up to 16383 times):
+
+  &B10nnnnnn &Bnnnnnnnn &Hdd
+
+  &Bnnnnnnnnnnnnnn is the number of times that the byte is repeated, &Hdd is
+  the repeated byte
+
+- End of data mark:
+
+  &B11000000 = &HC0
+
+The (de)compression is performed through consecutive segments; that is, after 
+(de)compressing from/to address #3FFF of segment S, the process continues in 
+address #0000 of segment S+1.
+
+
+5.1 ERRORS
+
+The following error codes can be returned by the graphic compresssion and 
+decompression functions:
+
+-1: Error when compressing or decompressing. The specified segment don't
+    exists, refers to VRAM or is the 255. Also, this error appears when an
+    invalid VRAM address is specified in any input parameter.
+ 5: Error when compressing. Segments have been exhausted before having
+    compressed all the required graphic data.
+ 6: Error when decompressing. An invalid data is found, or segments have been
+    exhausted before founding the end of data mark.
+
+
+6. BASIC PROGRAMS STORAGE AND EXECUTION
+
+NestorBASIC includes functions that allows the storage of BASIC programs in 
+RAM or VRAM segments, and its activation or execution, without losing the 
+existing variables generated by the original program. 
+
+WATCH OUT: For using these functions, the begin address of the BASIC programs 
+in the BASIC main RAM must be changed, from #8000 to #8003; this operation 
+must be done only once, and BEFORE the installation of NestorBASIC. You can 
+do this in two different ways:
+
+- In direct mode, enter the following commands:
+
+POKE &HF676,4
+POKE &H8003,0
+NEW
+
+- From a BASIC program. This is the best way, because you can use the same 
+program for perform this change and, after that, for loading NestorBASIC. The 
+first line of the program must be as follows:
+
+1 'program.bas
+10 IF PEEK(&HF676)<>4 THEN POKE &HF676,4:POKE &H8003,0:RUN"program.bas"
+20 'From here, you can load NestorBASIC
+
+When a BASIC program stored in a segment will be activated or executed, 
+NestorBASIC stores all the existing variables in segment 2; after that, the 
+new program is copied from the specified segment to the BASIC main RAM, all 
+the variables are placed after the program, and the appropriate pointers in 
+the BASIC work area are actualized. The last step is the execution of the new 
+BASIC program from the first line, or a jump to the direct mode, depending on 
+the called function (execution or activation of the program).
+
+If a BASIC program is intended for being stored in a segment and executed or 
+activated with these functions, it must be stored with a special header with 
+information about its lenght, which is needed in the process of concatenating 
+the existing variables to the new program. There is a function that saves the 
+current BASIC program with this header; later, just load this generated file 
+in any segment with the disk access functions, and then you have the program 
+stored and ready for being executed or activated.
+
+
+6.1 ERRORS
+
+It's clear that if the BASIC commands placed after the USR that calls the 
+execution or activation functions are executed, an error is occurred. Two 
+possible error codes can then be returned:
+
+- Error -1, if the specified segment don't exists. These functions work with 
+VRAM segments, but not with the segment 255.
+- Error -2, if the BASIC main RAM has not enough size for storing the new 
+progam and the existing variables. Such situation can appear if the new 
+program is biggest than the previous one.
+
+
+7. MISCELLANEOUS FUNCTIONS
+
+In this group are included various functions for the following purposes:
+
+- BIOS machine code routines execution.
+- User machine code routines execution (these routines can be executed from 
+any RAM segment).
+- Storage of string variables in RAM segments.
+- Screen print of a string variable in graphic mode.
+- SCREEN 0 blink mode management.
+- User defined interrupts definition (machine code routines which will be 
+executed, from any RAM segment, in each 50/60 Hz timer interrupt).
+- SEE 3.xx PSG sound effects replay.
+
+Some of these functions need a srtrings array, named F$, for passing 
+parameters and returning results, in addition to the integer array P. See 
+section 4 for more details about array F$.
+
+Some of the NestorBASIC internal machine code routines can be used by the 
+user machine code routines and by the user defined interrupt. See appendix 2 
+for a detailed description about the use of these routines.
+
+The PSG sound effects editor SEE was created by Fuzzy Logic, and the use of 
+the sound effects created with this editor in commercial programs implies the 
+pay of a small amount of money to the authors. See appendix 4 for more 
+details.
+
+
+8. THE MUSIC REPLAYER
+
+8.1. INITIALIZATION OF THE REPLAYER
+
+NestorBASIC includes Moonblaster 1.4 and Moonblaster for MoonSound Wave 
+versio 1.05 music replayers.
+
+These replayers are not automatically loaded when NestorBASIC is loaded: due 
+to its big lenght, they don't fit in the NestorBASIC RAM segment, and must be 
+loaded in a separate segment. Thus, for using a replayer, it must be 
+explicitily loaded. Only one replayer can be loaded at the same time.
+
+Function 71 loads and initializes the desired replayer, leaving it ready for 
+use. This function checks if the segment 5 exists and belongs to the primary 
+mapper: in this case, the replayer is loaded in this segment, which is no 
+longer available for the user. If segment 5 don't exists or don't belongs to 
+the primary mapper, the replayer will not be loaded, and an error will be 
+returned by the function.
+
+NBASIC.BIN file contains two versions of the Moonblaster Wave replayer: one 
+is for MSX2/2+ and Turbo-R in Z80 mode, and the other is for Turbo-R in R800 
+mode. If the computer is a Turbo-R, NestorBASIC decides the version to be 
+loaded according to the processor switched when function 71 is called. Note 
+that if a processor change is performed, this function must be called again 
+for load the appropriate replayer: Z80 version don't works in R800 mode, and 
+R800 version makes the system slower in Z80 mode.
+
+When the replayer is installed, a sound chips search is done, and all found 
+chips are marked as enabled. See funtion 73 description for more details 
+about enabling and disabling the sound chips.
+
+
+8.2. REPLAYER CAPABILITIES
+
+Once the replayer is loaded, you can use the functions that NestorBASIC 
+includes for the following purposes:
+
+- Start the replay of a music stored in any RAM segment (VRAM segments are 
+not supported).
+- Stop the replay of a music being replayed.
+- Pause/continue the music being replayed.
+- Fade out the music being replayed, with specification of the fading speed.
+- Obtain various information about the music being replayed (segment and 
+begin address in which the music is stored, songname and samplekit or 
+wavekit, current position and step).
+- Obtain the found sound chips in the system.
+- Disable the sound chips, which in this case will not sound even if they 
+have been detected.
+- Load a Music Module samplekit from a file.
+
+While a music is being replayed, all the NestorBASIC functions can be used in 
+a normal way, including the PSG sound effects replay and the definition of 
+user defined interrupts. If NestorBASIC is uninstalled, the music being 
+replayed will be automatically stopped.
+
+Moonblaster 1.4 replayer fits in 4.5K, therefore space between addresses 
+#1200 and #3FFF on segment 5 remains free and can be used, for example, for 
+storing the music to be replayed. This don't occurs with Moonblaster Wave 
+replayer, which uses itself the whole of the segment 5.
+
+Moonblaster 1.4 musics must be stored in a single segment, so its maximum 
+lenght is 16K. Moonblaster Wave musics can be stored trough consecutive 
+segments, maximum 3: when reading music data during the replaying, if 
+NestorBASIC reaches address #3FFF of a segment, it continues in address 0 of 
+the next segment.
+
+In order to load a music trough consecutive segments, the following sample 
+listing can be used:
+
+1000 'Loading a music through consecutive segments,
+1010 'starting in segment S, address A
+1020 F$(0)="music.mwm":P(2)=S:P(3)=A
+1030 E=USR(31):IF E<>0 THEN 10000
+1040 P(4)=&H4000:E=USR(33)
+1050 IF (E<>0 AND E<>1 AND E<>199) THEN 10000
+1060 IF E=0 THEN P(2)=P(2)+1:P(3)=0:GOTO 1040
+1070 E=USR(32):IF E<>0 THEN 10000
+...
+10000 'Disk error E handling routine
+...
+
+CAUTION: A Moonblaster Wave music can start at any address of a segment, if 
+it continues at the beginning of the next segment. However the first 800 
+bytes of the music, containing pattern table and various pointers, must be 
+entirely stored in the first segment.
+
+
+8.3 ERRORS
+
+The following error codes can be returned by the music replay functions:
+
+- Error 7, returned by the sound chips activation function, pause function 
+and fade out function, if any of the input parameters is invalid.
+- Error 12, returned by the replay start function and sound chips enabling 
+function, if the replayer is not installed. The rest of the functions will 
+simply do nothing in such case.
+
+The following errors can be returned by the replay start function:
+
+-1: The specified segment don't exists, refers to VRAM or is the 255.
+12: The replayer is not installed.
+13: The music was saved in EDIT mode and can't be replayed
+    (Moonblaster 1.4 replayer).
+    In the specified address there is no Moonblaster Wave music,
+    or there is a Moonblaster Wave music not saved in USER mode.
+    (Moonblaster Wave replayer).
+14: Other music is currently being replayed.
+
+MoonSound wavekit load function can return the following error, apart from 
+the disk access errors:
+
+15: In the current position of the specified file there is not placed a
+    Moonblaster wavekit, or there is placed a wavekit not saved in USER mode.
+
+NOTE: Moonblaster 1.4 replayer can't detect if data starting in the specified 
+address is actually a Moonblaster 1.4 music, and relys only in the first byte 
+for deciding if data is a Moonblaster EDIT music. Moonblaster Wave replayer 
+has not these restrictions.
+
+The replayer initialization function returns the same error codes as the disk 
+ccess functions, and the error code -1 if the segment 5 don't exists or don't 
+belongs to the primary mapper.
+
+
+9. NESTORBASIC FUNCTIONS
+
+9.1. GENERAL DESCRIPTION
+
+All the user accesibles routines of NestorBASIC are termed functions, and are 
+identified by the number passed as a parameter to the USR command. That is, 
+for use the function number F just do USR(F), and remember that if F is a 
+variable and not an inmediate number, it must be an integer variable. 
+Parameters for the function must be set in the array P (and, in some cases, 
+also in the array F$) before calling the function. Once executed, the results 
+of the function will be returned in the same arrays, P and F.
+
+Elements of P and F$ not explicitily mentioned in the results list of each 
+funtion are not modified, except the segment addresses, which are converted 
+to the range #0000-#3FFF (except in the case of the segment 255). When a 
+function returns an error, the results will not be valid (P and F$ are not 
+modified), except if otherwise is specified in the description of the 
+funtion.
+
+"VRAM block" refers to 64K lower VRAM (block 0) or to 64K upper VRAM (block 
+1). VRAM addresses have the range #0000-#FFFF. If any VRAM address surpass 
+#FFFF after an autoincrement, the new address will be #0000 and the VRAM 
+block will be reversed (from 0 to 1, or from 1 to 0).
+
+The USR command will return an error code, or 0 if there is not error. 
+Specific error codes for each functions group are detailed in each section.
+
+Appendix 1 contains a list of all the available functions. Use it as a fast 
+reference.
+
+
+9.2. GENERAL FUNCTIONS
+
+* Function 0: NestorBASIC uninstallation
+
+Input:	 P(0) = 0 -> Don't free BASIC main RAM area reserved by NestorBASIC
+	 P(0) <>0 -> Free the BASIC main RAM area reserved by NestorBASIC
+Out:	 -
+
+This function uninstalls NestorBASIC: makes the USR unusable and, in the case 
+of DOS 2, frees all the reserved segments. Also, all interrupt process (user 
+defined interrupt, PSG sound effects replay and music replay) are stopped. It 
+is advisable to uninstall NestorBASIC before returning to DOS; else, all the 
+reserved memory keep reserved, and unusable until the computer is reset.
+
+Before uninstalling NestorBASIC, check that no files still open. Else, if you 
+have done file writings, you can lost some data in the internal DOS buffers.
+
+If P(0)=0 is specified, the BASIC main RAM zone ocuped by the jump routine 
+(aprox. 500 bytes) is not freed; then, any memory reservation done with the 
+CLEAR statement after the installation of NestorBASIC remains valid. If 
+P(0)<>0 is specified, a new CLEAR statement is automatically executed, and 
+the highest RAM address usable for BASIC programs and variables becomes the 
+same as before the NestorBASIC installation; that is, FRE(0) returns the same 
+value as before the installation of NestorBASIC. Note that in this case, 
+variables are initialized.
+
+This function never returns error.
+
+
+* Function 1: Obtain general info about NestorBASIC and about a segment
+
+Input:	 P(10)= Logic segment to investigate
+Output:  P(0) = Number of available RAM segments
+	 P(1) = NestorBASIC main version
+	 P(2) = NestorBASIC secondary version, in BCD format
+		(must be shown in hexadecimal format)
+	 P(3) = MSX-DOS main version
+	 P(4) = MSX-DOS secondary version, in BCD format
+		(must be shown in hexadecimal format)
+	 P(5) = Amount of memory occuped in the BASIC main RAM
+		by the jump routine
+	 P(6) = VRAM size in K
+	 P(7) = Begin address of the free area in segment 0
+	 P(8) = Number of last function called
+	 P(9) = Number of currently opened files
+	 P(10)= Maximum number of simultaneously opened files
+		(valid only under DOS 1)
+	 P(11)= Slot that contains the logic segment specified in P(0)
+		(255 if this segment don't exists or refers to VRAM)
+	 P(12)= Physic segment number of the logic segment specified in P(0)
+	 F$(0)= Complete path of NBASIC.BIN file
+
+In the case of DOS 2, the maximum number of simultaneously opened files 
+depends on the state of the DOS internal memory, but will never be greatest 
+than 63.
+
+This function returns error code -1 if the logic segment specified in P(0) 
+don't exists, refers to VRAM or is the 255. But in this case, results
+returned in P(0) to P(10) still being valid.
+
+F$(0) will be just a drive letter and a colon under DOS 1 (for example "A:"), 
+and a drive+directory finished with "\" under DOS 2 (for example 
+"C:\UTILS\AMAZING\").
+
+P(8) returns the number of the last function called, but function 1 itself is 
+not counted. So if you call, for example, functions 64, 3, 10, 1, 1, 1 in 
+sequence, you will obtain P(8)=10 at the end. A value of zero means that no 
+functions were called other than function 1 since NestorBASIC was 
+initialized.
+
+
+9.3. FUNCTIONS FOR LOGIC SEGMENTS ACCESS
+
+* Function 2: Read a byte from a segment
+
+Input:	 P(0) = Segment
+	 P(1) = Address
+Output:  P(2) = Read byte
+
+
+* Function 3: Read a byte from a segment with address autoincrement
+
+Input:	 P(0) = Segment
+	 P(1) = Address
+Output:  P(2) = Read byte
+	 P(1) = P(1) + 1
+
+
+* Function 4: Read an integer (2 bytes) from a segment
+
+Input:	 P(0) = Segment
+	 P(1) = Address
+Output:  P(2) = Read integer
+
+Low byte is read from P(1), and high byte from P(1)+1.
+
+
+* Function 5: Read an integr (2 bytes) from a segment
+	      with address autoincrement
+
+Input:	 P(0) = Segment
+	 P(1) = Address
+Output:  P(2) = Read integer
+	 P(1) = P(1) + 2
+
+Low byte is read from P(1), and high byte from P(1)+1.
+
+
+* Function 6: Write a byte to a segment
+
+Input:	 P(0) = Segment
+	 P(1) = Address
+	 P(2) = Byte to be written
+Output:  -
+
+
+* Function 7: Write a byte to a segment with address autoincrement
+
+Input:	 P(0) = Segmento
+	 P(1) = Address
+	 P(2) = Byte to be written
+Output:  P(1) = P(1) + 1
+
+
+* Function 8: Write an integer (2 bytes) to a segment
+
+Input:	 P(0) = Segment
+	 P(1) = Address
+	 P(2) = Integer to be written
+Output:  -
+
+Low byte is written to P(1), and high byte to P(1)+1.
+
+
+* Function 9: Write an integer (2 bytes) to a segment
+	      with address autoincrement
+
+Input:	 P(0) = Segment
+	 P(1) = Address
+	 P(2) = Integer to be written
+Output:  P(1) = P(1) + 2
+
+Low byte is written to P(1), and high byte to P(1)+1.
+
+
+* Function 10: Data block transfer between segments
+
+Input:	 P(0) = Source segment
+	 P(1) = Source begin address
+	 P(2) = Destination segment
+	 P(3) = Destination begin address
+	 P(4) = Data lenght
+	 P(5)<> 0 -> Autoincrement of P(1)
+	 P(6)<> 0 -> Autoincrement of P(3)
+Output:  P(1) = P(1) + P(4) if P(5)<>0
+	 P(3) = P(3) + P(4) if P(6)<>0
+
+P(3)+P(4) must be lower than #4000, else the result is unpredictable.
+
+
+* Function 11: Fill a RAM zone with a byte
+
+Input:	 P(0) = Segment
+	 P(1) = Begin address
+	 P(2) = Byte
+	 P(3) = Zone lenght
+Output:  -
+
+P(3)+P(4) must be lower than #4000, else the result is unpredictable.
+
+
+* Function 12: Fill a RAM zone with a byte with address autoincrement
+
+Input:	 P(0) = Segment
+	 P(1) = Begin address
+	 P(2) = Byte
+	 P(3) = Zone lenght
+Output:  P(1) = P(1) + P(3)
+
+P(3)+P(4) must be lower than #4000, else the result is unpredictable.
+
+
+9.4. FUNCTIONS FOR VRAM ACCESS
+
+* Function 13: Read a byte from VRAM
+
+Input:	 P(0) = VRAM block
+	 P(1) = Address
+Output:  P(2) = Read byte
+
+
+* Function 14: Read a byte from VRAM with address autoincrement
+
+Input:	 P(0) = VRAM block
+	 P(1) = Address
+Output:  P(2) = Read byte
+	 P(0):P(1) = P(0):P(1) + 1
+
+
+* Function 15: Read an integer (2 bytes) from VRAM
+
+Input:	 P(0) = VRAM block
+	 P(1) = Address
+Output:  P(2) = Read integer
+
+Low byte is read from P(1), and high byte from P(1)+1.
+
+
+* Function 16: Read an integer (2 bytes) from VRAM
+	       with address autoincrement
+
+Input:	 P(0) = VRAM block
+	 P(1) = Address
+Output:  P(2) = Read integer
+	 P(0):P(1) = P(0):P(1) + 2
+
+Low byte is read from P(1), and high byte from P(1)+1.
+
+
+* Function 17: Write a byte to VRAM
+
+Input:	 P(0) = VRAM block
+	 P(1) = Address
+	 P(2) = Byte to be written
+Output:  -
+
+
+* Function 18: Write a byte to VRAM with address autoincrement
+
+Input:	 P(0) = VRAM block
+	 P(1) = Address
+	 P(2) = Byte to be written
+Output:  P(0):P(1) = P(0):P(1) + 1
+
+
+* Function 19: Write an integer (2 bytes) to VRAM
+
+Input:	 P(0) = VRAM block
+	 P(1) = Address
+	 P(2) = Integer to be written
+Output:  -
+
+Low byte is written to P(1), and high byte to P(1)+1.
+
+
+* Function 20: Write an integer (2 bytes) to VRAM
+	       with address autoincrement
+
+Input:	 P(0) = VRAM block
+	 P(1) = Address
+	 P(2) = Integer to be written
+Output:  P(0):P(1) = P(0):P(1) + 2
+
+Low byte is written to P(1), and high byte to P(1)+1.
+
+
+* Function 21: Data block transfer from VRAM to RAM
+
+Input	 P(0) = Source VRAM block
+	 P(1) = Source begin address (VRAM)
+	 P(2) = Destination segment
+	 P(3) = Destination begin address (RAM)
+	 P(4) = Block lenght
+	 P(5)<> 0 -> Autoincrement of P(1)
+	 P(6)<> 0 -> Autoincrement of P(3)
+Output:  P(1) = P(1) + P(4) if P(5)<>0
+	 P(2):P(3) = P(2):P(3) + P(4) if P(6)<>0
+
+P(1)+P(4) must be lower than #4000, else the result is unpredictable.
+
+
+* Function 22: Data block transfer from RAM to VRAM
+
+Input:	 P(0) = Source segment
+	 P(1) = Source begin address (RAM)
+	 P(2) = Destination VRAM block
+	 P(3) = Destination begin address (VRAM)
+	 P(4) = Block lenght
+	 P(5)<> 0 -> Autoincrement of P(1)
+	 P(6)<> 0 -> Autoincrement of P(3)
+Output:  P(1) = P(1) + P(4) if P(5)<>0
+	 P(2):P(3) = P(2):P(3) + P(4) if P(6)<>0
+
+
+* Function 23: Data block tranfer between VRAM
+
+Input:	 P(0) = Source VRAM block
+	 P(1) = Source begin address
+	 P(2) = Destination VRAM block
+	 P(3) = Destination begin address
+	 P(4) = Block lenght (maximum #4000)
+	 P(5)<> 0 -> Autoincrement of P(1)
+	 P(6)<> 0 -> Autoincrement of P(3)
+Output:  P(0):P(1) = P(0):P(1) + P(4) if P(5)<>0
+	 P(2):P(3) = P(2):P(3) + P(4) if P(6)<>0
+
+If P(4) is greatest than #4000 only #4000 bytes will be transferred, and the 
+addresses increment will be also limited to #4000, but P(4) will not be 
+modified. Thus, for transferring largest blocks (up to 64K) in a easy way you 
+can do something like the following:
+
+10 'P(0) to P(3) already set. Data block lenght set in L.
+20 P(5)=1:P(6)=1
+30 P(4)=VAL("&H"+HEX$(L)):J=USR(23):L=L-&H4000:IF L>0 THEN 30
+
+The decimal to hexadecimal and further hexadecimal to decimal conversion of L 
+is needed due to the integer variables range in BASIC: -32768 to 32767; if a 
+biggest number is directly assigned to P(4), an overflow error will be 
+generated.
+
+Since Turbo-BASIC treats floating point variables in a special way, if you 
+use this method inside a turbo-block, L must be an integer multiply of 256.
+
+
+* Function 24: Fill a VRAM zone with a byte
+
+Input:	 P(0) = VRAM block
+	 P(1) = Begin address
+	 P(2) = Byte
+	 P(3) = Zone lenght (maximum 16K)
+Output:  -
+
+For fill a zone largest than 16K, use the method described in function 23.
+
+
+* Function 25: Fill a VRAM zone with a byte with address autoincrement
+
+Input:	 P(0) = VRAM block
+	 P(1) = Begin address
+	 P(2) = Byte
+	 P(3) = Zone lenght (maximum 16K)
+Output:  P(0):P(1) = P(0):P(1) + P(3)
+
+For fill a zone largest than 16K, use the method described in function 23.
+
+
+9.5. DISK ACCESS FUNCTIONS
+
+* Function 26: Search for a file
+
+Input:	 F$(1) = Searching mask (null string="*.*")
+	 P(0)  = 0 -> Seacrh for first mactching filename
+	 P(0)  = 1 -> Seacrh for next matching filename
+	 P(1)  = Search attributes: 2*H + 4*S + 8*V + 16*D
+		 H = 1 -> Include hidden files in the search
+		 S = 1 -> Include system files in the search
+		 V = 1 -> Search only the volume label
+		 D = 1 -> Include subdirectories in the search
+Output:  F$(0) = Found filename
+	 P(0)  = 1
+	 P(1)  = File attributes (always 0 under DOS 1):
+		 R + 2*H + 4*S + 8*V + 16*D + 32*A
+		 R = 1 -> Read only
+		 H = 1 -> Hidden
+		 S = 1 -> System
+		 V = 1 -> Volume label
+		 D = 1 -> Subdirectory
+		 A = 1 -> Archive
+	 P(2)  = Hour of creation/last modification (0 to 23)
+	 P(3)  = Minute of creation/last modification (0 to 59)
+	 P(4)  = Day of creation/last modification (1 to 31)
+	 P(5)  = Month of creation/last modification (1 to 12)
+	 P(6)  = Year of creation/last modification (1980 to 2079)
+	 P(7)  = First cluster (2 to 4095)
+	 P(8)  = Logic drive (0=A:,...,7=H:)
+	 P(9)  = File lenght (lower part)
+	 P(10) = File lenght (higher part)
+	 P(11) = 0, if searching first no file is found
+		 1, if searching first a file is found
+		 P(11), if searching next no file is found
+		 P(11)+1, if searching next a file is found
+
+F$(1) can include a drive letter and, in the case of DOS 2, a pathname; F$(0) 
+will contain only the filename found.
+
+P(0) must be set to 0 for search the first filename matching with the 
+specified mask, and must be left to 1 for search the following ones. This is 
+done automatically by the function (P(0) is always set to 1). Besides, P(11) 
+is set to 1 when the first filename is searched (0 if no one is found), and 
+is increased automatically in each successive search. Thus, for search all 
+the matching filenames you can use a loop like the following:
+
+10 'Search of all the filenames in drive B: (default directory)
+20 F$(1)="B:":P(0)=0:P(1)=2+16 'Include directories and hidden files
+30 IF USR(26)<>0 THEN PRINT:PRINT"Total found:"P(11):END
+40 PRINT F$(0),CHR$(-ASC("h")*((P(1)AND2)<>0));
+	       CHR$(-ASC("d")*((P(1)AND16)<>0));
+	       CHR$(-ASC("a")*((P(1)AND32)<>0)):GOTO 30
+
+When there is no more matching files/directories remaining, the function will 
+return the "File not found" error. Under DOS 1, an error when searching the 
+first matching filename can also imply an invalid drive or filename 
+specification in the input mask (under DOS 2, these errors have its own error 
+code).
+
+To obtain the file lenght, use the expression P(9)+65536*P(10). When printing
+these lenghts in the screen, remember that the numeric variables screen 
+representation is different for BASIC and Turbo-BASIC when the number is big; 
+so, better print the file size in K: INT(P(9)/1024)+64*P(10)
+
+
+* Function 27: Rename a file
+
+Input:	 F$(0) = Filename
+	 F$(1) = New filename
+Output:  -
+
+F$(0) can include a drive letter and, in the case of DOS 2, a pathname; F$(1) 
+must contain only the new filename. Under DOS 1 you can rename several files 
+at the same time by using wildcards; under DOS 2 you can rename only one file 
+at the same time.
+
+
+* Function 28: Delete a file
+
+Input:	 F$(0) = Filename
+Output:  -
+
+F$(0) can include a drive letter and, in the case of DOS 2, a pathname. Under 
+DOS 2 this function will return an error if you try to delete an open file. 
+Under DOS 1 you can delete open files, but this is not advisable because 
+further attempts to access this file may cause unpredictable results.
+
+Under DOS 1 you can delete several files at the same time by using wildcards; 
+under DOS 2 you can delete only one file at the same time.
+
+
+* Function 29: Move a file (DOS 2)
+
+Input:	 F$(0) = Filename
+	 F$(1) = New file location
+Output:  -
+
+This function is only available under DOS 2. Under DOS 1 will always return 
+the error code 1.
+
+F$(0) can include a drive letter and a pathname. F$(1) can't not include a 
+filename (the file is always moved with the same name) nor a drive letter (a 
+file can be moved only to other directory on the same drive). If you specify 
+a directory instead of a file in F$(0), all its subdirectories and contained 
+files will also be moved.
+
+
+* Function 30: Create a file or subdirectory
+
+Input:	 F$(0) = Name of the file or subdirectory
+	 P(0)  = Creating attributes (ignored under DOS 1):
+		 R + 2*H + 4*S for create a file;
+		 2*H + 16 for create a subdirectory.
+		 R = 1 -> Read only
+		 H = 1 -> Hidden
+		 S = 1 -> System
+
+F$(0) can include a drive letter and a pathname. The file will be created 
+with a lenght of 0 bytes, and will not remain open: for accessing the file, 
+it must be explicitily opened (use function 31 for open a file).
+
+Under DOS 1 you can only create files, and P(0) is ignored. Under DOS 2 the 
+files are always created with the "Archive" attribute set, in addition to the 
+attributes specified in P(0).
+
+
+* Function 31: Open a file
+
+Input:	 F$(0) = Filename
+Output:  P(0)  = Number assigned to the file
+
+F$(0) can contain a drive letter and, in the case of DOS 2, a pathname. The 
+number returned in P(0) identifies the file, and must be specified in further 
+calls to the file access functions. The concrete value of this number depends 
+on the DOS version and the number of previously opened and closed files: 
+don't rely on it as a reference of the number of currently opened files (use 
+function 1 to obtain the number of currently opened files).
+
+Under DOS 1 an error code of 3 will be returned if there is too many opened 
+files already. Use function 1 to obtain the maximum number of simultaneously 
+opened files under DOS 1.
+
+
+* Function 32: Close a file
+
+Input:	 P(0) = File number
+Output:  -
+
+It is very important to close a file that will no longer be accessed: 
+otherwise, if the file has been written you can lose some data in the DOS 
+internal buffers; besides, in this case the directory entry of the file will 
+not be actualized.
+
+
+* Function 33: Read from a file
+
+Input:	 P(0) = File number
+	 P(2) = Destination segment
+	 P(3) = Destination begin address
+	 P(4) = Number of bytes to read
+	 P(6) = Increase P(3) if <>0
+Output:  P(7) = Number of bytes actually read
+	 P(3) = P(3)+P(4) if P(6)<>0
+
+P(3)+P(4) must be lowest than #4000, else the result is unpredictable.
+
+The file is read from the position indicated by its file pointer; this 
+pointer is automatically increased after the read. For examinate or modify 
+a file pointer use function 42.
+
+To read till the end of the file, or to read the whole file if it is shorter 
+that 16K, just try to read 16K (set P(4)=&H4000), and ignore the returned 
+error if it is the 1 or the 199: for this function, these errors means only 
+that the end of the file is reached.
+
+If the end of the file is reached before having read P(4) bytes an error will 
+be returned; to obtain the number of read bytes look at P(7). If no error is 
+returned P(7) will have the same value as P(4); in the case of a physical 
+error (bad FAT, physical disk error or disk offline) P(7) will always be 0.
+
+
+* Function 34: Read from a file to VRAM
+
+Input:	 P(0) = File number
+	 P(2) = Destination VRAM block
+	 P(3) = Destination begin address
+	 P(4) = Number of bytes to read (maximum #4000)
+	 P(6) = Increase P(3) if <>0
+Output:  P(7) = Number of bytes actually read
+	 P(2):P(3) = P(2):P(3)+P(4) if P(6)<>0
+
+If P(4) is greatest than #4000, only #4000 bytes will be read, and the 
+address increment will also be limited to #4000, but P(4) will not be 
+modified. Thus, for read largest blocks (up to 64K) you can use the method 
+described in function 23.
+
+See function 33 for explanations about the file pointer and the value 
+returned in P(7).
+
+
+* Function 35: Read sectors
+
+Input:	 P(0) = Drive (0=A:,...,7=H:)
+	 P(1) = First sector number
+	 P(2) = Destination segment
+	 P(3) = Destination begin address
+	 P(4) = Number of sectors to read (maximum 32)
+	 P(6) = Increase P(3) if <>0
+Output:  P(7) = P(4)*512 (0 in error condition)
+	 P(3) = P(3)+P(4)*512 if P(6)<>0
+
+P(3)+P(4)*512 must be lowest than #4000, else the result is unpredictable.
+
+This function don't supports partial readings: if there is no error, P(7) 
+will return the number of read bytes, that is, P(4)*512; but in case of error 
+P(7) will be always 0. If P(6)<>0, P(3) will be increased by the number of 
+read bytes (P(7) or 0).
+
+
+* Function 36: Read sectors to VRAM
+
+Input:	 P(0) = Drive (0=A:,...,7=H:)
+	 P(1) = First sector number
+	 P(2) = Destination VRAM block
+	 P(3) = Destination begin address
+	 P(4) = Number of sectors to read (maximum 32)
+	 P(6) = Increase P(3) if <>0
+Output:  P(7) = P(4)*512 (0 in error condition)
+	 P(3) = P(3)+P(4)*512 if P(6)<>0
+
+If P(4) is greatest than 32 only 32 sectors (#4000 bytes) will be read, and 
+the address increment will also be limited to #4000, but P(4) will not be 
+modified. Thus, to read largest blocks (up to 64K) you can use the method 
+described in function 23.
+
+See function 35 for an explanation about the value returned in P(7).
+
+
+* Function 37: Write to a file
+
+Input:	 P(0) = File number
+	 P(2) = Source segment
+	 P(3) = Source begin address
+	 P(4) = Number of bytes to be written
+	 P(6) = Increase P(3) if <>0
+Output:  P(7) = Number of bytes actually written
+	 P(3) = P(3)+P(4) si P(6)<>0
+
+P(3)+P(4) must be lowest than #4000, else the data written to the file is 
+unpredictable.
+
+Data is written to the file from the position indicated by its file pointer; 
+this pointer is automatically increased after the writing. For examinate or 
+modify a file pointer use function 42. In the case of a physical error (bad 
+FAT, physical disk error or disk offline) P(7) will always be 0.
+
+
+* Function 38: Write to a file from VRAM
+
+Input:	 P(0) = File number
+	 P(2) = Source VRAM block
+	 P(3) = Source begin address
+	 P(4) = Number of bytes to be written (maximum #4000)
+	 P(6) = Increase P(3) if <>0
+Output:  P(7) = Number of bytes actually written
+	 P(2):P(3) = P(2):P(3)+P(4) if P(6)<>0
+
+If P(4) is greatest than #4000, only #4000 bytes will be written, and the 
+address increment will also be limited to #4000, but P(4) will not be 
+modified. Thus, for write largest blocks (up to 64K) you can use the method 
+described in function 23.
+
+See function 37 for an axplanation about the file pointer.
+
+
+* Function 39: Write to sectors
+
+Input:	 P(0) = Drive (0=A:,...,7=H:)
+	 P(1) = First sector number
+	 P(2) = Source segment
+	 P(3) = Source begin address
+	 P(4) = Number of sectors to be written (maximum 32)
+	 P(6) = Increase P(3) if <>0
+Output:  P(7) = P(4)*512 (0 in error condition)
+	 P(3) = P(3)+P(4)*512 if P(6)<>0
+
+P(3)+P(4)*512 must be lowest than #4000, else the written data is 
+unpredictable.
+
+This function don't supports partial writes: if there is no error, P(7) will 
+return the number of written bytes, that is, P(4)*512; but in case of error 
+P(7) will be always 0. If P(6)<>0, P(3) will be increased by the number of 
+written bytes (P(7) or 0).
+
+
+* Function 40: Write to sectors from VRAM
+
+Input:	 P(0) = Drive (0=A:,...,7=H:)
+	 P(1) = First sector number
+	 P(2) = Source VRAM block
+	 P(3) = Source begin address
+	 P(4) = Number of sectors to be written (maximum 32)
+	 P(6) = Increase P(3) if <>0
+Output:  P(7) = P(4)*512 (0 in error condition)
+	 P(3) = P(3)+P(4)*512 si P(6)<>0
+
+If P(4) is greatest than 32 only 32 sectors (#4000 bytes) will be written, 
+and the address increment will also be limited to #4000, but P(4) will not be 
+modified. Thus, to write largest blocks (up to 64K) you can use the method 
+described in function 23.
+
+See function 39 for an explanation about the value returned in P(7).
+
+
+* Function 41: Fill a file with one byte
+
+Input:	 P(0) = File number
+	 P(1) = Byte
+	 P(4) = Lenght (maximum #4000)
+Output:  P(7) = Number of bytes actually written
+
+This function just writes P(4) bytes equal to the one indicated in P(1) in 
+segment 2, beginning at address 0, and then calls function 37 with P(2)=2 and 
+P(3)=0. Thus, all the explanations done in function 37 are also valid here.
+
+
+* Function 42: Move a file pointer
+
+Input:	 P(0) = File number
+	 P(1) = Moving method:
+		0 -> Relative to the beginning of the file
+		1 -> Relative to the current position of the pointer
+		2 -> Relative to the end of the file
+	 P(2) = Signed offset (lower part)
+	 P(3) = Signed offset (higher part)
+Output:  P(4) = New file pointer position (lower part)
+	 P(5) = New file pointer position (higher part)
+
+For setting P(2) and P(3) with a D offset greatest than 32768 or lowest than 
+0 you must use the followin expression:
+
+P(3)=INT(D/65536):P(2)=VAL("&H"+HEX$(D-(P2*65536)))
+
+and for obtain the new pointer P do:
+
+P=P(4)-(65536*(P(4)<0))+65536!*P(5)
+
+Since Turbo-BASIC treats floating point variables in a special way, if you 
+use these expressions inside a turbo-block, D must be an integer multiply of 
+256.
+
+For obtain the current file pointer position, just use this function with 
+P(1)=1, P(2)=0 and P(3)=0; for obtain the file lenght, use it with P(1)=2, 
+P(2)=0 and P(3)=0. In the first case the file pointer remains unmodified.
+
+Rememeber that the offset is interpreted as a signed type. Therefore, when 
+using this function be careful with the following points:
+
+- If you use this function with P(1)=0, the offset must be positive. 
+Otherwise, further access to the file will have unpredictable results.
+- If you use this function with P(1)=1, a positive offset will cause the file 
+pointer to advance; a negative offset will cause the file pointer to move 
+back.
+- If you use this function with P(1)=2, the offset must be negative; else, 
+the file pointer will be placed beyond the file lenght. In this case, a 
+further read of the file will cause an "End of file" error (0 bytes will be 
+read), and a write to the file will cause the space between the end of the 
+file and the position indicated by the file pointer to be filled with zeros.
+
+
+* Function 43: Obtain the default drive and the login vector
+
+Input:	 -
+Output:  P(0) = Default drive (0=A:,...,7=H:)
+	 P(1) = Login vector
+
+The login vector is a byte that contains, in each bit, information about the 
+existence of each drive letter (bit=1: exists, bit=0: don't exists); the 
+lower bit refers to drive A: and the upper bit refers to drive H:. For 
+example, if the function returns P(1)=&B01000011, then the available drives 
+are A:, B: and G:.
+
+
+* Function 44: Set the default drive
+
+Input:	 P(0) = Drive to be set (0=A:,...,7=H:)
+Output:  -
+
+This function returns the error code 62 to an attempt of setting an invalid 
+drive (not available or higher than 7).
+
+
+* Function 45: Obtain disk space information
+
+Input:	 P(0) = Drive (0=Default drive, 1=A:,...,8=H:)
+Output:  P(1) = Sectors per cluster
+	 P(2) = Total number of clusters (maximum 4096)
+	 P(3) = Number of free clusters
+
+The free space in bytes can be obtained with the expression P(1)*P(3)*512, or 
+in K with P(1)*P(3)/2; and the same for the total disk capacity, using P(2) 
+instead of P(3).
+
+This function returns the error code 62 to an attempt of obtaining 
+information for an invalid drive (not available or higher than 8). Use 
+function 43 to obtain the available drives.
+
+
+* Function 46: Obtain the default directory (DOS 2)
+
+Input:	 P(0) = Drive (0=Default drive, 1=A:,...,8=H:)
+Output:  F$(0)= Default directory
+
+This function is only available under DOS 2. Under DOS 1 will always return 
+the error code 1.
+
+The returned string will not include drive letter, nor "\" at the beginning 
+nor at the end; thus, the root directory will be represented as a null 
+string. 
+
+
+* Function 47: Set the default directory (DOS 2)
+
+Input:	 F$(0) = Drive (optional) + directory
+Output:  -
+
+This function is only available under DOS 2. Under DOS 1 will always return 
+the error code 1.
+
+This function will not change the default drive, for do this you must use 
+function 44.
+
+
+* Function 48: Obtain the RAM disk size (DOS 2)
+
+Input:	 -
+Output:  P(0) = RAM disk size in 16K segments
+
+This function is only available under DOS 2. Under DOS 1 will always return 
+the error code 1.
+
+To obtain the RAM disk size in K just do P(0)*16. A size of zero means that 
+the RAM disk don't exists.
+
+
+* Function 49: Create the RAM disk (DOS 2)
+
+Input:	 P(0) = Size required in 16K segments
+Output:  P(0) = Size of the RAM disk created in 16K segments
+
+This function is only available under DOS 2. Under DOS 1 will always return 
+the error code 1.
+
+Since NestorBASIC reserves all the available free memory when it is 
+installed, you can't create a RAM disk biggest than the one existing when 
+NestorBASIC was installed, except if the computer has more than 4M RAM. 
+Therefore, it is better to create the RAM disk before installing NestorBASIC; 
+if you do this and there is not enough memory to install NestorBASIC, just 
+reduce the RAM disk and repeat the installation.
+
+If there is not P(0) free segments but it is possible to create a smallest 
+RAM disk, the function will not return error, and P(0) at the end will 
+contain the size of the RAM disk created. But if there is no one available 
+segment and the RAM disk has not been created, the function will return the 
+appropriate error code.
+
+
+* Function 50: Obtain the attributes byte for a file (DOS 2)
+
+Input:	 P(0) = File number, or
+	 P(0) = #FF and F$(0) = File name
+Output:  P(1) = Attributes byte:
+		R + 2*H + 4*S + 8*V + 16*D + 32*A
+		R = 1 -> Read only
+		H = 1 -> Hidden
+		S = 1 -> System
+		V = 1 -> Volume label
+		D = 1 -> Subdirectory
+		A = 1 -> Archive
+
+This function is only available under DOS 2. Under DOS 1 will always return 
+the error code 1.
+
+If P(0)=#FF, the attributes byte for the file with the filename specified in 
+F$(0) will be obtained (F$(0) can contain a drive letter and a pathname); 
+else, the attributes byte for the file open and with the P(0) number assigned 
+will be obtained.
+
+
+* Function 51: Set the attributes byte for a file (DOS 2)
+
+Input:	 P(0) = File number, or
+	 P(0) = #FF and F$(0) = File name
+	 P(1) = New attributes byte:
+		R + 2*H + 4*S + 8*V + 16*D + 32*A
+		R = 1 -> Read only
+		H = 1 -> Hidden
+		S = 1 -> System
+		V = 1 -> Volume label
+		D = 1 -> Subdirectory
+		A = 1 -> Archive
+Output:  P(1) = New attributes byte actually set for the file
+
+This function is only available under DOS 2. Under DOS 1 will always return 
+the error code 1.
+
+If P(0)=#FF, the attributes byte for the file with the filename specified in 
+F$(0) will be set (F$(0) can contain a drive letter and a pathname); else, 
+the attributes byte for the file opened and with the P(0) number assigned 
+will be set.
+
+You can't set the attributes byte of an opened file by specifying its
+filename in F$(0); if you try to do this, you will obtain an error. If the 
+file is open, you must specify its file number in P(0).
+
+The only attributes than can be modified for a file are the system, hidden, 
+read only and archive; and for a directory, only the hidden. If you try 
+to change any other attribute, you will obtain an error. You can't change the 
+attributes for the "." and ".." entrys.
+
+
+* Function 52: Parse pathname (DOS 2)
+
+Input:	 F$(0) = Pathname to be parsed
+	 P(10)<>0 if the pathname refers to a volume label
+Output:  F$(1) = Last element of the pathname
+	 P(8)  = Logic drive number (1 = A:, ...)
+	 P(9)  = Position in the pathname of the last element
+		 (0 if there is not last element)
+	 The following results set to -1 if the condition is done, else to 0:
+	 P(0)	 The pathname contains characters other than the drive letter
+	 P(1)	 A directory is specified in the pathname
+	 P(2)	 A drive letter is specified in the pathname
+	 P(3)	 A file name is specified in the pathname
+	 P(4)	 A file extension is specified in the pathname
+	 P(5)	 The last element is ambiguous
+	 P(6)	 The last element is "." or ".."
+	 P(7)	 The last element is ".."
+
+This function is only available under DOS 2. Under DOS 1 will always return 
+the error code 1.
+
+This function just treats the input string returning the specified results. 
+No disk access are done, and the default drive/directory are not modified.
+
+If only a drive letter is specified, or if the last character of the string 
+is the directory separator character "\", then there is no "last element" of 
+the string; then P(9) will be 0 and F$(1) will be a null string. Example: for 
+F$(0) = "A:\DIR\FILES\ONEFI.LE", the last element, returned in F$(1), will be 
+"ONEFI.LE", and P(9) will be 14.
+
+If the pathname don't contains a drive letter, the current default drive will 
+be returned in P(2). Therefore, P(2) will never be zero.
+
+If P(10)<>0 is specified, P(1) and P(4) to P(7) will always be zero.
+
+
+9.6. FUNCTIONS FOR GRAPHIC COMPRESSION AND DECOMPRESSION
+
+* Function 53: Compression of graphic data
+
+Input:	 P(0) = Source VRAM block
+	 P(1) = Source begin address (VRAM)
+	 P(2) = First destination segment
+	 P(3) = Destination begin address (RAM)
+	 P(4) = Size of the VRAM data to be compressed
+	 P(5) = Increase P(1) if <>0
+	 P(6) = Increase P(3) if <>0
+Output:  P(7) = Size in RAM of the compressed data
+	 P(8) = Number of used RAM segments
+	 P(0):P(1) = P(0):P(1) + P(4) if P(5)<>0
+	 P(2):P(3) = RAM address next to the last one used, if P(6)<>0
+
+Compression is done through consecutive segments: after write compressed data 
+in the address #3FFF of the segment S, the write of the generated data 
+continues from the address #0000 of the segment S+1. If this situation is 
+done but the S+1 segment don't exists, the error 5 will be generated. This 
+function don't supports VRAM segments, nor the 255 segment.
+
+If the last used RAM address is the #3FFF of the segment S and P(6)<>0, then 
+P(2) will be S+1 and P(3) will be 0 at the end. In such situation, if S was 
+the last available RAM segment, P(2) will be zero at the end.
+
+
+* Function 54: Decompression of graphic data
+
+Input:	 P(0) = Destination VRAM block
+	 P(1) = Destination begin address (VRAM)
+	 P(2) = First source segment
+	 P(3) = Source begin address (RAM)
+	 P(5) = Increase P(1) if <>0
+	 P(6) = Increase P(3) if <>0
+Output:  P(7) = Size in VRAM of the decompressed image
+	 P(8) = Number of used RAM segments
+	 P(0):P(1) = P(0):P(1) + P(7) if P(5)<>0
+	 P(2):P(3) = RAM address next to the last one used, if P(6)<>0
+
+Decompression process is done through consecutive segments: after 
+decompressing data stored in the address #3FFF of the S segment, the read of 
+the compressed data continues from the address #0000 of the S+1 segment. If 
+this situation is done but the S+1 segment don't exists, or if an invalid 
+data is found in the compressed data, the error 6 will be generated. This 
+function don't supports VRAM segments, nor the 255 segment.
+
+If the last used RAM address is the #3FFF of the segment S and P(6)<>0, then 
+P(2) will be S+1 and P(3) will be 0 at the end. In such situation, if S was 
+the last available RAM segment, P(2) will be zero at the end.
+
+
+9.6. FUNCTIONS FOR THE EXECUTION OF BASIC PROGRAMS
+
+* Function 55: Execution of a BASIC program stored in a segment
+
+Input:	 P(0) = Segment
+	 P(1) = Begin address
+Output:  -
+
+VERY IMPORTANT: For using this function you must change the BASIC programs 
+begin address. See section 6 for more details.
+
+This function executes the BASIC program stored in the specified segment. 
+The program must be stored beginning in the P(1) specified address of the 
+P(0) segment, with the following format:
+
++#0000: Not used by NestorBASIC. You can use it, for example, for insert an 
+	idtification byte.
++#0001: Last program address +1, in the range #8000-#BFFF; low byte.
++#0002: Idem, high byte.
++#0003: Here starts the program data.
+
+All the exisiting numeric variables of the caller BASIC program will be 
+transferred to the new program. You can use this function from inside a 
+turbo-block, but in such case the only transferred variables will be the 
+integer ones defined outside of the turbo-block and passed to it with CALL 
+TURBO ON (variable, ..., array(), ...).
+
+The string variables stored in the BASIC string area will also be 
+transferred, but the ones defined directly in the BASIC text resides inside 
+the own BASIC program data, and will be lost. For being sure that a string is 
+stored inside the BASIC string area, do the following operation: C$=C$+"". Of 
+course, the most practical way of manage it is to group all the string 
+variables into a string array (for example F$), and then this operation can 
+be done with a loop.
+
+This function will return the error code -1 if a non existing segment is 
+specified, or if the 255 segment is specified, and error code -2 if the BASIC 
+main RAM is not enough to store the new program and the existing variables. 
+This situation must appear if the new program is largest than the caller 
+program, but if the lenghts difference is not very big and the number of 
+variables is reasonable you should not reach to this situation.
+
+
+* Function 56: Activation of a BASIC program stored in a segment
+
+Input:	 P(0) = Segment
+	 P(1) = Begin address
+Output:  -
+
+VERY IMPORTANT: For using this function you must change the BASIC programs 
+begin address. See section 6 for more details.
+
+This functions acts like function 55, with the following difference: once the 
+new program is placed in RAM an the variables are placed after it, the new
+program is not executed, and the BASIC interpreter returns to the direct 
+mode. Except for this, the functionning is the same, as well as the error 
+conditions and error codes.
+
+
+* Function 57: Save a BASIC program with a special header
+
+Input:	 P(0)  = Byte to be saved in the first header address
+		 (not used by NestorBASIC)
+	 F$(0) = Pathname + filename
+Output:  P(1)  = -1 -> No error
+	      <> -1 -> A disk error occurred, and the file remains open
+		       with this number; look at the value returned by the
+		       USR command for the error code, as usual.
+
+VERY IMPORTANT: For using this function you must change the BASIC programs 
+begin address. See section 6 for more details.
+
+This function saves the active BASIC program in the specified file, with the 
+appropriate header for being executed or activated with functions 55 or 56 
+(see function 55 for details about these header).
+
+The use of this function simplifies the conversion of BASIC normal programs 
+to the appropriate format required by function 55; this conversion is then 
+reduced to this:
+
+load"prog.bas"                  'Load the BASIC program
+F$(0)="prog.nba":?USR(57)       'Save the BASIC program with the header
+				'(setting of P(0) is optional)
+
+Once saved in this way, loading and executing the program is easy:
+
+1000 'Open prog.nba, read to segment S and close
+1001 F$(0)="prog.nba":?USR(31):P(2)=S:P(3)=0:P(4)=&H4000:?USR(33):?USR(32)
+...
+10000 'Execution of the program (error treatment is optional)
+10001 P(0)=S:P(1)=0:IF USR(55)=-1 THEN PRINT "ERROR: Non existing segment!"
+      ELSE PRINT "ERROR: Out of memory!"
+10002 END
+
+Using function 56 instead of function 55 you can load programs saved with the 
+header if you don't have a copy in normal BASIC format (LOADable).
+
+Of course, you can also use the normal disk access functions to save the 
+program, but in this case you must create the header by yourself:
+
+POKE &H8000,P(0) 'Data not used by NestorBASIC
+POKE &H8001,PEEK(&HF6C2)
+POKE &H8002,PEEK(&HF6C3)
+'Save from &H8000 to PEEK(&H8001)+256*PEEK(&H8002) to the file
+
+The error codes returned by this function are the same as the ones returned 
+by the disk access functions (see section 4). If a disk error caused the file 
+to remain open, P(1) will contain the associated file number; else, P(1) will 
+be -1.
+
+
+9.7. MISCELLAENOUS FUNCTIONS
+
+* Function 58: BIOS or SUB-BIOS machine code routine execution
+
+Input:	 P(0) = 0 to execute a BIOS routine
+	     <> 0 to execute a SUB-BIOS routine
+	 P(1) = Begin address of the routine
+	 P(2) to P(11) = Input registers for the routine:
+			 P(2) = AF	 P(8) = AF'
+			 P(3) = BC	 P(9) = BC'
+			 P(4) = DE	 P(10)= DE'
+			 P(5) = HL	 P(11)= HL'
+			 P(6) = IX
+			 P(7) = IY
+Output:  P(2) to P(11) = Output registers of the routine,
+			 with the same assignment as in the input
+
+With this function you can execute BIOS and SUB-BIOS machine code routines, 
+having defined previously the registers' input state using the array P; after 
+the execution, the registers' output contents will also be set in the array P 
+in the same way.
+
+This function will return an error -1 if an address higher than #3FFF is 
+specified in P(1). In the case of SUB-BIOS calls, this function uses the 
+EXTROM routine, so the input contents of the IX register [variable P(6)] will 
+be lost.
+
+
+* Function 59: User machine code routine execution
+	       (machine code routine stored in a RAM segment)
+
+Input:	 P(0) = Segment in which the routine is stored
+	 P(1) = Begin address of the routine
+	 P(2) to P(11) = Input registers for the routine:
+			 P(2) = AF	 P(8) = AF'
+			 P(3) = BC	 P(9) = BC'
+			 P(4) = DE	 P(10)= DE'
+			 P(5) = HL	 P(11)= HL'
+			 P(6) = IX
+			 P(7) = IY
+Output:  P(2) to P(11) = Output registers of the routine,
+			 with the same assignment as in the input
+
+Through this function you can execute a machine code routine previously 
+loaded in a RAM segment, having defined the registers' input state using the 
+array P; after the execution, the registers' output contents will also be set 
+in the array P in the same way.
+
+The specified segment will be switched in page 2 for the execution of the 
+routine, therefore the routine must have been assembled in the addresses 
+range #8000-#BFFF. When the routine is executed, BIOS is connected and 
+available in page 0, and NestorBASIC segment is available in page 1. This 
+state must be restored by the routine itself before returning, if 
+segment/slot switchings are done.
+
+Some of the internal NestorBASIC routines (for RAM and VRAM management, and 
+for obtaining information about the interrupt ptrocess) can be used by the 
+user MC routines. In appendix 2 you will found the list and detailed 
+description of these routines.
+
+This function don't supports VRAM segments nor the 255 segment, and will 
+return the error -1 if a non existing segment is specified in P(0).
+
+
+* Function 60: Print a string in graphic mode
+
+Input:	 F$(0) = String
+Output:  -
+
+This function works only in SCREEN 5 to 11 modes, and is equivalent to the 
+PRINT#1,F$(0) command, having executed previously OPEN"GRP:"AS#1. The 
+difference is the Turbo-BASIC compatibility.
+
+The maximum lenght of the string is 80 characters; if F$(0) is largest, only 
+the first 80 characters will be printed. The string can't contain the 0 
+character, because this code is interpreted as the end of the string.
+
+
+* Function 61: Store a string in a segment
+
+Input:	 F$(0) = String
+	 P(0)  = Segment
+	 P(1)  = Begin address
+	 P(2)  = Increase P(1) if <>0
+Output:  P(1)  = P(1) + LEN(F$(0)) + 1 if P(2)<>0
+
+This function stores the F$(0) string to the specified address of the 
+specified segment. The string is stored with a 0 character at the end, so 
+LEN(F$(0))+1 bytes will be occuped.
+
+The maximum lenght of the string is 80 characters; if F$(0) is largest, only 
+the first 80 characters will be stored. The string can't contain the 0 
+character, because this code is interpreted as the end of the string.
+
+This function will return the error -1 if a non exisiting segment is 
+specified in P(0).
+
+
+* Function 62: Restore a string stored in a segment
+
+Input:	 P(0)  = Segment
+	 P(1)  = Begin address
+	 P(2)  = Increase P(1) if <>0
+Output:  F$(1) = String
+	 P(1)  = P(1) + LEN(F$(1)) + 1 if P(2)<>0
+
+This function sets in F$(1) the string stored from the specified address of 
+the specified segment. The string is considered finished when a 0 character 
+is found, or when 80 characters have been copied to F$(1).
+
+If this function is executed from normal BASIC, the string can't contain the 
+character 255, because if found, this character will be converted to the 
+character 34 (quotation marks); this is due to the strings assignation method 
+of BASIC, that requires a special treatment for the quotation marks. This 
+don't happens when using Turbo-BASIC.
+
+This function will return the error -1 if a non exisiting segment is 
+specified in P(0).
+
+
+* Function 63: Initialization of the SCREEN 0 blink mode
+
+Input:	 P(0) = Foreground color of the blinking text
+	 P(1) = Background color of the blinking text
+	 P(2) = Time ON (0 to 15)
+	 P(3) = Time OFF (0 to 15)
+		IF P(2) and P(3) are both 0, this function
+		will only clear the blink zone in VRAM
+Output:  -
+
+This function will initialize the colors and times for the SCREEN 0 blink 
+mode, and will clear the VRAM blink zone. If P(2) and P(3) are both zero, 
+only this last action will be done.
+
+This function can only be used in SCREEN 0 mode with at least 41 columns set; 
+else, nothing will be done, and the error -1 will be returned.
+
+Actions done by this function can alse be done separately from BASIC, in the 
+following way:
+
+- Colors setting:
+
+VDP(13) = Foreground color+ 16*Background color
+
+- Times setting:
+
+VDP(14) = Time ON + 16*Time OFF
+
+- Clear VRAM:
+
+Fill with zeros the 256 bytes VRAM zone beginning at &H0800
+
+System variables FORCLR (&HF3E9) and BAKCLR (&HF3EA) contain respectively the 
+current foreground color and background color previously set with the COLOR 
+statement. Thus, for obtain an inverse video effect just do:
+
+P(0)=PEEK(&HF3EA):P(1)=PEEK(&HF3E9):P(2)=15:P(3)=0:?USR(63)
+
+or also
+
+VDP(13)=PEEK(&HF3EA)+16*PEEK(&HF3E9):VDP(14)=&HF0
+
+
+* Function 64: Make or erase a blinking characters block
+
+Input:	 P(0) = 0 to erase block
+	     <> 0 to create block
+	 P(1) = Begin X coordinate (column) (0 to 79)
+	 P(2) = Begin Y coordinate (line) (0 to 23)
+	 P(3) = X lenght (columns)
+	 P(4) = Y lenght (lines)
+	 P(5) = Increase P(1) if <>0
+	 P(6) = Increase P(2) if <>0
+Output:  P(1) = P(1) + P(3) if P(5)<>0
+	 P(2) = P(2) + P(4) if P(6)<>0
+
+This function makes or erases a blinking characters block with the specified 
+dimensions, in the specified coordinates. It is advisable to execute function 
+63 before use this function.
+
+This function can only be used in SCREEN 0 mode with at least 41 columns set; 
+otherwise nothing will be done, but no error will be returned. If P(1)>79 
+and/or P(2)>23, the error -1 will be returned.
+
+This function don't checks for the screen edges surpassing of the block. If 
+the block surpasses the column 79, it will continue at the column 0 of the 
+next line. But if a part of the block surpasses the line 23, this part will 
+not be shown.
+
+
+* Function 65: Obtain information about the interrupt process
+
+Input:	 -
+Output:  P(0) = -1 if any interrupt process is active
+	      (user defined interrupt, PSG sound effect or music replay)
+	 P(1) = -1 if an user defined interrupt is active
+	 P(2) = User defined interrupt segment
+	 P(3) = User defined interrupt begin address
+	 P(4) = -1 if a PSG sound effect is being replayed
+	 P(5) = -1 if a music is being replayed
+
+P(2) and P(3) will return the user interrupt definition, even if it is 
+stopped. If no user interrupt has never been defined, both results will be 
+zero.
+
+To obtain more information about the active sound effect use function 67. 
+For the music, use function 72.
+
+
+* Function 66: Define or stop an user defined interrupt routine
+
+Input:	 P(0) =  0 to stop the current user interrupt
+		 1 to define and activate an user interrupt
+		-1 to reverse the current status of the user interrupt
+		   (actived <--> stopped)
+	 P(1) = User interrupt segment (ignored if P(0)<>1)
+	 P(2) = User interrupt begin address (ignored if P(0)<>1)
+Output:  -
+
+This function defines or stops an user defined interrupt routine, that is, a 
+machine code routine that will be executed in each timer interrupt, 50 or 60 
+times per second. The specified segment will be switched in page 2 for the 
+execution of the routine, therefore the routine must have been assembled in 
+the addresses range #8000-#BFFF.
+
+If P(0)=1, the interrupt is defined by P(1) and P(2), and is activated (from 
+this moment, it is executed to 50 or 60 Hz). If P(0)=0, the interrupt is 
+stopped (is not executed), but its definition is not changed. If P(0)=-1, the 
+current status is reversed (actived to stopped and vice versa), and its 
+definition is not changed.
+
+Interrupt segment is switched in page 2 for executing it, so it must be 
+assembled in the address range #8000-#BFFF. BIOS is connected and available 
+in page 0, and NestorBASIC segment is available in page 1. This state must be 
+restored by the routine itself before returning, if segment/slot switchings 
+are done. Also, the interrupts will be disabled and must be in this state 
+during the routine execution. No register preservations are needed, because 
+NestorBASIC handles this automatically.
+
+Some of the internal NestorBASIC routines (for RAM and VRAM management, and 
+for obtaining information about the interrupt process) can be used by the 
+user interrupt routines. In appendix 2 you will found the list and detailed 
+description of these routines.
+
+You can't define an user interrupt routine in a VRAM segment, nor in the 
+segment 255. If you specify a non existing or invalid segment in P(1) the 
+function will return an error -1. If you specify a parameter other than 0, 1 
+or -1 in P(0), an error 7 will be returned.
+
+
+9.8. PSG SOUND EFFECTS
+
+* Function 67: Obtain information about the PSG sound effects
+
+Input:	 P(0) = New maximum volume (0 to 15, -1 to leave unchanged)
+Output:  P(1) = -1 if a sound effect is being replayed
+	 P(2) = Number of the SFX being replayed, or the last one replayed
+	 P(3) = Priority of the SFX being replayed, or the last one replayed
+	 P(4) = Segment of the sound effects set
+	 P(5) = Begin address of the sound effects set
+	 P(6) = Highest defined sound effect number
+	 P(7) = Maximum volume
+
+The results returned by this function will only be valid if the sound effects 
+set has been initialized with function 68. The sound effects set must have 
+been created with the editor SEE v3.xx, by Fuzzy Logic.
+
+This function never returns error. If the value specified in P(0) is greatest 
+than 15, it will be interpreted as 15.
+
+
+* Function 68: Initialization of a PSG sound effects set
+
+Input:	 P(0) = Segment
+	 P(1) = Begin address
+Output:  -
+
+This function initializes the sound effects set stored in the specified 
+segment and address, leaving it ready for use with function 69.
+
+The sound effects set must have been created with the editor SEE v3.xx, by 
+Fuzzy Logic; if the set format is invalid, the function will return the error 
+code 8.
+
+You can't use a sound effects set stored in a VRAM segment, nor in the 
+segment 255. If you specify a non existing segment in P(0), the error -1 will 
+be generated.
+
+
+* Function 69: Replay a PSG sound effect
+
+Input:	 P(0) = Effect number
+	 P(1) = Priority (0: low, <>0: high)
+Output:  -
+
+This function begins the replay of the specified sound effect; the sound 
+effects set must have been created with the editor SEE v3.xx, by Fuzzy Logic. 
+If the sound effects set has not been initialized with function 68, the 
+result is unpredictable.
+
+P(1) handles the priority in the case of the execution of this function when
+other sound effect is being replayed, in the following way:
+
+- If the SFX being replayed and the new one have the same priority, the SFX 
+being replayed is stopped, and the new one starts to being replayed.
+- If the SFX being replayed has low priority and the new one has high 
+priority, same as above.
+- If the SFX being replayed has high priority and the new one has low
+priority, the old SFX still being replayed, and the function returns the 
+error code 11.
+
+If the sound effect specified in P(0) is not defined (the first track is left 
+to "OFF" in the editor), the function will return the error code 9. If the 
+effect don't exists (its number is higher than the maximum effect number), 
+the function will return the error code 10.
+
+
+* Function 70: Stop PSG sound effect replay
+
+Input:	 -
+Output:  -
+
+This function stops the PSG sound effect being replayed, and silences the 
+PSG. Never returns error.
+
+
+9.9. FUNCTIONS FOR MOONBLASTER MUSIC REPLAY
+
+* Function 71: Load and initialization of the Moonblaster replayer
+
+Input:	 P(0)  = Replayer to be loaded:
+		 0: Moonblaster 1.4
+		 1: Moonblaster Wave 1.05
+		 2: Moonblaster FM (*)
+		 3: Autodetect:
+		    Load Moonblaster Wave replayer if MoonSound is present,
+		    else load Moonblaster 1.4 replayer.
+		 4: Autodetect:
+		    Load Moonblaster FM replayer if MoonSound is present,
+		    else load Moonblaster 1.4 replayer. (*)
+Output:  P(0)  = Replayer loaded (0, 1 or 2, as above).
+Output:  P(1)  = -1 -> No error
+	      <> -1 -> A disk error occurred, and NBASIC.BIN remains open
+		       with this number; look at the value returned by the
+		       USR command for the error code, as usual.
+
+(*) Moonblaster for MoonSound FM replayer is not implemented in this version.
+
+This function loads the specified Moonblaster replayer in segment 5, leaving 
+it ready for use. Also, searches for all the existing sound chips in the 
+system, and leaves all the found chips enabled (see function 73 for more 
+details about the sound chips activation).
+
+The replayer can only be installed if the segment 5 belongs to the primary 
+mapper; else, the function will return the error -1. If a disk error occurs, 
+the function will return the appropriate error code (see section 4). If 
+NBASIC.BIN remains open due to a disk error, its associated file number will 
+be returned in P(1); else, P(1) will be -1.
+
+NBASIC.BIN file contains two versions of the Moonblaster Wave replayer: one 
+is for MSX2/2+ and Turbo-R in Z80 mode, and the other is for Turbo-R in R800 
+mode. If the computer is a Turbo-R, NestorBASIC decides the version to be 
+loaded according to the processor switched when function 71 is called. Note 
+that if a processor change is performed, this function must be called again 
+for load the appropriate replayer: Z80 version don't works in R800 mode, and 
+R800 version makes the system slower in Z80 mode.
+
+For uninstall the replayer, just stop the music and erase the string 
+"NestorPlayer" placed at the beginning of segment 5. Then this segment is 
+again available for you.
+
+
+* Function 72: Obtain information about the music being replayed
+
+Input:	 -
+Output:  P(0) = -1 if a music is being replayed or is paused
+	 P(1) = -1 if a Moonblaster 1.4 music is being replayed or paused
+	 P(2) = -1 if a Moonblaster Wave music is being replayed or paused
+	 P(3) = -1 if a Moonblaster FM music is being replayed or paused  (*)
+	 P(4) = -1 if the music is paused
+	 P(5) = Segment of the being replayed music,
+		or segment of the last replayed music
+	 P(6) = Begin address of the being replayed music,
+		or begin address of the last replayed music
+	 P(7) = Current position
+	 P(8) = Current step (0 to 15)
+	 P(9) = -1 if a MSX-MUSIC was detected
+	 P(10)= -1 if a MSX-AUDIO was detected
+	 P(11)= -1 if a OPL4 was detected
+	 P(12)= -1 if the replayer is initialized
+	 P(13)= Replayer installed (only if P(12)=-1):
+		0: Moonblaster 1.4
+		1: Moonblaster Wave 1.05
+		2: Moonblaster FM (*)
+	 F$(0)= Songname (null string if no music is being replayed)
+	 F$(1)= Samplekit or wavekit (null string if no music is being
+		replayed)
+
+(*) Moonblaster for MoonSound FM replayer is not implemented in this version.
+
+If the Moonblaster replayer is not loaded, P(12) will be zero, and the other 
+results will not be set, but the function will not return error. Use function 
+71 to initialize the replayer.
+
+If no music is being replayed, P(5) and P(6) will return the position and the 
+step in which the last replayed music was stopped, and F$(0) and F$(1) will 
+be null strings. Else, F$(0) will return the songname (always 40 characters 
+for Moonblaster 1.4 musics, 50 for Moonblaster Wave musics) and F$(1) will 
+return the samplekit or wavekit that was loaded in Moonblaster when the music 
+was saved, in capital letters and without extension ("NONE" if there was no 
+samplekit loaded).
+
+P(9) to P(11) returns information about the detected sound chips. For obtain 
+information about the enabled sound chips, use function 73.
+
+
+* Function 73: Activation and deactivation of the sound chips
+
+Input:	 P(0) = 0 -> Request for information only
+		1 -> Enable or disable chips according to P(1) to P(3)
+		2 -> Activte all the found sound chips
+	 P(1) = 0 -> Don't modify MSX-MUSIC status
+		1 -> Disable MSX-MUSIC
+		2 -> Enable MSX-MUSIC
+	       -1 -> Reverse MSX-MUSIC status
+	 P(2) = 0 -> Don't modify MSX-AUDIO status
+		1 -> Disable MSX-AUDIO
+		2 -> Enable MSX-AUDIO
+	       -1 -> Reverse MSX-AUDIO status
+	 P(3) = 0 -> Don't modify OPL4 status
+		1 -> Disable OPL4
+		2 -> Enable OPL4
+	       -1 -> Reverse OPL4 status
+Output:  P(4) = 0 -> MSX-MUSIC not found
+		1 -> MSX-MUSIC found but disabled
+		2 -> MSX-MUSIC enabled
+	 P(5) = 0 -> MSX-AUDIO not found
+		1 -> MSX-AUDIO found but disabled
+		2 -> MSX-AUDIO enabled
+	 P(6) = 0 -> OPL4 not found
+		1 -> OPL4 found but disabled
+		2 -> OPL4 enabled
+
+This function allows to disable and enable MSX-MUSIC and MSX-AUDIO, which in 
+this state will not sound, even if they are found in the system. This feature 
+can be useful, for example, for ear only the MSX-AUDIO part of a music in a 
+computer with internal MSX-MUSIC.
+
+If P(0)=0, the function will only return information about the enabled sound 
+chips in P(4) to P(5), and will not change the current status of the chips. 
+If P(0)=2, all the found chips will be enabled (this is the default state 
+when the replayer is initialized). For obtain information about the found 
+sound chios use function 72.
+
+If P(0)=1, the different sound chips will be enabled or disabled according to 
+the values passed in P(1) to P(3); attempts to enable not found chips will be 
+ignored. If MSX-AUDIO and MSX-MUSIC are both disabled (Moonblaster 1.4 
+replayer) or if OPL4 is disabled (Moonblaster wave replayer), function 74 
+(start the replay of a music) will do nothing but will not return error.
+
+The changes done with this function have not effect until the currently being 
+replayed music is stopped (function 75 or 77) and restarted (function 74). If 
+no music is being replayed when you use this function, just start the music 
+and you will note the changes.
+
+This function will return the error code 7 if any of the input parameters in 
+invalid (but if P(0)<>1 you don't need to set P(1) to P(3)), and error code 
+12 if the replayer is not initialized.
+
+
+* Function 74: Start Moonblaster music replay
+
+Input:	 P(0) = Segment in which the music is stored
+	 P(1) = Music begin address
+Output:  -
+
+This function begins the replay of the specified Moonblaster music. If the 
+specified segment don't exists, refers to VRAM or is the 255, the error code 
+-1 will be returned. If the replayer is not yet initialized, the error code 
+12 will be returned (use function 71 to initialize the music replayer). 
+Moonblter Wave musics can be stored through consecutive segments; see section 
+8.2 for more details.
+
+In the case of Moonblaster 1.4 music, this function examines the first byte 
+of the music in the specified address; if this byte is #FF means that the 
+music was saved in EDIT format, and therefore can't be replayed; in such case 
+the error code 13 will be returned. Else, NestorBASIC assumes that in the 
+specified address a Moonblaster music saved in USER format begins, and the 
+replay starts without further checkings. If the specified RAM area don't 
+contains a Moonblaster music, the result is unpredictable.
+
+Moonblaster Wave rapleyer has not these restrictions: it can detect if data 
+in the specified address is really a Moonblaster music, and if it is saved in 
+USER mode. Else, error 13 is returned.
+
+If MSX-MUSIC and MSX-AUDIO are both disabled (Moonblaster 1.4 music) or OPL4 
+is disabled (Moonblaster Wave music) with function 73, this function will do 
+nothing, but no error will be returned. If other music is already being 
+replayed, the error code 14 will be returned.
+
+
+* Function 75: Stop the music replay
+
+Input:	 -
+Output:  -
+
+This function stops the replay of the being replayed music and silences the 
+sound chips. If no music is being replayed or if no music replayer was 
+initialized, the function will do nothing. Never returns error.
+
+
+* Function 76: Pause and continue the music
+
+Input:	 P(0) = 0 -> Pause music
+		1 -> Continue music
+	       -1 -> Reverse current status (replay <--> pause)
+Output:  -
+
+This function pauses or continues the replay of a Moonblaster music. If no 
+music is being replayed or if the replayer was not initialized, the function 
+will do nothing, but no error will be returned. If the specified parameter is 
+invalid, the error code 7 will be returned.
+
+
+* Function 77: Fade out the music
+
+Input:	 P(0) = 0      -> Request for information only
+		-1     -> Pause fade out
+		1..254 -> Start/continue fade out with the specified delay
+Output:  P(1) = -1 if a music is being faded
+	 P(2) = Current fade delay (-1 if the fade is paused)
+
+This function starts to fade out the music being replayed. The delay means 
+the number of clock cycles (of 1/50 or 1/60 seconds each) between each fade 
+step, so the smallest is the delay, the fastest is the fade. Once the fade is 
+completed (the music main volume decreases to zero), the music will be 
+automatically stopped: you don't need to stop it by yourself with function 
+75.
+
+If P(0)=-1 the fade will be paused, that is, the music will remain being 
+normally replayed with the reached volume. To continue the fade, just execute 
+again this function, specifying a new delay in P(0).
+
+If P(0)=0, this function will only set P(1) and P(2) with the specified 
+results. If no music is being replayed, or if the replayed was not 
+initialized, this function will do nothing. Never returns error.
+
+
+* Function 78: Load a Music Module samplekit
+
+Input:	 P(0) = File number
+Output:  P(7) = Number of read bytes
+
+This function loads from the specified open file a Music Module samplekit, 
+which must be saved in the Moonblaster format: 56 header bytes, which will be 
+copied into the appropriate zone of the replayer; and 32K of samples, which 
+will be transferred to the Music Module sample RAM.
+
+Data will be read from a previously opened file. This feature allows you to 
+concatenate the samplekit with other useful data in a single library file: in 
+such case, just move the file pointer to the appropriate point, and execute 
+this function. However, in the most common case you will need to load a MBK 
+file generated with Moonblaster. In such case, you can load the samplekit by 
+just doing the following:
+
+F$(0)="sampkit.mbk":?USR(31):?USR(78):?USR(32)
+
+If a disk error occurs, the function will return the appropriate error code, 
+and you can look for the number of bytes that have been read from the file in 
+P(7). If this number is greatest than 16K, only the first 16K of the 
+samplekit will have been transferred to the sample RAM. Else, no data will be 
+transferred to the sample RAM.
+
+If the replayer was not initialized or if no Music Module is found, this 
+functon will do nothing, but will not return error. If the whole samplekit is 
+successfully loaded, P(7) will not return 32824 but -32712, due to the BASIC 
+integer variables range (-32768 to 32767).
+
+
+* Function 79: Load a MoonSound wavekit
+
+Input:	 P(0) = File number
+Output:  P(6):P(7) = Number of read bytes
+
+This function loads from the specified open file a Moonsound wavekit, which 
+must be saved in USER. Else, error 15 is returned. 
+
+Data will be read from a previously opened file. This feature allows you to 
+concatenate the wavekit with other useful data in a single library file: in 
+such case, just move the file pointer to the appropriate point, and execute 
+this function. However, in the most common case you will need to load a MWK 
+file generated with Moonblaster. In such case, you can load the wavekit by 
+just doing the following:
+
+F$(0)="wavkit.mwk":?USR(31):?USR(79):?USR(32)
+
+If a disk error occurs, the function will return the appropriate error code, 
+and you can look for the number of bytes that have been read from the file in 
+P(6):P(7). In this case MoonSound sample RAM can have been modified, but work 
+area will not have been actualized, so a partial wavekit load can't be 
+supposed.
+
+If the Moonblaster Wave replayer was not initialized or if no MoonSound is 
+found, this functon will do nothing, but will not return error. If the whole 
+samplekit is successfully loaded, P(6):P(7) will contain the wavekit size 
+(equal to the file size if you just load a .MWK file).
+
+
+APPENDIX 1 - NESTORBASIC FUNCTIONS LIST
+
+--- General functions
+
+* Function 0: NestorBASIC uninstallation
+* Function 1: Obtain general info about NestorBASIC and about a segment
+
+--- RAM access functions
+
+* Function 2: Read a byte from a segment
+* Function 3: Read a byte from a segment with address autoincrement
+* Function 4: Read an integer (2 bytes) from a segment
+* Function 5: Read an integr (2 bytes) from a segment
+	      with address autoincrement
+* Function 6: Write a byte to a segment
+* Function 7: Write a byte to a segment with address autoincrement
+* Function 8: Write an integer (2 bytes) to a segment
+* Function 9: Write an integer (2 bytes) to a segment
+	      with address autoincrement
+* Function 10: Data block transfer between segments
+* Function 11: Fill a RAM zone with a byte
+* Function 12: Fill a RAM zone with a byte with address autoincrement
+
+--- VRAM access functions
+
+* Function 13: Read a byte from VRAM
+* Function 14: Read a byte from VRAM with address autoincrement
+* Function 15: Read an integer (2 bytes) from VRAM
+* Function 16: Read an integer (2 bytes) from VRAM
+	       with address autoincrement
+* Function 17: Write a byte to VRAM
+* Function 18: Write a byte to VRAM with address autoincrement
+* Function 19: Write an integer (2 bytes) to VRAM
+* Function 20: Write an integer (2 bytes) to VRAM
+	       with address autoincrement
+* Function 21: Data block transfer from VRAM to RAM
+* Function 22: Data block transfer from RAM to VRAM
+* Function 23: Data block tranfer between VRAM
+* Function 24: Fill a VRAM zone with a byte
+* Function 25: Fill a VRAM zone with a byte with address autoincrement
+
+--- Disk access functions
+
+* Function 26: Search for a file
+* Function 27: Rename a file
+* Function 28: Delete a file
+* Function 29: Move a file (DOS 2)
+* Function 30: Create a file or subdirectory
+* Function 31: Open a file
+* Function 32: Close a file
+* Function 33: Read from a file
+* Function 34: Read from a file to VRAM
+* Function 35: Read sectors
+* Function 36: Read sectors to VRAM
+* Function 37: Write to a file
+* Function 38: Write to a file from VRAM
+* Function 39: Write to sectors
+* Function 40: Write to sectors from VRAM
+* Function 41: Fill a file with one byte
+* Function 42: Move a file pointer
+* Function 43: Obtain the default drive and the login vector
+* Function 44: Set the default drive
+* Function 45: Obtain disk space information
+* Function 46: Obtain the default directory (DOS 2)
+* Function 47: Set the default directory (DOS 2)
+* Function 48: Obtain the RAM disk size (DOS 2)
+* Function 49: Create the RAM disk (DOS 2)
+* Function 50: Obtain the attributes byte for a file (DOS 2)
+* Function 51: Set the attributes byte for a file (DOS 2)
+* Function 52: Parse pathname (DOS 2)
+
+--- Graphic copression functions
+
+* Function 53: Compression of graphic data
+* Function 54: Decompression of graphic data
+
+--- BASIC programs execution
+
+* Function 55: Execution of a BASIC program stored in a segment
+* Function 56: Activation of a BASIC program stored in a segment
+* Function 57: Save a BASIC program with a special header
+
+--- Miscellaneous functions
+
+* Function 58: BIOS or SUB-BIOS machine code routine execution
+* Function 59: User machine code routine execution
+	       (machine code routine stored in a RAM segment)
+* Function 60: Print a string in graphic mode
+* Function 61: Store a string in a segment
+* Function 62: Restore a string stored in a segment
+* Function 63: Initialization of the SCREEN 0 blink mode
+* Function 64: Make or erase a blinking characters block
+* Function 65: Obtain information about the interrupt process
+* Function 66: Define or stop an user defined interrupt routine
+
+--- PSG sound effects replay
+
+* Function 67: Obtain information about the PSG sound effects
+* Function 68: Initialization of a PSG sound effects set
+* Function 69: Replay a PSG sound effect
+* Function 70: Stop PSG sound effect replay
+
+--- Moonblaster music replay
+
+* Function 71: Load and initialization of the Moonblaster replayer
+* Function 72: Obtain information about the music being replayed
+* Function 73: Activation and deactivation of the sound chips
+* Function 74: Start Moonblaster music replay
+* Function 75: Stop the music replay
+* Function 76: Pause and continue the music
+* Function 77: Fade out the music
+* Function 78: Load a Music Module samplekit
+* Function 79: Load a MoonSound wavekit
+
+
+APPENDIX 2 - USER ACCESSIBLE NESTORBASIC ROUTINES
+
+When an user machine code routine or an user interrupt routine is executed, 
+NestorBASIC segment is enabled in page 1. At the beginning of this segment 
+there is a jump table to some routines for RAM and VRAM control: these 
+routines are accessibles to the user routine via a normal CALL instruction. 
+In this section, the location of these routines and its meanings are 
+described.
+
+None of these routines modify the interrupts state, except PUTSLOT0, which
+disables interrupts before ending. The first three bytes of the jump table 
+contains data bytes (TABSEGS and INT_DATA) instead of a jump.
+
+WATCH OUT: Logic segment 255 refers always to the memory switched to pages 2 
+and 3 when the segment is referred to. While an user MC routine or an user 
+interrupt routine is being executed, page 2 DON'T contains the BASIC main RAM 
+segment, but the segment of the routine itself. So, to actually convert the 
+segment 255 to the appropriate BASIC segment, do the following:
+
+	ld	hl,address
+	call	CHKSLFF
+	cp	3
+	jr	z,OKFF
+	ld	a,4
+OKFF:	;
+
+
+The contents of the jump table is the following:
+
+
+#4100: Identification string "NestorBASIC x.xx"
+
+
+#4110: TABSEGS
+
+Pointer to the segments table. The format of this table is as follows:
+
+-1: Number of available RAM segments (same as P(0) returned by function 1)
++0: Slot of the logic segment 0
++1: Physic segment of the logic segment 0
++2: Slot of the logic segment 1
++3: Physic segment of the logic segment 1
+...
++492: Slot of the logic segment 246
++493: Physic segment of the logic segment 246
+
+
+#4112: INT_DATA
+
+Contains information about the NestorBASIC active interrupt process:
+
+bit 0 = 1: User defined interrupt active
+bit 1 = 1: PSG sound effect being replayed
+bit 2 = 1: Moonblaster 1.4 music being replayed
+bit 3 = 1: Moonblaster Wave music being replayed
+
+
+#4113: PUTSLOT0
+
+Enables the specified slot in page 0, without using ENASLT. Returns with 
+interrupts disabled.
+
+Input:	   A = Slot to switch
+Output:    -
+Registers: AF
+
+
+#4116: CHKSLE
+
+Checks if the specified logic segment exists. DON'T recognizes VRAM segments 
+as valid segments, nor the 255 segment.
+
+Input:	   A = Logic segment
+Output:    Cy= 1 -> Logic segment exists
+	   Cy= 0 -> Logic segment don't exists
+Registers: F
+
+
+#4119: CHKSLFF
+
+Checks if the specified logic segment is the 255. In such case, the segment 
+is converted to the appropriate segment number (current page 2 segment if 
+HL<#C000, segment 3 if HL>=#C000)
+
+Input:	   A  = Logic segment
+	   HL = Address
+Output:    A  = Segment converted if it was #FF; else, unchanged
+Registers: F
+
+
+#411C: CHKSLV
+
+Checks if the specified logic segment refers to VRAM. In such case, the 
+specified segment address is converted to the appropriate VRAM address.
+
+Input:	   A  = Logic segment
+	   HL = Address
+Output:    If segment refers to VRAM:
+	      A  = VRAM block
+	      HL = VRAM address
+	      Cy = 1
+	   If segment don't refers to VRAM:
+	      A, HL unchanged
+	      Cy = 0
+Registers: -
+
+
+#411F: VTOSL
+
+Converts a VRAM address to the appropriate VRAM segment
+
+Input:	   A  = VRAM block
+	   HL = VRAM address
+Output:    A  = Equivalent logic segment
+	   HL = Equivalent RAM address
+	   Cy = 1 -> A=1 on input, but only 64K VRAM are available
+Registers: F
+
+
+#4122: GET_SF
+
+Obtains the physic segment and the slot for a logic segment.
+
+Input:	   A = Logic segment
+Output:    A = Physic segment
+	   B = Slot (#FF -> Non existing logic segment)
+Registers: -
+
+
+#4125: GET_SLT
+
+Obtains the slot connected to page 1 or page 2.
+
+Input:	   A  = Page (1 or 2)
+Output:    B  = Slot
+Registers: F, C
+
+
+#4128: READ_SL
+
+Reads a byte from a logic segment.
+
+Input:	   A  = Logic segment
+	   HL = Address (0-#3FFF)
+Output:    A  = Byte read
+Registers: F, AF'
+
+
+#412B: WRITE_SL
+
+Writes a byte into a logic segment.
+
+Input:	   A  = Logic segment
+	   E  = Byte to be written
+	   HL = Address (0-#3FFF)
+Output:    -
+Registers: F, AF'
+
+
+#412E: LDIRSS
+
+Transfers a data block from a logic segment to another.
+Recognizes the segment 255 and the VRAM segments.
+Returns with BIOS switched in page 0.
+DON'T checks if BC>#4000.
+
+Input:	    IXh = Source logic segment
+	    IXl = Destination logic segment
+	    HL	= Source begin address (0..#3FFF)
+	    DE	= Destination begin address (0..#3FFF)
+	    BC	= Block lenght (0..#3FFF)
+Output:     A	= 0 -> Data block successfully transferred
+	    A  <> 0 -> One of the specified logic segments don't exists
+Registers:  All
+
+
+#4131: CHKBV
+
+Checks if a VRAM address exists.
+
+Input:	   A  = VRAM block (0 o 1, 64K low VRAM or high VRAM block)
+Output:    Cy = 1 -> The specified VRAM block don't exists
+		     (A = 1 but computer has only 64K VRAM)
+Registers: -
+
+
+#4134: SET_RD
+
+Sets VDP for reading VRAM.
+
+Input:	   HL = VRAM address, 16 low bits
+	   CY = VRAM address, bit 17
+Output:    -
+Registers: AF, HL
+
+
+#4137: SET_WR
+
+Sets VDP for writing VRAM.
+
+Input:	   HL = VRAM address, 16 low bits
+	   CY = VRAM address, bit 17
+Output:    -
+Registers: AF, HL
+
+
+#413A: LDIRVR
+
+Transfers data block from VRAM to RAM.
+
+Input:	   VRAM source begin address previously set with SET_RD
+	   DE = RAM destination begin address
+	   BC = Block lenght
+Output:    DE = RAM address next to the data block end
+Registers: AF
+
+
+#413D: LDIRRV
+
+Transfers data block from RAM to VRAM.
+
+Input:	   VRAM destination begin address previously set with SET_WR
+	   HL = RAM source begin address
+	   BC = Block lenght
+Output:    HL = RAM address next to the data block end
+Registers: AF
+
+
+#4140: LDIRVV
+
+Transfers data block from VRAM to VRAM through a RAM buffer.
+
+Input:	   HL = VRAM source address, 16 low bits
+	   DE = VRAM destination address, 16 low bits
+	   BC = Block lenght
+	   A  = %000000 D S, bit 17 of Destination and Source
+	   IX = RAM buffer with size of at least BC bytes
+Output:    -
+Registers: AF, HL, DE
+
+
+#4143: FILLVR
+
+Fills a VRAM zone with un byte.
+
+Input:	   VRAM address previously set with SET_WR
+	   BC = Zone lenght
+	   A  = Byte
+Output:    -
+Registers: -
+
+
+#4146: BLK_CLS
+
+Clears the VRAM zone for the SCREEN 0 blink mode.
+
+Input:	   -
+Output:    -
+Registers: AF
+
+
+#4149: BLK_COL
+
+Sets the colors for SCREEN 0 blink mode.
+
+Input:	   A = foreground color + 16* background color
+Output:    -
+Registers: A
+
+
+#414C: BLK_TIM
+
+Sets the times for the SCREEN 0 blink mode.
+
+Input:	   A = time ON + 16* time OFF
+Output:    -
+Registers: A
+
+
+#414F: BLK_ON
+
+Makes a blinking block.
+
+Input:	   HL = XXYY
+	   B  = X lenght
+	   C  = Y lenght
+Output:    L  = YY next to the last line
+	   H	unchanged
+Registers: AF
+
+
+#4152: BLK_OF
+
+Erases a blinking block.
+
+Input:	   HL = XXYY
+	   B  = X lenght
+	   C  = Y lenght
+Output:    L  = YY next to the last line
+	   H	unchanged
+Registers: AF
+
+
+#4155: C_BLKAD
+
+Calculates the VRAM address in the blink area for the specified coordinates.
+
+Input:	   HL = XXYY
+Output:    HL = VRAM address
+Registers: AF
+
+
+#4158: C_STBT
+
+Calculates the appropriate bit of the appropriate VRAM address
+for the specified coordinates.
+
+Input:	   A = X coordinate
+Output:    A has the appropriate bit set to 1
+Registers: F
+
+
+#415B: GINFOUS
+
+Returns information about the user interrupt definition
+
+Input:	 -
+Output:  A  = Segment
+	 HL = Address
+
+
+#415E: GINFOSFX
+
+Returns information about the PSG sound effects
+
+Input:	 A  = New maximum volume (-1 to leave it unchanged)
+Output:  A  = SFX set segment
+	 HL = SFX set begin address
+	 B  = Number of the being replayed SFX, or the last one replayed
+	 C  = Priority of the being replayed SFX, or the last one replayed
+	 D  = Number of the highest existing sound effect
+	 E  = Maximum volume
+
+
+#4161: GINFOMUS
+
+Returns information about the music being replayed and about the replayer.
+
+Input:	 -
+Output:  Cy = 1 -> No repla is initialised,
+		   the other results are invalid.
+	 Cy = 0 -> Any replayer is initialised.
+		   The other results are valid
+		   if a music is being replayed (see INT_DATA).
+	 A  = Logic segment of the being replayed music
+	 HL = Begin address of the being replayed music
+	 B  = Found sound chips:
+	      bit 0 = 1 -> MSX-MUSIC found
+	      bit 1 = 1 -> MSX-AUDIO found
+	      bit 2 = 2 -> OPL4 found
+	 C  = Enabled sound chips:
+	      bit 0 = 1 -> MSX-MUSIC enabled
+	      bit 1 = 1 -> MSX-AUDIO enabled
+	      bit 2 = 2 -> OPL4 enabled
+	 D  = Position
+	 E  = Step (0 to 15)
+	 IXl= #FF if the music is paused
+
+
+#4164: REPTYPE
+
+It is not a routine but a data byte. Contains the type of replayer currently 
+loaded:
+
+0 = Moonblaster 1.4 replayer
+1 = Moonblaster Wave replayer
+
+Note that before looking for this information, you must check that actually 
+any replayer is loaded! Use function GINFOMUS (#4161) for this.
+
+
+APPENDIX 3 - INTERRUPTS IN MSX TURBO-R
+
+NestorBASIC works perfectly in all the MSX2/2+/Turbo-R computers, but you may 
+have problems with the interrupt process if your computer is a Turbo-R and 
+you are running in DOS 1 mode, especially if you have an external mapper. 
+This is due to the needed process for the interrupt request handling: 
+NestorBASIC must check which segment is connected in page 1 before make any 
+segment switching. In DOS 1 mode, the only way to do this is the use of IN 
+A,(#FD) instruction, which in the Turbo-R computers don't works exactly in 
+the same way as in the MSX2/2+ computers.
+
+Thus, if you will use user interrupts, sound effects or music replay in your 
+program using Nestor-BASIC, it is advised to do the following: check if the 
+computer is a Turbo-R (if PEEK(&H2D)=3) running in DOS 1 mode (use function 1 
+to check this); in such case, show a message asking to reboot in DOS 2 mode.
+
+
+APPENDIX 4 - USE CONDITIONS
+
+NestorBASIC is freeware, so you can use and distribute it freely. But if you 
+use NestorBASIC in your programs you should do the following:
+
+- Somewhere in your program (when loading, in a "about" option, when showing 
+the staff, etc) you must place a mention to the use of NestorBASIC, as well 
+as the version number (use function 1 to obtain NestorBASIC version number).
+
+- If the program is not for your personal use (that is, if the program will 
+be distributed, freely or not) you must sent to me (Nestor Soriano) a copy of 
+the program.
+
+For any suggestion, question or comment about NestorBASIC, please write to me 
+at <konamiman@geocities.com>.
+
+The use of the sound effects created with the sound effects editor SEE has 
+its own use conditions. If you will shell your program for more than 15 NLG 
+you must pay a little amount of money to the authors, never more than 25 NLG. 
+For more details or for comments about SEE, please contact Fuzzy Logic:
+
+       R. v/d Meulen		A. v/d Wal
+       Lijsterstraat 25 	Tormentil 15
+       8917 CX Leeuwarden	8445 RR Heerenveen
+       Holland. 		Holland.
+
+

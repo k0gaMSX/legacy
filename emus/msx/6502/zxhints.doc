@@ -1,0 +1,158 @@
+
+
+Hints & kinks for operation of ZX65: SIMULATING A MICRO
+
+Written 7/80		 R. M. Kruse
+
+
+	There are a few things about ZX65 which are either not immedia-
+tly evident in the original Dobb's article or which I have run across
+since the article was submitted. These I will share with you in the hope
+that they make your use of the package easier.
+
+	MODIFICATIONS: If you compare the first few lines of both ZXLD
+and ZX65 source code on this disk with the listings in Dobb's, you will
+notice some differences. The reasons for these changes are twofold: 1)
+since submission of the article, I have obtained a much better assembler
+(namely the SD Systems Version 3.3). Use of this assembler required the
+addition of the 'PSECT ABS' pseudo-op found in the new listing. Although
+this assembler does not require the LABEL-$ convention in relative jump
+instructions (as did V. 1.0) it tolerates them so they are still there.
+2) I have cleaned up the mechanism for reassembling for different system
+memory sizes through the use of the 'INCLUDE FILE' mechanism found in
+both ZX65 and ZXLD. In case you're wondering, all instructions still
+occupy the same absolute locations as in the Dobb's listing, with an
+offset if your system is not 32K.
+
+	RELOCATING THE SYSTEM: If for any reason you need to modify the
+system to operate in a different memory configuration, follow these
+steps:
+
+	1. Using your editor, put a new value in the 'SIZE EQU XX'
+	   statement in the 'SIZE.ZX' file. This is normally the size
+	   (in decimal) of your CP/M system (i.e. 16K, 24K, 48K, etc)
+	   and upon assembly this puts the package from MEMTOP-1100H
+	   to MEMTOP-200H. You could, of course, locate the package
+	   just about anywhere by using oddball values in 'SIZE EQU
+	   XX' statement, but don't try this unless you know how to
+	   relocate your CBIOS. ZX65 expects CBIOS to be in the 512
+	   bytes of memory immediately following it.
+
+	2. Assemble (and link, if necessary) both ZX65.ZSM and ZXLD
+	   .ZSM in order to create a .HEX file for each. (Note: if
+	   your assembler doesn't support the 'INCLUDE' mechanism,
+	   you will have to place the 'SIZE EQU XX' statement into
+	   both files manually using your editor. Also, you may have
+	   to do some minor syntax modifications to suit your ass-
+	   embler.)  
+
+	3. Don't try to use CP/M's LOAD utility. It can't handle the
+	   'load and boot' method used by ZX65. Instead, use DDT:
+
+		a. First, load ZXLD by typing 'DDT ZXLD.HEX'. DDT
+		   will respond with 'PC 100  NEXT 10E' and a 
+		   prompt.
+
+		b. Next, load ZX65 by typing 'IZX65.HEX' <CR> and
+		   'Rdisp' <CR>. The hex value 'disp' is the offset
+		   necessary to fool DDT into loading a hex file
+		   at the 'wrong' address. If you have printed out
+		   the .PRN file for ZXLD, this value should be cal-
+		   culated for you at the 'OFFS EQU XXXX' statement
+		   (it should be a four-digit hex number ending in
+		   '10' such as 9210 for a 32K system.) You may
+		   also have DDT calculate it for you by typing
+		   'H110,ssss' where 'ssss' is MEMTOP-1100H for your
+		   system.
+
+		c. You now have a memory image of ZX65 with a booter
+		   in the TPA. Exit DDT with a ^C (warm start) and
+		   type 'SAVE 15 ZX65.COM' to store it on disk as
+		   an executable command file.
+
+		d. Invoke the package by typing 'ZX65'. Drive B
+		   should immediately operate briefly and a '>'
+		   prompt should appear on the screen. If not, go
+		   through the procedure again, and be sure that
+		   CBIOS is in its usual place.
+
+	CP/M COMPATABILITY: As of this writing, I have not yet succum-
+bed to Digital Research's efforts to get me to buy the new CP/M 2. From
+what I have been able to figure out, it offers very little to me in the
+way of advantages. Suffice it to say that ZX65 was written and debugged
+using V 1.4, and I cannot say whether or not it will run under any other
+version. (My guess is that it will work with V 1.3, but not v 2.X.) The
+main reason for any incompatibility will probably have to do with the
+fact that my self-contained mini DOS operates the disks and console dir-
+ectly through CBIOS rather than by using calls to BDOS which is the more
+conventional method. (There is a good reason for this madness which I
+will explain shortly.) In any event, since you have spent your hard-
+earned nickels for this copy, I suspect that you are resourceful enough
+to overcome such problems and implement any necessary patches. If you
+do come up with a running version patched for CP/M 2 or for some other
+disk format (i.e. North Star etc.), how about submitting it for possible
+publication in Dobb's? (No, I'm not on their payroll, but they are re-
+ceptive to this type of material and lots of 'hard core' dedicated
+computerists read their mag.)
+
+	SOME NITTY-GRITTY: As promised, here is the explanation of why
+I have interfaced through CBIOS rather than using BDOS: If you have
+done any work at all with the 6502 processor, you will recall that page
+zero of memory (0000H to 00FFH) is sacred to it. There are short forms
+of many instructions for use on page zero, and the very powerful indirect
+indexing modes always use page zero. Now ZX65 by design uses no memory
+mapping at all...that is, if your 6502 program is ORG'd at 2000H, that
+is exactly where you will load it. (This is in contrast to at least one
+TRS80-based simulator that I know of.) Having gone this far, it is only
+reasonable to expect that page zero will be totally available to the
+6502 program. As you have probably realized by now, the catch here is
+that BDOS also likes page zero, and uses large chunks of it during disk
+accesses. With one possible limitation (which I will discuss in a bit)
+ZX65 totally removes the host system from page zero...even the vectors
+at the bottom of memory need not be saved.  ZX65 is, in fact, confined
+to the top 1100H bytes of user memory, and ALL space below that is av-
+ailable for 6502 programs and data. The one possible conflict that I
+mentioned is system-dependent, and may or may not apply in your case.
+CP/M V 1.4 has a reserved 'scratch' area of 16 bytes located from 0040H
+to 004FH. Some disk controllers use this area for temporary data stor-
+age during all disk transfers, whether initiated by CP/M or not. If this
+is true of your controller, then you have very little choice but to ac-
+cept the fact that this portion of page zero will be messed up whenever
+you do a disk access from ZX65. There is still one alternative (I know
+because I did it!): you may be able to move this scratch area out of
+page zero into high memory. Even if you have this conflict, 6502 pro-
+grams that use page zero only for temporary data storage will probably
+run normally unless the 6502 program itself accesses the disk. (Yes, it
+is possible, using the 'system' subroutine calls.)
+
+	ZXDOS COMMENTS: Having destroyed BDOS as described above, I was
+obliged to include an embedded disk operating system in ZX65. Now, ZXDOS
+will never win any awards for versatility, but it is, I think, adequate
+for the application. All internal disk access is confined to drive B (a
+two drive system is assumed). ZXDOS files are not CP/M compatible. A dir-
+ectory is maintained on track zero, and the remainder of the disk is
+available for program/data storage. Each directory entry is 16 bytes long,
+and contains the file name (format same as CP/M but file type has no spe-
+cial meaning), the load address, the disk location, the number of sectors,
+and an active/dead flag byte. During a directory display or search, the
+directory is paged through a buffer within ZX65 one sector at a time,
+continuing until an 'end of directory' mark is located. Files are stored
+sequentially and on sequential sectors (no interleaving). A new file will
+normally be appended at the tail end of existing files, unless the entire
+file will fit into the space allocated for a dead file. Thus a rudimentary
+form of dynamic disk space allocation is used, but a full disk will still
+contain quite a few empty slots. Killing a file does not actually erase
+anything, but simply resets the active status flag in the directory for
+that entry. The 'initialize' command writes a properly formatted empty
+directory to the disk. Although I have not done so, it should be possible
+to use ZX65 with only one drive. The only change to the source code is at
+line   37, where the instruction 'LD C,1' will have to be replaced with
+'LD C,0'. To operate in this mode, first load ZX65, then immediately re-
+move the system disk and insert the ZX65 data disk, and from this point
+operation should be the same. This should work because once loaded, ZX65
+does not itself require any further disk access.
+
+	CONCLUSION: Have fun with ZX65!		-RMK
+
+
+

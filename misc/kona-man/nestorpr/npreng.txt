@@ -1,0 +1,1255 @@
+	NestorPreTer 0.3 - By Nestor Soriano (Konami Man), 12-1999
+	----------------------------------------------------------
+
+This text contains the following points:
+
+1. INTRODUCTION
+2. SOME SHORT SAMPLES
+3. RUNNING NESTORPRETER
+4. BASIC LINES GENERATION
+5. USING LINE LABELS
+6. DIRECTIVES
+6.1. ENABLING AND DISABLING REMARKS
+6.2. ENABLING AND DISBALING SPACES BETWEEN INSTRUCTIONS
+6.3. CHANGING THE BASIC LINE NUMBERING
+6.4. STOPPING PROCESS
+6.5. USING MACROS
+7. LISTS
+8. ERRORS
+8.1. INITIALIZATION ERRORS
+8.2. MACRO SEARCH ERRORS
+8.3. LINE LABEL SEARCH ERRORS
+8.4. PROCESS ERRORS
+8.5. FATAL ERRORS
+8.6. ERRORS INSIDE MACROS
+9. TIPS AND VARIOUS STUFF
+10. PROGRAM STATUS, CONTACTING AUTHOR
+
+
+1. INTRODUCTION
+
+NestorPreTer is a MSX BASIC pre-interpreter, that is, a program which 
+converts an ASCII file containing BASIC text in a special format into a 
+MSX-BASIC executable file. This "special format" includes normal MSX-BASIC 
+format as a particular case, so old existing MSX-BASIC programs can also be 
+used as input files, as long as they are saved in ASCII format 
+(save"name",a).
+
+The format of the input file is the same of the MSX-BASIC with the following 
+differences:
+
+- Remarks can be used without limit and without getting worried for the spent 
+BASIC memory, because they will be ignored and not included in the output 
+file.
+
+- The same applies to the blank spaces between BASIC instructions. This 
+allows you to use line indent without spending BASIC memory.
+
+- Line numbers are not needed. Just write your program and let NestorPreTer 
+generate the line numbers on the output file automatically.
+
+- Of course you will need to identify some BASIC lines in order to do 
+branching. For doing this, you can use line labels, which can use 
+alphanumeric characters (there is some special characters which you can't 
+use, a list of these characters is provided forward). As a particular case of 
+line labels you can use also line numbers, of course.
+
+- NestorPreTer directives will allow you to perform some control in the text 
+converting process: in any point of your program you can temporarily disable 
+and re-enable the remark and/or space ignore feature, change the current 
+BASIC line number and/or increment, and stop the process ignoring the 
+remaining of the input file.
+
+- You can use macros, that is, give a short name to a portion of text and use 
+this name in the program instead of the complete text. Macro recursivity is 
+allowed up to 127 levels. Currently you can't pass parameters to macros, this 
+feature will be implemented in future versions of NestorPreTer.
+
+
+In this point it is clear that there is three main ways in which NestorPreTer 
+can be used:
+
+- Use NestorPreTer with your old MSX-BASIC programs, and you will obtain the 
+same program but without remarks and spaces, so you save BASIC memory.
+
+- Develop your new programs using the MSX-BASIC environment in the usual way, 
+but don't worry about the remarks amount and extension, because you will 
+process your program with NestorPreTer before running it so remarks will 
+disappear.
+
+- Develop your new programs using any text editor and use the new 
+NestorPreTer features: a text without line numbers, with line labels and 
+macros, with extense remarks and with line indent comes to be highly 
+readable. Next use NestorPreTer to generate the executable file.
+
+Remember that existing MSX-BASIC programs must be saved in ASCII format 
+(save"name",a) if they will be used as NestorPreTer input files. Also 
+remember that output file is also an ASCII file, so it is recommended to 
+convert it to normal MSX-BASIC format (just do load"name":save"name"), which 
+loads faster.
+
+
+2. SOME SHORT SAMPLES
+
+Detailed description of NestorPreTer use will be provided soon, but first 
+let's see some examples of text conversion.
+
+
+* Remark elimination:
+
+10 Print "One line"
+22 REM This is just a nasty remark
+34 Print "Wow!" 'Stupid message
+40 goto 34 'This never ends!!
+
+will be converted to
+
+10 PRINT"One line"
+20 PRINT"Wow!"
+30 GOTO20
+
+Note that NestorPreTer performs a RENUM automatically. Lines containing only 
+a remark are just discarded.
+
+
+* Spaces elimination:
+
+10 for k = 1 to 10
+20    print "The number is";k
+30    for j = 10 to 1 step -1
+40	 print "The reverse number is";j
+50    next j
+60 next k
+
+will be converted to:
+
+10 FORK=1TO10
+20 PRINT"The number is";K
+30 FORJ=10TO1STEP-1
+40 PRINT"The reverse number is";J
+50 NEXTJ
+60 NEXTK
+
+
+* Using line labels:
+
+~INIT:	print "This is the start...":
+	print "This is still the start!":
+	print "When indent is performed, previous BASIC line continues."
+~CHECK: if inkey$="" then ~CHECK
+10 print "Heeey this is NOT line 10!!"
+goto ~INIT
+
+will be converted to:
+
+10 PRINT"This is the start...":PRINT"This is still the start!":PRINT"When 
+indent is performed, previous BASIC line continues."
+20 IFINKEY$=""THEN20
+30 PRINT"Heeey this is NOT line 10!!"
+40 GOTO10
+
+Note that line numbers are just a special case of line labels, they do not 
+represent a concrete line number of the output file.
+
+
+* Line numbering change
+
+print "This is first line..."
+print "This is second line..."
+@line 1001,2
+print "Line numbering changed!"
+print "But life goes on..."
+
+will be converted to:
+
+10 PRINT"This is first line..."
+20 PRINT"This is second line..."
+1001 PRINT"Line numbering changed!"
+1003 PRINT"But life goes on..."
+
+
+* Using macros
+
+@define TRUE -1
+@define FALSE 0
+@define ERROR E%
+@macro	SHOW_ERR print "Error";@ERROR;"!!"
+
+gosub ~PROCESS
+if @ERROR=@TRUE then @SHOW_ERR
+
+will be converted to (assuming that ~PROCESS is converted to 10000):
+
+10 GOSUB10000
+20 IFE%=-1THENPRINT"Error";E%;"!!"
+
+Note that you can use blank lines freely. They will be always ignored.
+
+DEFINE and MACRO directives have exactly the same effect, just use the one 
+which you like more. Normally, and in order to provide readability, DEFINE 
+should be used to name constants and variables, and MACRO should be used to 
+name pieces of executable code.
+
+
+* Enabling remarks
+
+10 'This is just bla, bla, bla...
+@remon
+20 'Hey, this is an important remark!!
+30 print "Hello mom!" 'Also this one!
+@remoff
+40 print "Look at me!" 'More bla, bla...
+50 'I like bla, bla...
+
+will be converted to:
+
+10 'Hey, this is an important remark!!
+20 PRINT"Hello mom!" 'Also this one!
+30 PRINT"Look at me!"
+
+
+3. RUNNING NESTORPRETER
+
+NestorPreTer runs on any MSX2 or higher with any DOS version. Under DOS 1, at 
+least 128K of mapped memory is required. Under DOS 2, at least three free 
+memory segments on any slot are required. NestorPreTer uses mapped memory to 
+store line lables and macros, so if you have more memory you can use more 
+line labels and macros in your program. The maximum amount of memory used by 
+NestorPreTer is about 450K.
+
+NestorPreTer must be run in the following way:
+
+NPR <infile>[.<ext>] [<outfile>[.<ext>]] [/C0|/C1] [/B0|/B1] [/F<n>]
+    [/I<n>] [/LOG[:][<logfile>[.<ext>]]] [/LIN[:][<linfile>[.<ext>]]]
+    [/MAC[:][<macfile>[.<ext>]]]
+
+where:
+
+* <infile> is the name of the input ASCII file. It is the only mandatory 
+parameter. If no extension is given, .ASC will be assumed.
+
+* <outfile> is the name of the MSX-BASIC ASCII file which NestorPreTer will 
+generate. If not specified, the same name of <infile> with extension .BAS 
+will be assumed, and the file will be placed in the same drive and directory 
+of the input file. If file name is specified but without extension, .BAS will 
+be assumed.
+
+* /C1 will cause NestorPreTer to be case sensitive when processing line 
+labels and macro names, so then ~line will not be the same as ~LINE. /C0 will 
+cause NestorPreTer to be not case sensitive, this is the default option. Note 
+that NestorPreTer is never case sensitive with its own directives.
+
+* /B1 will cause NestorPreTer to jump to BASIC and execute output program 
+when process is complete. Note that this will be possible only if 1) no 
+errors were found in the process, and 2) output file is located in the 
+current directory (that is, "out.ext" was specified as output file instead of 
+"X:\path\out.ext"). /B0 will cause to never do this, it is the default 
+option.
+
+* /Fn sets the first BASIC line number on the output file to n. Default is 
+10. Remember that you can change this in the program itself using the @LINE 
+directive (see section 6.3).
+
+* /In sets the BASIC line number increment on the output file to n. Default 
+is 10. Remember that you can change this in the program itself using the 
+@LINE directive (see section 6.3).
+
+* /LOG or /LOG:<filename> will create a process logfile, that is, a file in 
+which are specified the name of all the involved files; the number of lines, 
+macros and labels found; and all the errors found during process. If no file 
+name is specified, the same name of <infile> with extension .LOG will be 
+assumed, and the file will be placed in the same drive and directory of the 
+input file. If file name is specified but without extension, .LOG will be 
+assumed.
+
+* /LIN or /LIN:<filename> will crearte a line labels list file, that is, a 
+file with a list of all the line labels used, together with their matching 
+BASIC line numbers of the output file. If no file name is specified, the same 
+name of <infile> with extension .LIN will be assumed, and the file will be 
+placed in the same drive and directory of the input file. If file name is 
+specified but without extension, .LIN will be assumed. The format of the LIN 
+file is:
+
+<Header with some information>
+label name <tabulator> line number
+label name <tabulator> line number
+...
+
+Note that if you don't specify any case option, or if you specify /C0 option, 
+all label names will appear uppercased in the LIN file, regardless of how 
+they are typed in the input file.
+
+* /MAC or /MAC:<filename> will cause to search for macro definitions in the 
+specified external file, in addition to the macros defined in the source file 
+itself. Note that this external file can contain only macro definitions; any 
+other text in this file will be ignored even if it is not a remark. If no 
+file name is specified, the same name of <infile> with extension .MAC will be 
+assumed, and the file will be searched in the same drive and directory of the 
+input file. If file name is specified but without extension, .MAC will be 
+assumed.
+
+
+All this information will be shown in a resumed way if you run NPR alone 
+without parameters.
+
+
+4. BASIC LINES GENERATION
+
+Normally, a new BASIC line starts in the output file when a physical line (a 
+line which ends with a CR character -ASCII 13-) starts in the input file. 
+However this will not occur (that is, new physical input line will be treated 
+as the continuation of the current output BASIC line) in two cases:
+
+- When previous physical line ended with a SPACE+CR instead of a (any other 
+character)+CR. This allows you to use the text processors which use the 
+SPACE+CR combination to mark the continuation of long lines, for example 
+TED.
+
+- When first character of the line is a space or tabulator character. This 
+allows you to maintain a nice and readable indent in your programs (see 
+examples in section 2).
+
+There is a way to force NestorPreTer to start a new BASIC line without having 
+to renounce to indent and without having to specify a line label: just use 
+the "~" character alone at the start of the line; NestorPreTer will ignore it 
+but a new BASIC line will start in the output file. Example:
+
+~PROCESS: Print "Process starts...":
+	  Print "Process continues..."
+~	  Print "Process continues but in a new BASIC line!":
+	  Print "Process ends!"
+Return
+
+This will be converted to:
+
+1000 PRINT"Process starts...":PRINT"Process continues..."
+1010 PRINT"Process continues but in a new BASIC line!":PRINT"Process ends!"
+1020 RETURN
+
+Note that:
+
+- NestorPreTer treats space character (ASCII 32) and tabulator character 
+(ASCII 9) exactly in the same way.
+- It is not required that physical lines on the input file finish with a 
+CR+LF mark (ASCII 13+10), a CR alone is enough. LF mark will be always 
+ignored. In the output file, however, lines will always finish with a CR+LF 
+mark.
+
+
+5. USING LINE LABELS
+
+You can use line labels to identify BASIC lines, in order to use line related 
+BASIC instructions (GOTO, RESTORE...) or just in order to identify a certain 
+part of your program.
+
+Line labels which identify a given line must be put at the beginning of the 
+physical line (so a new BASIC line is assumed, see section 4), and line 
+labels which refer to any BASIC line can be placed anywhere in the text; that 
+is, just like the MSX-BASIC line numbers. When NestorPreTer finds a physical 
+line starting with a line label, it stores the label together with it 
+matching BASIC line number in an internal table; when a line label is found 
+not at the beginning of the physical line, the table is referred and the 
+label is changed into it matching line number in the output file.
+
+There are three types of line labels:
+
+- Normal line labels, they start with "~" character and they must end with a 
+space character or with a ":" character. They can contain any character not 
+in the list of forbidden characters (see section 7).
+
+- Numeric line labels. They start with and can contain only numbers, and 
+finish with a space character; they are provided in order to give 
+compatibility with existing MSX-BASIC programs, so existing line numbers are 
+treated as line labels.
+
+- Special line label "~~", this refers not to a concrete line but to the 
+current BASIC line (the line in which this label is referred).
+
+The maximum label length for normal and numeric labels is 255 characters.
+
+Some examples of label definition and use:
+
+~Label1:	print "Use NestorBASIC!"
+~LABEL2 	gosub ~Label1 : goto ~Label2 '--> Error if /C1 specified
+~1234:
+~Continue:	print "Yes, empty lines are allowed!"
+~MoreLabelsBecauseTheyReallyRulez:	goto 100
+100		gosub ~1234
+~AnyLabel:	goto ~~ 	'This is an endless loop (= goto ~AnyLabel)
+123ABC 'THIS WILL GENERATE ERROR! (numeric labels can contain only numbers)
+
+Use of "~~" allows you to create useful macros such:
+
+@macro WAIT_KEY if inkey$="" then ~~
+
+Note that:
+
+- There is no problem on using line labels without actually having any line 
+body: in the previous example, labels ~1234 and ~Continue will have the same 
+BASIC line number assigned, and this will not be considered an error.
+
+- If /C1 option is given when running NestorPreTer (see section 3), the line 
+which starts with ~LABEL2 will generate an error because the referred label 
+name ~Label2 is not defined.
+
+- If you have a label named ~LABEL and you write a text like 
+IFA=1THEN~LABELELSEEND, an error will be generated because NestorPreTer will 
+assume that the referred label is ~LABELELSEEND, which does not exist, 
+instead of ~LABEL. Do not write such dirty code: remember that NestorPreTer 
+will automatically skip the spaces, so you don't need to do it. It is much 
+better to write IF A = 1 THEN ~LABEL ELSE END.
+
+However, if you write ...THEN~LABEL:END there will be not problem, because 
+":" is a forbidden character, so it is interpreted as the end of the label 
+name. See section 7 for a list of forbidden characters.
+
+When you use an existing MSX-BASIC program as input file, you don't need to 
+worry about this even if the text has no spaces: a ...THEN100ELSEEND will not 
+be a problem, because 100 is a numeric line label, so the first "E" found is 
+a forbidden character and therefore interpreted as the end of the label.
+
+
+6. DIRECTIVES
+
+NestorPreTer has some own directives which allows you to take some control in 
+the text conversion process. These directives are identified with an starting 
+"@" character, and of course they are not placed in the output text.
+
+
+6.1. ENABLING AND DISABLING REMARKS
+
+When NestorPreTer starts, the default state is "ignore remarks": remarks at 
+the end of a line will not be included in the output file, and if a line 
+contains only a remark, the entire line is discarded.
+
+You can change to "do not ignore remarks" state with the @REMON directive. In 
+this state, when e remark identificator is found (character "'" or 
+instruction REM), the following text until the end of the physical line is 
+copied literally in the output file. To return to "ignore remarks" state, use 
+the @REMOFF directive.
+
+Note that:
+
+- These directives must be placed only at the start of a physical line, 
+otherwise NestorPreTer will generate an error.
+- Any text placed after these directives in the physical line will be 
+ignored, even if it is not a remark.
+- For BASIC line numbering purposes, lines containing these directives are 
+ignored, just like blank lines.
+- NestorPreTer ignores SPACE+CR marks, so when remarks are OFF, any text 
+after a remark indicator will be ignored until a (not SPACE)+CR is found.
+
+
+6.2. ENABLING AND DISABLING SPACES BETWEEN INSTRUCTIONS
+
+When NestorPreTer starts, the default state is "ignore spaces": spaces placed 
+between BASIC instructions are ignored and not placed in the output file.
+
+You can change to "do not ignore spaces" state using the @SPACEON directive. 
+In this state, all the found spaces and tabulators are placed in the output 
+file, in the same way as the normal characters. To return to "ignore spaces", 
+use the @SPACEOFF directive.
+
+Note that:
+
+- Unlike all the other directives, @SPACEON/@SPACEOFF can be placed anywhere 
+in the BASIC text; of course, the directive itself will not be included in 
+the output file. For example, A = 3 :@SPACEON: B = 4 will be converted to 
+A=3: B = 4
+- Sometimes, enabling spaces is really necessary. For example, if you have a 
+text like B = X OR 3 it will be converted to B=XOR3, MSX-BASIC will take it 
+as B = XOR 3 and a syntax error will be generated. To avoid this, do 
+@SPACEON: A= X OR3: @SPACEOFF. Please have this in mind if you find strange 
+errors when executing the generated BASIC program.
+- In some cases NestorPreTer will not eliminate the duplicate ":" caused by 
+the skipping of the @SPACEON/OFF directive, so a A=3 : @SPACEON : B=4 may 
+result in a A=3::B=4. However this will not affect to the generated program 
+execution.
+- NestorPreTer treats spaces and tabulators exactly in the same way.
+- Beware when using @SPACEON before an indented text! The output file will 
+have a very strange look in this case, besides a lot of BASIC memory will be 
+wasted with spaces.
+
+
+6.3. CHANGING THE BASIC LINE NUMBERING
+
+Line numbering on the output file starts with the value specified in the /F 
+parameter, and the line increment is the one specified in the /I parameter; 
+default value for both is 10 (see section 3).
+
+You can alter this line progression with the @LINE command, which enables you 
+to set a new starting line number which will be applied to the text placed 
+next, or a new line increment, or both. So, there is three ways to use @LINE:
+
+@LINE <num>
+
+The text placed next starts with number <num>, the line increment does not 
+change.
+
+@LINE ,<inc>
+
+Sets the new line increment to <inc>, the current line number does not 
+change.
+
+@LINE <num>,<inc>
+
+Changes both the current line number and the increment. See sample in section 
+2.
+
+Note that:
+
+- You can't set a line number smaller than the current one. If you try it, an 
+error is generated and the directive is ignored.
+- Of course, error is also generated when you specify an invalid parameter, 
+for example a line number bigger than 65535.
+- If line number reaches or surpass 65535 during the text processing, a fatal 
+error will be generated and the entire process will be aborted. See section 
+8.5.
+- See also notes for @REMON/OFF directives (section 6.1).
+
+
+6.4. STOPPING PROCESS
+
+You can stop the text process in any moment, causing the remaining of the 
+input file to be ignored. Use the @ENDBASIC directive for this.
+
+This directive can be placed only at the start of a physical line. See notes 
+for @REMON/OFF directives (section 6.1).
+
+
+6.5. USING MACROS
+
+Macros are pieces of text which have a name assigned, so when a reference to
+this name is found in the input file, the associated text is actually placed 
+in the output file.
+
+Macros can be defined in the source file itself, but also in an external file 
+if you specify /MAC option when running NestorPreTer (see section 3). To 
+define a macro, use the @DEFINE or @MACRO directive (both are same) in the 
+following way:
+
+@DEFINE macroname macrobody
+or
+@MACRO macroname macrobody
+
+Macro name can be any alphanumeric string not containing forbidden characters 
+(see list in section 7) and with a maximum length of 255 characters. You 
+can't use NestorPreTer directive names as macro names (see directives list in 
+section 7).
+
+Macro body (the referred text) starts after the macro name, and ends when a 
+CR mark is found; as for the normal text, SPACE+CR marks are ignored (see 
+section 4), but note that now line indent can NOT be used to indicate the 
+continuation of a macro.
+
+For example, in the following text:
+
+@DEFINE any_name print"Hey!":gosub 100:?"End"
+		 print "This is not part of the macro!"
+
+the macro body ends with the ?"End", unless a SPACE+CR is placed instead 
+of a CR after this instruction.
+
+For purposes of remark and space skipping, the bodies of the macros are 
+treated in the same way of the normal text.
+
+To refer to a macro, just place the name preceded by a "@" character anywhere 
+in the program. The macro body will be placed instead in the output file. For 
+example, to use the macro of the previous example, you can do
+
+print "Let's use macro!":@any_name:print "Done!!"
+
+It is interisting to use fixed macros for defining some commonly used 
+constants, for example @TRUE for -1 or @FALSE for 0 (see samples in section 
+2).
+
+Macro recursivity is allowed up to 127 levels; a fatal error is generated and 
+the entire process is stopped if this limit is surpassed or if a macro calls 
+itself (see section 8.5). An example of recursivity of level 3:
+
+@define MACRO1	print"1A":@MACRO2:print"1B"
+@define MACRO2	print"2A":@MACRO3:print"2B"
+@define MACRO3	print"3A":print"The center!":print"3B"
+print"Let's go":@MACRO1:print"Done!"
+
+The result will be:
+
+print"Let's go":print"1A":print"2A":print"3A":print"The center!":print"3B":
+print"2B":print"1B":print"Done!"
+
+VERY IMPORTANT: Macro definitions can be placed only in the first 16K of the 
+input text. Macro definitions placed outside this limit are just ignored 
+without generating any error. This applies to the source file as well as to 
+the external macros file.
+
+If the 16K limit is reached inside of a macro definition, an error will be 
+generated and the macro will be ignored; note that only in this extreme case 
+an error is generated. See section 8.2.
+
+Also, remember this: NestorPreTer will crash if you define too many macros; 
+this is a NestorPreTer design failure and will be corrected in future 
+versions. The maximum number of macros that can be defined depends on the 
+length of the macros' names; for an average length of 10 characters, this 
+maximum number is about 1000.
+
+Note: do not use remarks in a macro definition if you use the @REMON 
+directive. Study the following example to know why:
+
+@remon
+@define NAME print 'What a stupid macro...
+print "Hi world!":@NAME:print "Ops..."
+
+This will be converted to:
+
+10 PRINT"Hi world!":PRINT'What a stupid macro...:PRINT"Ops..."
+
+and the PRINT"Ops..." will not be executed because it is a part of the 
+remark.
+
+
+7. LISTS
+
+* Forbidden characters
+
+Forbidden characters can't be used in a macro or line label name. If they are 
+found in a macro/label definition, an error will be generated and the 
+definition will be ignored (except for the space/tabulator, which marks the 
+end of the definition; line label definition can also end with ":"); if they 
+are found in a macro/label reference (inside the text), they mark the end of 
+the macro/label name and the point where text continues.
+
+Some examples of the explained above ("+" and ":" are forbidden characters):
+
+@define MACNAME+ exp(1)  --> ERROR
+@define MACNAME: exp(1)  --> ERROR
+@define MACNAME  exp(1)  --> OK
+...print:a=@MACNAME+34:if... --> OK, macro name is MACNAME, the "+" is a part 
+of the text, so: a=exp(1)+34
+
+~labname+ print...	--> ERROR
+123ABC	print...	--> ERROR (it is a numeric label)
+~labname: print...	--> OK
+~labname  print...	--> OK
+...print:goto ~labname:if...  --> OK, label name is "labname", the ":" is a 
+part of the text.
+
+Forbidden characters are:
+
+! " # $ % & ' ( ) * + , - . / : ; < = > ? @ [ \ ] ^ { }
+
+Also character with ASCII code 127, and all characters with ASCII code 
+in the range 0-32, including space and tabulator.
+
+
+* NestorPreTer directives
+
+The following are the NestorPreTer directives names, and can't be used as 
+macro names:
+
+DEFINE
+ENDBASIC
+LINE
+MACRO
+REMOFF
+REMON
+SPACEOFF
+SPACEON
+
+Note that NestorPreTer is never case sensitive with the directives, so you 
+can't use for example @EndBasic as a macro name even if you specified case 
+sentitive process option (/C1, see section 3).
+
+
+* Line related instructions
+
+The following are the instruction which NestorPreTer recognizes as 
+line-related. When a number is found in the text, the presence of one of 
+these instructions before the number is checked; is found, the number is 
+interpreted as a numeric line label and the matching BASIC line number is 
+placed in the output file instead of the number itself.
+
+If any MSX-BASIC line-related instruction is missing in this list, then it is 
+not implemented in NestorPreTer, so a wrong output file can be generated. 
+Then please contact the author (me) and tell me what instruction I forgot, in 
+order to solve this.
+
+AUTO
+DELETE
+ELSE
+GOSUB
+GOTO
+LIST
+RENUM
+RESTORE
+RESUME
+RETURN
+RUN
+THEN
+
+
+8. ERRORS
+
+When NestorPreTer finds an error during the text processing, it displays it 
+in the screen, and also in the logfile if /LOG option is specified. General 
+format of these errors is:
+
+ERROR in line <lin> [M<lev>] [F]: Error message.
+
+where <lin> is the physical line of the input file where the error was found. 
+The [M<lev>] field appears only when the error is found inside a macro, this 
+is explained in section 8.6. The [F] field appears only when the error is 
+found in a macro definition placed not in the source file but in the external 
+macros file.
+
+
+8.1. INITIALIZATION ERRORS
+
+These errors appears before any text processing start, normally they are the 
+result of a wrong input parameter. When any of these errors appears 
+NestorPreTer finishes its execution; note that in this case no output, LIN 
+nor LOG files are created, or they are created with a length of zero bytes.
+
+
+* Source file name invalid or not specified
+
+The input file name is not a valid MSX-DOS file name, or simply it was not 
+specified (for example NPR /C1 was executed).
+
+
+* Invalid input prameter
+
+An unknown or not valid parameter was specified when executing NPR. See 
+section 3 for a list and format of NestorPreTer input parameters.
+
+
+* No mapped memory found
+
+The computer has not any memory mapper, so NestorPreTer can't run.
+
+
+* No free memory segments found
+
+Only 64K of mapped memory was found in the primary mapper (DOS 1), or less 
+than three free memory segments were found after scanning all slots (DOS 2), 
+so NestorPreTer can't run.
+
+
+* Duplicate filename in input parameters
+
+Two or more of the specified files (input, output, LOG, LIN) have the same 
+name and extension, so NestorPreTer can't run.
+
+Note that you can't specify the same file names even if you specify different 
+directories, so you will obtain this error also if you do
+NPR A:FILE.EXT B:\BASIC\FILE.EXT.
+
+Also, note that you will obtain this error also if you do NPR FILE.BAS, 
+because the output file is assumed to be FILE.BAS (see section 3 for 
+information about assumed default values on input parameters). For the same 
+reason, also produce this error inputs like:
+NPR FILE FILE.ASC
+NPR FILE.LOG /LOG
+etc.
+
+
+* Out/log/lin file already exists and is read-only file
+
+If the output, LOG or LIN specified file already exists, NestorPreTer erases 
+it and creates a new one. But if the file has the read-only attribute set, it 
+can't be erased and this error is generated.
+
+
+Errors generated by MSX-DOS when handling files are also considered 
+initialization errors. The following are the MSX-DOS errors which 
+NestorPreTer can display:
+
+* Invalid drive/filename, or disk/root directory full
+* Invalid drive/filename, or source file not found
+* Invalid drive
+* Invalid file name
+* Invalid pathname
+* Source file not found
+* Macros file not found
+* Directory not found
+* Root directory full
+* Disk full
+
+If any DOS error not included in this list appears, NestorPreTer will show
+
+* Disk error with DOS code <code>
+
+
+8.2. MACRO SEARCH ERRORS
+
+After a successful initialization, NestorPreTer performs a macros search in 
+the first 16K of the input file, and builds an internal table with all the 
+macros found, together with its starting position in the input file.
+
+The following errors can appear during this process, causing the macro to be 
+ignored then. Note that when [F] field appears in an error message of this 
+type, error line number refers to a line in the external macros file and not 
+to any line of the source file.
+
+
+* Invalid character in macro name
+
+A forbidden character was found being part of the macro name. See section 7 
+for a list of forbidden characters.
+
+
+* Macro name too long (>255 characters)
+
+Macro name is too long. Maximum macro name size allowed is 255 characters.
+
+
+* Reserved word used as macro name
+
+A NestorPreTer directive name was specified as a macro name. See section 7 
+for a list of NestorPreTer directives, which can't be used as macro names.
+
+
+* Empty macro name and body
+
+A line containing only "@MACRO" or "@DEFINE" was found. It is mandatory to 
+specify a macro name and body, see section 6.5.
+
+
+* Empty macro body
+
+A line containing only "@MACRO name" or "@DEFINE name" was found. It is 
+mandatory to specify a macro name and body, see section 6.5.
+
+
+* Duplicate macro name
+
+The macro name specified was already used in a previous macro definition. 
+Note that macros defined in the external macros file can't be defined again 
+in the source file and vice versa; so check and compare both files if you 
+obtain this error message and everything seems to be OK in every single file.
+
+
+* 16K limit reached - macro ignored
+
+Position 16384 of the input text was found inside a macro definition (that 
+is, macro name or body crosses this position), so the macro is ignored; all 
+macros placed after this point will just be ignored without prompting any 
+error message. Remember that all macro definitions must be in the first 16K 
+of the input file.
+
+
+8.3. LINE LABEL SEARCH ERRORS
+
+After the search for all macros, NestorPreTer scans all the input file 
+searching all the lines starting with a line label, and builds an internal 
+table with all the labels found and their associated line number.
+
+The following errors can appear during this process, causing the line label 
+to be ignored then:
+
+
+* Invalid character in line label name
+
+A forbidden character was found being part of the label name. See section 7 
+for a list of forbidden characters.
+
+
+* Non-numeric characters in a numeric label name
+
+Characters other than numbers were found being part of a numeric label name. 
+Remember that in numeric line labels (those which do not start with a "~" 
+character) only numbers are allowed, and all other characters are forbidden 
+characters.
+
+
+* Line label too long (>255 characters)
+
+Label name is too long. Maximum label name size allowed is 255 characters.
+
+
+* Duplicate line label
+
+The label name specified was already used in a previous label definition.
+
+
+* Invalid parameter in @LINE command
+
+The @LINE directive must be used with one of the following formats (see 
+section 6.3 for details):
+
+@LINE <lin>,<inc>
+@LINE <lin>
+@LINE ,<inc>
+
+where <lin> and <inc> are numbers in the range 0-65535. Using of @LINE with 
+any other parameters format will cause this error, so the directive will be 
+ignored and line numbering will not change.
+
+
+* Can't set BASIC line number lower than current one
+
+The new BASIC line number specified in the @LINE directive is smaller than 
+the current BASIC line number, so it can't be set and the directive is 
+ignored.
+
+
+8.4. PROCESS ERRORS
+
+Once all macros and labels have been examined, NestorPreTer parses the input 
+file again and generates the output file. During this process the following 
+errors can appear:
+
+
+* Undefined macro name
+
+A certain macro is referred, but this macro name is not in the macros list 
+previously built. This can occur for four reasons:
+
+- You just forgot to define this macro.
+- You defined "MACRONAME" and you referred "MacroName", with different case; 
+this can occur only if /C1 option was given when executing NestorPreTer (see 
+section 3).
+- A forbidden character was found in the macro definition, so a "Invalid 
+macro name" was generated and the macro was ignored. See section 7 for a list 
+of forbidden characters.
+- The macro is correctly defined in the input file, but the macro definition 
+is placed over the first 16K of the file, so it is ignored. Macro definitions 
+must be placed in the first 16K of the input file, please remember this when 
+you find this error and everything seems to be OK.
+
+When this error is generated, the macro reference is just ignored, so it is 
+better to discard the generated output file because it will not act as 
+expected.
+
+
+* Undefined line label name
+
+A certain line label is referred, but this label name is not in the labels 
+list previously built. This can occur for three reasons:
+
+- You just forgot to define this line label.
+- You defined "LABELNAME" and you referred "LabelName", with different case; 
+this can occur only if /C1 option was given when executing NestorPreTer (see 
+section 3).
+- A forbidden character was found in the label definition, so a "Invalid 
+label name" or "Non-numeric characters in a numeric line label" was generated 
+and the label was ignored.
+
+When this error is generated, the line reference is just ignored, so it is 
+better to discard the generated output file because it will not act as 
+expected.
+
+
+* NestorPreTer command found in a BASIC line
+
+A NestorPreTer directive other than @SPACEON or @SPACEOFF was found not at 
+the beginning of a physical line, so it is just ignored. See section 7 for a 
+list of NestorPreTer directives.
+
+
+8.5. FATAL ERRORS
+
+Fatal errors are those which make impossible to continue the text processing, 
+and cause the entire process to be aborted. Unlike initialization errors, 
+fatal errors are printed in the LOG file, if specified.
+
+
+* Memory for macros and line labels exhausted
+
+NestorPreTer uses the available memory segments to store internal tables with 
+all the macro names and line label names found in the input text. This error 
+is generated if the available memory is not enough for store all the macros 
+and line labels found.
+
+
+* BASIC line number overflow
+
+Current BASIC line number surpassed value 65535, so no new BASIC lines can be 
+generated.
+
+
+* Macro recursivity overflow
+
+Attempt to call a macro from inside of another one, when this was done 
+already 127 times recursively. This error will occur also if a macro calls 
+itself in its body (for example @MACRO name @name), entering in an endless 
+loop.
+
+
+* Input file is not an ASCII format file
+
+The first byte of the input file is the ASCII 255, so it is probably a 
+MSX-BASIC file not saved in ASCII format. Existing MSX-BASIC programs which 
+are used as NestorPreTer input files must be saved in ASCII format 
+(save"name",a).
+
+
+* Errors were found, can't execute target program
+
+This is not exactly a fatal error, it will appear after the whole text is 
+processed if /B1 option is specified but one or more errors were found during 
+the text processing. When errors are found the output program probably will 
+not act as expected, so it is better to don't execute it; therefore this 
+error appears and program is not executed.
+
+
+8.6. ERRORS INSIDE MACROS
+
+When an error is found inside a macro body, the physical line shown in the 
+error message is not that one containing the macro body, but that one in 
+which the macro of the first level was referred. For example, if we have:
+
+'The following are physical lines 15,16 and 17
+@define MACRO1	print"1A":@MACRO2:print"1B"
+@define MACRO2	print"2A":@MACRO3:print"2B"
+@define MACRO3	print"3A":@remoff:print"3B" '--> Here is an error!!
+
+...
+
+'The following is the physical line 134
+print"Let's go":@MACRO1:print"Done!"
+
+here the error line is not 17 nor 16 nor 15, but it is 134.
+
+Since this can make error trace difficult, error messages which refers to 
+errors inside a macro body will show together with the line number an 
+additional field, with the format [M<lev>], indicating in <lev> the macro 
+recusivity level which was reached when the error was found. So in the 
+previous example, the error generated is:
+
+ERROR in line 134 [M3]: NestorPreTer command found in a BASIC line.
+
+Note that when both [M<lev>] and [F] fields appear in the error message, line 
+number refers always to the source file and never to the external macros 
+file.
+
+
+9. TIPS AND VARIOUS STUFF
+
+- If you want to use different default input parameters for NestorPreTer, 
+just execute it through a BAT file which will contain the following:
+
+npr %1 %2 %3 %4 %5 %6 %7 %8 %9 <new default parameters>
+
+or alternatively, through the following alias if you have Command 2.40:
+
+npr %& <new default parameters>
+
+For example, if you want that by default a macros file placed at 
+B:\DOS\NPR.MAC be used, and that generated program be executed at the process 
+end, use:
+
+npr %& /mac:B:\DOS\NPR.MAC /b1
+
+so if you don't specify any MAC or B parameters, the new default ones will be 
+used; and if you specify any, they will be used and the new default ones will 
+be ignored. This will work correctly because when NestorPreTer finds 
+duplicate input parameters it uses only the first one, and the rest are just 
+ignored without generating any error.
+
+
+- Remember that NestorPreTer just parses the text in the explained form, 
+without checking for any BASIC rule compliance. In other words, a successful 
+(without errors) text process does not guarantee that generated program will 
+act as you want nor guarantees that it will not generate BASIC errors; it 
+only guarantees that the input text was successfully converted into a file 
+loadable by MSX-BASIC interpreter.
+
+
+- Don't forget that MSX-BASIC has a maximum length for BASIC lines, it is 255 
+bytes; so be careful with the length of your text lines, specially if you use 
+indentation (real length of the resulting line is dificult to see then). If 
+the output file has any line with more than 255 characters (including line 
+number), MSX-BASIC will generate a "Direct statement in file" error when 
+loading it.
+
+
+- Your program will be interpreted by MSX-BASIC, and MSX-BASIC needs the 
+instructions to be separated by ":". When using indentation, it is very easy 
+to write the following without catching on the error:
+
+~	instruction1: instruction2
+	instruction3
+	instruction4: instruction5
+
+This will result in
+
+10 instruction1:instruction2instruction3instruction4:instruction5
+
+The correct way to do this is
+
+~	instruction1: instruction2:
+	instruction3:
+	instruction4: instruction5
+
+Of course, ":" is not needed in IF-THEN-ELSE instructions:
+
+~	if a=3 then
+		?"A is 3":
+		end
+	else
+		?"A is not 3":
+		end
+
+
+- Also, another easy-to-caugh error is to forgot the "@" character preceding 
+the macro names. Be careful!
+
+
+- If your resulting BASIC program has mixed lines (code which should appear 
+in separate BASIC lines appears in a single line), or if some code disappears 
+without any apparent reason, check for dirty SPACE+CR marks at the end of the 
+involved lines in the input file. It is very easy to generate these marks 
+unintentionally when using a text editor.
+
+
+- A very interisting use of macros is for give readable names to 
+one-character or two-character MSX-BASIC variables, as well as to name 
+constants. For example:
+
+@define FALSE 0
+@define TRUE -1
+@define PI 3.1416
+
+@define @ROW x
+@define @COLUMN y
+@define @Max_ROW x1
+@define @Max_COLUMN y1
+...
+
+
+- Or better, forget simple variables and use a data array where you put all 
+your variables:
+
+dim d(50)
+@define @ROW d(0)
+@define @COLUMN d(1)
+@define @Max_ROW d(2)
+@define @Max_COLUMN d(3)
+...
+
+One large array uses less BASIC memory than several single variables, besides 
+this allows you to save a block of variables in the mapped memory and recover 
+them later, using NestorBASIC "data transfer between RAM segments" funtion:
+
+'Save row, column, max_row and max_column in mapped memory
+
+~	p(0)=255:	'Source segment = BASIC memory
+	p(1)=varptr(d(0)):	'Source address = array D, data 0
+	p(2)=any segment:	'Destination segment
+	p(3)=any address:	'Destination address in dest. seg.
+	p(4)=8: 	'4 integers = 8 bytes
+	e=usr(10)	'Block data copy function
+
+Please refer to NestorBASIC user's manual for detailed description of 
+NestorBASIC functions and memory use.
+
+
+- Several times I heard "NestorBASIC is nice, but it is very annoying that 
+all functions are identified by numbers and not by names". NestorPreTer gives 
+you the solution: just define all the functions you need as macros. For 
+example:
+
+@define RDVRAM 13	'Read a byte from VRAM
+@define RDVRAMI 14	'Read a byte from VRAM with address increment
+@define RDVRAM2 15	'Read an integer from VRAM
+@define RDVRAMI2 16	'Read an integer from VRAM with address increment
+
+p(0)=0 : p(1)=&h34 : e=usr(@RDVRAM)
+
+Or better:
+
+@define RDVRAM e=usr(13)       'Read a byte from VRAM
+@define RDVRAMI e=usr(14)      'Read a byte from VRAM with address increment
+@define RDVRAM2 e=usr(15)      'Read an integer from VRAM
+@define RDVRAMI2 e=usr(16)     'Read an integer from VRAM with ad. increment
+
+p(0)=0 : p(1)=&h34 : @RDVRAM
+
+The best way to do it is to use an external file with all NestorBASIC 
+functions defined as macros. And of course you can also use macros for give 
+names to input/output parameters p(n).
+
+
+- Study the sample file NBAS.ASC. It is an interisting example of the joint 
+use of NestorPreTer and NestorBASIC.
+
+
+- Now that you can afford it: do not save comments! There is a big difference 
+between
+
+'* 
+'* Data output subroutine. IN: DS,DN,DT; OUT: E,DR
+'*
+
+and
+
+'**************************
+'*                        *
+'* DATA OUTPUT SUBROUTINE *
+'*                        *
+'**************************
+'
+' Input:  @DATA_START = First data pointer
+'         @DATA_NUM   = Amount of data to be displayed
+'         @DATA_LPT   = Output to printer if @TRUE
+'
+' Output: @ERROR = Error code (no error if @FALSE):
+'                  @INV_START: Invalid first data pointer
+'                  @EMPTY: No data to be output
+'                  @PRN_NOTREADY: Printer not ready
+'         @DATA_REM: Remaining data
+
+If you are also assembler programmer you know perfeclty what I speak about.
+
+
+- I recommend you to use always indentation, so your program will have a nice 
+look, something like this:
+
+~LABEL1: code: code: code: code: 'Remark
+	 code: code: code
+
+~	 code: code: code: code: 'New line
+	 code: code
+
+~LABEL2  code: code: code: code:
+	 code: code
+
+~	 gosub ~SUBNAME
+
+'Subroutine
+
+~SUBNAME: code: code: code:
+	  code: code
+Return
+
+
+10. PROGRAM STATUS, CONTACTING AUTHOR
+
+This is the third release of NestorPreTer, version 0.3. See file NPRENG.REV 
+for information about changes made in every version.
+
+This version is still an alfa version. This means that it can have (and 
+probably has) errors that I could not detect yet, because I could not do an 
+extense test (I can't figure out all the possible input conditions, and I 
+have not time to spend typing loads of test input files). Particularly, 
+working under DOS 1 and using big input files (bigger than 16K) are two 
+conditions in which I did only few testing. Please use NestorPreTer as much 
+as you can/want, and if you find any error, contact me indicating:
+
+- The most detailed possible error description.
+- Your DOS version and memory amount.
+- A copy of input, output and LOG files.
+- Any suggestions that you have.
+
+You can find me in konamiman@geocities.com. You can always find the last 
+version of NestorPreTer, as well as other nice programs (all for free) in my 
+web page:
+
+http://konamiman.msx.tni.nl
+
+And, huh, this is not necesary, but if you want to write me just for say 
+"your program is very nice", you will make me very happy. 8-)
+
+Thanks for using NestorPreTer. Enjoy it!
+
+

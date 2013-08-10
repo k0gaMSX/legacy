@@ -1,0 +1,1697 @@
+;
+;                       YawaraPS.270
+;
+;     Yawara: General Game Music Player Source 2700H
+;
+; Version Bianca-1-1 (2nd Ver., 1st Release, 1st Revision)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =YawaraPS.270
+;   L80 YawaraPS,Yawara.270 /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.Txt").
+;
+
+
+; Program addresses.
+
+MPBsAd equ  02700H ; Music Player Base Address.
+ShlBsA equ  09000H ; Shell Base Address.
+
+
+; MSX PPI constants.
+
+PrSReg equ  0A8H   ; Primary Slot Register.
+KCInpt equ  0A9H   ; Keyboard Column Input.
+KRCOMC equ  0AAH   ; Keyboard click, LED and Row, Cas.Out. and Motor Control.
+PPICtP equ  0ABH   ; PPI Control Port.
+
+
+; MSX PSG constants.
+
+PSGAdr equ  0A0H   ; PSG register Address port.
+PSGWrP equ  0A1H   ; PSG Write Port.
+PSGRdP equ  0A2H   ; PSG Read Port.
+PALwPr equ  000H   ; PSG channel A Low Period.
+PAHgPr equ  001H   ; PSG channel A High Period.
+PBLwPr equ  002H   ; PSG channel B Low Period.
+PBHgPr equ  003H   ; PSG channel B High Period.
+PCLwPr equ  004H   ; PSG channel C Low Period.
+PCHgPr equ  005H   ; PSG channel C High Period.
+PNsTon equ  006H   ; PSG Noise Tone.
+PChnCt equ  007H   ; PSG Channel Control.
+PAVol  equ  008H   ; PSG channel A Volume.
+PBVol  equ  009H   ; PSG channel B Volume.
+PCVol  equ  00AH   ; PSG channel C Volume.
+PELwPr equ  00BH   ; PSG Envelope Low Period.
+PEHgPr equ  00CH   ; PSG Envelope High Period.
+PEWvFm equ  00DH   ; PSG Envelope Wave Format.
+
+
+; MSX standard addresses and constants.
+
+GRPNAM equ  0F3C7H ; Graphic mode Name table address.
+GRPCOL equ  0F3C9H ; Graphic mode Colour table address.
+GRPCGP equ  0F3CBH ; Graphic mode Character image table address.
+GRPATR equ  0F3CDH ; Graphic mode sprite Attribute table address.
+GRPPAT equ  0F3CFH ; Graphic mode sprite Pattern table address.
+CLIKSW equ  0F3DBH ; Key Click Sound Switch (0=Off;NZ=On).
+RG0SAV equ  0F3DFH ; VDP Register 0 Save state.
+RG1SAV equ  0F3E0H ; VDP Register 1 Save state.
+RG7SAV equ  0F3E6H ; VDP Register 7 Save state.
+STATFL equ  0F3E7H ; VDP Status register Flag copy.
+SCNCNT equ  0F3F6H ; Scan Counter.
+REPCNT equ  0F3F7H ; Repetition Counter.
+KBUF   equ  0F41FH ; Tokenized Buffer (318).
+KBUFSz equ  318    ; KBUF Size.
+BUF    equ  0F55EH ; Buffer (259).
+BUFSiz equ  259    ; BUF Size.
+TEMPST equ  0F67AH ; Temporary String (30).
+TEMPSS equ  30     ; TEMPST Size.
+TEMP3  equ  0F69DH ; Temporary 3 (2).
+TEMP   equ  0F6A7H ; Temporary (2).
+TEMP2  equ  0F6BCH ; Temporary 2 (2).
+PARM1  equ  0F6E8H ; FN Parameters 1 (100).
+PARM1S equ  100    ; PARM1 Size.
+PARM2  equ  0F750H ; FN Parameters 2 (100).
+PARM2S equ  100    ; PARM2 Size.
+TEMP9  equ  0F7B8H ; Temporary 9 (2).
+FBUFFR equ  0F7C5H ; Work buffer (43).
+FBFFRS equ  43     ; FBUFFR Size.
+HOLD8  equ  0F806H ; Multiplication data Hold 8 (65).
+HOLD8S equ  65     ; HOLD8 Size.
+FNKSTR equ  0F87FH ; Function Key Strings (160).
+FNKSTS equ  160    ; FNKSTR Size.
+VOICAQ equ  0F975H ; PSG Voice A Queue (128 B for each channel).
+VOICSz equ  128*3  ; PSG Voice Queue total Size.
+LINTTB equ  0FBB2H ; Line Transpass Table (24).
+LNTTBS equ  24     ; LINTTB Size.
+OLDKEY equ  0FBDAH ; Old Keys (11).
+NEWKEY equ  0FBE5H ; New Keys (11).
+LINWRK equ  0FC18H ; Line Work buffer (40).
+LINWKS equ  40     ; Line Work buffer Size.
+SAVENT equ  0FCBFH ; BSAVE and BLOAD Save Entry.
+EXPTBL equ  0FCC1H ; Expanded slot flag Table.
+SLTTBL equ  0FCC5H ; Slot Table.
+HKEYI  equ  0FD9AH ; Key Interruption Hook.
+HTIMI  equ  0FD9FH ; Time Interruption Hook.
+RG8SAV equ  0FFE7H ; VDP Register 8 Save state.
+RG25SA equ  0FFFAH ; VDP Register 25 Save state.
+ScSltR equ  0FFFFH ; Secondary Slot Register.
+
+
+; BDOS functions.
+
+OpnFil equ  00FH   ; Open file.
+ReadBD equ  014H   ; Read Block from file into DTA.
+SetDTA equ  01AH   ; Set DTA address.
+
+
+; BDOS constants.
+
+FCBSiz equ  00028H ; File Control Block Size.
+DTASiz equ  00080H ; Disk Data Transfer Area Size.
+
+
+; Key definitions.
+
+CrRetK equ  00DH   ; <Carriage Return Key>.
+SelctK equ  018H   ; <Select Key>.
+EscapK equ  01BH   ; <Escape Key>.
+ArrowR equ  01CH   ; <Arrow Right>.
+ArrowL equ  01DH   ; <Arrow Left>.
+ArrowU equ  01EH   ; <Arrow Up>.
+ArrowD equ  01FH   ; <Arrow Down>.
+
+
+; Constant definitions.
+
+TimSym equ  05CH   ; Time Symbol.
+BGMSym equ  05EH   ; BGM Symbol.
+SFXSym equ  05FH   ; SFX Symbol.
+NoSndS equ  07BH   ; No Sound Symbol character.
+SquWvS equ  07CH   ; Square Wave generator Symbol character.
+NoiseS equ  07DH   ; Noise generator Symbol character.
+SqWNsS equ  07EH   ; Square Wave and Noise Symbol character.
+SpaceS equ  07FH   ; Space Symbol character.
+ArrwLS equ  080H   ; Arrow Left Symbol character.
+ArrwRS equ  081H   ; Arrow Right Symbol character.
+ArrwDS equ  082H   ; Arrow Down Symbol character.
+ArrwUS equ  083H   ; Arrow Up Symbol character.
+CrRetS equ  084H   ; Carriage Return Symbol character.
+SelctS equ  085H   ; Select Symbol character.
+WvFrmS equ  086H   ; Wave Form Symbol characters (2).
+BG0Bs  equ  088H   ; Bar Graphic 0 (volume/noise) Base.
+BG1Bs  equ  08DH   ; Bar Graphic 1 (frequency) Base.
+
+OpnAnS equ  001H   ; Opening Animation State.
+SttAnS equ  002H   ; Start Animation State.
+MMAnmS equ  003H   ; Main Menu Animation State.
+PlyMsS equ  004H   ; Play Music State.
+
+KbTRat equ  002H   ; Keyboard Typing Rate (30/s at 60 Hz).
+
+PSGPr0 equ  2419   ; F1+    46.2 Hz
+PSGPr1 equ  1710   ; C2     65.4 Hz
+PSGPr2 equ  1209   ; F2+    92.5 Hz
+PSGPr3 equ   855   ; C3    130.8 Hz
+PSGPr4 equ   604   ; F3+   185.2 Hz
+PSGPr5 equ   427   ; C4    261.9 Hz
+PSGPr6 equ   302   ; F4+   370.4 Hz
+PSGPr7 equ   213   ; C5    525.1 Hz
+PSGPr8 equ   151   ; F5+   740.8 Hz
+PSGPr9 equ   106   ; C6   1055.3 Hz
+PSGPrA equ    75   ; F6+  1491.5 Hz
+PSGPrB equ    53   ; C7   2110.6 Hz
+PSGPrC equ    37   ; F7+  3023.3 Hz
+PSGPrD equ    26   ; C8   4302.3 Hz
+
+
+; VRAM addresses.
+
+GrpCP0 equ  00000H ; Graphic mode Character generator Pattern table 0 base.
+GrpNm0 equ  01800H ; Graphic mode Name table 0 base.
+GrpAt0 equ  01B00H ; Graphic mode sprite Attribute table 0 base.
+GrpNm1 equ  01C00H ; Graphic mode Name table 1 base.
+GrpAt1 equ  01F00H ; Graphic mode sprite Attribute table 1 base.
+GrpCl0 equ  02000H ; Graphic mode Colour table 0 base.
+GrpPt0 equ  03800H ; Graphic mode sprite Pattern table 0 base.
+
+
+; Export address bases.
+
+EBTb0  equ  HOLD8  ; 65      ; Enhanced BIOS table address.
+EBTb0S equ  HOLD8S           ; Enhanced BIOS table Size.
+EBTb1  equ  FBUFFR ; 43      ; Enhanced BIOS table address.
+EBTb1S equ  FBFFRS           ; Enhanced BIOS table Size.
+EBDBnk equ  FNKSTR ; 160     ; EBIOS Data Bank.
+EBRBk0 equ  KBUF   ; 318     ; EBIOS Routine Bank 0.
+EBRBS0 equ  KBUFSz           ; EBIOS Routine Bank 0 Size.
+EBRBk1 equ  PARM1  ; 100     ; EBIOS Routine Bank 1.
+EBRBS1 equ  PARM1S           ; EBIOS Routine Bank 1 Size.
+EBRBk2 equ  BUF    ; 259     ; EBIOS Routine Bank 2.
+EBRBS2 equ  BUFSiz           ; EBIOS Routine Bank 2 Size.
+EBRBk3 equ  PARM2  ; 100     ; EBIOS Routine Bank 3.
+EBRBS3 equ  PARM2S           ; EBIOS Routine Bank 3 Size.
+EBRBk4 equ  TEMPST ; 30      ; EBIOS Routine Bank 4.
+EBRBS4 equ  TEMPSS           ; EBIOS Routine Bank 4 Size.
+TDBuf  equ  VOICAQ ; 128x3   ; Temporary Data Buffer.
+TDBfSz equ  VOICSz           ; Temporary Data Buffer Size.
+SysDB  equ  LINTTB ; 24      ; System Data Bank.
+
+
+; EBIOS Table 0 entries.
+
+LExecF equ  EBTb0            ; Load and Execute File (3).
+LdStrm equ  EBTb0+003H       ; Load Stream (3).
+LdFile equ  EBTb0+006H       ; Load File (3).
+LdImgH equ  EBTb0+009H       ; Load Image (3).
+StNewH equ  EBTb0+00CH       ; Set New interruption Hook (3).
+StOldH equ  EBTb0+00FH       ; Set Old interruption Hook (3).
+StVDPW equ  EBTb0+012H       ; Set VDP for Writing (3).
+StVDPR equ  EBTb0+015H       ; Set VDP for Reading (3).
+SVDPIW equ  EBTb0+018H       ; Set VDP for Immediate Writing (3).
+SVDPIR equ  EBTb0+01BH       ; Set VDP for Immediate Reading (3).
+WrVRMB equ  EBTb0+01EH       ; Write VRAM Byte (3).
+RdVRMB equ  EBTb0+021H       ; Read VRAM Byte (3).
+WrVDPR equ  EBTb0+024H       ; Write into VDP Register (3).
+LVMIR  equ  EBTb0+027H       ; Copy VRAM <- Memory (3).
+LMVIR  equ  EBTb0+02AH       ; Copy Memory <- VRAM (3).
+LVVIR  equ  EBTb0+02DH       ; Copy VRAM <- VRAM (3).
+FilVRB equ  EBTb0+030H       ; Fill VRAM Block (3).
+VDPCtl equ  EBTb0+033H       ; VDP Control (3).
+RdKbd  equ  EBTb0+036H       ; Read Keyboard (3).
+Where  equ  EBTb0+039H       ; Where?
+
+
+; EBIOS Table 1 entries.
+
+OpenFl equ  EBTb1            ; Open File (3).
+CpRdBt equ  EBTb1+003H       ; Copy Read Bytes (internal use, 3).
+CpImgB equ  EBTb1+006H       ; Copy Read Bytes (internal use, 3).
+ISVDPW equ  EBTb1+009H       ; Internal Set VDP for Writing (3).
+ISVDPR equ  EBTb1+00CH       ; Internal Set VDP for Reading (3).
+ChkEPR equ  EBTb1+00FH       ; Check if EI required, "POP AF" and "RET" (7).
+IntHdl equ  EBTb1+016H       ; "LD A,I", "PUSH AF" and call Int. Handler (6).
+MainHk equ  EBTb1+01CH       ; Call to Main Hook (3).
+IntExt equ  EBTb1+01FH       ; Branch Interruption Exit (3).
+LinInt equ  EBTb1+022H       ; Line Interruption Handler (3).
+DMainH equ  EBTb1+025H       ; Disable Main Hook (3).
+EMainH equ  EBTb1+028H       ; Enable Main Hook (3).
+
+
+; EBIOS Data Bank.
+
+ShlNam equ  EBDBnk           ; Shell Name (3).
+LstNum equ  EBDBnk+00003H    ; List Number (3).
+ItmNum equ  EBDBnk+00006H    ; Item Number (1).
+ModNam equ  EBDBnk+00007H    ; List Item Name (8).
+SaveSP equ  EBDBnk+0000FH    ; Save Stack Pointer (2).
+CmdKey equ  EBDBnk+00011H    ; Command Keys (1).
+KbFsRD equ  EBDBnk+00012H    ; Keyboard Fast Repeat Delay (1).
+KbSlRD equ  EBDBnk+00013H    ; Keyboard Slow Repeat Delay (1).
+FBGDRt equ  EBDBnk+00014H    ; Frequency Bar Graphic Decrement Rate (1).
+FMSlt  equ  EBDBnk+00015H    ; MSX-Music Slot (1).
+SCCSl0 equ  EBDBnk+00016H    ; SCC Slot 0 (1).
+SCCSl1 equ  EBDBnk+00017H    ; SCC Slot 1 (1).
+MIType equ  EBDBnk+00018H    ; Music I.C. Type/available, xx S1 S0 FM, (1).
+DTA0   equ  EBDBnk+00019H    ; Disk Data Transfer Area 0 (DTASiz).
+FCB0   equ  LINWRK           ; File Control Block 0 (FCBSiz).
+
+
+; System Data Bank.
+
+StupRH equ  SysDB            ; Set-up Routine Hook (3).
+SilnRH equ  SysDB+003H       ; Silence Routine Hook (3).
+StMsRH equ  SysDB+006H       ; Set Music Routine Hook (3).
+PlayRH equ  SysDB+009H       ; Play Routine Hook (3).
+VDPRdC equ  SysDB+00CH       ; VDP Reading port number Copy (1).
+VDPWrC equ  SysDB+00DH       ; VDP Writing port number Copy (1).
+MSXV0C equ  SysDB+00EH       ; MSX ROM Version Id. byte 0 Copy (1).
+MSXV2C equ  SysDB+00FH       ; MSX ROM Version Id. byte 2 Copy (1).
+SavHok equ  SysDB+010H       ; Save Hook (5).
+TimeCt equ  SysDB+015H       ; Time Counter (2).
+GCtrlR equ  SysDB+017H       ; General Control Register (1).
+
+
+; Reusable variables.
+
+FrqBD0 equ  Start            ; Frequency Bar Data Bank 0 (15).
+FrqBD1 equ  Start+15         ; Frequency Bar Data Bank 1 (15).
+FrqBD2 equ  Start+30         ; Frequency Bar Data Bank 2 (15).
+PSGCop equ  Start+45         ; PSG register Copy (14).
+DsplBf equ  Start+59         ; Display Buffer (12).
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase MPBsAd
+
+Start: di                    ; Start!
+       im   1
+       ld   sp,(SaveSP)
+       xor  a
+       ld   (CmdKey),a
+       ld   a,KbTRat
+       ld   (SCNCNT),a
+       ld   a,(KbSlRD)
+       ld   (REPCNT),a
+       ld   a,(FBGDRt)
+       ld   (DecBGC),a
+       call InterM
+       ld   hl,GrpCl0+256*8*2+CrRetS*8
+       ld   (MrkdVA),hl
+       ld   hl,MainHR
+       ld   (MainHk+1),hl
+       ld   a,003H
+       call VDPCtl
+       ld   hl,ModNam
+       ld   de,GMMFFN
+       ld   bc,8
+       ldir
+       ld   hl,GameDt
+       ld   de,GMMFFN
+       call LdStrm
+       jp   nz,GmLdEr
+       ld   hl,(GmBlPt)
+       ld   de,GameDt
+       add  hl,de
+LdGmBL:ld   d,h              ; Load Game Block Loop.
+       ld   e,l
+       ld   bc,13
+       add  hl,bc
+       ld   c,(hl)
+       inc  hl
+       ld   b,(hl)
+       inc  hl
+       push hl
+       ld   h,b
+       ld   l,c
+       call LdFile
+       pop  hl
+       jp   nz,GmLdEr
+       ld   a,(hl)
+       inc  a
+       jr   nz,LdGmBL
+       ld   a,0C3H
+       ld   de,GameDt
+       ld   (StupRH),a
+       ld   hl,(StupRP)
+       add  hl,de
+       ld   (StupRH+1),hl
+       ld   (SilnRH),a
+       ld   hl,(SilnRP)
+       add  hl,de
+       ld   (SilnRH+1),hl
+       ld   (StMsRH),a
+       ld   hl,(StMsRP)
+       add  hl,de
+       ld   (StMsRH+1),hl
+       ld   (PlayRH),a
+       ld   hl,(PlayRP)
+       add  hl,de
+       ld   (PlayRH+1),hl
+       ld   hl,(BGMSPt)
+       add  hl,de
+       ld   (BGMAdd),hl
+       ld   hl,(SFXSPt)
+       add  hl,de
+       ld   (SFXAdd),hl
+       ld   hl,GrpCl0+256*8*2+CrRetS*8
+       call MrkCh1
+       xor  a
+       ld   (hl),a
+       ld   hl,Start
+       ld   de,Start+1
+       ld   bc,44
+       ld   (hl),000H
+       ldir
+       ld   a,(Resorc)
+       bit  3,a
+       jr   z,StVar1
+       ld   hl,GCtrSt
+       ld   de,GCRStr+1
+       ld   bc,7
+       ldir
+StVar1:bit  0,a
+       jp   z,LdMnMn
+       bit  2,a
+       jr   z,NoDlOp
+       ld   a,(MSXV0C)
+       and  00000111B
+       push af
+       call z,JapanM
+       pop  af
+       jr   z,LdOpnG
+NoDlOp:call InterM           ; No Dual Opening.
+LdOpnG:xor  a                ; Load Opening Graphics.
+       call VDPCtl
+       ld   hl,00000H
+       ld   de,OpnGFN
+       call LdImgH
+       call nz,StDfCS
+       ld   a,001H
+       call VDPCtl
+       di
+       xor  a
+       call StupRH           ; Must be in "main stream" (not sub-routine)!
+       call EMainH
+       ld   a,OpnAnS
+       ld   (PrgmSt),a
+       ld   bc,08080H
+       ld   (TimeCt),bc
+       ld   a,(OpenMN)
+       call SetBGM
+       xor  a
+       ld   (CmdKey),a
+OpnWKy:ei                    ; Opening Wait key.
+       ld   a,(CmdKey)
+       bit  3,a
+       jp   nz,Escape
+       bit  1,a
+       jp   nz,ChgOpn
+       bit  0,a
+       jr   z,OpnWKy
+       ld   a,(Resorc)
+       bit  1,a
+       jr   z,OpnWKy
+       ld   a,SttAnS
+       ld   (PrgmSt),a
+       ld   a,020H
+       ld   (AnmtRg),a
+       xor  a
+       ld   (TimeCt),a
+       call Silenc
+       ld   a,(StrtSE)
+       call SetBGM
+StartW:ei                    ; Start Wait.
+       ld   a,(AnmtRg)
+       or   a
+       jr   nz,StartW
+       call Silenc
+LdMnMn:xor  a                ; Load Main Menu Graphics.
+       call VDPCtl
+       call DMainH
+       call InterM
+       ld   hl,00000H
+       ld   de,MnuGFN
+       call LdImgH
+       call nz,DfPbkS
+       ld   a,001H
+       call VDPCtl
+       di
+       xor  a
+       call StupRH           ; Must be in "main stream" (not sub-routine)!
+       ld   hl,(GRPNAM)
+       ld   de,32*17+10
+       add  hl,de
+       ld   (DsplVA),hl
+       ld   de,DsplBf
+       ld   bc,12
+       call LMVIR
+       call EMainH
+       ld   a,MMAnmS
+       ld   (PrgmSt),a
+       call ResetT
+       xor  a
+       ld   (CmdKey),a
+WaitAK:ei                    ; Wait Any command Key press.
+       ld   a,(CmdKey)
+       or   a
+       jr   z,WaitAK
+       ld   hl,NoisSp
+       ld   de,GrpPt0+63*32
+       ld   bc,8
+       call LVMIR
+       xor  a
+       ld   b,24
+       call FVRAML
+       ld   hl,(GRPATR)
+       ld   de,31*4
+       add  hl,de
+       call SVDPIW
+       ld   a,0D4H
+       out  (c),a
+       ld   hl,(GRPNAM)
+       ld   de,32*19
+       add  hl,de
+       call SVDPIW
+       call PrtStr
+       db   ' ',ArrwLS,ArrwRS,' ',CrRetS,' ',SpaceS,' ----------------------- '
+       db   ' ',ArrwDS,ArrwUS,' ',SelctS,'  --/-- ',TimSym,'--:--.- ',NoiseS
+       db   BG0Bs,BG0Bs,BG0Bs,BG0Bs,BG0Bs,BG0Bs,BG0Bs,BG0Bs,' ',0
+       ld   de,03003H
+PMMBGB:ld   b,2              ; Print Main Menu Bar Graphic Background.
+       ld   hl,MenuG1
+       call WrVRML
+       out  (c),d
+       inc  d
+       ld   b,29
+       call WrVRML
+       dec  e
+       jr   nz,PMMBGB
+       xor  a
+       ld   (CmdKey),a
+WaitKy:ei                    ; Main Menu Wait Key.
+       ld   hl,CmdKey
+       xor  a
+       ld   b,(hl)
+       ld   (hl),a
+       ld   a,b
+       rrca
+       call c,Playbk
+       rrca
+       call c,ChgBGT
+       rrca
+       call c,StpSnd
+       rrca
+       call c,Escape
+       rrca
+       call c,BGMBak
+       rrca
+       call c,SFXFor
+       rrca
+       call c,SFXBak
+       rrca
+       call c,BGMFor
+       jr   WaitKy
+
+MenuG1:db   ' P ',BG1Bs,BG1Bs,BG1Bs,BG1Bs,BG1Bs,BG1Bs,BG1Bs,BG1Bs,BG1Bs
+       db   BG1Bs,BG1Bs,BG1Bs,BG1Bs,BG1Bs,BG1Bs,' ',NoSndS,'           '
+
+GMMFFN:ds   8                ; Game Music Module Full File Name.
+       db   'GMM'
+
+NoisSp:db   01000000B,01000000B,11100000B,10100000B
+       db   11100000B,01000000B,01000000B,00000000B
+
+GmLdEr:ld   a,001H           ; Game Loading Error.
+       call VDPCtl
+       ld   hl,(GRPNAM)
+       ld   de,32*23+0
+       add  hl,de
+       call SVDPIW
+       ld   hl,FCB0+1
+       ld   b,8
+       call WrVRML
+       ld   a,'.'
+       out  (c),a
+       ld   b,3
+       call WrVRML
+       call PrtStr
+       db   ': cannot read.',0
+WaitSp:ei                    ; Wait <Space> key press.
+       ld   a,(NEWKEY+8)
+       bit  0,a
+       jr   z,WaitSp
+LdShel:di                    ; Load Shell.
+       call DMainH
+       ld   a,0FFH
+       or   a
+       call StupRH           ; Must be in "main stream" (not sub-routine)!
+       ld   hl,ShlNam
+       ld   de,ShlFFN+8
+       ld   bc,3
+       ldir
+       ld   hl,ShlBsA
+       ld   de,ShlFFN
+       call LExecF
+       jr   GmLdEr
+
+ShlFFN:db   'Yawara  '       ; Shell Full File Name.
+       ds   3
+
+Escape:xor  a                ; <Escape> pressed: Exit.
+       ld   (PrgmSt),a
+       ld   a,PChnCt
+       out  (PSGAdr),a
+       in   a,(PSGRdP)
+       or   00111111B
+       out  (PSGWrP),a
+       jr   LdShel
+
+WrVRML:outi                  ; Write VRAM Loop: I(B=#;C=VDP;HL=SPt);m(F,B,HL).
+       nop                   ; Spend time to allow MSX VDP to "breath".
+       jr   nz,WrVRML
+       ret
+
+JapanM:ld   hl,GrpNm1        ; Japanese Mode.
+       ld   (GRPNAM),hl
+       ld   bc,00702H
+       call WrVDPR
+       ld   hl,GrpAt1
+       ld   (GRPATR),hl
+       ld   bc,03E05H
+       jp   WrVDPR
+
+InterM:ld   hl,GrpNm0        ; International Mode.
+       ld   (GRPNAM),hl
+       ld   bc,00602H
+       call WrVDPR
+       ld   hl,GrpAt0
+       ld   (GRPATR),hl
+       ld   bc,03605H
+       jp   WrVDPR
+
+ChgOpn:xor  a                ; Change Opening.
+       ld   (CmdKey),a
+       ld   a,(Resorc)
+       bit  2,a
+       jp   z,OpnWKy
+       ld   a,(GRPNAM+1)
+       cp   018H
+       push af
+       call z,JapanM
+       pop  af
+       call nz,InterM
+       jp   OpnWKy
+
+BGMFor:push af               ; <Arrow Right> pressed: Next Music.
+       ld   hl,GrpCl0+256*8*2+ArrwRS*8
+       call MrkChr
+       ld   hl,(BGMAdd)
+       ld   a,(CurSnd)
+       and  01111111B
+       cp   001H
+       ld   a,(hl)
+       jr   nz,SlcBGM
+       ld   de,25
+       add  hl,de
+       ld   a,(hl)
+       dec  hl
+       inc  a
+       jr   z,PpRtW1
+       ld   de,BGMNum
+       ld   a,(de)
+       inc  a
+       ld   (de),a
+       jr   SlcBGM
+
+BGMBak:push af               ; <Arrow Left> pressed: Previous Music.
+       ld   hl,GrpCl0+256*8*2+ArrwLS*8
+       call MrkChr
+       ld   hl,(BGMAdd)
+       ld   a,(CurSnd)
+       and  01111111B
+       cp   001H
+       ld   a,(hl)
+       jr   nz,SlcBGM
+       dec  hl
+       ld   a,(hl)
+       inc  a
+       jr   z,PpRtW1
+       or   a
+       ld   de,23
+       sbc  hl,de
+       ld   de,BGMNum
+       ld   a,(de)
+       dec  a
+       ld   (de),a
+SlcBGM:ld   (BGMAdd),hl      ; Play BGM.
+       ld   a,001H
+       ld   (CurSnd),a
+SlcSnd:ld   (CurSAd),hl      ; Play Sound.
+       ld   a,(hl)
+       call UpdtMn
+       ld   a,PlyMsS
+       ld   (PrgmSt),a
+PpRtW1:pop  af               ; Pop and Return to WaitKy (I).
+       ret
+
+SFXFor:push af               ; <Arrow Up> pressed: Next Effect.
+       ld   hl,GrpCl0+256*8*2+ArrwUS*8
+       call MrkChr
+       ld   hl,(SFXAdd)
+       ld   a,(CurSnd)
+       and  01111111B
+       cp   002H
+       ld   a,(hl)
+       jr   nz,SlcSFX
+       ld   de,25
+       add  hl,de
+       ld   a,(hl)
+       dec  hl
+       inc  a
+       jr   z,PpRtW1
+       ld   de,SFXNum
+       ld   a,(de)
+       inc  a
+       ld   (de),a
+SlcSFX:ld   (SFXAdd),hl      ; Play SFX.
+       ld   a,002H
+       ld   (CurSnd),a
+       jr   SlcSnd
+
+SFXBak:push af               ; <Arrow Down> pressed: Previous Effect.
+       ld   hl,GrpCl0+256*8*2+ArrwDS*8
+       call MrkChr
+       ld   hl,(SFXAdd)
+       ld   a,(CurSnd)
+       and  01111111B
+       cp   002H
+       ld   a,(hl)
+       jr   nz,SlcSFX
+       dec  hl
+       ld   a,(hl)
+       inc  a
+       jr   z,PpRtW2
+       or   a
+       ld   de,23
+       sbc  hl,de
+       ld   de,SFXNum
+       ld   a,(de)
+       dec  a
+       ld   (de),a
+       jr   SlcSFX
+
+Playbk:push af               ; <Space> pressed: Playback!
+       call ClMkCh
+       ld   a,(CurSnd)
+       or   a
+       jr   z,PpRtW2
+       and  01111111B
+       ld   (CurSnd),a
+       ld   hl,GrpCl0+256*8*2+SpaceS*8
+       call MrkChr
+       ld   hl,(CurSAd)
+       ld   a,(hl)
+       call SetBGM
+       call ResetT
+       ld   a,PlyMsS
+       ld   (PrgmSt),a
+PpRtW2:pop  af               ; Pop and Return to WaitKy (II).
+       ret
+
+StpSnd:push af               ; <Return> pressed: Stop!
+       ld   a,(CurSnd)
+       or   10000000B
+       ld   (CurSnd),a
+       ld   hl,GrpCl0+256*8*2+CrRetS*8
+       call MrkChr
+       xor  a
+       ld   (hl),a
+       ld   h,a
+       ld   l,a
+       ld   (TimeCt),hl
+       call Silenc
+       ld   a,PlyMsS
+       ld   (PrgmSt),a
+       pop  af
+       ret
+
+ChgBGT:push af               ; <Select> pressed: Change Bar Graph Type.
+       ld   hl,GrpCl0+256*8*2+SelctS*8
+       call MrkChr
+       ld   hl,BGType
+       inc  (hl)
+       pop  af
+       ret
+
+MrkChr:push hl               ; Mark Character.
+       call ClMkCh
+       pop  hl
+MrkCh1:ld   b,080H           ; Mark Character (I).
+       call FilVR8
+       ld   hl,ClrCnt
+       ld   (hl),18
+       ret
+
+UpdtMn:push af               ; Update Menu.
+       ld   a,(hl)
+       push af
+       inc  hl
+       ex   de,hl
+       ld   hl,(GRPNAM)      ; Print BGM/SFX title.
+       ld   bc,32*19+8
+       add  hl,bc
+       ex   de,hl
+       ld   bc,23
+       call LVMIR
+       ld   hl,(GRPNAM)
+       ld   de,32*20+6
+       add  hl,de
+       call SVDPIW
+       ld   a,(CurSnd)
+       cp   001H
+       ld   a,(BGMNum)
+       ld   e,BGMSym
+       jr   z,UdtMn1
+       ld   a,(SFXNum)
+       ld   e,SFXSym
+UdtMn1:out  (c),e            ; UpdtMn (I): BGM/SFX symbol, number print.
+       call PrBHex
+       ld   a,'/'
+       out  (c),a
+       pop  af
+       call PrBHex
+       pop  af
+       ret
+
+Silenc:call SilnRH           ; Silence.
+       call ResetT
+       ld   a,(PrgmSt)
+       cp   PlyMsS
+       ret  nz
+       jp   PrtTim
+
+ResetT:push hl               ; Reset Timer.
+       ld   hl,00000H
+       ld   (TimeCt),hl
+       ld   (ClockM),hl
+       ld   (ClockF),hl
+       pop  hl
+       ret
+
+SetBGM:di                    ; Set BGM to be played.
+       call StMsRH
+       ei
+       ret
+
+OpnAnm:ld   a,(TimeCt)       ; Opening Animation.
+       cp   01FH
+       ret  c
+       xor  a
+       ld   (TimeCt),a
+       ld   a,(TimeCt+1)
+       or   a
+       jr   z,OpnAn1
+       xor  a
+       ld   (TimeCt+1),a
+       call SOASP0
+       call Prt1OS
+       call SOASP1
+Prt1OS:call PrtStr           ; Print First Opening String.
+       db   'PUSH SPACE KEY',0
+       ret
+
+OpnAn1:inc  a                ; OpnAnm (I).
+       ld   (TimeCt+1),a
+       ld   a,(Resorc)
+       bit  2,a
+       jr   z,OpAnSC
+       call SOASP0
+       call Prt2OS
+       call SOASP1
+Prt2OS:call PrtStr           ; Print Second Opening String.
+       db   ' PRESS SELECT ',0
+       ret
+
+SOASP0:ld   hl,GrpNm0        ; Set Opening Animation String Page 0.
+       jr   SOASPg
+
+SOASP1:ld   hl,GrpNm1        ; Set Opening Animation String Page 1.
+SOASPg:ld   de,(OpnStC)
+       add  hl,de
+       jp   SVDPIW
+
+StrtAn:ld   a,(TimeCt)       ; Start Animation.
+       cp   5
+       ret  c
+       xor  a
+       ld   (TimeCt),a
+       ld   a,(AnmtRg)
+       or   a
+       ret  z
+       dec  a
+       ld   (AnmtRg),a
+       ld   hl,(GRPNAM)
+       ld   de,(OpnStC)
+       add  hl,de
+       call SVDPIW
+       and  001H
+       jr   z,ClOASt
+PrtStS:call PrtStr           ; Print Start String.
+       db   '    START!    ',0
+       ret
+
+OpAnSC:call SOASP0           ; Opening Animation String Clear.
+       call ClOASt
+       call SOASP1
+ClOASt:ld   b,14             ; Start Animation Clear.
+       jp   PrtSpc
+
+MMAnmt:ret                   ; Main Menu Animation.
+
+FF50Hz:cp   5
+       jr   c,DecFBG
+       jr   IncTmr
+
+PlayAn:ld   a,(MSXV0C)       ; Playback Animation.
+       ld   hl,ClockC
+       inc  (hl)
+       and  10000000B
+       ld   a,(hl)
+       jr   nz,FF50Hz
+       cp   6
+       jr   c,DecFBG
+IncTmr:xor  a                ; Increment Timer.
+       ld   (hl),a
+       dec  hl
+       inc  (hl)
+       ld   a,(hl)
+       cp   10
+       jr   c,DecFBG
+       xor  a
+       ld   (hl),a
+       dec  hl
+       ld   a,(hl)
+       add  a,1
+       daa
+       ld   (hl),a
+       cp   060H
+       jr   c,DecFBG
+       xor  a
+       ld   (hl),a
+       dec  hl
+       ld   a,(hl)
+       add  a,1
+       daa
+       ld   (hl),a
+DecFBG:ld   hl,DecBGC        ; Decrement Frequency Bar Graphic.
+       ld   a,(hl)
+       or   a
+       jr   z,DecFB1
+       dec  (hl)
+       jr   nz,CpPSGR
+DecFB1:ld   a,(FBGDRt)       ; DecFBG (I).
+       ld   (hl),a
+       ld   hl,FrqBD0
+       ld   b,45
+DecFB2:ld   a,(hl)           ; DecFBG (II).
+       or   a
+       jr   z,DecFB3
+       dec  (hl)
+DecFB3:inc  hl               ; DecFBG (III).
+       djnz DecFB2
+CpPSGR:ld   hl,PSGCop        ; Copy PSG Registers.
+       ld   b,14
+       ld   c,PSGRdP
+       xor  a
+CPSGR1:out  (PSGAdr),a       ; CpPSGR (I).
+       in   e,(c)
+       ld   (hl),e
+       inc  a
+       inc  hl
+       djnz CPSGR1
+       ld   hl,PSGCop+PChnCt
+       ld   a,(hl)
+       cpl
+       and  00111111B
+       ld   (hl),a
+       ld   i,a
+       and  00001001B
+       ld   c,0
+       ld   de,32*21+4
+       ld   hl,Start
+       call PPSGDt
+       ld   a,i
+       and  00010010B
+       ld   c,1
+       ld   de,32*22+4
+       ld   hl,FrqBD1
+       call PPSGDt
+       ld   a,i
+       and  00100100B
+       ld   c,2
+       ld   de,32*23+4
+       ld   hl,FrqBD2
+       call PPSGDt
+       call PrtTim
+       ld   hl,(GRPATR)      ; Print Noise value.
+       ld   de,31*4
+       add  hl,de
+       call SVDPIW
+       ld   a,20*8-1
+       out  (c),a
+       ld   a,(PSGCop+PNsTon)
+       xor  00011111B
+       and  00011111B
+       add  a,a
+       add  a,23*8-1
+       out  (c),a
+       ld   a,63*4
+       out  (c),a
+       ld   a,7
+       out  (c),a
+       ld   hl,ClrCnt
+       ld   a,(hl)
+       or   a
+       jr   z,ChkHDC
+       dec  (hl)
+       call z,ClMkCh
+ChkHDC:ld   hl,HdDpCt        ; Check Hide Display Counter.
+       ld   a,(hl)
+       or   a
+       ret  z
+       dec  (hl)
+       ret  nz
+       ld   hl,DsplBf
+       ld   de,(DsplVA)
+       ld   bc,12
+       jp   LVMIR
+
+PerDTb:dw   PSGPrD,PSGPrC-PSGPrD,PSGPrB-PSGPrC,PSGPrA-PSGPrB
+       dw   PSGPr9-PSGPrA,PSGPr8-PSGPr9,PSGPr7-PSGPr8,PSGPr6-PSGPr7
+       dw   PSGPr5-PSGPr6,PSGPr4-PSGPr5,PSGPr3-PSGPr4,PSGPr2-PSGPr3
+       dw   PSGPr1-PSGPr2,PSGPr0-PSGPr1
+
+PPSGDt:push hl               ; I: C=Channel #,DE=VRAM Offset,HL=Data Bank Ptr.
+       ld   hl,(GRPNAM)      ;    A=Channel Mask.
+       add  hl,de
+       call StVDPW
+       pop  de
+       push af
+       and  00000111B
+       jr   z,FrqBGr
+RaiseB:push de               ; Raise Bar Graphic.
+       ld   hl,PSGCop+PAVol
+       ld   b,000H
+       add  hl,bc
+       ld   a,(hl)
+       and  00011111B
+       ld   (hl),a
+       ld   ix,PSGCop+PALwPr
+       add  ix,bc
+       add  ix,bc
+       ex   af,af'
+       ld   a,(ix+1)
+       and  00001111B
+       ld   h,a
+       ex   af,af'
+       ld   l,(ix)
+       cp   16
+       ld   b,15
+       jr   c,RaisB1
+       ld   a,b
+RaisB1:ld   ix,PerDTb        ; RaiseB (I).
+RaisB2:ld   e,(ix)           ; RaiseB (II).
+       inc  ix
+       ld   d,(ix)
+       inc  ix
+       dec  b
+       jr   z,RaisB3
+       or   a
+       sbc  hl,de
+       jr   nc,RaisB2
+RaisB3:pop  de               ; RaiseB (III).
+       ld   l,b
+       ld   h,000H
+       add  hl,de
+       ld   b,a
+       ld   a,(hl)
+       cp   b
+       jr   nc,FrqBGr
+       add  a,2
+       cp   b
+       jr   c,RaisB4
+       ld   a,b
+RaisB4:ld   (hl),a           ; RaiseB (IV).
+FrqBGr:pop  af               ; Frequency Bar Graphic.
+       push bc
+       ld   hl,BGType
+       bit  0,(hl)
+       jr   nz,PrtPer
+       ex   af,af'
+       ld   bc,(VDPWrC)
+       ld   b,15
+FrqBG1:ld   a,(de)           ; FrqBGr (I).
+       inc  de
+       srl  a
+       add  a,BG1Bs
+       out  (c),a
+       djnz FrqBG1
+       ld   a,' '
+       out  (c),a
+       ex   af,af'
+NoisFl:push af               ; Noise Flag.
+       call PrtNsF
+       pop  af
+       ex   af,af'
+       pop  de
+       ld   a,(Resorc)
+       bit  4,a
+       call nz,PrtDur
+       ld   a,' '
+       out  (c),a
+       ld   d,000H
+       ld   hl,PSGCop+PAVol
+       add  hl,de
+       ld   d,(hl)
+       ld   a,d
+       cp   16
+       jr   nc,PrtEvl
+       ld   hl,BGType
+       bit  1,(hl)
+       jr   nz,PrtVol
+       ex   af,af'
+       or   a
+       jr   z,DsVlBr
+       ex   af,af'
+       inc  a
+VolBGr:ld   b,4              ; Volume Bar Graphic.
+       ld   h,b
+VolBG1:cp   h                ; VolBGr (I).
+       jr   nc,VolBG2
+       ld   h,a
+VolBG2:sub  h                ; VolBGr (II).
+       ld   l,a
+       ld   a,BG0Bs
+       add  a,h
+       out  (c),a
+       ld   a,l
+       djnz VolBG1
+       ld   b,2
+       jp   PrtSpc
+
+DsVlBr:xor  a
+       jr   VolBGr
+
+PrtPer:ld   hl,PSGCop+PALwPr ; Print PSG Period.
+       ld   b,000H
+       add  hl,bc
+       add  hl,bc
+       ld   a,(hl)
+       inc  hl
+       ld   h,(hl)
+       ld   l,a
+       call PrWHex
+       ld   b,12
+       call PrtSpc
+       jr   NoisFl
+
+PrtVol:ld   a,' '            ; Print Volume.
+       out  (c),a
+       ld   a,d
+       call PrBHex
+       ld   b,3
+       jp   PrtSpc
+
+PrtEvl:ld   hl,PSGCop+PELwPr ; Print Envelope data.
+       ld   e,(hl)
+       inc  hl
+       ld   d,(hl)
+       ex   de,hl
+       call PrWHex
+       ld   a,WvFrmS
+       out  (c),a
+       inc  a
+       out  (c),a
+       inc  de
+       ld   a,(de)
+       and  00001111B
+       ld   l,a
+       ld   h,000H
+       ld   de,WvFCTb
+       add  hl,de
+       ld   l,(hl)
+       ld   h,000H
+       ld   de,WvFrmC
+       add  hl,de
+       ld   de,GrpCP0+256*8*2+WvFrmS*8
+       ld   bc,16
+       jp   LVMIR
+
+WvFCTb:db   010H,010H,010H,010H,070H,070H,070H,070H
+       db   000H,010H,020H,030H,040H,050H,060H,070H
+
+WvFrmC:db   00000000B,10000100B,11000110B,10100101B,10010100B,10001100B
+       db   10000100B,00000000B,00000000B,00100000B,00010000B,00100000B
+       db   10100100B,01000000B,00100001B,00000000B
+
+       db   00000000B,10000000B,11000000B,10100000B,10010000B,10001000B
+       db   10000111B,00000000B,00000000B,00000000B,00000000B,00000000B
+       db   00000000B,00000000B,11101101B,00000000B
+
+       db   00000000B,10000000B,11000000B,10100000B,10010001B,10001010B
+       db   10000100B,00000000B,00000000B,00100000B,01010000B,10001000B
+       db   00000100B,00000000B,00000001B,00000000B
+
+       db   00000000B,10000111B,11000100B,10100100B,10010100B,10001100B
+       db   10000100B,00000000B,00000000B,11101101B,00000000B,00000000B
+       db   00000000B,00000000B,00000000B,00000000B
+
+       db   00000000B,00000100B,00001100B,00010100B,00100101B,01000110B
+       db   10000100B,00000000B,00000000B,00100001B,01000000B,10100100B
+       db   00100000B,00010000B,00100000B,00000000B
+
+       db   00000000B,00000111B,00001000B,00010000B,00100000B,01000000B
+       db   10000000B,00000000B,00000000B,11101101B,00000000B,00000000B
+       db   00000000B,00000000B,00000000B,00000000B
+
+       db   00000000B,00000100B,00001010B,00010001B,00100000B,01000000B
+       db   10000000B,00000000B,00000000B,00000001B,00000000B,00000100B
+       db   10001000B,01010000B,00100000B,00000000B
+
+       db   00000000B,00000100B,00001100B,00010100B,00100100B,01000100B
+       db   10000111B,00000000B,00000000B,00000000B,00000000B,00000000B
+       db   00000000B,00000000B,11101101B,00000000B
+
+PrtNsF:or   a                ; Print Noise Flag.
+       jr   z,SilncC         ; I(A=Mask;C=VDPWrPort;VDP=Pos); O(A); m(AF,BC).
+       ld   b,a
+       and  00000111B
+       ld   a,b
+       jr   z,OnlNsC
+       and  00111000B
+       jr   z,OnlSdC
+       ld   a,SqWNsS         ; Sound & Noise Character.
+ExPNsF:ld   bc,(VDPWrC)      ; Exit Print Noise Flag.
+       out  (c),a
+PrtSp1:ld   b,1              ; Print One Space.
+PrtSpc:ld   a,' '            ; Print Spaces.
+       jr   FVRAML
+
+OnlSdC:ld   a,SquWvS         ; Only Sound Character.
+       jr   ExPNsF
+
+OnlNsC:ld   a,NoiseS         ; Only Noise Character.
+       jr   ExPNsF
+
+SilncC:ld   a,NoSndS         ; Silence Character.
+       jr   ExPNsF
+
+ClMkCh:ld   hl,(MrkdVA)      ; Clear Marked Character.
+       ld   b,0F0H
+       xor  a
+       ld   (ClrCnt),a
+FilVR8:ld   (MrkdVA),hl      ; Fill 8 Bytes of VRAM (only in graphic mode).
+       call SVDPIW           ; I(B=Value;HL=VRAMAdd);O(AF,BC).
+       ld   a,b
+       ld   b,008H
+FVRAML:out  (c),a            ; Fill VRAM Loop: I(B=#;C=VDP WrP;A=Dat.);m(F,B).
+       nop                   ; Spend time to allow MSX VDP to "breath".
+FVRML1:djnz FVRAML           ; FVRAML (I).
+       ret
+
+;
+; Main Menu general appearance:
+;
+; \01234567890123456789012345678901
+; 9 <> r s -----------------------
+; 0 v^ ? *--/-- @--:--.- ~........
+; 1 P1 --------------- . -- ....^v
+; 2 P2 --------------- . -- ....^v
+; 3 P3 --------------- . -- ....^v
+;
+; \01234567890123456789012345678901
+; 9 <> r s -----------------------
+; 0 v^ ? *--/-- @--:--.- ~........
+; 1 P1 --------------- .  ....^v
+; 2 P2 --------------- .  ....^v
+; 3 P3 --------------- .  ....^v
+;
+
+PrtDur:ld   d,000H           ; Print note Duration.
+       ld   hl,ChATDD
+       add  hl,de
+       add  hl,de
+       ld   c,(hl)
+       inc  hl
+       ld   b,(hl)
+       ld   a,(bc)
+       jr   PrBHex
+
+PrtTCt:ld   hl,(TimeCt)      ; Print Time Counter.
+       call PrWHex
+       ld   b,3
+       jr   PrtSpc
+
+PrtTim:ld   hl,(GRPNAM)      ; Print Time.
+       ld   de,32*20+14
+       add  hl,de
+       call StVDPW
+       ld   hl,BGType
+       bit  2,(hl)
+       jr   nz,PrtTCt
+       ld   hl,ClockM
+       ld   a,(hl)
+       call PrBHex
+       inc  hl
+       ld   a,':'
+       out  (c),a
+       ld   a,(hl)
+       call PrBHex
+       inc  hl
+       ld   a,'.'
+       out  (c),a
+       ld   a,(hl)
+       jr   PrtHex
+
+PrWHex:ld   a,h               ; Print Word datum in Hexadecimal format:
+       call PrBHex            ; I(VDPAP=Coordinate;HL=Number); m(AF,BC).
+       ld   a,l
+PrBHex:ld   bc,(VDPWrC)       ; Print Byte datum in Hexadecimal format:
+       ld   b,a               ; I(VDPAP=Coordinate;A=Number); m(AF,BC).
+       srl  a
+       srl  a
+       srl  a
+       srl  a
+       call PrtHex
+       ld   a,00FH
+       and  b
+PrtHex:cp   00AH             ; Print Hexadecimal digit.
+       jr   nc,PrtHAF
+       add  a,'0'
+       out  (c),a
+       ret
+
+PrtHAF:add  a,'A'-00AH       ; Print Hexadecimal digit from "A" to "F".
+       out  (c),a
+       ret
+
+PrtStr:ex   (sp),hl          ; Print String (from the calling point till 0):
+       jr   PrtSt2           ; I(Stack:Str.Ptr.,C=VDPWP); m(A=0,F=Z).
+
+PrtSt1:out  (c),a            ; PrtStr (I).
+PrtSt2:ld   a,(hl)           ; PrtStr (II).
+       inc  hl
+       or   a
+       jr   nz,PrtSt1
+       ex   (sp),hl
+       ret
+
+LdDCSt:ld   hl,(GRPCGP)      ; Load Default Character Set.
+       ld   de,DCSCGD
+       call LdImgH
+       jp   nz,GmLdEr
+       ld   hl,(GRPCOL)
+       ld   de,DCSClD
+       call LdImgH
+       ret  z
+       jp   GmLdEr
+
+DCSCGD:db   'YGMPDCSFCG2'    ; Default Character Set C.G.P. file Descriptor.
+       dw   256*8
+DCSClD:db   'YGMPDCSFCl2'    ; Default Character Set Colour file Descriptor.
+       dw   256*8
+
+St3PCS:push hl               ; Set Third Part Character Set.
+       ld   de,(GRPCGP)
+       call S3PCS1
+       pop  hl
+       ld   de,(GRPCOL)
+S3PCS1:add  hl,de            ; St3PCS (I).
+       ex   de,hl
+       ld   bc,256*8
+       jp   LVVIR
+
+StDfCS:di                    ; Set Default Character Set.
+       call LdDCSt
+       call ClASpr
+       ld   hl,256*8*1
+       call St3PCS
+       ld   hl,256*8*2
+       call St3PCS
+       jr   DfPScr
+
+DfPbkS:di                    ; Default Playback Screen.
+       xor  a
+       call VDPCtl
+       call ClASpr
+       call LdDCSt
+       ld   hl,256*8*1
+       call St3PCS
+       ld   hl,GrpCP0+256*8*2+32*8
+       ld   de,DBGCGD
+       call LdImgH
+       jp   nz,GmLdEr
+       ld   hl,GrpCl0+256*8*2+32*8
+       ld   de,DBGClD
+       call LdImgH
+       jp   nz,GmLdEr
+DfPScr:di                    ; Default Presentation Screen.
+       call PPrScr
+       ld   ix,BdChr1
+       ld   de,(GRPNAM)
+       ld   hl,32*10
+       add  hl,de
+       call SVDPIW
+       ld   a,32
+       or   a
+       call DrwHLn
+       ld   hl,32*12
+       add  hl,de
+       call SVDPIW
+       ld   hl,GameDt
+       ld   b,32
+PrtTLp:ld   a,(hl)           ; Print Title Loop.
+       add  a,080H
+       out  (c),a
+       inc  hl
+       djnz PrtTLp
+       ld   hl,32*14
+       add  hl,de
+       call SVDPIW
+       ld   a,32
+       or   a
+       call DrwHLn
+       ld   a,001H
+       jp   VDPCtl
+
+DBGCGD:db   'YGMPDBGFCG2'    ; Default Bar Graphic C.G.P. file Descriptor.
+       dw   117*8
+DBGClD:db   'YGMPDBGFCl2'    ; Default Bar Graphic Colour file Descriptor.
+       dw   117*8
+
+PPrScr:call ClrGSc           ; Print Presentation Screen.
+       ld   hl,00000H
+       ld   de,01F06H
+       ld   ix,BdChr0
+       call DrwBox
+       ld   hl,32*1+4
+       ld   de,Title0
+       ld   bc,26
+       call GPrint
+       ld   hl,32*2+3
+       ld   c,28
+       call GPrint
+       ld   hl,32*3+2
+       inc  c
+       call GPrint
+       ld   hl,32*4+2
+       call GPrint
+       ld   hl,32*5+1
+       inc  c
+GPrint:push bc               ; Graphical menu Print:
+       push de               ; I(HL=Offset;DE=Str.Ptr;BC=Length);
+       ld   de,(GRPNAM)      ; O(DE=Next Address); m(AF,DE,HL).
+       add  hl,de
+       pop  de
+       ex   de,hl
+       call LVMIR
+       ex   de,hl
+       pop  bc
+       ret
+
+Title0:db                  000H,001H,002H,' "',0D9H,0E1H,0F7H,0E1H,0F2H,0E1H,'$: General Game'
+       db             003H,004H,005H,006H,' Music and Effect Player'
+       db        007H,008H,009H,00AH,00BH,'1994,1998 Unicorn Dreams'
+       db        00CH,00DH,00EH,00FH,010H,'Artwork Programs release'
+       db   011H,012H,013H,014H,020H,020H,'Program by "Cyberknight$'
+
+DrwBox:di                    ; Draw Box.
+       call CkCDGC
+       call ClcGPA
+       call SVDPIW
+       ld   a,(ix)
+       out  (c),a
+       ld   a,d
+       sub  2
+       ld   d,a
+       call nc,DrwHLn
+       ld   a,(ix+1)
+       out  (c),a
+       ld   a,e
+       sub  2
+       jr   c,DrwBx2
+       jr   z,DrwBx2
+       ld   e,a
+DrwBx1:ld   bc,32            ; DrwBox (I).
+       add  hl,bc
+       call SVDPIW
+       ld   a,(ix+5)
+       out  (c),a
+       ld   b,d
+       ld   a,' '
+       call FVRAML
+       ld   a,(ix+5)
+       out  (c),a
+       dec  e
+       jr   nz,DrwBx1
+DrwBx2:ld   bc,32            ; DrwBox (II).
+       add  hl,bc
+       call SVDPIW
+       ld   a,(ix+2)
+       out  (c),a
+       inc  hl
+       ld   a,d
+       add  a,2
+       ld   a,d
+       call nc,DrwHLn
+       ld   a,(ix+3)
+       out  (c),a
+       ret
+
+DrwHLn:ret  z                ; Draw Horizontal Line:
+       ld   b,a              ; I(IX=Border Pointer;B=Length);m(AF,BC).
+       ld   a,(ix+4)
+       jp   FVRAML
+
+CkCDGC:push af               ; Check and Calc. Delta from Graphic Coordinates:
+       ld   a,d              ; I(HL=X1Y1;DE=X2Y2); O(HL=minXY;DE=DXDY).
+       sub  h
+       jr   nc,SetGDX
+       ld   a,h
+       sub  d
+       ld   h,d
+SetGDX:inc  a                ; Set Graphic coordinate Delta X (maxX-minX+1).
+       ld   d,a
+       ld   a,e
+       sub  l
+       jr   nc,SetGDY
+       ld   a,l
+       sub  e
+       ld   l,e
+SetGDY:inc  a                ; Set Graphic coordinate Delta Y (maxY-minY+1).
+       ld   e,a
+       pop  af
+       ret
+
+ClcGPA:push af               ; Calculate Graphic Screen Physical Address:
+       push de               ; I(H=X;L=Y); O(HL=VAddress).
+       ld   e,h
+       ld   h,0
+       ld   d,h
+       add  hl,hl
+       add  hl,hl
+       add  hl,hl
+       add  hl,hl
+       add  hl,hl
+       add  hl,de
+       ld   de,(GRPNAM)
+       add  hl,de
+       pop  de
+       pop  af
+Return:ret
+
+ClrGSc:ld   hl,(GRPNAM)      ; Clear Screen.
+       ld   bc,256*3
+       ld   a,' '
+       jp   FilVRB
+
+ClASpr:ld   hl,(GRPATR)      ; Clear (hide) All Sprites.
+       ld   de,4
+       ld   b,32
+       ld   a,0D4H
+ClASpL:call WrVRMB           ; ClASpr Loop.
+       add  hl,de
+       djnz ClASpL
+       ret
+
+MainHR:call ChkKey           ; Main Hook Routine.
+       call PlayRH
+       ld   a,(PrgmSt)
+       ld   h,000H
+       ld   l,a
+       add  hl,hl
+       ld   de,AnmTbl
+       add  hl,de
+       ld   e,(hl)
+       inc  hl
+       ld   d,(hl)
+       ex   de,hl
+       jp   (hl)
+
+AnmTbl:dw   Return,OpnAnm,StrtAn,MMAnmt,PlayAn
+
+ChkKey:ret  nz               ; Check Key.
+       ld   a,(Resorc)
+       ld   b,a
+       ld   a,(NEWKEY+7)
+       xor  00010000B
+       ld   c,a
+       bit  4,c
+       call z,StupRH         ; Reset Music Routines.
+       bit  3,b
+       ret  z
+       ld   a,(GCtrlR)
+       bit  0,c
+       jr   nz,DcGCtR
+       bit  1,c
+       ret  z
+       inc  a
+       ret  z
+StGCtR:ld   (GCtrlR),a       ; Set GCtrlR.
+       ld   b,a
+       ld   a,(PrgmSt)
+       cp   PlyMsS
+       ret  nz
+       ld   hl,(DsplVA)
+       call SVDPIW
+       call PrtStr
+GCRStr:db   ' Control ',0
+       ld   a,60
+       ld   (HdDpCt),a
+       ld   a,b
+       call PrBHex
+       jp   PrtSp1
+
+DcGCtR:or   a                ; Decrement GCtrlR.
+       ret  z
+       dec  a
+       jr   StGCtR
+
+
+; Program constants.
+
+BdChr0:db   01AH,01BH,01CH,01DH,01EH,01FH
+BdChr1:db   09AH,09BH,09CH,09DH,09EH,09FH
+
+
+; Program variables.
+
+PrgmSt:db   000H   ; Program State.
+ClockM:ds      1   ; Clock Minutes.
+ClockS:ds      1   ; Clock Seconds.
+ClockF:ds      1   ; Clock Fraction.
+ClockC:ds      1   ; Clock Counter.
+BGMAdd:ds      2   ; B.G.M. Address.
+BGMNum:db   000H   ; B.G.M. Number.
+SFXAdd:ds      2   ; S.F.X. Address.
+SFXNum:db   000H   ; S.F.X. Number.
+CurSnd:db   000H   ; Current Sound.
+CurSAd:ds      2   ; Current Sound Address.
+AnmtRg:ds      1   ; Animation Register.
+MrkdVA:ds      2   ; Marked VRAM Address.
+ClrCnt:db   000H   ; Clear Counter.
+BGType:db   000H   ; Bar Graphic Type.
+HdDpCt:db   000H   ; Hide Display Counter.
+DsplVA:ds      2   ; Display VRAM Address.
+DecBGC:ds      1   ; Decrement Bar Graphic Counter.
+
+
+; Music data.
+
+GameDt:db   'Unicorn Dreams Artwork Programs!'   ; Game Data (32).
+GmBlPt:dw   GmBlNm-GameDt    ; Game music routine Block list Pointer (2).
+StupRP:dw   SetupR-GameDt    ; Set-up Routine Pointer (2).
+SilnRP:dw   SilnRt-GameDt    ; Silence Routine Pointer (2).
+StMsRP:dw   StMsRt-GameDt    ; Set Music Routine Address (2).
+PlayRP:dw   PlayRt-GameDt    ; Play Routine Address (2).
+GMPBAd:dw   02700H           ; Game Music Player Base Address (2).
+GMPNam:db   'Yawara  270'    ; Game Music Player Name (11).
+OpenMN:db   000H             ; Opening Music Number (1).
+StrtSE:db   000H             ; Start Sound Effect Number (1).
+ChATDD:dw   00000H           ; Channel A Tone Duration Datum address (2).
+ChBTDD:dw   00000H           ; Channel B Tone Duration Datum address (2).
+ChCTDD:dw   00000H           ; Channel C Tone Duration Datum address (2).
+BGMSPt:dw   MusicT-GameDt    ; BGM List Start Point (2).
+SFXSPt:dw   EffctT-GameDt    ; SFX List Start Point (2).
+OpnGFN:db   'Opening Sc2'    ; Opening graphics File Name (11).
+OpnGFS:dw   00000H           ; Opening graphics File Size (2).
+MnuGFN:db   'MainMenuSc2'    ; Main Menu graphics File Name (11).
+MnuGFS:dw   00000H           ; Main Menu graphics File Size (2).
+OpnStC:dw   21*32+10         ; Opening String Coordinate (2).
+Resorc:db   00000000B        ; Game music routine resources (1):
+                             ;  0 = opening (0=no, 1=yes);
+                             ;  1 = selection menu (0 = no, 1 = yes);
+                             ;  2 = dual opening (0 = no, 1 = yes);
+                             ;  3 = general control (0 = no, 1 = available);
+                             ;  4 = duration data (1 = available);
+                             ;  5 = MSX-Music FM Sound I.C.;
+                             ;  6 = Konami Sound Creative Chip;
+                             ;  7 = unused.
+GCtRSt:db   'Control'        ; General Control Register String (7).
+
+SetupR:ret  nz               ; Set-up Routine.
+       ld   hl,00000H
+       ld   de,00001H
+       ld   bc,00000H
+       ld   (hl),000H
+       ldir
+       ret
+
+SilnRt:jp   00000H           ; Silence Routine.
+
+StMsRt:jp   00000H
+
+PlayRt:jp   00000H
+
+GmBlNm:db   'GameName000'    ; Game Block Name.
+GmBlSz:dw   00000H           ; Game Block Size.
+LoadAd:dw   00000H           ; Game block Loading Address.
+       db   0FFH
+MusicT:db   000H,'           00          '
+       db   0FFH,0FFH
+EffctT:db   0FFH,'           FF          '
+       db   0FFH,0FFH
+
+Tail:  end

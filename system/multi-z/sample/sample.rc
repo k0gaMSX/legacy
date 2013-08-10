@@ -1,0 +1,94 @@
+menu	MENU
+	{
+		POPUP "Demo"
+		{
+			ENTRY "Execute...",2;		// Nonhandled dialog
+			SEPAR;
+			ENTRY "Modal Dialog",3;		// Modal dialog
+			ENTRY "Nested dialogs",4;	// handled dialog
+			ENTRY "Dynamic redrawing",5;	// demonstrations
+			SEPAR;
+			ENTRY "Exit SAMPLE",1
+		}
+		POPUP "Options"
+		{
+			GRAY "Unused option",0;
+			SEPAR;
+			ENTRY AUTOCHECK "Automatic Check",0; // Here no action
+			SEPAR;				     // is taken:
+			CHECKED AUTOSEL "Option 1",0;        // only shows
+			ENTRY AUTOSEL "Option 2",0;          // automatic manu
+			ENTRY AUTOSEL "Option 3",0           // capabilities.
+		}
+	}
+
+about	DIALOG BORDERED (0,0,150,50)
+{
+	BOXF STATIC (5,5,140,8),2,2;
+	TEXT OVERLAY (10,5),"Multi-Z Sample Program";
+	TEXT (10,15),"(c) 1994, SOLIDSOFT";
+	SEPAR (10,25),130;
+	BUTTON CONTROL 1,(100,32,40,12),"Close";
+}
+
+_modal	DIALOG MODAL PANEL (100,40,155,55)
+{
+	TEXT(10,5),"This is a modal dialog.";
+	TEXT(10,15),"So, you can not move it.";
+	TEXT(10,25),"Try to do it!";
+	BUTTON CONTROL 1,(55,40,40,12),"Ok!";
+}
+
+nh	DIALOG	WINDOW (200,30,200,50)
+{
+	TEXT (10,2),"Illustration of Dialog Nesting";
+	BUTTON CONTROL 1,(10,20,50,20),"Exit";
+	BUTTON 2,(70,20,120,20),"See another dialog";
+}
+
+dynamic	DIALOG WINDOW (0,0,200,100)
+{
+	TEXT (10,2),"Multi-Z Button types demo";
+	BUTTON 1,(10,20,50,14),"System";
+	BUTTON 2,(10,40,50,14),"Boxes";
+	BUTTON 3,(10,60,50,14),"Normal";
+	BUTTON CONTROL 4,(10,80,50,14),"Quit";
+	GROUP TXTFRAME (70,20,120,75)
+	{
+		BOXF STATIC (4,4,110,65),4,4;
+	}
+}
+
+b_sys	DIALOG TXTFRAME (70,20,120,75)
+{
+	BOXF STATIC (4,4,110,65),4,4;
+	TEXT (10,4),"System bitmapped";
+	SYSBUTT (20,25),1;
+	SYSBUTT (40,25),3;
+	SYSBUTT (60,25),5;
+	SYSBUTT (80,25),7;
+	SYSBUTT (20,42),9;
+	SYSBUTT (40,42),11;
+	SYSBUTT (60,42),13;
+	SYSBUTT (80,42),15;
+}
+
+b_box	DIALOG TXTFRAME (70,20,120,75)
+{
+	BOXF STATIC (4,4,110,65),4,4;
+	TEXT (10,4),"Boxes and Rects";
+	BOX (20,25,30,12),2,3;
+	BOXF (60,25,30,12),14,14;
+	RECT (20,42,30,12),6,8;
+	RECT (60,42,30,12),20,4;
+}
+
+b_btn	DIALOG TXTFRAME (70,20,120,75)
+{
+	BOXF STATIC (4,4,110,65),4,4;
+	TEXT (10,4),"Ordinar buttons";
+	BUTTON (20,25,60,12),"Button #1";
+	BUTTON (20,42,60,12),"Button #2";
+}
+
+

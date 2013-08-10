@@ -1,0 +1,127 @@
+
+Registros del VDP
+
+VDP ($00) ($F3DF)	Mode Register #0
+	7: 'Sin uso' = 0
+	6: DG: Pone el color en modo entrada (¿¿??)
+	5: IE2: Light Pen Interrupt. (=1 Activada)
+	4: IE1: Line Interrupt. (=1 Activada)
+	3: M5: (Modo de Pantalla)
+	2: M4: (Modo de Pantalla)
+	1: M3: (Modo de Pantalla)
+	0: 'Sin uso' = 0
+VDP ($01) ($F3E0)	Mode Register #1
+	7: 'Sin uso' = 0
+	6: BL: Visualizar Pantalla. (=0: OFF ; =1: ON)
+	5: IE0: vBlank Interrupt (=1 Activada)
+	4: M1: (Modo de Pantalla)
+	3: M2: (Modo de Pantalla)
+	2: 'Sin uso' = 0
+	1: SI: Size Sprites. (=0: 8x8 ; =1: 16x16)
+	0: MA: Sprites Ampliados (=0: Normal ; =1: Ampliados)
+VDP ($02) ($F3E1)	Tabla de Nombres de Patrones. (&7F x $400)  Solo en modos de Texto.
+	Bits 6-5: Bits Altos del VDP ($17) Hardware Scroll en Graph 4 (Screen 5)
+	Bit 5: Bit Alto del VDP ($17) Hardware Scroll en Graph 5 (Screen 6)
+	Bits 6-5: Bits Altos del VDP ($17) Hardware Scroll en Graph 6 (Screen 7)
+	Bit 5: Bit Alto del VDP ($17) Hardware Scroll en Graph 7 (Screen 8)
+VDP ($03) ($F3E2)	Tabla de Colores. (Byte Bajo)  (&07.FF x $40)
+VDP ($04) ($F3E3)	Tabla Generadora de Patrones. (&3F x $800)
+VDP ($05) ($F3E4)	Tabla de Atributos de Sprites. (Byte Bajo) (&03.FF x $80)
+VDP ($06) ($F3E5)	Tabla Generadora de Patrones de Sprites. (&3F x $800)
+VDP ($07) ($F3E6)	Color del Borde. / Color Caracteres en modo Texto.
+	Bits 7-4: TC: Text Colour. (Color de las letras en Text1 y Text2)
+	Bits 3-0: BD: Back Drop. (Color 0 de Fondo en todos los modos)
+VDP ($08) ($FFE7)	Mode Register #2
+	7: MS: Mouse. (=0: OFF ; =1: ON)
+	6: LP: Light Pen. (=0: OFF ; =1 ON)
+	5: TP: Color 0. (=0: igual al del Borde ; =1: como la Paleta)
+	4: CB: Color Bus. (=0: Output Mode ; =1: Input Mode)
+	3: VR: Tipo de VRAM. (=0: 16k x 1bit o 4bits ; =1: 64k x 1bit o 4bits)
+	2: 'Sin uso' = 0
+	1: SPD: Sprites (=0: ON ; =1: OFF)
+	0: BW: Black and White (=0: Color ; =1: Blaco y Negro)
+VDP ($09) ($FFE8)	Mode Register #3
+	7: LN: Size Y. (=0: 192 pixels ; =1: 212 pixels)
+	6: 'Sin uso' = 0
+	5: S1: Selecciona Modo Simultaneo (¿?)
+	4: S0: Selecciona Modo Simultaneo (¿?)
+	3: IL: Modo Interlazado. (=0: OFF ; =1: ON) 'Vibrar pantalla'
+	2: E0: 'Exchange' (=0: Nada ; =1: Intercambia dos pantallas según VDP ($0D)
+	1: NT: Frequencia. (=1: PAL [313] ; =0: NTSC [262])
+	0: DC: DLCLK. (=0: Output Mode ; =1: Input Mode)  (¿¿??)
+VDP ($0A) ($FFE9)	Tabla de Colores (Byte Alto)  (&07.FF x $40)
+VDP ($0B) ($FFEA)	Tabla de Atributos de Sprites. (Byte Alto) (&03.FF x $80)
+VDP ($0C) ($FFEB)	Color de caracteres en modo 'Blink'
+	Bits 7-4: T2: Text Colour. (Color 2 de las letras en Text2)
+	Bits 3-0: BC: Back Color. (Color 2 de las letras de Fondo en Text2)
+VDP ($0D) ($FFEC)	Periodo del 'Blink' entre pantallas en modo Entrelazado y Color 2 en Text2.
+	Bits 7-4: Nº de frames mostrando Página Par / Modo Text2 color 2 ON.
+	Bits 3-0: Nº de frames mostrando Página Impar / Modo Text2 color 2 OFF.
+VDP ($0E) ($FFED)	Acceso a la VRAM (Byte Alto)  (Nº de bloque de 16Kb de la VRAM)
+VDP ($0F) ($FFEE)	Acceso Indirecto a Registros de Lectura del VDP. (VDP a Leer)
+VDP ($10) ($FFEF)	Acceso Indirecto a Registros de La Paleta. (Nº de la Paleta)
+VDP ($11) ($FFF0)	Acceso Indirecto a Registros de Escritura del VDP. (VDP a Escribir)
+
+
+
+VDP ($12) ($FFF1)	Display Adjust. (Ajuste X e Y de la Pantalla del MSX)
+	Bits 7-4: Ajuste Y. (7=Arriba ; 0=Centro ; 8=Abajo)
+	Bits 3-0: Ajuste X. (7=Izquierda ; 0=Centro ; 8=Derecha)
+VDP ($13) ($FFF2)	Line Interrupt. ( Line Int. + Y Scroll )
+VDP ($14) ($FFF3)	Color Burst Signal 1. (?)
+VDP ($15) ($FFF4)	Color Burst Signal 2. (?)
+VDP ($16) ($FFF5) 	Color Burst Signal 3. (?)
+VDP ($17) ($FFF6)	Hardware 'Y' Scroll.
+
+VDP ($20,$21)	Source X.   ( Low Byte, Hight Byte )
+VDP ($22,$23)	Source Y.
+VDP ($24,$25)	Destino X.
+VDP ($26,$27)	Destino Y.
+VDP ($28,$29)	Size X.
+VDP ($2A,$2B)	Size Y.
+VDP ($2C)	CLR. (Para transferir Datos desde la CPU)
+VDP ($2D)	ARG.
+VDP ($2E)	CMR.  Ejecuta Comando VDP.
+
+
+Registros de Lectura del VDP
+
+VDP ($0) ($F3E7)	Registro de Estado #0
+	7: F: (=1: Petición de vBlank Interrupt) (se pone a 0 al leerlo)
+	6: S: Detectado 5 o 9 Sprites en una línea. (=1: Detectado)
+	5: C: Colisión de Sprites. (=1: Colisión detectada)
+	4-0: Número del 5º o 9º Sprite en la misma línea.
+VDP ($1)	Registro de Estado #1
+	7: FL: Petición de Light Pen Interrupt. (Se pone a 0 al leerlo)
+	6: LFS: Botón del Light Pen se ha pulsado. (=1: Botón Pulsado)
+	5-1: ID: Versión del VDP. (=$0: MSX2 VDP9938 ; =$2: MSX2+ VDP9958)
+	0: FH: (=1: Petición de Line Interrupt) (Se pone a 0 al leerlo)
+VDP ($2)	Registro de Estado #2
+	7: TR: Transfer Ready. (=0: VDP Ready ; =1: VDP está ocupado)
+	6: VR: Timming Y
+	5: HR: Timming X.
+	4: BD: Color Detectado (=1: El Comando Search ha encontrado el color)
+	3: 'Sin Uso' = 1
+	2: 'Sin Uso' = 1
+	1: EO: Display Field. (=0: Campo Par ; =1: Campo Impar)
+	0: CE: Command Ends (=0: El Comando del VDP ha terminado)
+VDP ($3,$4)	Coordenada X detectada.  (Low, High)
+VDP ($5,$6)	Coordenada Y detectada.  (Low, High)
+VDP ($7)	Dato Obtenido por el Comando VDP Point y Modo VRAM > CPU.
+VDP ($8,$9)	Coordenada X obtenida por el comando Search. (Low, High)
+	Bits del 0 al 7 Low (S#8) y 0 al 1 Hight (S#9)
+
+Puertos de Entrada y Salida:
+
+OUT ($98)	Escribe en la VRAM.
+OUT ($99)	Escribe en los Registros de Control.
+OUT ($9A)	Escribe en Registros de Paleta que se especificó en VDP ($10) con Incremento.
+		Primer Out de RGBs (0RRR 0BBB)
+		Segundo Out de RGBs (0000 0GGG)
+OUT ($9B)	Escribe en Registros del VDP que se especificó en VDP ($11)
+		Si el VDP ($11) es Positivo es SIN incremento.
+		Si el VDP ($11) es Negativo es CON incremento.
+
+IN ($98)	Lee de la VRAM.
+IN ($99)	Lee el registro de estado del VDP. (nº de estado en VDP ($0F))
+

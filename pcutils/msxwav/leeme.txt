@@ -1,0 +1,157 @@
+TSUNAMI soft presenta con orgullo y amor paterno:
+
+ MSXwav v.0.99b
+------------------------------------------------------------------------------
+ Programado por Eduardo A. Robsy Petrus
+ Contacto:  robsypetrus@teleline.es
+
+ Historial:
+  v.0.99a : 29 Agosto del 2000 - Primera versi¢n p£blica (pese al calor).
+
+  v.0.99b : 30 Agosto del 2000 - La primera versi¢n NO FUNCIONABA EN ABSOLUTO
+                               - Corregida una grave inversi¢n de banderas
+                               - Corregido terminador de BASIC tokenizado
+                               - Reducido el tama¤o total del programa
+                               
+
+ Requisitos del sistema:
+  -PC compatible con procesador m¡nimo 8086 o superior.
+  -Memoria RAM convencional (64 KBs libres).
+  -Bastantes megabytes libres en el disco duro para poder trabajar.
+  -Sistema operativo MS-DOS, DR-DOS, PC-DOS, IBM-DOS, Win'9x, etc.
+
+Introducci¢n
+------------------------------------------------------------------------------
+Este programa sirve para convertir archivos de MSX, ya sean binarios cargables
+con BLOAD o programas en BASIC cargables con LOAD o RUN, a archivos de sonido
+en formato WAV (RIFF) a una frecuencia de muestreo de 44,1 KHz, 16 bits y
+est‚reo que pueden ser cargados en un MSX de primera generaci¢n a trav‚s de su
+entrada de cassette est ndar.
+
+Conversi¢n de ficheros
+----------------------
+Este programa funciona mediante comando de l¡nea, no tiene ni men£s ni nada,
+porque de momento es bastante experimental. Pero funciona, que ya es mucho.
+Supongamos que tenemos un fichero de MSX llamado HERO.BIN y queramos pasarlo a
+un fichero de audio llamado HERO.WAV, y que al cargarlo en el MSX con la orden
+BLOAD"CAS:",R nos indique Found:HERO. Entonces la l¡nea a emplear ser¡a:
+
+        MSXwav HERO.BIN HERO.WAV HERO
+
+ATENCION al orden: si se cambia el orden a saber que har  el pobre MSXwav...
+
+Compatibilidad
+--------------
+MSXwav s¢lo convertir  correctamente ficheros binarios cargables desde BASIC
+con BLOAD y ficheros de programas en BASIC, tokenizados o en formato ASCII.
+Los archivos tokenizados no podr n ser cargados desde el MSX con LOAD"CAS:" o
+RUN"CAS:", sino con CLOAD y luego ejecutados con RUN. Los programas en BASIC
+salvados en ASCII s¡ que cargar n con LOAD"CAS:",R o RUN"CAS:".
+Para salvar un programa desde MSX-BASIC en formato ASCII al disco bastar  con
+emplear la instrucci¢n SAVE"PROG.BAS",A
+Si el archivo de origen es texto en formato ASCII, tambi‚n lo convertir .
+Esto sirve, principalmente, para escribir un programa en BASIC desde cual-
+quier editor de textos de PC (s¡, tal cual), con los n£meros de l¡nea y todo
+eso, y convertirlo luego a MSX directamente. Atenci¢n a los caracteres de
+final de l¡nea y de final de fichero, porque puede que no sean del todo
+compatibles con el MSX.
+Si el archivo de origen no est  en uno de estos formatos, MSXwav indicar  que
+el formato no es v lido, y no realizar  la conversi¢n.
+La conversi¢n se realizar  empleando una velocidad de 2400 baudios, el doble
+de r pido que la velocidad por defecto del MSX, 1200 baudios.
+Para cambiar la velocidad de grabaci¢n desde el BASIC del MSX se emplea:
+
+ ú Velocidad de 1200 baudios
+
+   SCREEN ,,,0
+
+ ú Velocidad de 2400 baudios
+
+   SCREEN ,,,1
+
+En cualquier caso, no es necesario cambiar la velocidad para cargar los progra-
+mas, independientemente de la velocidad a la que est‚n grabados. El MSX elegir 
+la adecuada.
+
+Archivos WAV
+------------
+El formato de salida es WAV, con una cabecera RIFF de 58 bytes, y los datos
+con una velocidad de muestreo de 44.100 Hz, a 16-bits en est‚reo. Para repro-
+ducir este tipo de formato basta cualquier reproductor est ndar, como el
+reproductor multimedia de Windows, o cualquier otro.
+Este archivo WAV es absolutamente compatible con cualquier reproductor de so-
+nido o multimedia. Eso s¡, es bastante grande, por lo general, pero para
+guardarlos en CD eso no importa. Por cierto, como se trata de archivos con
+poca informaci¢n, si los comprim¡s con ZIP o algo as¡ se quedan en nada.
+Este formato es muy abultado, pero es el formato que permite la grabaci¢n
+directa de estos archivos WAVs en CD sin conversi¢n alguna, para crear CDs de
+audio con programas MSX: bienvenidos al mundo del MSX-tapeCD. La ventaja de
+los CDs frente a las cintas de cassette corrientes son muchas, pero destaca-
+remos cuatro:
+
+     - Sonido mucho m s claro y n¡tido: los juegos cargar n SIEMPRE en el MSX
+     - Grabaci¢n y reproducci¢n digital: no se deteriora al reproducirlo.
+     - Capacidad de almacenamiento grande: 74 minutos (o m s).
+     - Selecci¢n directa de pista: eliges que juego cargar.
+
+Conexi¢n MSX-PC
+---------------
+Nada m s sencillo. Si lo que quer‚is es cargar los juegos en el MSX desde el
+PC, os recomiendo que conect‚is el jack EAR del MSX (normalmente el cable que
+es de color blanco) a la salida sin amplificar del PC (LINE-OUT). Si no va
+bien, probar a conectarla a la salida amplificada (SPEAKER o algo as¡) y poned
+un buen volumen al control de sonido.
+Eso s¡, no hay forma de controlar el REM, as¡ que atenci¢n a las paradas del
+MSX, porque el reproductor multimedia no parar . Eso s¡, MSXwav deja el espacio
+suficiente entre bloques para que normalmente carguen bien.
+Lo que resulta estupendo es grabarlos en CD. Si ten‚is grabadora pod‚is hacer
+maravillas, y cargar n SIEMPRE en vuestro MSX. Para la gente normal, que tiene
+s¢lo un MSX de primera generaci¢n guardado en un armario, ‚sta es la mejor de
+las opciones para volver a conectarlo y disfrutar con los juegos de siempre.
+
+Datos t‚cnicos
+--------------
+Este peque¤o programa ha sido programado en ensamblador puro y duro, en modo
+real de 16-bits, y deber¡a ser compatible con cualquier PC, incluso con los
+vetustos XT (procesador i8086). Si alguien tiene acceso a una m quina as¡,
+que por favor pruebe si funciona MSXwav.
+Para los morbosos, deciros que MSXwav ha sido programado en dos d¡as, usando
+el Turbo Assembler (TASM) de Borland y una buena cantidad de caf‚. Tras muchos
+intentos he descubierto que el caf‚ Segafredo consumido solo y sin az£car es
+el que me produce el estado de trance mental necesario para programar en
+ensamblador. 
+La informaci¢n t‚cnica necesaria sobre el formato FSK de grabaci¢n ha sido
+extra¡da del MSX RED BOOK, en una versi¢n en formato .TXT muy buena.
+
+
+Mejoras y adiciones
+-------------------
+Pr¢ximas versiones de MSXwav incluir n soporte para formato ASCII para cinta,
+es decir, para cargar con RUN y LOAD los archivos en BASIC.
+Tambi‚n se planea de forma m s inmediata implementar soporte para ROMs, de
+modo que se conviertan en bloques binarios cargables desde BASIC, con su
+propio programa ejecutor incorporado.
+
+Problemas y sugerencias
+-----------------------
+Si el programa hace algo "raro", no funciona o no funciona como deber¡a, por
+favor, mandadme un mail a robsypetrus@teleline.es. Lo mismo si ten‚is que
+hacer alguna sugerencia o ten‚is dudas.
+
+Descargo legal
+--------------
+El autor no responde de los efectos de este software ni de ning£n da¤o que
+pueda causar en su ordenador, su salud o sus relaciones conyugales. El autor
+se desentiende de los usos indebidos o ilegales que se puedan hacer de este
+programa: la pirater¡a es delito, si bien los juegos de MSX de primera gene-
+raci¢n deber¡an ser de dominio p£blico, y no creo que nadie os diga nada por
+hacer algunas pruebas.
+Este programa queda declarado como Freeware, software de libre copia y libre
+distribuci¢n. Todo el software para MSX y relacionado con el MSX deber¡a ser
+freeware: nadie deber¡a tratar de ganar dinero con algo tan trascendental como
+es el MSX.
+
+Gracias por usar MSXwav
+
+        Eduardo A. Robsy Petrus
+

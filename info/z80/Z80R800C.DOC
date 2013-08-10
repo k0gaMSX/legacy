@@ -1,0 +1,1529 @@
+  Z80 and R800 Assembly/Machine Language Op-code Tables
+
+    Written by "Cyberknight" Masao Kawata.
+    E-Mail: cyber_unicorn@hotmail.com
+    Revised: 1997-10-06 Monday.
+
+
+
+    Notes:
+
+  *1: the op-code "ED 70" has no mnemonic defined for Z80,
+      though it is a valid instruction.
+  *2: SHL and SHLA instructions of the R800 are the same,
+      but with two different mnemonics defined, so they
+      can "pair" the SHR and SHRA instruction mnemonics.
+  *3: some op-codes are equivalent, performing the same
+      operations, so they are assigned to the same
+      mnemonics.
+
+
++-------------------------------------------------------- +
+|            Fast Reference (sorted op-codes)             |
++-------------+-----------------+-------------------------+
+|  Op-codes   |   Z80 Assembly  |     R800 Assembly       |
+|(Hexadecimal)|    Mnemonics    |       Mnemonics         |
++=============+=================+=========================+
+|00           |nop              |nop                      |
+|01 nnl nnh   |ld bc,nn         |ld .bc,nn                |
+|02           |ld (bc),a        |ld [.bc],.a              |
+|03           |inc bc           |inc .bc                  |
+|04           |inc b            |inc .b                   |
+|05           |dec b            |dec .b                   |
+|06 n         |ld b,n           |ld .b,n                  |
+|07           |rlca             |rola                     |
+|08           |ex af,af'        |xch .af,.af'             |
+|09           |add hl,bc        |add .hl,.bc              |
+|0A           |ld a,(bc)        |ld .a,[.bc]              |
+|0B           |dec bc           |dec .bc                  |
+|0C           |inc c            |inc .c                   |
+|0D           |dec c            |dec .c                   |
+|0E n         |ld c,n           |ld .c,n                  |
+|0F           |rrca             |rora                     |
++-------------+-----------------+-------------------------+
+|10 d         |djnz d           |dbnz d                   |
+|11 nnl nnh   |ld de,nn         |ld .de,nn                |
+|12           |ld (de),a        |ld [.de],.a              |
+|13           |inc de           |inc .de                  |
+|14           |inc d            |inc .d                   |
+|15           |dec d            |dec .d                   |
+|16 n         |ld d,n           |ld .d,n                  |
+|17           |rla              |rolca                    |
+|18 d         |jr d             |short br d               |
+|19           |add hl,de        |add .hl,.de              |
+|1A           |ld a,(de)        |ld .a,[.de]              |
+|1B           |dec de           |dec .de                  |
+|1C           |inc e            |inc .e                   |
+|1D           |dec e            |dec .e                   |
+|1E n         |ld e,n           |ld .e,n                  |
+|1F           |rra              |rorca                    |
++-------------+-----------------+-------------------------+
+|20 d         |jr nz,d          |short bnz d              |
+|21 nnl nnh   |ld hl,nn         |ld .hl,nn                |
+|22 nnl nnh   |ld (nn),hl       |ld [nn],.hl              |
+|23           |inc hl           |inc .hl                  |
+|24           |inc h            |inc .h                   |
+|25           |dec h            |dec .h                   |
+|26 n         |ld h,n           |ld .h,n                  |
+|27           |daa              |adj .a                   |
+|28 d         |jr z,d           |short bz d               |
+|29           |add hl,hl        |add .hl,.hl              |
+|2A nnl nnh   |ld hl,(nn)       |ld .hl,[nn]              |
+|2B           |dec hl           |dec .hl                  |
+|2C           |inc l            |inc .l                   |
+|2D           |dec l            |dec .l                   |
+|2E n         |ld l,n           |ld .l,n                  |
+|2F           |cpl              |not .a                   |
++-------------+-----------------+-------------------------+
+|30 d         |jr nc,d          |short bnc d              |
+|31 nnl nnh   |ld sp,nn         |ld .sp,nn                |
+|32 nnl nnh   |ld (nn),a        |ld [nn],.a               |
+|33           |inc sp           |inc .sp                  |
+|34           |inc (hl)         |inc [.hl]                |
+|35           |dec (hl)         |dec [.hl]                |
+|36 n         |ld (hl),n        |ld [.hl],n               |
+|37           |scf              |setc                     |
+|38 d         |jr c,d           |short bc d               |
+|39           |add hl,sp        |add .hl,.sp              |
+|3A nnl nnh   |ld a,(nn)        |ld .a,[nn]               |
+|3B           |dec sp           |dec .sp                  |
+|3C           |inc a            |inc .a                   |
+|3D           |dec a            |dec .a                   |
+|3E n         |ld a,n           |ld .a,n                  |
+|3F           |ccf              |notc                     |
++-------------+-----------------+-------------------------+
+|40           |ld b,b           |ld .b,.b                 |
+|41           |ld b,c           |ld .b,.c                 |
+|42           |ld b,d           |ld .b,.d                 |
+|43           |ld b,e           |ld .b,.e                 |
+|44           |ld b,h           |ld .b,.h                 |
+|45           |ld b,l           |ld .b,.l                 |
+|46           |ld b,(hl)        |ld .b,[.hl]              |
+|47           |ld b,a           |ld .b,.a                 |
+|48           |ld c,b           |ld .c,.b                 |
+|49           |ld c,c           |ld .c,.c                 |
+|4A           |ld c,d           |ld .c,.d                 |
+|4B           |ld c,e           |ld .c,.e                 |
+|4C           |ld c,h           |ld .c,.h                 |
+|4D           |ld c,l           |ld .c,.l                 |
+|4E           |ld c,(hl)        |ld .c,[.hl]              |
+|4F           |ld c,a           |ld .c,.a                 |
++-------------+-----------------+-------------------------+
+|50           |ld d,b           |ld .d,.b                 |
+|51           |ld d,c           |ld .d,.c                 |
+|52           |ld d,d           |ld .d,.d                 |
+|53           |ld d,e           |ld .d,.e                 |
+|54           |ld d,h           |ld .d,.h                 |
+|55           |ld d,l           |ld .d,.l                 |
+|56           |ld d,(hl)        |ld .d,[.hl]              |
+|57           |ld d,a           |ld .d,.a                 |
+|58           |ld e,b           |ld .e,.b                 |
+|59           |ld e,c           |ld .e,.c                 |
+|5A           |ld e,d           |ld .e,.d                 |
+|5B           |ld e,e           |ld .e,.e                 |
+|5C           |ld e,h           |ld .e,.h                 |
+|5D           |ld e,l           |ld .e,.l                 |
+|5E           |ld e,(hl)        |ld .e,[.hl]              |
+|5F           |ld e,a           |ld .e,.a                 |
++-------------+-----------------+-------------------------+
+|60           |ld h,b           |ld .h,.b                 |
+|61           |ld h,c           |ld .h,.c                 |
+|62           |ld h,d           |ld .h,.d                 |
+|63           |ld h,e           |ld .h,.e                 |
+|64           |ld h,h           |ld .h,.h                 |
+|65           |ld h,l           |ld .h,.l                 |
+|66           |ld h,(hl)        |ld .h,[.hl]              |
+|67           |ld h,a           |ld .h,.a                 |
+|68           |ld l,b           |ld .l,.b                 |
+|69           |ld l,c           |ld .l,.c                 |
+|6A           |ld l,d           |ld .l,.d                 |
+|6B           |ld l,e           |ld .l,.e                 |
+|6C           |ld l,h           |ld .l,.h                 |
+|6D           |ld l,l           |ld .l,.l                 |
+|6E           |ld l,(hl)        |ld .l,[.hl]              |
+|6F           |ld l,a           |ld .l,.a                 |
++-------------+-----------------+-------------------------+
+|70           |ld (hl),b        |ld [.hl],.b              |
+|71           |ld (hl),c        |ld [.hl],.c              |
+|72           |ld (hl),d        |ld [.hl],.d              |
+|73           |ld (hl),e        |ld [.hl],.e              |
+|74           |ld (hl),h        |ld [.hl],.h              |
+|75           |ld (hl),l        |ld [.hl],.l              |
+|76           |halt             |halt                     |
+|77           |ld (hl),a        |ld [.hl],.a              |
+|78           |ld a,b           |ld .a,.b                 |
+|79           |ld a,c           |ld .a,.c                 |
+|7A           |ld a,d           |ld .a,.d                 |
+|7B           |ld a,e           |ld .a,.e                 |
+|7C           |ld a,h           |ld .a,.h                 |
+|7D           |ld a,l           |ld .a,.l                 |
+|7E           |ld a,(hl)        |ld .a,[.hl]              |
+|7F           |ld a,a           |ld .a,.a                 |
++-------------+-----------------+-------------------------+
+|80           |add a,b          |add .a,.b                |
+|81           |add a,c          |add .a,.c                |
+|82           |add a,d          |add .a,.d                |
+|83           |add a,e          |add .a,.e                |
+|84           |add a,h          |add .a,.h                |
+|85           |add a,l          |add .a,.l                |
+|86           |add a,(hl)       |add .a,[.hl]             |
+|87           |add a,a          |add .a,.a                |
+|88           |adc a,b          |addc .a,.b               |
+|89           |adc a,c          |addc .a,.c               |
+|8A           |adc a,d          |addc .a,.d               |
+|8B           |adc a,e          |addc .a,.e               |
+|8C           |adc a,h          |addc .a,.h               |
+|8D           |adc a,l          |addc .a,.l               |
+|8E           |adc a,(hl)       |addc .a,[.hl]            |
+|8F           |adc a,a          |addc .a,.a               |
++-------------+-----------------+-------------------------+
+|90           |sub b            |sub .a,.b                |
+|91           |sub c            |sub .a,.c                |
+|92           |sub d            |sub .a,.d                |
+|93           |sub e            |sub .a,.e                |
+|94           |sub h            |sub .a,.h                |
+|95           |sub l            |sub .a,.l                |
+|96           |sub (hl)         |sub .a,[.hl]             |
+|97           |sub a            |sub .a,.a                |
+|98           |sbc a,b          |subc .a,.b               |
+|99           |sbc a,c          |subc .a,.c               |
+|9A           |sbc a,d          |subc .a,.d               |
+|9B           |sbc a,e          |subc .a,.e               |
+|9C           |sbc a,h          |subc .a,.h               |
+|9D           |sbc a,l          |subc .a,.l               |
+|9E           |sbc a,(hl)       |subc .a,[.hl]            |
+|9F           |sbc a,a          |subc .a,.a               |
++-------------+-----------------+-------------------------+
+|A0           |and b            |and .a,.b                |
+|A1           |and c            |and .a,.c                |
+|A2           |and d            |and .a,.d                |
+|A3           |and e            |and .a,.e                |
+|A4           |and h            |and .a,.h                |
+|A5           |and l            |and .a,.l                |
+|A6           |and (hl)         |and .a,[.hl]             |
+|A7           |and a            |and .a,.a                |
+|A8           |xor b            |xor .a,.b                |
+|A9           |xor c            |xor .a,.c                |
+|AA           |xor d            |xor .a,.d                |
+|AB           |xor e            |xor .a,.e                |
+|AC           |xor h            |xor .a,.h                |
+|AD           |xor l            |xor .a,.l                |
+|AE           |xor (hl)         |xor .a,[.hl]             |
+|AF           |xor a            |xor .a,.a                |
++-------------+-----------------+-------------------------+
+|B0           |or b             |or .a,.b                 |
+|B1           |or c             |or .a,.c                 |
+|B2           |or d             |or .a,.d                 |
+|B3           |or e             |or .a,.e                 |
+|B4           |or h             |or .a,.h                 |
+|B5           |or l             |or .a,.l                 |
+|B6           |or (hl)          |or .a,[.hl]              |
+|B7           |or a             |or .a,.a                 |
+|B8           |cp b             |cmp .a,.b                |
+|B9           |cp c             |cmp .a,.c                |
+|BA           |cp d             |cmp .a,.d                |
+|BB           |cp e             |cmp .a,.e                |
+|BC           |cp h             |cmp .a,.h                |
+|BD           |cp l             |cmp .a,.l                |
+|BE           |cp (hl)          |cmp .a,[.hl]             |
+|BF           |cp a             |cmp .a,.a                |
++-------------+-----------------+-------------------------+
+|C0           |ret nz           |ret nz                   |
+|C1           |pop bc           |pop .bc                  |
+|C2 nnl nnh   |jp nz,nn         |bnz nn                   |
+|C3 nnl nnh   |jp nn            |br nn                    |
+|C4 nnl nnh   |call nz,nn       |call nz,nn               |
+|C5           |push bc          |push .bc                 |
+|C6 n         |add a,n          |add .a,n                 |
+|C7           |rst 00H          |brk 00H                  |
+|C8           |ret z            |ret z                    |
+|C9           |ret              |ret                      |
+|CA nnl nnh   |jp z,nn          |bz nn                    |
++=============+=================+=========================+
+|CB 00        |rlc b            |rol .b                   |
+|CB 01        |rlc c            |rol .c                   |
+|CB 02        |rlc d            |rol .d                   |
+|CB 03        |rlc e            |rol .e                   |
+|CB 04        |rlc h            |rol .h                   |
+|CB 05        |rlc l            |rol .l                   |
+|CB 06        |rlc (hl)         |rol [.hl]                |
+|CB 07        |rlc a            |rol .a                   |
+|CB 08        |rrc b            |ror .b                   |
+|CB 09        |rrc c            |ror .c                   |
+|CB 0A        |rrc d            |ror .d                   |
+|CB 0B        |rrc e            |ror .e                   |
+|CB 0C        |rrc h            |ror .h                   |
+|CB 0D        |rrc l            |ror .l                   |
+|CB 0E        |rrc (hl)         |ror [.hl]                |
+|CB 0F        |rrc a            |ror .a                   |
++-------------+-----------------+-------------------------+
+|CB 10        |rl b             |rolc .b                  |
+|CB 11        |rl c             |rolc .c                  |
+|CB 12        |rl d             |rolc .d                  |
+|CB 13        |rl e             |rolc .e                  |
+|CB 14        |rl h             |rolc .h                  |
+|CB 15        |rl l             |rolc .l                  |
+|CB 16        |rl (hl)          |rolc [.hl]               |
+|CB 17        |rl a             |rolc .a                  |
+|CB 18        |rr b             |rorc .b                  |
+|CB 19        |rr c             |rorc .c                  |
+|CB 1A        |rr d             |rorc .d                  |
+|CB 1B        |rr e             |rorc .e                  |
+|CB 1C        |rr h             |rorc .h                  |
+|CB 1D        |rr l             |rorc .l                  |
+|CB 1E        |rr (hl)          |rorc [.hl]               |
+|CB 1F        |rr a             |rorc .a                  |
++-------------+-----------------+------------+------------+
+|CB 20        |sla a            |shl .b      |shla .b     |
+|CB 21        |sla a            |shl .c      |shla .c     |
+|CB 22        |sla a            |shl .d      |shla .d     |
+|CB 23        |sla a            |shl .e      |shla .e     |
+|CB 24        |sla a            |shl .h      |shla .h     |
+|CB 25        |sla a            |shl .l      |shla .l     |
+|CB 26        |sla (hl)         |shl [.hl]   |shla [.hl]  |
+|CB 27        |sla a            |shl .a      |shla .a     |
++-------------+-----------------+------------+------------+
+|CB 28        |sra b            |shra .b                  |
+|CB 29        |sra c            |shra .c                  |
+|CB 2A        |sra d            |shra .d                  |
+|CB 2B        |sra e            |shra .e                  |
+|CB 2C        |sra h            |shra .h                  |
+|CB 2D        |sra l            |shra .l                  |
+|CB 2E        |sra (hl)         |shra [.hl]               |
+|CB 2F        |sra a            |shra .a                  |
++-------------+-----------------+-------------------------+
+|CB 30        |                                           |
+|.............|             invalid op-codes              |
+|CB 37        |                                           |
++-------------+-----------------+-------------------------+
+|CB 38        |srl b            |shr .b                   |
+|CB 39        |srl c            |shr .c                   |
+|CB 3A        |srl d            |shr .d                   |
+|CB 3B        |srl e            |shr .e                   |
+|CB 3C        |srl h            |shr .h                   |
+|CB 3D        |srl l            |shr .l                   |
+|CB 3E        |srl (hl)         |shr [.hl]                |
+|CB 3F        |srl a            |shr .a                   |
++-------------+-----------------+-------------------------+
+|CB 40        |bit 0,b          |bit 0,.b                 |
+|CB 41        |bit 0,c          |bit 0,.c                 |
+|CB 42        |bit 0,d          |bit 0,.d                 |
+|CB 43        |bit 0,e          |bit 0,.e                 |
+|CB 44        |bit 0,h          |bit 0,.h                 |
+|CB 45        |bit 0,l          |bit 0,.l                 |
+|CB 46        |bit 0,(hl)       |bit 0,[.hl]              |
+|CB 47        |bit 0,a          |bit 0,.a                 |
+|CB 48        |bit 1,b          |bit 1,.b                 |
+|CB 49        |bit 1,c          |bit 1,.c                 |
+|CB 4A        |bit 1,d          |bit 1,.d                 |
+|CB 4B        |bit 1,e          |bit 1,.e                 |
+|CB 4C        |bit 1,h          |bit 1,.h                 |
+|CB 4D        |bit 1,l          |bit 1,.l                 |
+|CB 4E        |bit 1,(hl)       |bit 1,[.hl]              |
+|CB 4F        |bit 1,a          |bit 1,.a                 |
++-------------+-----------------+-------------------------+
+|CB 50        |bit 2,b          |bit 2,.b                 |
+|CB 51        |bit 2,c          |bit 2,.c                 |
+|CB 52        |bit 2,d          |bit 2,.d                 |
+|CB 53        |bit 2,e          |bit 2,.e                 |
+|CB 54        |bit 2,h          |bit 2,.h                 |
+|CB 55        |bit 2,l          |bit 2,.l                 |
+|CB 56        |bit 2,(hl)       |bit 2,[.hl]              |
+|CB 57        |bit 2,a          |bit 2,.a                 |
+|CB 58        |bit 3,b          |bit 3,.b                 |
+|CB 59        |bit 3,c          |bit 3,.c                 |
+|CB 5A        |bit 3,d          |bit 3,.d                 |
+|CB 5B        |bit 3,e          |bit 3,.e                 |
+|CB 5C        |bit 3,h          |bit 3,.h                 |
+|CB 5D        |bit 3,l          |bit 3,.l                 |
+|CB 5E        |bit 3,(hl)       |bit 3,[.hl]              |
+|CB 5F        |bit 3,a          |bit 3,.a                 |
++-------------+-----------------+-------------------------+
+|CB 60        |bit 4,b          |bit 4,.b                 |
+|CB 61        |bit 4,c          |bit 4,.c                 |
+|CB 62        |bit 4,d          |bit 4,.d                 |
+|CB 63        |bit 4,e          |bit 4,.e                 |
+|CB 64        |bit 4,h          |bit 4,.h                 |
+|CB 65        |bit 4,l          |bit 4,.l                 |
+|CB 66        |bit 4,(hl)       |bit 4,[.hl]              |
+|CB 67        |bit 4,a          |bit 4,.a                 |
+|CB 68        |bit 5,b          |bit 5,.b                 |
+|CB 69        |bit 5,c          |bit 5,.c                 |
+|CB 6A        |bit 5,d          |bit 5,.d                 |
+|CB 6B        |bit 5,e          |bit 5,.e                 |
+|CB 6C        |bit 5,h          |bit 5,.h                 |
+|CB 6D        |bit 5,l          |bit 5,.l                 |
+|CB 6E        |bit 5,(hl)       |bit 5,[.hl]              |
+|CB 6F        |bit 5,a          |bit 5,.a                 |
++-------------+-----------------+-------------------------+
+|CB 70        |bit 6,b          |bit 6,.b                 |
+|CB 71        |bit 6,c          |bit 6,.c                 |
+|CB 72        |bit 6,d          |bit 6,.d                 |
+|CB 73        |bit 6,e          |bit 6,.e                 |
+|CB 74        |bit 6,h          |bit 6,.h                 |
+|CB 75        |bit 6,l          |bit 6,.l                 |
+|CB 76        |bit 6,(hl)       |bit 6,[.hl]              |
+|CB 77        |bit 6,a          |bit 6,.a                 |
+|CB 78        |bit 7,b          |bit 7,.b                 |
+|CB 79        |bit 7,c          |bit 7,.c                 |
+|CB 7A        |bit 7,d          |bit 7,.d                 |
+|CB 7B        |bit 7,e          |bit 7,.e                 |
+|CB 7C        |bit 7,h          |bit 7,.h                 |
+|CB 7D        |bit 7,l          |bit 7,.l                 |
+|CB 7E        |bit 7,(hl)       |bit 7,[.hl]              |
+|CB 7F        |bit 7,a          |bit 7,.a                 |
++-------------+-----------------+-------------------------+
+|CB 80        |res 0,b          |clr 0,.b                 |
+|CB 81        |res 0,c          |clr 0,.c                 |
+|CB 82        |res 0,d          |clr 0,.d                 |
+|CB 83        |res 0,e          |clr 0,.e                 |
+|CB 84        |res 0,h          |clr 0,.h                 |
+|CB 85        |res 0,l          |clr 0,.l                 |
+|CB 86        |res 0,(hl)       |clr 0,[.hl]              |
+|CB 87        |res 0,a          |clr 0,.a                 |
+|CB 88        |res 1,b          |clr 1,.b                 |
+|CB 89        |res 1,c          |clr 1,.c                 |
+|CB 8A        |res 1,d          |clr 1,.d                 |
+|CB 8B        |res 1,e          |clr 1,.e                 |
+|CB 8C        |res 1,h          |clr 1,.h                 |
+|CB 8D        |res 1,l          |clr 1,.l                 |
+|CB 8E        |res 1,(hl)       |clr 1,[.hl]              |
+|CB 8F        |res 1,a          |clr 1,.a                 |
++-------------+-----------------+-------------------------+
+|CB 90        |res 2,b          |clr 2,.b                 |
+|CB 91        |res 2,c          |clr 2,.c                 |
+|CB 92        |res 2,d          |clr 2,.d                 |
+|CB 93        |res 2,e          |clr 2,.e                 |
+|CB 94        |res 2,h          |clr 2,.h                 |
+|CB 95        |res 2,l          |clr 2,.l                 |
+|CB 96        |res 2,(hl)       |clr 2,[.hl]              |
+|CB 97        |res 2,a          |clr 2,.a                 |
+|CB 98        |res 3,b          |clr 3,.b                 |
+|CB 99        |res 3,c          |clr 3,.c                 |
+|CB 9A        |res 3,d          |clr 3,.d                 |
+|CB 9B        |res 3,e          |clr 3,.e                 |
+|CB 9C        |res 3,h          |clr 3,.h                 |
+|CB 9D        |res 3,l          |clr 3,.l                 |
+|CB 9E        |res 3,(hl)       |clr 3,[.hl]              |
+|CB 9F        |res 3,a          |clr 3,.a                 |
++-------------+-----------------+-------------------------+
+|CB A0        |res 4,b          |clr 4,.b                 |
+|CB A1        |res 4,c          |clr 4,.c                 |
+|CB A2        |res 4,d          |clr 4,.d                 |
+|CB A3        |res 4,e          |clr 4,.e                 |
+|CB A4        |res 4,h          |clr 4,.h                 |
+|CB A5        |res 4,l          |clr 4,.l                 |
+|CB A6        |res 4,(hl)       |clr 4,[.hl]              |
+|CB A7        |res 4,a          |clr 4,.a                 |
+|CB A8        |res 5,b          |clr 5,.b                 |
+|CB A9        |res 5,c          |clr 5,.c                 |
+|CB AA        |res 5,d          |clr 5,.d                 |
+|CB AB        |res 5,e          |clr 5,.e                 |
+|CB AC        |res 5,h          |clr 5,.h                 |
+|CB AD        |res 5,l          |clr 5,.l                 |
+|CB AE        |res 5,(hl)       |clr 5,[.hl]              |
+|CB AF        |res 5,a          |clr 5,.a                 |
++-------------+-----------------+-------------------------+
+|CB B0        |res 6,b          |clr 6,.b                 |
+|CB B1        |res 6,c          |clr 6,.c                 |
+|CB B2        |res 6,d          |clr 6,.d                 |
+|CB B3        |res 6,e          |clr 6,.e                 |
+|CB B4        |res 6,h          |clr 6,.h                 |
+|CB B5        |res 6,l          |clr 6,.l                 |
+|CB B6        |res 6,(hl)       |clr 6,[.hl]              |
+|CB B7        |res 6,a          |clr 6,.a                 |
+|CB B8        |res 7,b          |clr 7,.b                 |
+|CB B9        |res 7,c          |clr 7,.c                 |
+|CB BA        |res 7,d          |clr 7,.d                 |
+|CB BB        |res 7,e          |clr 7,.e                 |
+|CB BC        |res 7,h          |clr 7,.h                 |
+|CB BD        |res 7,l          |clr 7,.l                 |
+|CB BE        |res 7,(hl)       |clr 7,[.hl]              |
+|CB BF        |res 7,a          |clr 7,.a                 |
++-------------+-----------------+-------------------------+
+|CB C0        |set 0,b          |set 0,.b                 |
+|CB C1        |set 0,c          |set 0,.c                 |
+|CB C2        |set 0,d          |set 0,.d                 |
+|CB C3        |set 0,e          |set 0,.e                 |
+|CB C4        |set 0,h          |set 0,.h                 |
+|CB C5        |set 0,l          |set 0,.l                 |
+|CB C6        |set 0,(hl)       |set 0,[.hl]              |
+|CB C7        |set 0,a          |set 0,.a                 |
+|CB C8        |set 1,b          |set 1,.b                 |
+|CB C9        |set 1,c          |set 1,.c                 |
+|CB CA        |set 1,d          |set 1,.d                 |
+|CB CB        |set 1,e          |set 1,.e                 |
+|CB CC        |set 1,h          |set 1,.h                 |
+|CB CD        |set 1,l          |set 1,.l                 |
+|CB CE        |set 1,(hl)       |set 1,[.hl]              |
+|CB CF        |set 1,a          |set 1,.a                 |
++-------------+-----------------+-------------------------+
+|CB D0        |set 2,b          |set 2,.b                 |
+|CB D1        |set 2,c          |set 2,.c                 |
+|CB D2        |set 2,d          |set 2,.d                 |
+|CB D3        |set 2,e          |set 2,.e                 |
+|CB D4        |set 2,h          |set 2,.h                 |
+|CB D5        |set 2,l          |set 2,.l                 |
+|CB D6        |set 2,(hl)       |set 2,[.hl]              |
+|CB D7        |set 2,a          |set 2,.a                 |
+|CB D8        |set 3,b          |set 3,.b                 |
+|CB D9        |set 3,c          |set 3,.c                 |
+|CB DA        |set 3,d          |set 3,.d                 |
+|CB DB        |set 3,e          |set 3,.e                 |
+|CB DC        |set 3,h          |set 3,.h                 |
+|CB DD        |set 3,l          |set 3,.l                 |
+|CB DE        |set 3,(hl)       |set 3,[.hl]              |
+|CB DF        |set 3,a          |set 3,.a                 |
++-------------+-----------------+-------------------------+
+|CB E0        |set 4,b          |set 4,.b                 |
+|CB E1        |set 4,c          |set 4,.c                 |
+|CB E2        |set 4,d          |set 4,.d                 |
+|CB E3        |set 4,e          |set 4,.e                 |
+|CB E4        |set 4,h          |set 4,.h                 |
+|CB E5        |set 4,l          |set 4,.l                 |
+|CB E6        |set 4,(hl)       |set 4,[.hl]              |
+|CB E7        |set 4,a          |set 4,.a                 |
+|CB E8        |set 5,b          |set 5,.b                 |
+|CB E9        |set 5,c          |set 5,.c                 |
+|CB EA        |set 5,d          |set 5,.d                 |
+|CB EB        |set 5,e          |set 5,.e                 |
+|CB EC        |set 5,h          |set 5,.h                 |
+|CB ED        |set 5,l          |set 5,.l                 |
+|CB EE        |set 5,(hl)       |set 5,[.hl]              |
+|CB EF        |set 5,a          |set 5,.a                 |
++-------------+-----------------+-------------------------+
+|CB F0        |set 6,b          |set 6,.b                 |
+|CB F1        |set 6,c          |set 6,.c                 |
+|CB F2        |set 6,d          |set 6,.d                 |
+|CB F3        |set 6,e          |set 6,.e                 |
+|CB F4        |set 6,h          |set 6,.h                 |
+|CB F5        |set 6,l          |set 6,.l                 |
+|CB F6        |set 6,(hl)       |set 6,[.hl]              |
+|CB F7        |set 6,a          |set 6,.a                 |
+|CB F8        |set 7,b          |set 7,.b                 |
+|CB F9        |set 7,c          |set 7,.c                 |
+|CB FA        |set 7,d          |set 7,.d                 |
+|CB FB        |set 7,e          |set 7,.e                 |
+|CB FC        |set 7,h          |set 7,.h                 |
+|CB FD        |set 7,l          |set 7,.l                 |
+|CB FE        |set 7,(hl)       |set 7,[.hl]              |
+|CB FF        |set 7,a          |set 7,.a                 |
++=============+=================+=========================+
+|CC nnl nnh   |call z,nn        |call z,nn                |
+|CD nnl nnh   |call nn          |call nn                  |
+|CE n         |adc a,n          |addc .a,n                |
+|CF           |rst 08H          |brk 08H                  |
++-------------+-----------------+-------------------------+
+|D0           |ret nc           |ret nc                   |
+|D1           |pop de           |pop .de                  |
+|D2 nnl nnh   |jp nc,nn         |bnc nn                   |
+|D3 n         |out (n),a        |out [n],.a               |
+|D4 nnl nnh   |call nc,nn       |call nc,nn               |
+|D5           |push de          |push .de                 |
+|D6 n         |sub n            |sub .a,n                 |
+|D7           |rst 10H          |brk 10H                  |
+|D8           |ret c            |ret c                    |
+|D9           |exx              |xchx                     |
+|DA nnl nnh   |jp c,nn          |bc nn                    |
+|DB n         |in a,(n)         |in .a,[n]                |
+|DC nnl nnh   |call c,nn        |call c,nn                |
++=============+=================+=========================+
+|DD 00        |                                           |
+|.............|             invalid op-codes              |
+|DD 08        |                                           |
++-------------+-----------------+-------------------------+
+|DD 09        |add ix,bc        |add .ix,.bc              |
++-------------+-----------------+-------------------------+
+|DD 0A        |                                           |
+|.............|             invalid op-codes              |
+|DD 18        |                                           |
++-------------+-----------------+-------------------------+
+|DD 19        |add ix,de        |add .ix,.de              |
++-------------+-----------------+-------------------------+
+|DD 1A        |                                           |
+|.............|             invalid op-codes              |
+|DD 20        |                                           |
++-------------+-----------------+-------------------------+
+|DD 21 nnl nnh|ld ix,nn         |ld .ix,nn                |
+|DD 22 nnl nnh|ld (nn),ix       |ld [nn],.ix              |
+|DD 23        |inc ix           |inc .ix                  |
+|DD 24        | invalid op-code |inc .ixh                 |
+|DD 25        | invalid op-code |dec .ixh                 |
+|DD 26 n      | invalid op-code |ld .ixh,n                |
++-------------+-----------------+-------------------------+
+|DD 27        |             invalid op-code               |
+|DD 28        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|DD 29        |add ix,ix        |add .ix,.ix              |
+|DD 2A nnl nnh|ld ix,(nn)       |ld .ix,[nn]              |
+|DD 2B        |dec ix           |dec .ix                  |
+|DD 2C        | invalid op-code |inc .ixl                 |
+|DD 2D        | invalid op-code |dec .ixl                 |
+|DD 2E n      | invalid op-code |ld .ixl,n                |
++-------------+-----------------+-------------------------+
+|DD 2F        |                                           |
+|.............|             invalid op-codes              |
+|DD 33        |                                           |
++-------------+-----------------+-------------------------+
+|DD 34 d      |inc (ix+d)       |inc [.ix+d]              |
+|DD 35 d      |dec (ix+d)       |dec [.ix+d]              |
+|DD 36 d n    |ld (ix+d),n      |ld [.ix+d],n             |
++-------------+-----------------+-------------------------+
+|DD 37        |             invalid op-code               |
+|DD 38        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|DD 39        |add ix,sp        |add .ix,.sp              |
++-------------+-----------------+-------------------------+
+|DD 40        | invalid op-code |ld .b,.b                 |
+|DD 41        | invalid op-code |ld .b,.c                 |
+|DD 42        | invalid op-code |ld .b,.d                 |
+|DD 43        | invalid op-code |ld .b,.e                 |
+|DD 44        | invalid op-code |ld .b,.ixh               |
+|DD 45        | invalid op-code |ld .b,.ixl               |
+|DD 46 d      |ld b,(ix+d)      |ld .b,[.ix+d]            |
+|DD 47        | invalid op-code |ld .b,.a                 |
+|DD 48        | invalid op-code |ld .c,.b                 |
+|DD 49        | invalid op-code |ld .c,.c                 |
+|DD 4A        | invalid op-code |ld .c,.d                 |
+|DD 4B        | invalid op-code |ld .c,.e                 |
+|DD 4C        | invalid op-code |ld .c,.ixh               |
+|DD 4D        | invalid op-code |ld .c,.ixl               |
+|DD 4E d      |ld c,(ix+d)      |ld .c,[.ix+d]            |
+|DD 4F        | invalid op-code |ld .c,.a                 |
++-------------+-----------------+-------------------------+
+|DD 50        | invalid op-code |ld .d,.b                 |
+|DD 51        | invalid op-code |ld .d,.c                 |
+|DD 52        | invalid op-code |ld .d,.d                 |
+|DD 53        | invalid op-code |ld .d,.e                 |
+|DD 54        | invalid op-code |ld .d,.ixh               |
+|DD 55        | invalid op-code |ld .d,.ixl               |
+|DD 56 d      |ld d,(ix+d)      |ld .d,[.ix+d]            |
+|DD 57        | invalid op-code |ld .d,.a                 |
+|DD 58        | invalid op-code |ld .e,.b                 |
+|DD 59        | invalid op-code |ld .e,.c                 |
+|DD 5A        | invalid op-code |ld .e,.d                 |
+|DD 5B        | invalid op-code |ld .e,.e                 |
+|DD 5C        | invalid op-code |ld .e,.ixh               |
+|DD 5D        | invalid op-code |ld .e,.ixl               |
+|DD 5E d      |ld e,(ix+d)      |ld .e,[.ix+d]            |
+|DD 5F        | invalid op-code |ld .e,.a                 |
++-------------+-----------------+-------------------------+
+|DD 60        | invalid op-code |ld .ixh,.b               |
+|DD 61        | invalid op-code |ld .ixh,.c               |
+|DD 62        | invalid op-code |ld .ixh,.d               |
+|DD 63        | invalid op-code |ld .ixh,.e               |
+|DD 64        | invalid op-code |ld .ixh,.ixh             |
+|DD 65        | invalid op-code |ld .ixh,.ixl             |
+|DD 66 d      |ld h,(ix+d)      |ld .h,[.ix+d]            |
+|DD 67        | invalid op-code |ld .ixh,.a               |
+|DD 68        | invalid op-code |ld .ixl,.b               |
+|DD 69        | invalid op-code |ld .ixl,.c               |
+|DD 6A        | invalid op-code |ld .ixl,.d               |
+|DD 6B        | invalid op-code |ld .ixl,.e               |
+|DD 6C        | invalid op-code |ld .ixl,.ixh             |
+|DD 6D        | invalid op-code |ld .ixl,.ixl             |
+|DD 6E d      |ld l,(ix+d)      |ld .l,[.ix+d]            |
+|DD 6F        | invalid op-code |ld .ixl,.a               |
++-------------+-----------------+-------------------------+
+|DD 70 d      |ld (ix+d),b      |ld [.ix+d],.b            |
+|DD 71 d      |ld (ix+d),c      |ld [.ix+d],.c            |
+|DD 72 d      |ld (ix+d),d      |ld [.ix+d],.d            |
+|DD 73 d      |ld (ix+d),e      |ld [.ix+d],.e            |
+|DD 74 d      |ld (ix+d),h      |ld [.ix+d],.h            |
+|DD 75 d      |ld (ix+d),l      |ld [.ix+d],.l            |
+|DD 77 d      |ld (ix+d),a      |ld [.ix+d],.a            |
+|DD 78        | invalid op-code |ld .a,.b                 |
+|DD 79        | invalid op-code |ld .a,.c                 |
+|DD 7A        | invalid op-code |ld .a,.d                 |
+|DD 7B        | invalid op-code |ld .a,.e                 |
+|DD 7C        | invalid op-code |ld .a,.ixh               |
+|DD 7D        | invalid op-code |ld .a,.ixl               |
+|DD 7E d      |ld a,(ix+d)      |ld .a,[.ix+d]            |
+|DD 7F        | invalid op-code |ld .a,.a                 |
++-------------+-----------------+-------------------------+
+|DD 80        |                                           |
+|.............|             invalid op-codes              |
+|DD 83        |                                           |
++-------------+-----------------+-------------------------+
+|DD 84        | invalid op-code |add .a,.ixh              |
+|DD 85        | invalid op-code |add .a,.ixl              |
+|DD 86 d      |add a,(ix+d)     |add .a,[.ix+d]           |
++-------------+-----------------+-------------------------+
+|DD 87        |                                           |
+|.............|             invalid op-codes              |
+|DD 8B        |                                           |
++-------------+-----------------+-------------------------+
+|DD 8C        | invalid op-code |addc .a,.ixh             |
+|DD 8D        | invalid op-code |addc .a,.ixl             |
+|DD 8E d      |adc a,(ix+d)     |addc .a,[.ix+d]          |
++-------------+-----------------+-------------------------+
+|DD 8F        |                                           |
+|.............|             invalid op-codes              |
+|DD 83        |                                           |
++-------------+-----------------+-------------------------+
+|DD 94        | invalid op-code |sub .a,.ixh              |
+|DD 95        | invalid op-code |sub .a,.ixl              |
+|DD 96 d      |sub (ix+d)       |sub .a,[.ix+d]           |
++-------------+-----------------+-------------------------+
+|DD 97        |                                           |
+|.............|             invalid op-codes              |
+|DD 9B        |                                           |
++-------------+-----------------+-------------------------+
+|DD 9C        | invalid op-code |subc .a,.ixh             |
+|DD 9D        | invalid op-code |subc .a,.ixl             |
+|DD 9E d      |sbc a,(ix+d)     |subc .a,[.ix+d]          |
++-------------+-----------------+-------------------------+
+|DD 9F        |                                           |
+|.............|             invalid op-codes              |
+|DD A3        |                                           |
++-------------+-----------------+-------------------------+
+|DD A4        | invalid op-code |and .a,.ixh              |
+|DD A5        | invalid op-code |and .a,.ixl              |
+|DD A6 d      |and (ix+d)       |and .a,[.ix+d]           |
++-------------+-----------------+-------------------------+
+|DD A7        |                                           |
+|.............|             invalid op-codes              |
+|DD AB        |                                           |
++-------------+-----------------+-------------------------+
+|DD AC        | invalid op-code |xor .a,.ixh              |
+|DD AD        | invalid op-code |xor .a,.ixl              |
+|DD AE d      |xor (ix+d)       |xor .a,[.ix+d]           |
++-------------+-----------------+-------------------------+
+|DD AF        |                                           |
+|.............|             invalid op-codes              |
+|DD B3        |                                           |
++-------------+-----------------+-------------------------+
+|DD B4        | invalid op-code |or .a,.ixh               |
+|DD B5        | invalid op-code |or .a,.ixl               |
+|DD B6 d      |or (ix+d)        |or .a,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD B7        |                                           |
+|.............|             invalid op-codes              |
+|DD BB        |                                           |
++-------------+-----------------+-------------------------+
+|DD BC        | invalid op-code |cmp .a,.ixh              |
+|DD BD        | invalid op-code |cmp .a,.ixl              |
+|DD BE d      |cp (ix+d)        |cmp .a,[.ix+d]           |
++-------------+-----------------+-------------------------+
+|DD BF        |                                           |
+|.............|             invalid op-codes              |
+|DD CA        |                                           |
++=============+=================+=========================+
+|DD CB d 06   |rlc (ix+d)       |rol [.ix+d]              |
+|DD CB d 0E   |rrc (ix+d)       |ror [.ix+d]              |
+|DD CB d 16   |rl (ix+d)        |rolc [.ix+d]             |
+|DD CB d 1E   |rr (ix+d)        |rorc [.ix+d]             |
++-------------+-----------------+-------------------------+
+|DD CB d 1F   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 25   |                                           |
++-------------+-----------------+------------+------------+
+|DD CB d 26   |sla (ix+d)       |shl [.ix+d] |shla [.ix+d]|
++-------------+-----------------+------------+------------+
+|DD CB d 27   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 2D   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 2E   |sra (ix+d)       |shra [ix+d]              |
++-------------+-----------------+-------------------------+
+|DD CB d 2F   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 3D   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 3E   |srl (ix+d)       |shr [.ix+d]              |
++-------------+-----------------+-------------------------+
+|DD CB d 3F   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 45   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 46   |bit 0,(ix+d)     |bit 0,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d 47   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 4D   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 4E   |bit 1,(ix+d)     |bit 1,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d 4F   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 55   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 56   |bit 2,(ix+d)     |bit 2,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d 57   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 5D   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 5E   |bit 3,(ix+d)     |bit 3,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d 5F   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 65   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 66   |bit 4,(ix+d)     |bit 4,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d 67   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 6D   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 6E   |bit 5,(ix+d)     |bit 5,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d 6F   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 75   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 76   |bit 6,(ix+d)     |bit 6,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d 77   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 7D   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 7E   |bit 7,(ix+d)     |bit 7,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d 7F   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 85   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 86   |res 0,(ix+d)     |clr 0,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d 87   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 8D   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 8E   |res 1,(ix+d)     |clr 1,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d 8F   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 95   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 96   |res 2,(ix+d)     |clr 2,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d 97   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d 9D   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d 9E   |res 3,(ix+d)     |clr 3,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d 9F   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d A5   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d A6   |res 4,(ix+d)     |clr 4,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d A7   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d AD   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d AE   |res 5,(ix+d)     |clr 5,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d AF   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d B5   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d B6   |res 6,(ix+d)     |clr 6,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d B7   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d BD   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d BE   |res 7,(ix+d)     |clr 7,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d BF   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d C5   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d C6   |set 0,(ix+d)     |set 0,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d C7   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d CD   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d CE   |set 1,(ix+d)     |set 1,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d CF   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d D5   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d D6   |set 2,(ix+d)     |set 2,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d D7   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d DD   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d DE   |set 3,(ix+d)     |set 3,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d DF   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d E5   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d E6   |set 4,(ix+d)     |set 4,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d E7   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d ED   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d EE   |set 5,(ix+d)     |set 5,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d EF   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d F5   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d F6   |set 6,(ix+d)     |set 6,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d F7   |                                           |
+|.............|             invalid op-codes              |
+|DD CB d FD   |                                           |
++-------------+-----------------+-------------------------+
+|DD CB d FE   |set 7,(ix+d)     |set 7,[.ix+d]            |
++-------------+-----------------+-------------------------+
+|DD CB d FF   |             invalid op-code               |
++=============+=================+=========================+
+|DD CC        |                                           |
+|.............|             invalid op-codes              |
+|DD E0        |                                           |
++-------------+-----------------+-------------------------+
+|DD E1        |pop ix           |pop .ix                  |
++-------------+-----------------+-------------------------+
+|DD E2        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|DD E3        |ex (sp),ix       |xch [.sp],.ix            |
++-------------+-----------------+-------------------------+
+|DD E4        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|DD E5        |push ix          |push .ix                 |
++-------------+-----------------+-------------------------+
+|DD E6        |                                           |
+|.............|             invalid op-codes              |
+|DD E8        |                                           |
++-------------+-----------------+-------------------------+
+|DD E9        |jp (ix)          |br [.ix]                 |
++-------------+-----------------+-------------------------+
+|DD EA        |                                           |
+|.............|             invalid op-codes              |
+|DD F8        |                                           |
++-------------+-----------------+-------------------------+
+|DD F9        |ld sp,ix         |ld .sp,.ix               |
++-------------+-----------------+-------------------------+
+|DD FA        |                                           |
+|.............|             invalid op-codes              |
+|DD FF        |                                           |
++=============+=================+=========================+
+|DE n         |sbc a,n          |subc .a,n                |
+|DF           |rst 18H          |brk 18H                  |
++-------------+-----------------+-------------------------+
+|E0           |ret po           |ret po                   |
+|E1           |pop hl           |pop .hl                  |
+|E2 nnl nnh   |jp po,nn         |bpo nn                   |
+|E3           |ex (sp),hl       |xch [.sp],.hl            |
+|E4 nnl nnh   |call po,nn       |call po,nn               |
+|E5           |push hl          |push .hl                 |
+|E6 n         |and n            |and .a,n                 |
+|E7           |rst 20H          |brk 20H                  |
+|E8           |ret pe           |ret pe                   |
+|E9           |jp (hl)          |br [.hl]                 |
+|EA nnl nnh   |jp pe,nn         |bpe nn                   |
+|EB           |ex de,hl         |xch .de,.hl              |
+|EC nnl nnh   |call pe,nn       |call pe,nn               |
++=============+=================+=========================+
+|ED 00        |                                           |
+|.............|             invalid op-codes              |
+|ED 3F        |                                           |
++-------------+-----------------+-------------------------+
+|ED 40        |in b,(c)         |in .b,[.c]               |
+|ED 41        |out (c),b        |out [.c],.b              |
+|ED 42        |sbc hl,bc        |subc .hl,.bc             |
+|ED 43 nnl nnh|ld (nn),bc       |ld [nn],.bc              |
+|ED 44        |neg              |neg .a                   |
+|ED 45        |retn             |retn                     |
+|ED 46        |im 0             |im 0                     |
+|ED 47        |ld i,a           |ld .i,.a                 |
+|ED 48        |in c,(c)         |in .c,[.c]               |
+|ED 49        |out (c),c        |out [.c],.c              |
+|ED 4A        |adc hl,bc        |addc .hl,.bc             |
+|ED 4B nnl nnh|ld bc,(nn)       |ld .bc,[nn]              |
++-------------+-----------------+-------------------------+
+|ED 4C        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|ED 4D        |reti             |reti                     |
++-------------+-----------------+-------------------------+
+|ED 4E        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|ED 4F        |ld r,a           |ld .r,.a                 |
++-------------+-----------------+-------------------------+
+|ED 50        |in d,(c)         |in .d,[.c]               |
+|ED 51        |out (c),d        |out [.c],.d              |
+|ED 52        |sbc hl,de        |subc .hl,.de             |
+|ED 53 nnl nnh|ld (nn),de       |ld [nn],.de              |
++-------------+-----------------+-------------------------+
+|ED 54        |             invalid op-code               |
+|ED 55        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|ED 56        |im 1             |im 1                     |
+|ED 57        |ld a,i           |ld .a,.i                 |
+|ED 58        |in e,(c)         |in .e,[.c]               |
+|ED 59        |out (c),e        |out [.c],.e              |
+|ED 5A        |adc hl,de        |addc .hl,.de             |
+|ED 5B nnl nnh|ld de,(nn)       |ld .de,[nn]              |
++-------------+-----------------+-------------------------+
+|ED 5C        |             invalid op-code               |
+|ED 5D        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|ED 5E        |im 2             |im 2                     |
+|ED 5F        |ld a,r           |ld .a,.r                 |
++-------------+-----------------+-------------------------+
+|ED 60        |in h,(c)         |in .h,[.c]               |
+|ED 61        |out (c),h        |out [.c],.h              |
+|ED 62        |sbc hl,hl        |subc .hl,.hl             |
+|ED 63 nnl nnh|ld (nn),hl       |ld [nn],.hl              |
++-------------+-----------------+-------------------------+
+|ED 64        |                                           |
+|.............|             invalid op-codes              |
+|ED 66        |                                           |
++-------------+-----------------+-------------------------+
+|ED 67        |rrd              |rol4 [.hl]               |
+|ED 68        |in l,(c)         |in .l,[.c]               |
+|ED 69        |out (c),l        |out [.c],.l              |
+|ED 6A        |adc hl,hl        |addc .hl,.hl             |
+|ED 6B nnl nnh|ld hl,(nn)       |ld .hl,[nn]              |
++-------------+-----------------+-------------------------+
+|ED 6C        |                                           |
+|.............|             invalid op-codes              |
+|ED 6E        |                                           |
++-------------+-----------------+-------------------------+
+|ED 6F        |rld              |rol4 [.hl]               |
++-------------+-----------------+-------------------------+
+|ED 70        | *1              |in .f,[.c]               |
++-------------+-----------------+-------------------------+
+|ED 71        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|ED 72        |sbc hl,sp        |subc .hl,.sp             |
+|ED 73 nnl nnh|ld (nn),sp       |ld [nn],.sp              |
++-------------+-----------------+-------------------------+
+|ED 74        |                                           |
+|.............|             invalid op-codes              |
+|ED 77        |                                           |
++-------------+-----------------+-------------------------+
+|ED 78        |in a,(c)         |in .a,[.c]               |
+|ED 79        |out (c),a        |out [.c],.a              |
+|ED 7A        |adc hl,sp        |addc .hl,.sp             |
+|ED 7B nnl nnh|ld sp,(nn)       |ld .sp,[nn]              |
++-------------+-----------------+-------------------------+
+|ED 7C        |                                           |
+|.............|             invalid op-codes              |
+|ED 9F        |                                           |
++-------------+-----------------+-------------------------+
+|ED A0        |ldi              |move [.hl++],[.de++]     |
+|ED A1        |cpi              |cmp .a,[.hl++]           |
+|ED A2        |ini              |in [.hl++],[.c]          |
+|ED A3        |outi             |out [.c],[.hl++]         |
++-------------+-----------------+-------------------------+
+|ED A4        |                                           |
+|.............|             invalid op-codes              |
+|ED A7        |                                           |
++-------------+-----------------+-------------------------+
+|ED A8        |ldd              |move [.hl--],[.de--]     |
+|ED A9        |cpd              |cmp .a,[.hl--]           |
+|ED AA        |ind              |in [.hl--],[.c]          |
+|ED AB        |outd             |out [.c],[.hl--]         |
++-------------+-----------------+-------------------------+
+|ED AC        |                                           |
+|.............|             invalid op-codes              |
+|ED AF        |                                           |
++-------------+-----------------+-------------------------+
+|ED B0        |ldir             |movem [.hl++],[.de++]    |
+|ED B1        |cpir             |cmpm .a,[.hl++]          |
+|ED B2        |inir             |inm [.hl++],[.c]         |
+|ED B3        |otir             |outm [.c],[.hl++]        |
++-------------+-----------------+-------------------------+
+|ED B4        |                                           |
+|.............|             invalid op-codes              |
+|ED B7        |                                           |
++-------------+-----------------+-------------------------+
+|ED B8        |lddr             |movem [.hl--],[.de--]    |
+|ED B9        |cpdr             |cmpm .a,[.hl--]          |
+|ED BA        |indr             |inm [.hl--],[.c]         |
+|ED BB        |otdr             |outm [.c],[.hl--]        |
++-------------+-----------------+-------------------------+
+|ED BC        |                                           |
+|.............|             invalid op-codes              |
+|ED C0        |                                           |
++-------------+-----------------+-------------------------+
+|ED C1        | invalid op-code |mulub .a,.b              |
++-------------+-----------------+-------------------------+
+|ED C2        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|ED C3        | invalid op-code |muluw .hl,.bc            |
++-------------+-----------------+-------------------------+
+|ED C4        |                                           |
+|.............|             invalid op-codes              |
+|ED C8        |                                           |
++-------------+-----------------+-------------------------+
+|ED C9        | invalid op-code |mulub .a,.c              |
++-------------+-----------------+-------------------------+
+|ED CA        |                                           |
+|.............|             invalid op-codes              |
+|ED D0        |                                           |
++-------------+-----------------+-------------------------+
+|ED D1        | invalid op-code |mulub .a,.d              |
++-------------+-----------------+-------------------------+
+|ED C2        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|ED D3        | invalid op-code |muluw .hl,.de            |
++-------------+-----------------+-------------------------+
+|ED D4        |                                           |
+|.............|             invalid op-codes              |
+|ED D8        |                                           |
++-------------+-----------------+-------------------------+
+|ED D9        | invalid op-code |mulub .a,.e              |
++-------------+-----------------+-------------------------+
+|ED DA        |                                           |
+|.............|             invalid op-codes              |
+|ED E0        |                                           |
++-------------+-----------------+-------------------------+
+|ED E1        | invalid op-code |mulub .a,.h              |
++-------------+-----------------+-------------------------+
+|ED E2        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|ED E3        | invalid op-code |muluw .hl,.hl            |
++-------------+-----------------+-------------------------+
+|ED E4        |                                           |
+|.............|             invalid op-codes              |
+|ED E8        |                                           |
++-------------+-----------------+-------------------------+
+|ED E9        | invalid op-code |mulub .a,.l              |
++-------------+-----------------+-------------------------+
+|ED EA        |                                           |
+|.............|             invalid op-codes              |
+|ED F2        |                                           |
++-------------+-----------------+-------------------------+
+|ED F3        | invalid op-code |muluw .hl,.sp            |
++-------------+-----------------+-------------------------+
+|ED F4        |                                           |
+|.............|             invalid op-codes              |
+|ED F8        |                                           |
++-------------+-----------------+-------------------------+
+|ED F9        | invalid op-code |mulub .a,.a              |
++-------------+-----------------+-------------------------+
+|ED FA        |                                           |
+|.............|             invalid op-codes              |
+|ED FF        |                                           |
++=============+=================+=========================+
+|EE n         |xor n            |xor .a,n                 |
+|EF           |rst 28H          |brk 28H                  |
+|F0           |ret p            |ret p                    |
+|F1           |pop af           |pop .af                  |
+|F2 nnl nnh   |jp p,nn          |bp nn                    |
+|F3           |di               |di                       |
+|F4 nnl nnh   |call p,nn        |call p,nn                |
+|F5           |push af          |push .af                 |
+|F6 n         |or n             |or .a,n                  |
+|F7           |rst 30H          |brk 30H                  |
+|F8           |ret m            |ret m                    |
+|F9           |ld sp,hl         |ld .sp,.hl               |
+|FA nnl nnh   |jp m,nn          |bm nn                    |
+|FB           |ei               |ei                       |
+|FC nnl nnh   |call m,nn        |call m,nn                |
++=============+=================+=========================+
+|FD 00        |                                           |
+|.............|             invalid op-codes              |
+|FD 08        |                                           |
++-------------+-----------------+-------------------------+
+|FD 09        |add iy,bc        |add .iy,.bc              |
++-------------+-----------------+-------------------------+
+|FD 0A        |                                           |
+|.............|             invalid op-codes              |
+|FD 18        |                                           |
++-------------+-----------------+-------------------------+
+|FD 19        |add iy,de        |add .iy,.de              |
++-------------+-----------------+-------------------------+
+|FD 1A        |                                           |
+|.............|             invalid op-codes              |
+|FD 20        |                                           |
++-------------+-----------------+-------------------------+
+|FD 21 nnl nnh|ld iy,nn         |ld .iy,nn                |
+|FD 22 nnl nnh|ld (nn),iy       |ld [nn],.iy              |
+|FD 23        |inc iy           |inc .iy                  |
+|FD 24        | invalid op-code |inc .iyh                 |
+|FD 25        | invalid op-code |dec .iyh                 |
+|FD 26 n      | invalid op-code |ld .iyh,n                |
++-------------+-----------------+-------------------------+
+|FD 27        |             invalid op-code               |
+|FD 28        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|FD 29        |add iy,iy        |add .iy,.iy              |
+|FD 2A nnl nnh|ld iy,(nn)       |ld .iy,[nn]              |
+|FD 2B        |dec iy           |dec .iy                  |
+|FD 2C        | invalid op-code |inc .iyl                 |
+|FD 2D        | invalid op-code |dec .iyl                 |
+|FD 2E n      | invalid op-code |ld .iyl,n                |
++-------------+-----------------+-------------------------+
+|FD 2F        |                                           |
+|.............|             invalid op-codes              |
+|FD 33        |                                           |
++-------------+-----------------+-------------------------+
+|FD 34 d      |inc (iy+d)       |inc [.iy+d]              |
+|FD 35 d      |dec (iy+d)       |dec [.iy+d]              |
+|FD 36 d n    |ld (iy+d),n      |ld [.iy+d],n             |
++-------------+-----------------+-------------------------+
+|FD 37        |             invalid op-code               |
+|FD 38        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|FD 39        |add iy,sp        |add .iy,.sp              |
++-------------+-----------------+-------------------------+
+|FD 40        | invalid op-code |ld .b,.b                 |
+|FD 41        | invalid op-code |ld .b,.c                 |
+|FD 42        | invalid op-code |ld .b,.d                 |
+|FD 43        | invalid op-code |ld .b,.e                 |
+|FD 44        | invalid op-code |ld .b,.iyh               |
+|FD 45        | invalid op-code |ld .b,.iyl               |
+|FD 46 d      |ld b,(iy+d)      |ld .b,[.iy+d]            |
+|FD 47        | invalid op-code |ld .b,.a                 |
+|FD 48        | invalid op-code |ld .c,.b                 |
+|FD 49        | invalid op-code |ld .c,.c                 |
+|FD 4A        | invalid op-code |ld .c,.d                 |
+|FD 4B        | invalid op-code |ld .c,.e                 |
+|FD 4C        | invalid op-code |ld .c,.iyh               |
+|FD 4D        | invalid op-code |ld .c,.iyl               |
+|FD 4E d      |ld c,(iy+d)      |ld .c,[.iy+d]            |
+|FD 4F        | invalid op-code |ld .c,.a                 |
++-------------+-----------------+-------------------------+
+|FD 50        | invalid op-code |ld .d,.b                 |
+|FD 51        | invalid op-code |ld .d,.c                 |
+|FD 52        | invalid op-code |ld .d,.d                 |
+|FD 53        | invalid op-code |ld .d,.e                 |
+|FD 54        | invalid op-code |ld .d,.iyh               |
+|FD 55        | invalid op-code |ld .d,.iyl               |
+|FD 56 d      |ld d,(iy+d)      |ld .d,[.iy+d]            |
+|FD 57        | invalid op-code |ld .d,.a                 |
+|FD 58        | invalid op-code |ld .e,.b                 |
+|FD 59        | invalid op-code |ld .e,.c                 |
+|FD 5A        | invalid op-code |ld .e,.d                 |
+|FD 5B        | invalid op-code |ld .e,.e                 |
+|FD 5C        | invalid op-code |ld .e,.iyh               |
+|FD 5D        | invalid op-code |ld .e,.iyl               |
+|FD 5E d      |ld e,(iy+d)      |ld .e,[.iy+d]            |
+|FD 5F        | invalid op-code |ld .e,.a                 |
++-------------+-----------------+-------------------------+
+|FD 60        | invalid op-code |ld .iyh,.b               |
+|FD 61        | invalid op-code |ld .iyh,.c               |
+|FD 62        | invalid op-code |ld .iyh,.d               |
+|FD 63        | invalid op-code |ld .iyh,.e               |
+|FD 64        | invalid op-code |ld .iyh,.iyh             |
+|FD 65        | invalid op-code |ld .iyh,.iyl             |
+|FD 66 d      |ld h,(iy+d)      |ld .h,[.iy+d]            |
+|FD 67        | invalid op-code |ld .iyh,.a               |
+|FD 68        | invalid op-code |ld .iyl,.b               |
+|FD 69        | invalid op-code |ld .iyl,.c               |
+|FD 6A        | invalid op-code |ld .iyl,.d               |
+|FD 6B        | invalid op-code |ld .iyl,.e               |
+|FD 6C        | invalid op-code |ld .iyl,.iyh             |
+|FD 6D        | invalid op-code |ld .iyl,.iyl             |
+|FD 6E d      |ld l,(iy+d)      |ld .l,[.iy+d]            |
+|FD 6F        | invalid op-code |ld .iyl,.a               |
++-------------+-----------------+-------------------------+
+|FD 70 d      |ld (iy+d),b      |ld [.iy+d],.b            |
+|FD 71 d      |ld (iy+d),c      |ld [.iy+d],.c            |
+|FD 72 d      |ld (iy+d),d      |ld [.iy+d],.d            |
+|FD 73 d      |ld (iy+d),e      |ld [.iy+d],.e            |
+|FD 74 d      |ld (iy+d),h      |ld [.iy+d],.h            |
+|FD 75 d      |ld (iy+d),l      |ld [.iy+d],.l            |
++-------------+-----------------+-------------------------+
+|FD 76        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|FD 77 d      |ld (iy+d),a      |ld [.iy+d],.a            |
+|FD 78        | invalid op-code |ld .a,.b                 |
+|FD 79        | invalid op-code |ld .a,.c                 |
+|FD 7A        | invalid op-code |ld .a,.d                 |
+|FD 7B        | invalid op-code |ld .a,.e                 |
+|FD 7C        | invalid op-code |ld .a,.iyh               |
+|FD 7D        | invalid op-code |ld .a,.iyl               |
+|FD 7E d      |ld a,(iy+d)      |ld .a,[.iy+d]            |
+|FD 7F        | invalid op-code |ld .a,.a                 |
++-------------+-----------------+-------------------------+
+|FD 80        |                                           |
+|.............|             invalid op-codes              |
+|FD 83        |                                           |
++-------------+-----------------+-------------------------+
+|FD 84        | invalid op-code |add .a,.iyh              |
+|FD 85        | invalid op-code |add .a,.iyl              |
+|FD 86 d      |add a,(iy+d)     |add .a,[.iy+d]           |
++-------------+-----------------+-------------------------+
+|FD 87        |                                           |
+|.............|             invalid op-codes              |
+|FD 8B        |                                           |
++-------------+-----------------+-------------------------+
+|FD 8C        | invalid op-code |addc .a,.iyh             |
+|FD 8D        | invalid op-code |addc .a,.iyl             |
+|FD 8E d      |adc a,(iy+d)     |addc .a,[.iy+d]          |
++-------------+-----------------+-------------------------+
+|FD 8F        |                                           |
+|.............|             invalid op-codes              |
+|FD 93        |                                           |
++-------------+-----------------+-------------------------+
+|FD 94        | invalid op-code |sub .a,.iyh              |
+|FD 95        | invalid op-code |sub .a,.iyl              |
+|FD 96 d      |sub (iy+d)       |sub .a,[.iy+d]           |
++-------------+-----------------+-------------------------+
+|FD 97        |                                           |
+|.............|             invalid op-codes              |
+|FD 9B        |                                           |
++-------------+-----------------+-------------------------+
+|FD 9C        | invalid op-code |subc .a,.iyh             |
+|FD 9D        | invalid op-code |subc .a,.iyl             |
+|FD 9E d      |sbc a,(iy+d)     |subc .a,[.iy+d]          |
++-------------+-----------------+-------------------------+
+|FD 9F        |                                           |
+|.............|             invalid op-codes              |
+|FD A3        |                                           |
++-------------+-----------------+-------------------------+
+|FD A4        | invalid op-code |and .a,.iyh              |
+|FD A5        | invalid op-code |and .a,.iyl              |
+|FD A6 d      |and (iy+d)       |and .a,[.iy+d]           |
++-------------+-----------------+-------------------------+
+|FD A7        |                                           |
+|.............|             invalid op-codes              |
+|FD AB        |                                           |
++-------------+-----------------+-------------------------+
+|FD AC        | invalid op-code |xor .a,.iyh              |
+|FD AD        | invalid op-code |xor .a,.iyl              |
+|FD AE d      |xor (iy+d)       |xor .a,[.iy+d]           |
++-------------+-----------------+-------------------------+
+|FD AF        |                                           |
+|.............|             invalid op-codes              |
+|FD B3        |                                           |
++-------------+-----------------+-------------------------+
+|FD B4        | invalid op-code |or .a,.iyh               |
+|FD B5        | invalid op-code |or .a,.iyl               |
+|FD B6 d      |or (iy+d)        |or .a,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD B7        |                                           |
+|.............|             invalid op-codes              |
+|FD BB        |                                           |
++-------------+-----------------+-------------------------+
+|FD BC        | invalid op-code |cmp .a,.iyh              |
+|FD BD        | invalid op-code |cmp .a,.iyl              |
+|FD BE d      |cp (iy+d)        |cmp .a,[.iy+d]           |
++-------------+-----------------+-------------------------+
+|FD BF        |                                           |
+|.............|                                           |
+|FD CA        |             invalid op-codes              |
+|FD CB d 00   |                                           |
+|.............|                                           |
+|FD CB d 05   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 06   |rlc (iy+d)       |rol [.iy+d]              |
++-------------+-----------------+-------------------------+
+|FD CB d 07   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 0D   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 0E   |rrc (iy+d)       |ror [.iy+d]              |
++-------------+-----------------+-------------------------+
+|FD CB d 0F   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 15   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 16   |rl (iy+d)        |rolc [.iy+d]             |
++-------------+-----------------+-------------------------+
+|FD CB d 17   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 1D   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 1E   |rr (iy+d)        |rorc [.iy+d]             |
++-------------+-----------------+-------------------------+
+|FD CB d 1F   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 25   |                                           |
++-------------+-----------------+------------+------------+
+|FD CB d 26   |sla (iy+d)       |shl [.iy+d] |shla [.iy+d]|
++-------------+-----------------+------------+------------+
+|FD CB d 27   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 2D   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 2E   |sra (iy+d)       |shra [iy+d]              |
++-------------+-----------------+-------------------------+
+|FD CB d 2F   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 3D   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 3E   |srl (iy+d)       |shr [.iy+d]              |
++-------------+-----------------+-------------------------+
+|FD CB d 3F   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 45   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 46   |bit 0,(iy+d)     |bit 0,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d 47   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 4D   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 4E   |bit 1,(iy+d)     |bit 1,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d 4F   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 55   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 56   |bit 2,(iy+d)     |bit 2,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d 57   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 5D   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 5E   |bit 3,(iy+d)     |bit 3,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d 5F   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 65   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 66   |bit 4,(iy+d)     |bit 4,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d 67   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 6D   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 6E   |bit 5,(iy+d)     |bit 5,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d 6F   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 75   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 76   |bit 6,(iy+d)     |bit 6,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d 77   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 7D   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 7E   |bit 7,(iy+d)     |bit 7,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d 7F   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 85   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 86   |res 0,(iy+d)     |clr 0,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d 87   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 8D   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 8E   |res 1,(iy+d)     |clr 1,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d 8F   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 95   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 96   |res 2,(iy+d)     |clr 2,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d 97   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d 9D   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d 9E   |res 3,(iy+d)     |clr 3,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d 9F   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d A5   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d A6   |res 4,(iy+d)     |clr 4,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d A7   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d AD   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d AE   |res 5,(iy+d)     |clr 5,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d AF   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d B5   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d B6   |res 6,(iy+d)     |clr 6,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d B7   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d BD   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d BE   |res 7,(iy+d)     |clr 7,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d 3F   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d C5   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d C6   |set 0,(iy+d)     |set 0,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d C7   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d CD   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d CE   |set 1,(iy+d)     |set 1,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d CF   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d D5   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d D6   |set 2,(iy+d)     |set 2,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d D7   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d DD   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d DE   |set 3,(iy+d)     |set 3,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d DF   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d E5   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d E6   |set 4,(iy+d)     |set 4,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d E7   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d ED   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d EE   |set 5,(iy+d)     |set 5,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d EF   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d F5   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d F6   |set 6,(iy+d)     |set 6,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d F7   |                                           |
+|.............|             invalid op-codes              |
+|FD CB d FD   |                                           |
++-------------+-----------------+-------------------------+
+|FD CB d FE   |set 7,(iy+d)     |set 7,[.iy+d]            |
++-------------+-----------------+-------------------------+
+|FD CB d FF   |                                           |
+|FD CC        |             invalid op-codes              |
+|.............|                                           |
+|FD E0        |                                           |
++-------------+-----------------+-------------------------+
+|FD E1        |pop iy           |pop .iy                  |
++-------------+-----------------+-------------------------+
+|FD E2        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|FD E3        |ex (sp),iy       |xch [.sp],.iy            |
++-------------+-----------------+-------------------------+
+|FD E4        |             invalid op-code               |
++-------------+-----------------+-------------------------+
+|FD E5        |push iy          |push .iy                 |
++-------------+-----------------+-------------------------+
+|FD E6        |                                           |
+|.............|             invalid op-codes              |
+|FD E8        |                                           |
++-------------+-----------------+-------------------------+
+|FD E9        |jp (iy)          |br [.iy]                 |
++-------------+-----------------+-------------------------+
+|FD EA        |                                           |
+|.............|             invalid op-codes              |
+|FD F8        |                                           |
++-------------+-----------------+-------------------------+
+|FD F9        |ld sp,iy         |ld .sp,.iy               |
++-------------+-----------------+-------------------------+
+|FD FA        |                                           |
+|.............|             invalid op-codes              |
+|FD FF        |                                           |
++=============+=================+=========================+
+|FE n         |cp n             |cmp .a,n                 |
+|FF           |rst 38H          |brk 38H                  |
++-------------+-----------------+-------------------------+

@@ -1,0 +1,214 @@
+;
+;                      RockNRlr.SMM
+;
+;        "Rock'n'Roller" Source Game Music Module
+;
+; Version Amalthea-1-0 (1st Ver., 1st Release, No Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =RockNRlr.SMM
+;   L80 RockNRlr,RockNRlr.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Rock'n'Roller" game mapping:
+;
+;           8A39 8A89 D480 DFFF
+;   ...|?|?|?|?|M|?|?|?|?|M|?|?|
+;   4000                       FFFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+; Program addresses and constants.
+
+HOLD8  equ  0F806H
+EBTb0  equ  HOLD8
+Where  equ  EBTb0+039H
+
+LINTTB equ  0FBB2H
+SysDB  equ  LINTTB
+MSXV0C equ  SysDB+00EH
+SavHok equ  SysDB+010H
+
+FNKSTR equ  0F87FH
+EBDBnk equ  FNKSTR
+SaveSP equ  EBDBnk+0000FH
+
+HKEYI  equ  0FD9AH
+HTIMI  equ  0FD9FH
+
+
+; MSX PSG constants.
+
+PSGAdr equ  0A0H
+PSGWrP equ  0A1H
+PSGRdP equ  0A2H
+PChnCt equ  007H
+PAVol  equ  008H
+PBVol  equ  009H
+PCVol  equ  00AH
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '         Rock''N Roller          '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   06000H
+GMPNam:db   'Yawara  600'
+OpenMN:db   000H
+StrtSE:db   000H
+ChATDD:dw   0D9A9H+4
+ChBTDD:dw   0D9D7H+4
+ChCTDD:dw   0DA05H+4
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'RckNRlr0Sc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'RckNRlr1Sc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00010010B
+
+SetupR:jr   z,Start
+
+       ld   de,09002H
+       ld   a,(de)
+       ld   (SavHok),a
+       inc  de
+       ld   a,(de)
+       ld   (HTIMI),a
+
+       ld   hl,04000H        ; Restore disk work area.
+       ld   de,0D480H
+       ld   bc,01800H
+       ldir
+
+       pop  hl               ; Restore Stack Pointer.
+       ld   sp,(SaveSP)
+       jp   (hl)
+
+Start: ld   a,(09000H)
+       or   a
+       jr   z,SilnRt
+       ld   hl,0D480H        ; Save disk work area.
+       ld   de,04000H
+       ld   bc,01800H
+       ldir
+
+       pop  ix               ; Set new Stack Pointer.
+       ld   sp,0CFFFH
+
+       ld   hl,09000H        ; Move game block.
+       ld   de,0D480H
+       ld   bc,00B80H
+       ldir
+
+       push ix
+
+       xor  a
+       ld   c,0C9H
+       ld   hl,09000H
+       ld   (hl),a           ; Set main flag.
+       inc  hl
+       ld   (hl),a
+
+       inc  hl               ; Save old and reset hooks.
+       ex   de,hl
+       ld   hl,SavHok
+       ld   a,(hl)
+       ld   (de),a
+       ld   (hl),c
+       inc  de
+       ld   hl,HTIMI
+       ld   a,(hl)
+       ld   (de),a
+       ld   (hl),c
+SilnRt:ld   a,0FFH
+StMsRt:ld   (09001H),a
+       cp   00EH
+       jr   c,SetSFX
+       inc  a
+       jp   z,0DE8FH
+       xor  a
+       ld   de,0DD13H
+       call 0D480H
+       ld   a,001H
+       ld   de,0DD32H
+       call 0D480H
+       ld   a,002H
+       ld   de,0DD6DH
+       jp   0D480H
+
+SetSFX:ld   (08A85H),a
+       ret
+
+PlayRt:ld   (09001H),a
+       inc  a
+       ret  z
+       jp   08A39H
+
+GmBlNm:db   'RockNRlr000'
+GmBlSz:dw   00050H
+LoadAd:dw   08A39H
+GmBlN1:db   'RockNRlr001'
+GmBlS1:dw   00B80H
+LoadA1:dw   09000H
+       dw   0FFFFH
+MusicT:db   080H,' Theme of Rock''N Roller'
+       db   0FFH,0FFH
+EffctT:db   0FFH,'       Silence...      '
+       db   000H,'           00          '
+       db   001H,'           01          '
+       db   002H,'           02          '
+       db   003H,'           03          '
+       db   004H,'           04          '
+       db   005H,'           05          '
+       db   006H,'           06          '
+       db   007H,'           07          '
+       db   008H,'           08          '
+       db   009H,'           09          '
+       db   00AH,'           0A          '
+       db   00BH,'           0B          '
+       db   00CH,'           0C          '
+       db   00DH,'           0D          '
+       db   0FFH,0FFH
+
+       end

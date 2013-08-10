@@ -1,0 +1,234 @@
+<HTML><Head><Title>Z80 and R800 Assembly/Machine Language Op-code
+  Tables</Title></Head>
+
+<Body BGColor=#FFFFFF Text=#0000C0 Link=#20FF00 VLink=#FF2020 ALink=#FFFF00>
+
+  <H3><P Align=Center>Z80 and R800 Assembly/Machine Language Op-code
+    Tables</P></H3>
+
+    <UL><P>
+    Written by "Cyberknight" Masao Kawata.<Br>
+    E-Mail: cyber_unicorn@hotmail.com<Br>
+    Revised: 1997-November-19 Wednesday.</P></UL>
+
+<Br><Br>
+
+    <P>These tables are compilations of different sources, including Z80
+instruction set tables and an article of the Japanese "MSX Magazine"
+(issue of 1990-Nov.) with R800 Assembly.</P>
+
+<Br>
+
+    <H4><P>Tables entries:</P></H4>
+
+<P><UL>
+  <LI>Z80 Assembly: Z80 official Assembly instructions.</LI>
+  <LI>R800 Assembly: R800 official Assembly instructions.</LI>
+  <LI>Operation: description of instruction's operations in symbolic
+    language.</LI>
+  <LI>Description: description of instruction in natural language.</LI>
+  <LI>Remarks: remarks about the instruction.</LI>
+  <LI><P>Flags: description of register F bits' reaction to the instruction
+    execution:</P>
+
+    <P><UL><Table CellSpacing=0 CellPadding=0>
+      <TR VAlign=Top><TD><B>.</B>&nbsp;&nbsp;</TD><TD>(flag not modified)<Br></TD></TR>
+      <TR VAlign=Top><TD><B>*</B>&nbsp;&nbsp;</TD><TD>(flag modified by the instruction)<Br></TD></TR>
+      <TR VAlign=Top><TD><B>0</B>&nbsp;&nbsp;</TD><TD>(flag reset), 1 (flag set)<Br></TD></TR>
+      <TR VAlign=Top><TD><B>p</B>&nbsp;&nbsp;</TD><TD>("parity/overflow" flag indicates parity)<Br></TD></TR>
+      <TR VAlign=Top><TD><B>o</B>&nbsp;&nbsp;</TD><TD>("parity/overflow" flag indicates overflow state)<Br></TD></TR>
+      <TR VAlign=Top><TD><B>?</B>&nbsp;&nbsp;</TD><TD>(flag result is unknown)<Br></TD></TR>
+      <TR VAlign=Top><TD><B>$</B>&nbsp;&nbsp;</TD><TD>(if .bc becomes zero, flag is set to 0, else to 1)<Br></TD></TR>
+      <TR VAlign=Top><TD><B>%</B>&nbsp;&nbsp;</TD><TD>(if .a = [.hl], then flag is set to 1, else to 0)<Br></TD></TR>
+      <TR VAlign=Top><TD><B>!</B>&nbsp;&nbsp;</TD><TD>(if .b becomes zero, flag is set to 1, else to 0)<Br></TD></TR>
+      <TR VAlign=Top><TD><B>I</B>&nbsp;&nbsp;</TD><TD>(copies the value of IFF into the flag)<Br></TD></TR>
+    </Table></UL></P>
+
+    <P>The flags are:</P>
+
+    <P><UL><Table CellSpacing=0 CellPadding=0>
+      <TR VAlign=Top><TD><B>S</B>&nbsp;&nbsp;</TD><TD>(sign, .f{7})<Br></TD></TR>
+      <TR VAlign=Top><TD><B>Z</B>&nbsp;&nbsp;</TD><TD>(zero, .f{6})<Br></TD></TR>
+      <TR VAlign=Top><TD><B>H</B>&nbsp;&nbsp;</TD><TD>(half-carry, .f{4})<Br></TD></TR>
+      <TR VAlign=Top><TD><B>P</B>&nbsp;&nbsp;</TD><TD>(parity/overflow, .f{3})<Br></TD></TR>
+      <TR VAlign=Top><TD><B>N</B>&nbsp;&nbsp;</TD><TD>(subtraction, .f{1})<Br></TD></TR>
+      <TR VAlign=Top><TD><B>C</B>&nbsp;&nbsp;</TD><TD>(carry, .f{0})<Br></TD></TR>
+    </Table></UL></P></LI>
+
+  <LI>Op-codes: the codes in Machine Language (binary and hexadecimal
+    [Hex]).</LI>
+  <LI>B: length of the instruction in bytes.</LI>
+  <LI>Z*: time spent by a Z80 to execute the instruction, in clock
+    cycles.</LI>
+  <LI>R*: time spent by a R800 to execute the instruction, in clock
+    cycles.</LI>
+</UL></P>
+
+  <P>* The time spent by each instruction depends on the hardware
+  architecture. MSX uses RAS/CAS memory banks, so some "wait states" may be
+  generated when accessing memory, even when just reading the program
+  op-codes. MSX turbo R is somehow optimized so it avoids some wait-states
+  when running in R800 mode.</P>
+
+<Br>
+
+    <H4><P>Definitions used in the tables:</P></H4>
+
+<Br>
+
+<P><Table CellPadding=4 Border>
+<TR VAlign=Top Align=Center><TD ColSpan=9>Z80 8 bit registers</TD></TR>
+<TR VAlign=Top Align=Center><TD></TD><TD>000</TD><TD>001</TD><TD>010</TD><TD>011</TD><TD>100</TD><TD>101</TD><TD>110</TD><TD>111</TD></TR>
+<TR VAlign=Top Align=Center><TD>r</TD><TD>b</TD><TD>c</TD><TD>d</TD><TD>e</TD><TD>h</TD><TD>l</TD><TD></TD><TD>a</TD></TR>
+<TR VAlign=Top Align=Center><TD>u</TD><TD>b</TD><TD>c</TD><TD>d</TD><TD>e</TD><TD ColSpan=3></TD><TD>a</TD></TR>
+<TR VAlign=Top Align=Center><TD>v</TD><TD>b</TD><TD>c</TD><TD>d</TD><TD>e</TD><TD ColSpan=3></TD><TD>a</TD></TR>
+</Table></P>
+
+<P><Table CellPadding=4 Border>
+<TR VAlign=Top Align=Center><TD ColSpan=9>R800 8 bit registers</TD></TR>
+<TR VAlign=Top Align=Center><TD></TD><TD>000</TD><TD>001</TD><TD>010</TD><TD>011</TD><TD>100</TD><TD>101</TD><TD>110</TD><TD>111</TD></TR>
+<TR VAlign=Top Align=Center><TD>r</TD><TD>.b</TD><TD>.c</TD><TD>.d</TD><TD>.e</TD><TD>.h</TD><TD>l</TD><TD></TD><TD>.a</TD></TR>
+<TR VAlign=Top Align=Center><TD>u</TD><TD>.b</TD><TD>.c</TD><TD>.d</TD><TD>.e</TD><TD>.ixh</TD><TD>.ixl</TD><TD></TD><TD>.a</TD></TR>
+<TR VAlign=Top Align=Center><TD>v</TD><TD>.b</TD><TD>.c</TD><TD>.d</TD><TD>.e</TD><TD>.iyh</TD><TD>.iyl</TD><TD></TD><TD>.a</TD></TR>
+<TR VAlign=Top Align=Center><TD>p</TD><TD ColSpan=4></TD><TD>.ixh</TD><TD>.ixl</TD><TD ColSpan=2></TD></TR>
+<TR VAlign=Top Align=Center><TD>q</TD><TD ColSpan=4></TD><TD>.iyh</TD><TD>.iyl</TD><TD ColSpan=2></TD></TR>
+</Table></P>
+
+<P><Table CellPadding=4 Border>
+<TR VAlign=Top Align=Center><TD ColSpan=5>Z80 16 bit registers</TD></TR>
+<TR VAlign=Top Align=Center><TD></TD><TD>00</TD><TD>01</TD><TD>10</TD><TD>11</TD></TR>
+<TR VAlign=Top Align=Center><TD>rr</TD><TD>bc</TD><TD>de</TD><TD>hl</TD><TD>af</TD></TR>
+<TR VAlign=Top Align=Center><TD>ss</TD><TD>bc</TD><TD>de</TD><TD>hl</TD><TD>sp</TD></TR>
+<TR VAlign=Top Align=Center><TD>pp</TD><TD>bc</TD><TD>de</TD><TD>ix</TD><TD>sp</TD></TR>
+<TR VAlign=Top Align=Center><TD>qq</TD><TD>bc</TD><TD>de</TD><TD>iy</TD><TD>sp</TD></TR>
+</Table></P>
+
+<P><Table CellPadding=4 Border>
+<TR VAlign=Top Align=Center><TD ColSpan=5>R800 16 bit registers</TD></TR>
+<TR VAlign=Top Align=Center><TD></TD><TD>00</TD><TD>01</TD><TD>10</TD><TD>11</TD></TR>
+<TR VAlign=Top Align=Center><TD>rr</TD><TD>.bc</TD><TD>.de</TD><TD>.hl</TD><TD>.af</TD></TR>
+<TR VAlign=Top Align=Center><TD>ss</TD><TD>.bc</TD><TD>.de</TD><TD>.hl</TD><TD>.sp</TD></TR>
+<TR VAlign=Top Align=Center><TD>pp</TD><TD>.bc</TD><TD>.de</TD><TD>.ix</TD><TD>.sp</TD></TR>
+<TR VAlign=Top Align=Center><TD>qq</TD><TD>.bc</TD><TD>.de</TD><TD>.iy</TD><TD>.sp</TD></TR>
+</Table></P>
+
+<P><Table CellPadding=4 Border>
+<TR VAlign=Top Align=Center><TD ColSpan=3>Other Registers</TD></TR>
+<TR VAlign=Top Align=Center><TD>Z80</TD><TD>R800</TD><TD>Name</TD></TR>
+<TR VAlign=Top Align=Center><TD>i</TD><TD>.i</TD><TD>interrupt vector</TD></TR>
+<TR VAlign=Top Align=Center><TD>r</TD><TD>.r</TD><TD>refresh register</TD></TR>
+<TR VAlign=Top Align=Center><TD>pc</TD><TD>.pc</TD><TD>program counter</TD></TR>
+</Table></P>
+
+<P><Table CellPadding=4 Border>
+<TR VAlign=Top Align=Center><TD ColSpan=2>Bits</TD></TR>
+<TR VAlign=Top Align=Center><TD>{b}</TD><TD>bit b (3 bits number)</TD></TR>
+<TR VAlign=Top Align=Center><TD>{x..y}</TD><TD>bit range x..y</TD></TR>
+<TR VAlign=Top Align=Center><TD>IFF</TD><TD>interrupt flip-flop</TD></TR>
+<TR VAlign=Top Align=Center><TD>C</TD><TD>1st bit of .f</TD></TR>
+<TR VAlign=Top Align=Center><TD>N</TD><TD>2nd bit of .f</TD></TR>
+<TR VAlign=Top Align=Center><TD>P</TD><TD>4th bit of .f</TD></TR>
+<TR VAlign=Top Align=Center><TD>H</TD><TD>5th bit of .f</TD></TR>
+<TR VAlign=Top Align=Center><TD>Z</TD><TD>7th bit of .f</TD></TR>
+<TR VAlign=Top Align=Center><TD>S</TD><TD>8th bit of .f</TD></TR>
+</Table></P>
+
+<P><Table CellPadding=4 Border>
+<TR VAlign=Top Align=Center><TD ColSpan=3>Index Register Modifiers (Z80/R800)</TD></TR>
+<TR VAlign=Top Align=Center><TD>Bin<br>Hex</TD><TD>DDH<Br>11011101</TD><TD>FDH<Br>11111101</TD></TR>
+<TR VAlign=Top Align=Center><TD>ii</TD><TD>ix/.ix</TD><TD>iy/.iy</TD></TR>
+</Table></P>
+
+<P><Table CellPadding=4 Border>
+<TR VAlign=Top Align=Center><TD ColSpan=9>Reset/Break Addresses</TD></TR>
+<TR VAlign=Top Align=Center><TD></TD><TD>000</TD><TD>001</TD><TD>010</TD><TD>011</TD><TD>100</TD><TD>101</TD><TD>110</TD><TD>111</TD></TR>
+<TR VAlign=Top Align=Center><TD>k</TD><TD>00H</TD><TD>08H</TD><TD>10H</TD><TD>18H</TD><TD>20H</TD><TD>28H</TD><TD>30H</TD><TD>38H</TD></TR>
+</Table></P>
+
+<P><Table CellPadding=4 Border>
+<TR VAlign=Top Align=Center><TD ColSpan=2>Symbolic operands</TD></TR>
+<TR VAlign=Top Align=Center><TD>+</TD><TD>add</TD></TR>
+<TR VAlign=Top Align=Center><TD>-</TD><TD>subtract</TD></TR>
+<TR VAlign=Top Align=Center><TD>&times;</TD><TD>multiply</TD></TR>
+<TR VAlign=Top Align=Center><TD>&divide;</TD><TD>divide</TD></TR>
+<TR VAlign=Top Align=Center><TD>&lt;&lt;</TD><TD>assign</TD></TR>
+<TR VAlign=Top Align=Center><TD>&lt;=&gt;</TD><TD>exchange</TD></TR>
+<TR VAlign=Top Align=Center><TD>&lt;</TD><TD>less than</TD></TR>
+<TR VAlign=Top Align=Center><TD>&gt;</TD><TD>greater than</TD></TR>
+<TR VAlign=Top Align=Center><TD>=</TD><TD>equal</TD></TR>
+<TR VAlign=Top Align=Center><TD>[n]</TD><TD>I/O port n</TD></TR>
+<TR VAlign=Top Align=Center><TD>[.c]</TD><TD>I/O port defined by .c</TD></TR>
+<TR VAlign=Top Align=Center><TD>[nn]</TD><TD>address pointer</TD></TR>
+</Table></P>
+
+<P><Table CellPadding=4 Border>
+<TR VAlign=Top Align=Center><TD ColSpan=2>Numbers</TD></TR>
+<TR VAlign=Top Align=Center><TD>n</TD><TD>8 bits</TD></TR>
+<TR VAlign=Top Align=Center><TD>d</TD><TD>-128..+127</TD></TR>
+<TR VAlign=Top Align=Center><TD>nn</TD><TD>16 bits</TD></TR>
+<TR VAlign=Top Align=Center><TD>nnl</TD><TD>nn &quot;LSB&quot;</TD></TR>
+<TR VAlign=Top Align=Center><TD>nnh</TD><TD>nn &quot;MSB&quot;</TD></TR>
+</Table></P>
+
+<P><Table CellPadding=4 Border>
+<TR VAlign=Top Align=Center><TD ColSpan=2>Logical Operations</TD></TR>
+<TR VAlign=Top Align=Center><TD>&not;</TD><TD>not</TD></TR>
+<TR VAlign=Top Align=Center><TD>&amp;</TD><TD>and</TD></TR>
+<TR VAlign=Top Align=Center><TD>#</TD><TD>or</TD></TR>
+<TR VAlign=Top Align=Center><TD>^</TD><TD>xor</TD></TR>
+</Table></P>
+
+<P><Table CellPadding=4 Border>
+<TR VAlign=Top Align=Center><TD ColSpan=2>Symbolic registers</TD></TR>
+<TR VAlign=Top Align=Center><TD>ssl</TD><TD>ss LSB</TD></TR>
+<TR VAlign=Top Align=Center><TD>ssh</TD><TD>ss MSB</TD></TR>
+<TR VAlign=Top Align=Center><TD>rrl</TD><TD>rr LSB</TD></TR>
+<TR VAlign=Top Align=Center><TD>rrh</TD><TD>rr MSB</TD></TR>
+<TR VAlign=Top Align=Center><TD>iil</TD><TD>ii LSB</TD></TR>
+<TR VAlign=Top Align=Center><TD>iih</TD><TD>ii MSB</TD></TR>
+<TR VAlign=Top Align=Center><TD>pcl</TD><TD>pc/.pc LSB</TD></TR>
+<TR VAlign=Top Align=Center><TD>pch</TD><TD>pc/.pc MSB</TD></TR>
+<TR VAlign=Top Align=Center><TD>tmp</TD><TD>temporary</TD></TR>
+</Table></P>
+
+<P><Table CellPadding=4 Border>
+<TR VAlign=Top Align=Center><TD ColSpan=9>Register F/.F</TD></TR>
+<TR VAlign=Top Align=Center><TD>bit</TD><TD>7</TD><TD>6</TD><TD>5</TD><TD>4</TD><TD>3</TD><TD>2</TD><TD>1</TD><TD>0</TD></TR>
+<TR VAlign=Top Align=Center><TD>flag</TD><TD>S</TD><TD>Z</TD><TD></TD><TD>H</TD><TD>P</TD><TD></TD><TD>N</TD><TD>C</TD></TR>
+</Table></P>
+
+<Br>
+
+  <P>Notes:</P>
+
+<P><UL>
+  <LI>Some R800 exclusive instructions may also work on most Z80, but it's
+    not granted. To support compatibility, don't use them in MSX programs.
+    Multiplication instruction are known to work only with R800.</LI>
+  <LI>The destiny address off-set of all relative jumps is calculated based on
+    the next address immediately after the jump op-code itself. Thus, a zero
+    off-set will make the processor jump exactly to the next instruction
+    (it will execute the next instruction as if no jump was made); a -2
+    off-set will make the processor jump back to the jump op-code itself,
+    because all relative jump op-codes are 2 bytes long, and so on. It is
+    valid also to the <I>DJNZ</I>/<I>DBNZ</I> instruction.</LI>
+  <LI>The <I>EX AF,AF'</I>/<I>XCH .AF,.AF'</I> and
+    <I>POP AF</I>/<I>POP .AF</I> instructions does not modify any flag by
+    themselves, but, due to their operations, value of register F may be
+    changed.</LI>
+  <LI>Assembly instructions that use index registers IX or IY and requires a
+    numeric off-set may have it ommited if off-set is zero. Examples:
+    &quot;<I>ld a,(ix+0)</I>&quot; may appear as &quot;<I>ld a,(ix)</I>&quot;;
+    &quot;<I>bit 0,[.ix+0]</I>&quot; may appear as
+    &quot;<I>bit 0,[.ix]</I>&quot;. Of course, the machine op-codes are not
+    affected, ever presenting the off-set, even if it is zero.</LI>
+  <LI><I>SHL</I> and <I>SHLA</I> instructions of the R800 are the same, but
+    with two different mnemonics defined, so they can "pair" the <I>SHR</I>
+    and <I>SHRA</I> instruction mnemonics.</LI>
+  <LI>Some op-codes are equivalent, performing the same operations, so they are
+    assigned to the same mnemonics.</LI>
+  <LI>There are currently three tables available: <I>compact</I>, <I>sorted by
+    instruction</I> and <I>sorted by op-code</I>.</LI>
+</UL></P>
+
+</Body></HTML>

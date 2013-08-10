@@ -1,0 +1,551 @@
+
+;       crun    -- MSX-C run time library (Ver 1.1)
+;
+;       (compiler known subroutines)
+;
+; 25-Oct-83
+; 26-Oct-83     add CRUNVER
+; 28-Nov-83     debug ?DVBAB
+;  1-Feb-84     topological sort
+;  8-Jul-85     debug ?SRIHB
+; 20-Jun-87     use Z80 op-code
+
+
+	MODULE  CRUNVER
+
+;
+; This module contains version number of CRUN.REL
+;
+;       26-Jun-87   MSX-C Version 1.1
+;
+
+	public  ?crun
+
+?crun:  defb    "MSX-C ver 1.1 CRUN"
+
+	ENDMODULE
+
+
+	MODULE  LAUHL
+
+	public  ?lauhl
+	public  ?laut
+
+?lauhl:
+; load 16-bit automatic variable
+;       hl = var
+
+	pop     hl
+	ld      e,(hl)
+	inc     hl
+	ld      d,(hl)
+	inc     hl
+	push    hl
+	ex      de,hl
+?laut:
+	add     hl,sp
+	ld      e,(hl)
+	inc     hl
+	ld      d,(hl)
+	ex      de,hl
+	ret
+
+	ENDMODULE
+
+
+	MODULE  LAUT1
+
+	public  ?laut1
+	extrn   ?laut
+
+?laut1: ld      hl,1+2
+	jp      ?laut
+
+	ENDMODULE
+
+
+	MODULE  LAUT2
+
+	public  ?laut2
+	extrn   ?laut
+
+?laut2: ld      hl,2+2
+	jp      ?laut
+
+	ENDMODULE
+
+
+	MODULE  LAUT3
+
+	public  ?laut3
+	extrn   ?laut
+
+?laut3: ld      hl,3+2
+	jp      ?laut
+
+	ENDMODULE
+
+
+	MODULE  LAUT4
+
+	public  ?laut4
+	extrn   ?laut
+
+?laut4: ld      hl,4+2
+	jp      ?laut
+
+	ENDMODULE
+
+
+	MODULE  LAUT5
+
+	public  ?laut5
+	extrn   ?laut
+
+?laut5: ld      hl,5+2
+	jp      ?laut
+
+	ENDMODULE
+
+
+	MODULE  LAUT6
+
+	public  ?laut6
+	extrn   ?laut
+
+?laut6: ld      hl,6+2
+	jp      ?laut
+
+	ENDMODULE
+
+
+	MODULE  LAUT7
+
+	public  ?laut7
+	extrn   ?laut
+
+?laut7: ld      hl,7+2
+	jp      ?laut
+
+	ENDMODULE
+
+
+	MODULE  LAUT8
+
+	public  ?laut8
+	extrn   ?laut
+
+?laut8: ld      hl,8+2
+	jp      ?laut
+
+	ENDMODULE
+
+
+
+
+	MODULE  SAUHL
+
+	public  ?sauhl
+	public  ?saut
+
+?sauhl:
+; store 16-bit automatic variable
+;       var = hl
+
+	ex      (sp),hl
+	ld      e,(hl)
+	inc     hl
+	ld      d,(hl)
+	inc     hl
+	ex      (sp),hl
+?saut:
+	ex      de,hl
+	add     hl,sp
+	ld      (hl),e
+	inc     hl
+	ld      (hl),d
+	ex      de,hl
+	ret
+
+	ENDMODULE
+
+
+	MODULE  SAUT1
+
+	public  ?saut1
+	extrn   ?saut
+
+?saut1: ld      de,1+2
+	jp      ?saut
+
+	ENDMODULE
+
+
+	MODULE  SAUT2
+
+	public  ?saut2
+	extrn   ?saut
+
+?saut2: ld      de,2+2
+	jp      ?saut
+
+	ENDMODULE
+
+
+	MODULE  SAUT3
+
+	public  ?saut3
+	extrn   ?saut
+
+?saut3: ld      de,3+2
+	jp      ?saut
+
+	ENDMODULE
+
+
+	MODULE  SAUT4
+
+	public  ?saut4
+	extrn   ?saut
+
+?saut4: ld      de,4+2
+	jp      ?saut
+
+	ENDMODULE
+
+
+	MODULE  SAUT5
+
+	public  ?saut5
+	extrn   ?saut
+
+?saut5: ld      de,5+2
+	jp      ?saut
+
+	ENDMODULE
+
+
+	MODULE  SAUT6
+
+	public  ?saut6
+	extrn   ?saut
+
+?saut6: ld      de,6+2
+	jp      ?saut
+
+	ENDMODULE
+
+
+	MODULE  SAUT7
+
+	public  ?saut7
+	extrn   ?saut
+
+?saut7: ld      de,7+2
+	jp      ?saut
+
+	ENDMODULE
+
+
+	MODULE  SAUT8
+
+	public  ?saut8
+	extrn   ?saut
+
+?saut8: ld      de,8+2
+	jp      ?saut
+
+	ENDMODULE
+
+
+
+
+	MODULE  MULHD
+
+	public  ?mulhd
+
+?mulhd:
+; 16-bit multiply
+;       hl *= de
+
+	ld      b,h
+	ld      c,l
+	ld      hl,0
+	ld      a,16
+	?01:
+		add     hl,hl
+		ex      de,hl
+		add     hl,hl
+		ex      de,hl
+		jr      nc,?02
+			add     hl,bc
+		?02:
+		dec     a
+		jr      nz,?01
+	ret
+
+	ENDMODULE
+
+
+	MODULE  MULAB
+
+	public  ?mulab
+
+?mulab:
+; 8-bit multiply
+;       a *= b
+
+	ld      h,a
+	xor     a
+	ld      c,8
+	?11:
+		add     a,a
+		add     hl,hl
+		jr      nc,?12
+			add     a,b
+		?12:
+		dec     c
+		jr      nz,?11
+	ret
+
+	ENDMODULE
+
+
+	MODULE  DVNHD
+
+	public  ?dvnhd
+
+?dvnhd:
+; 16-bit unsigned division
+;       hl /= de
+;       de = hl % de
+
+	ld      b,d
+	ld      c,e
+	ld      de,0
+	ld      a,16
+	?21:
+		add     hl,hl
+		ex      de,hl
+		adc     hl,hl
+		jr      c,?22
+		push    hl      ;carry is always cleared
+		sbc     hl,bc
+		pop     hl
+		jr      c,?23
+		?22:    and     a       ;clear carry
+			sbc     hl,bc
+			inc     e
+		?23:
+		ex      de,hl
+		dec     a
+		jr      nz,?21
+	ret
+
+	ENDMODULE
+
+
+	MODULE  ABSNEG
+
+	public  ?abshl
+	public  ?neghl
+	public  ?nothl
+
+?abshl:
+	ld      a,h
+	or      a
+	ret     p
+?neghl:
+	dec     hl
+?nothl:
+	ld      a,l
+	cpl
+	ld      l,a
+	ld      a,h
+	cpl
+	ld      h,a
+	ret
+
+	ENDMODULE
+
+
+	MODULE  DVIHD
+
+	public  ?dvihd
+	extrn   ?abshl
+	extrn   ?neghl
+	extrn   ?dvnhd
+
+?dvihd:
+; 16-bit signed division
+;       hl /= de
+;       de = hl % de
+
+	ld      a,h
+	or      a
+	push    af              ;remainder's sign
+	xor     d
+	push    af              ;quotient's sign
+
+	call    ?abshl
+	ex      de,hl
+	call    ?abshl
+	ex      de,hl
+	call    ?dvnhd
+
+	pop     af
+	call    m,?neghl
+	pop     af
+	ex      de,hl
+	call    m,?neghl
+	ex      de,hl
+	ret
+
+	ENDMODULE
+
+
+	MODULE  DVBAB
+
+	public  ?dvbab
+
+?dvbab:
+; 8-bit unsigned division
+;       a /= b
+;       b = a % b
+
+	ld      l,a
+	ld      h,0
+	ld      c,8
+	?41:    add     hl,hl
+		ld      a,h
+		jr      c,?42
+		cp      b
+		jr      c,?43
+		?42:    sub     b
+			ld      h,a
+			inc     l
+		?43:
+		dec     c
+		jr      nz,?41
+	ld      a,l
+	ld      b,h
+	ret
+
+	ENDMODULE
+
+
+	MODULE  SLHB
+
+	public  ?slhb
+
+?slhb:
+; 16-bit shift left
+;       hl <<= b
+
+	inc     b
+	?51:    dec     b
+		ret     z
+		add     hl,hl
+		jr      ?51
+
+	ENDMODULE
+
+
+	MODULE  SLAB
+
+	public  ?slab
+
+?slab:
+; 8-bit shift left
+;       a <<= b
+
+	inc     b
+	?61:    dec     b
+		ret     z
+		add     a,a
+		jr      ?61
+
+	ENDMODULE
+
+
+	MODULE  SRNHB
+
+	public  ?srnhb
+
+?srnhb:
+; 16-bit unsigned shift right
+;       hl >>= b
+
+	inc     b
+	?71:    dec     b
+		ret     z
+		srl     h
+		rr      l
+		jr      ?71
+
+	ENDMODULE
+
+
+	MODULE  SRIHB
+
+	public  ?srihb
+
+?srihb:
+; 16-bit signed shift right
+;       hl >>= b
+
+	inc     b
+	?81:    dec     b
+		ret     z
+		sra     h
+		rr      l
+		jr      ?81
+
+	ENDMODULE
+
+
+	MODULE  SRAB
+
+	public  ?srab
+
+?srab:
+; 8-bit unsigned shift right
+;       a >>= b
+
+	inc     b
+	?91:    dec     b
+		ret     z
+		srl     a
+		jr      ?91
+
+	ENDMODULE
+
+
+	MODULE  CPSHD
+
+	public  ?cpshd
+
+?cpshd:
+; 16-bit signed comparation
+;       test hl : de
+;       set into cy & z
+
+	ld      a,h
+	xor     d
+	jp      p,?101
+		ld      a,d
+		cp      h
+		ret
+	?101:
+	ld      a,h
+	cp      d
+	ret     nz
+	ld      a,l
+	cp      e
+	ret
+
+	ENDMODULE
+
+
+	end
+

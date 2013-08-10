@@ -1,0 +1,54 @@
+--- NestorPreTer revision information file
+--- Version 0.3, December 1999
+
+
+* Changes in version 0.2 (November 1999):
+
+- Corrected a bug: when line indent was used to continue new physical line in 
+the current line number, the previous quotation state was ignored and reset. 
+That is, this text:
+
+Print "Use Nestor
+       Basic because it is very nice!": goto ~~
+
+is converted in version 0.1 to
+
+10 PRINT"Use NestorBASICBECAUSEITISVERYNICE!": goto ~~
+
+and in version 0.2 it becomes the correct:
+
+10 PRINT"Use NestorBasic because it is very nice!":GOTO10
+
+- Corrected a very stupid bug which caused macros placed at the very 
+beginning of the input file to be corrupted when LIN parameter was specified.
+
+- Corrected a bug which caused problems when using empty line labels (like 
+~1234 in the samples of section 5): sometimes lines were mixed and the BASIC 
+line number assignation of the other labels was not correct.
+
+- Added the special label "~~", which refers to current BASIC line number. 
+See section 5 on manual file.
+
+- Manual text corrected: in section 3, when explaining /B parameter, it was 
+written that "output file must be placed in the same directory of 
+NestorPreTer"; this is not true, it has been corrected to "output file must 
+be placed in the current directory".
+
+
+* Changes in version 0.3 (December 1999):
+
+- Added the /MAC option, so now you can use an external file for macro 
+definitions. See section 3 on manual file.
+
+- Added the [F] field in the error messages, which indicates an error found 
+in the external macro files and not in the source text. See section 8 on 
+manual file.
+
+- Added a note about failures when defining too many macros, please read it 
+in section 6.5 of the manual file.
+
+- Now the minimum required segments under DOS 2 is three and not two.
+
+- Corrected another nasty bug which caused wrong line numbering when 
+directives were used together with the /LIN option.
+

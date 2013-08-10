@@ -1,0 +1,133 @@
+============================================================
+                            ZD
+                MSX commenting Dizassembler
+                       version 3.50
+============================================================
+
+     ZD is a commenting dizassembler for Z-80, oriented  for
+use on MSX computers. The main features of ZD include:
+
+      + any input format: MSX-DOS program, BLOAD program,
+	MSX ROM, code fragment, SPR (SYS) program.
+      + automatic search of strings and pointer arrays.
+      + good readability due to meaningful comments.
+      + "preprocessor" mode to generate symbol tables for
+	further use with dialog dizassembler (DASM or
+	compatible).
+      + ZD understands MSX-specific RST instructions.
+
+
+     Executing ZD
+     ------------
+     The MSXDOS command line for ZD is
+
+	ZD [{-,/}options] inputfile[.ext]
+
+     When no extension is given, ZD tries to  load  first  a
+file with null extension and if not found, tries to  load  a
+MSXDOS .COM file.
+     Output file  has  the  same  name  as  input  and  .ASM
+extension. If ZD is used in preprocessor mode, .ASM file  is
+not generated, but two tables in DASM  format  are  created:
+.SYM (symbol table file) and .CTL (control table file).
+     The following options may be used in the command string
+(NOT case sensitive):
+
+	A - inhibit string analysis
+no search for ASCII strings, do not create DB data
+
+	B# - basic ROM format (# base address, default 4000)
+source file is  a  ROM  cartridge  (only  normal,  MEGA  not
+supported)
+
+	C - convert out-bound addresses into symbols
+normally ZD outputs words that are out of program  range  as
+hex numbers. if the option is on, ZD makes them Txxxx, Bxxxx
+and Wxxxx data labels.
+
+	D - driver (SPR) format
+says that input file is MISIX, NIKE DOS or TINY  DOS  driver
+in SPR (SYS) relocatable format.
+
+	E - disable russian letters in DBs
+by default symbols  that  may  form  a  string  include  all
+printable ASCII characters plus russian letters in the range
+0C0h .. 0FFh. E option says that ASCII strings  may  contain
+only  7-bit  characters.  This  option  is  recommended  for
+dizassembling  european  programs,  cause  it  makes  string
+analysis more 'paranoic' and thus more correct.
+
+	F - full symbol list
+
+
+	G - do not create DB and DW
+only plain code, no DB and DW data output
+
+	I - convert 0F000h..0FFFFh to negative ints
+this option is useful for high level laguage dizassemble
+(especially for C)
+
+	L - local labels of Lhhhh style
+use Lhhhh (where hhhh is hex address) for local jump labels
+
+	M - enable MISIX calls
+enables MISIX calls, RSTs and system call comments 
+
+	R - search ASCII C runtime library
+searches for ?LAUT, ?SAUT and some other functions; corrects
+inline parameters for ?LAUT and ?SAUT into word data as
+required. This option also restricts character string terminator
+to a null character '\0' only.
+
+	V - skip pointer vector analysis
+do not search for pointer arrays in program
+
+	N#- program length #
+
+	O#- offset in file #
+
+	S#- program start address #
+
+	X - make symbol files for DASM: *.SYM, *.CTL
+
+	Yfile - enable symbol file (file.ZFS) usage
+symbol table file format: records of 8 bytes each;
+first 2 bytes contain address, other 6 bytes contain
+symbol name, zero terminated if length is less than 6
+characters.
+
+
+
+     DISTRIBUTION
+     ------------
+     ZD is _PUBLIC_DOMAIN_
+     The package consists of two files: ZD.COM and ZD.DOC
+     ZD source code is available for developers  on  special
+request.
+
+
+     SUPPORT
+     -------
+     With all questions about ZD and  other  SOLiD  products
+send email to:
+     msxegor@glas.apc.org
+
+
+     OTHER SOLiD PRODUCTS
+     --------------------
+     AS  - relocatable assembler for Z80/Z180/Z380
+     LD  - fast linker (for .REL format)
+     PR  - fast archive utility
+     VS  - Visual Shell (a program like NC)
+
+     SOLiD C - C compiler, ASCII C compatible
+     MULTI Z - Window operating system
+     ASM320  - assembler for TMS320C10/C20/C50 DSP
+
+============================================================
+SOLiD is Egor G. Voznessenski   (Moscow, RUSSIA)
+	phone +7-(095)-141-4069
+	email msxegor@glas.apc.org
+        http://www.glasnet.ru/~msxegor
+============================================================
+

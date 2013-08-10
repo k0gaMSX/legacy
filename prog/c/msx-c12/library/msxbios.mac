@@ -1,0 +1,1118 @@
+;/*
+.comment %
+
+	(C) Copyrighted by ASCII corp., 1988
+		All rights Reserved.
+
+		File:	msxbios.mac
+
+
+    MSXBIOS.MAC --- Interface routines to MSX ROM-BIOS functions.
+
+	This file is coded with dirty tricks (or magic) to serve as a
+	source file;
+
+	    1.	for MX to generate actual library,
+
+	    2.	for CF to generate TCO file for FPC and
+
+	    3.	for M80 to get fast turn-around testing new library
+		"trial and error".
+
+ */
+
+/*%
+;------ Faking stuff for M80 and MX ------------------------------------
+module	macro		;; "module" must be lower cased
+	endm
+
+endmodule macro 	;; "endmodule" must be lower cased
+	endm
+
+extrn	macro
+	endm
+;-----------------------------------------------------------------------
+
+	MODULE	JCALBIO
+
+CALSLT	equ	001Ch
+EXPTBL	equ	0FCC1h		;slot address of BIOS ROM
+;
+;	Call a ROM BIOS routine specified by IX
+;
+;	Only used internally
+;
+_CALBIO::
+	ld	iy,(EXPTBL-1)
+	call	CALSLT
+	ei			;*** make sure interrupts are enabled
+	ret
+
+	ENDMODULE
+
+.comment %*/
+
+VOID	calbio(adrs, reg)
+NAT	adrs;
+REGS	*reg;
+{
+/*%
+	MODULE	CALBIO
+;
+;	Call a ROM BIOS routine from C program
+;
+	extrn	_CALBIO
+;
+CALBIO@::
+	push	de		; save pointer to REGS structure
+	push	hl		; set routine address in IX
+	pop	ix
+	ld	iy,0		; save SP in IY
+	add	iy,sp
+	ex	de,hl
+	di
+	ld	sp,hl		; copy to registers
+	pop	af
+	pop	bc
+	pop	de
+	pop	hl
+	ei
+	ld	sp,iy		; restore true stack pointer
+	push	iy
+	call	_CALBIO
+	pop	iy
+	pop	ix		; restore pointer to REGS structure
+	di
+	ld	sp,ix		; copy from registers
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	push	hl
+	push	de
+	push	bc
+	push	af
+	ei
+	ld	sp,iy		; restore true stack pointer
+	pop	af		; discard stack
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	calbas(adrs, reg)
+NAT	adrs;
+REGS	*reg;
+{
+/*%
+	MODULE	CALBAS
+;
+;	Call a ROM BASIC routine from C program
+;
+	extrn	_CALBIO
+;
+CALBAS@::
+	push	de		; save pointer to REGS structure
+	push	hl		; set routine address to IX
+	pop	ix
+	ld	iy,0		; save SP in IY
+	add	iy,sp
+	ex	de,hl
+	di
+	ld	sp,hl		; copy to registers
+	pop	af
+	pop	bc
+	pop	de
+	pop	hl
+	ei
+	ld	sp,iy		; restore true stack pointer
+	push	iy
+	call	_CALBAS
+	pop	iy
+	pop	ix		; restore pointer to REGS structure
+	di
+	ld	sp,ix		; copy from registers
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	push	hl
+	push	de
+	push	bc
+	push	af
+	ei
+	ld	sp,iy		; restore true stack
+	pop	af		; discard stack
+	ret
+
+;
+;	Call a ROM BASIC routine.
+;
+;	Only used internally.
+;
+;	The  problem is we can never pass IX register that CALBAS wants.
+;	What must be done is to set IX register and jump to CALBAS after
+;	the BIOS ROM is inter-slot called.
+;
+;	Build  the  following  interface routine on the stack.	Make NMI
+;	hook jump to it.  Inter-slot call BIOS NMI entry (never used and
+;	only hook is provided).
+;
+;	+0	inc	sp
+;	+1	inc	sp
+;	+2	ld	ix,<interpreter entry>
+;	+6	nop
+;	+7	jp	CALBAS
+;
+CALBAS	equ	0159h
+NMI	equ	0066h		; Non-maskable interrupt
+H.NMI	equ	0FDD6h		; Hook for NMI
+;
+_CALBAS::
+	exx			; Save argument registers over setup
+	ex	af,af'
+	ld	hl,CALBAS
+	push	hl
+	ld	hl,0C300h
+	push	hl
+	push	ix
+	ld	hl,021DDh
+	push	hl
+	ld	hl,03333h
+	push	hl
+	ld	hl,0
+	add	hl,sp
+	ld	a,0C3h
+	ld	(H.NMI),a
+	ld	(H.NMI+1),hl
+	ex	af,af'          ; Restore registers
+	exx
+;
+	ld	ix,NMI
+	call	_CALBIO
+;
+	ld	hl,10		; Throw away the interface routine
+	add	hl,sp
+	ld	sp,hl
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	calsub(adrs, reg)
+NAT	adrs;
+REGS	*reg;
+{
+/*%
+	MODULE	CALSUB
+;
+;	Call a SUB-ROM routine from C program
+;
+CALSUB@::
+	push	de		; save pointer to REGS structure
+	push	hl		; set routine address to IX
+	pop	ix
+	ld	iy,0		; save SP in IY
+	add	iy,sp
+	ex	de,hl
+	di
+	ld	sp,hl		; Copy to registers
+	pop	af
+	pop	bc
+	pop	de
+	pop	hl
+	ei
+	ld	sp,iy		; restore true stack pointer
+	push	iy
+	call	_CALSUB
+	pop	iy
+	pop	ix		; restore pointer to REGS structure
+	di
+	ld	sp,ix		; copy from registers
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	push	hl
+	push	de
+	push	bc
+	push	af
+	ei
+	ld	sp,iy		; restore true stack
+	pop	af		; discard stack
+	ret
+
+;
+;	The  problem is we can never pass IX register that EXTROM wants.
+;	What must be done is to set IX register and jump to EXTROM after
+;	the BIOS ROM is inter-slot called.
+;
+;	Build  the  following  interface routine on the stack.	Make NMI
+;	hook jump to it.  Inter-slot call BIOS NMI entry (never used and
+;	only hook is provided).
+;
+;	+0	inc	sp
+;	+1	inc	sp
+;	+2	ld	ix,<sub-ROM entry>
+;	+6	nop
+;	+7	jp	EXTROM
+;
+EXTROM	equ	015Fh
+NMI	equ	0066h		; Non-maskable interrupt
+H.NMI	equ	0FDD6h		; Hook for NMI
+	extrn	_CALBIO
+;
+_CALSUB::
+	exx			; Save argument registers over setup
+	ex	af,af'
+	ld	hl,EXTROM
+	push	hl
+	ld	hl,0C300h
+	push	hl
+	push	ix
+	ld	hl,021DDh
+	push	hl
+	ld	hl,03333h
+	push	hl
+	ld	hl,0
+	add	hl,sp
+	ld	a,0C3h
+	ld	(H.NMI),a
+	ld	(H.NMI+1),hl
+	ex	af,af'          ; Restore registers
+	exx
+;
+	ld	ix,NMI
+	call	_CALBIO
+;
+	ld	hl,10		; Throw away the interface routine
+	add	hl,sp
+	ld	sp,hl
+	ret
+
+	ENDMODULE
+
+.comment %*/
+}
+
+VOID	calslt(slot, adrs, reg)
+TINY	slot;
+NAT	adrs;
+REGS	*reg;
+{
+/*%
+	MODULE	CALSLT
+;
+;	Call a routine in other slot from C program
+;
+CALSLT	equ	001Ch
+;
+CALSLT@::
+	push	bc		; save pointer to REGS structure
+	push	de		; set routine address to IX
+	pop	ix
+	push	af		; save slot number
+	ld	iy,0		; save SP in IY
+	add	iy,sp
+	ld	l,c		; HL = pointer to REGS structure
+	ld	h,b
+	di
+	ld	sp,hl		; copy to registers
+	pop	af
+	pop	bc
+	pop	de
+	pop	hl
+	ei
+	ld	sp,iy		; restore true stack
+	ex	(sp),iy 	; save true stack pointer
+				; restore slot in IYH
+	call	CALSLT
+	ei
+	pop	iy
+	pop	ix		; restore pointer to REGS structure
+	di
+	ld	sp,ix		; copy from registers
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	inc	sp
+	push	hl
+	push	de
+	push	bc
+	push	af
+	ei
+	ld	sp,iy		; restore true stack
+	pop	af		; discard stack
+	pop	af
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+TINY	rdslt(slot, adr)
+TINY	slot;
+NAT	adr;
+{
+/*%
+	MODULE	RDSLT
+
+RDSLT@::
+	ex	de,hl
+	call	000Ch
+	ei			;*** make sure interrupts are enabled
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	wrslt(slot, adr, value)
+TINY	slot;
+NAT	adr;
+TINY	value;
+{
+/*%
+	MODULE	WRSLT
+
+WRSLT@::
+	ex	de,hl
+	ld	e,c
+	call	0014h
+	ei			;*** make sure interrupts are enabled
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	callx(adrs, regs)
+NAT	adrs;
+REGS	*regs;
+{
+/*%
+	MODULE	CALLX
+;
+;	Call machine language subroutine. 
+;
+SPSIZE  equ     8
+;
+CALLX@::
+	push	de
+;
+	call	GO_CALL
+;
+RETREG@::
+;
+	ex	(sp),hl		;get registers
+	push	de
+	push	bc
+	push	af
+;
+	ex	de,hl
+	ld	hl,0
+	add	hl,sp
+	ld	bc,SPSIZE
+	ldir
+	ld	sp,hl
+	ret
+
+GO_CALL:
+	push	hl		;save entry address
+;
+	ld	hl,-SPSIZE
+	add	hl,sp
+	ld	sp,hl
+;
+	ex	de,hl
+	ld	bc,SPSIZE
+	ldir
+;
+	pop	af		;set registers
+	pop	bc
+	pop	de
+	pop	hl
+;
+	ret			;let's go
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	inifnk()
+{
+/*%
+	MODULE	INIFNK
+;
+;	INIFNK	initializes function key strings.
+;	Entry:	None.
+;	Exit:	None.
+;
+INIFNK	equ	003Eh
+	extrn	_CALBIO
+;
+INIFNK@::
+	ld	ix,INIFNK
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	disscr()
+{
+/*%
+	MODULE	DISSCR
+
+DISSCR	equ	0041h
+	extrn	_CALBIO
+;
+DISSCR@::
+	ld	ix,DISSCR
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	enascr()
+{
+/*%
+	MODULE	ENASCR
+
+ENASCR	equ	0044h
+	extrn	_CALBIO
+;
+ENASCR@::
+	ld	ix,ENASCR
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	screen(mode)
+TINY	mode;
+{
+/*%
+	MODULE	SCREEN
+
+CHGMOD	equ	005Fh			; for MSX1
+CHGMDP	equ	01B5h			; for MSX2 (initialize palette also)
+EXBRSA	equ	0FAF8h
+	extrn	_CALSUB
+	extrn	_CALBIO
+;
+SCREEN@::
+	ld	c,a			; save screen mode
+	ld	a,(EXBRSA)		; running on MSX1?
+	and	a
+	ld	a,c			; restore screen mode
+	jr	z,screen_msx1		; yes
+	ld	ix,CHGMDP		; change screen mode and initialize
+	jp	_CALSUB			;  palette
+;
+screen_msx1:
+	ld	ix,CHGMOD
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	gicini()
+{
+/*%
+	MODULE	GICINI
+
+GICINI	equ	0090h
+	extrn	_CALBIO
+;
+GICINI@::
+	ld	ix,GICINI
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	sound(reg, val)
+TINY	reg;
+TINY	val;
+{
+/*%
+	MODULE	SOUND
+
+WRTPSG	equ	0093h
+	extrn	_CALBIO
+;
+SOUND@::
+	ld	ix,WRTPSG
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+TINY	rdpsg(reg)
+TINY	reg;
+{
+/*%
+	MODULE	RDPSG
+;
+;	RDPSG	reads data from the PSG register.
+;	Entry:	Register number in [A].
+;	Exit:	Data in [A].
+;
+RDPSG	equ	0096h
+	extrn	_CALBIO
+;
+RDPSG@::
+	ld	ix,RDPSG
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+BOOL	chsns()
+{
+/*%
+	MODULE	CHSNS
+;
+;	CHSNS	checks the status of keyboard buffer.
+;	Entry:	None.
+;	Exit:	Z flag reset and non-zero value in [A]
+;		if any character in buffer.
+;
+CHSNS	equ	009Ch
+	extrn	_CALBIO
+;
+CHSNS@::
+	ld	ix,CHSNS
+	call	_CALBIO
+	ret	z
+	ld	a,1
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+char	chget()
+{
+/*%
+	MODULE	CHGET
+;
+;	CHGET	waits for characters being input and returns the
+;		character code.
+;	Entry:	None.
+;	Exit:	Character code in [A].
+;
+CHGET	equ	009Fh
+	extrn	_CALBIO
+;
+CHGET@::
+	ld	ix,CHGET
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	chput(c)
+char	c;
+{
+/*%
+	MODULE	CHPUT
+;
+;	CHPUT	outputs a character to the console.
+;	Entry:	Character code in [A].
+;	Exit:	None.
+;
+CHPUT	equ	00A2h
+	extrn	_CALBIO
+;
+CHPUT@::
+	ld	ix,CHPUT
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+BOOL	lptout(c)
+char	c;
+{
+/*%
+	MODULE	LPTOUT
+;
+;	LPTOUT	outputs a character to the line printer.
+;
+;	Returns 0 if successful output, 1 of aborted
+;
+LPTOUT	equ	00A5h
+	extrn	_CALBIO
+;
+LPTOUT@::
+	ld	ix,LPTOUT
+	call	_CALBIO
+	sbc	a,a
+	and	1
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+BOOL	lptstt()
+{
+/*%
+	MODULE	LPTSTT
+;
+;	LPTSTT	checks the line printer status.
+;	Exit:	1   if printer ready,
+;		0   if not.
+;
+LPTSTT	equ	00A8h
+	extrn	_CALBIO
+;
+LPTSTT@::
+	ld	ix,LPTSTT
+	call	_CALBIO
+	ret	z
+	ld	a,1
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+char	*pinlin()
+{
+/*%
+	MODULE	PINLIN
+
+PINLIN	equ	00AEh
+	extrn	_CALBIO
+;
+PINLIN@::
+	ld	ix,PINLIN
+	call	_CALBIO
+	inc	hl
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+char	*inlin()
+{
+/*%
+	MODULE	INLIN
+
+INLIN	equ	00B1h
+	extrn	_CALBIO
+;
+INLIN@::
+	ld	ix,INLIN
+	call	_CALBIO
+	inc	hl
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+TINY	breakx()
+{
+/*%
+	MODULE	BREAKX
+;
+;	BREAKX	checks the status of the Control-STOP key.
+;	Exit:	0 if not pressed, 1 if being pressed
+;
+BREAKX	equ	00B7h
+	extrn	_CALBIO
+;
+BREAKX@::
+	ld	ix,BREAKX
+	call	_CALBIO
+	sbc	a,a			; 000h if not pressed
+					; 0ffh if being pressed
+	and	1
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	beep()
+{
+/*%
+	MODULE	BEEP
+;
+;	BEEP	sounds the buzzer.
+;	Entry:	None.
+;	Exit:	None.
+;
+BEEP	equ	00C0h
+	extrn	_CALBIO
+;
+BEEP@::
+	ld	ix,BEEP
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	cls()
+{
+/*%
+	MODULE	CLS
+;
+;	CLS	clears the screen.
+;	Entry:	None.
+;	Exit:	None.
+;
+CLS	equ	00C3h
+	extrn	_CALBIO
+;
+CLS@::
+	cp	a		;by unknown reason must set Z flag
+	ld	ix,CLS
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	locate(csrx, csry)
+TINY	csrx, csry;
+{
+/*%
+	MODULE	LOCATE
+;
+;	POSIT	locates the cursor at the specified position.
+;	Entry:	Column in [A], row in [E].
+;	Exit:	None.
+;
+POSIT	equ	00C6h
+	extrn	_CALBIO
+;
+LOCATE@::
+	ld	h,a
+	ld	l,e
+	ld	ix,POSIT
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	erafnk()
+{
+/*%
+	MODULE	ERAFNK
+;
+;	ERAFNK	erases the function key display.
+;	Entry:	None.
+;	Exit:	None.
+;
+ERAFNK	equ	00CCh
+	extrn	_CALBIO
+;
+ERAFNK@::
+	ld	ix,ERAFNK
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	dspfnk()
+{
+/*%
+	MODULE	DSPFNK
+;
+;	DSPFNK	displays the function key display.
+;	Entry:	None.
+;	Exit:	None.
+;
+DSPFNK	equ	00CFh
+	extrn	_CALBIO
+;
+DSPFNK@::
+	ld	ix,DSPFNK
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+TINY	gtstck(port)
+TINY	port;
+{
+/*%
+	MODULE	GTSTCK
+;
+;	GTSTCK	returns the current joystick status.
+;	Entry:	Joystick ID in [A].
+;	Exit:	Direction in [A].
+;
+GTSTCK	equ	00D5h
+	extrn	_CALBIO
+;
+GTSTCK@::
+	ld	ix,GTSTCK
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+BOOL	gttrig(trig)
+TINY	trig;
+{
+/*%
+	MODULE	GTTRIG
+;
+;	GTTRIG	returns the current trigger button status.
+;	Entry:	Trigger button ID in [A].
+;	Exit:	Returns 0 in [A] if not pressed, 1 otherwise.
+;
+GTTRIG	equ	00D8h
+	extrn	_CALBIO
+;
+GTTRIG@::
+	ld	ix,GTTRIG
+	call	_CALBIO
+	ret	z
+	ld	a,1
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+TINY	gtpad(pad)
+TINY	pad;
+{
+/*%
+	MODULE	GTPAD
+;
+;	GTPAD	checks the current touch PAD status.
+;	Entry:	ID in [A].
+;	Exit:	Value in [A].
+;
+GTPAD	equ	00DBh
+	extrn	_CALBIO
+;
+GTPAD@::
+	ld	ix,GTPAD
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+TINY	gtpdl(pdl)
+TINY	pdl;
+{
+/*%
+	MODULE	GTPDL
+;
+;	GTPDL	returns the value of the paddle.
+;	Entry:	Paddle ID in [A].
+;	Exit:	Value in [A].
+;
+GTPDL	equ	00DEh
+	extrn	_CALBIO
+;
+GTPDL@::
+	ld	ix,GTPDL
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	chgsnd(onoff)
+BOOL	onoff;
+{
+/*%
+	MODULE	CHGSND
+;
+;	CHGSND	changes the status of the 1 bit sound port.
+;	Entry:	Zero in [A] to turn off, non-zero otherwise.
+;	Exit:	None.
+;
+CHGSND@::
+	and	a			; turn off?
+	ld	a,1110b			; assume so
+	jr	z,snd_off		; good assumption
+	inc	a
+snd_off:
+	out	(0ABh),a
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+TINY	snsmat(row)
+TINY	row;
+{
+/*%
+	MODULE	SNSMAT
+;
+;	SNSMAT	returns the status of a specified row of a keyboard
+;		matrix.
+;	Entry:	Row
+;	Exit:	Corresponding bit is reset to 0 if a key
+;		is being pressed.
+;
+SNSMAT	equ	0141h
+	extrn	_CALBIO
+;
+SNSMAT@::
+	ld	ix,SNSMAT
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	kilbuf()
+{
+/*%
+	MODULE	KILBUF
+;
+;	KILBUF	clears the keyboard buffer.
+;
+KILBUF	equ	0156h
+	extrn	_CALBIO
+;
+KILBUF@::
+	ld	ix,KILBUF
+	jp	_CALBIO
+
+	ENDMODULE
+.comment %*/
+}
+
+NAT	rnd(range)
+NAT	range;
+{
+/*%
+	MODULE	MUL32
+
+;
+;	hl:bc = hl * de
+;
+_MUL32::
+	ld	c,l
+	ld	a,h
+	ld	hl,0
+	ld	b,17
+	jr	rnd4
+;
+rnd2:
+	jr	nc,rnd3
+	add	hl,de
+rnd3:
+	rr	h
+	rr	l
+rnd4:
+	rra
+	rr	c
+	djnz	rnd2
+	ld	b,a
+	ret
+
+	ENDMODULE
+
+	MODULE	RND
+
+	extrn	_MUL32
+;
+RND@::
+	push	hl		; save range
+	ld	hl,(rndseed)
+	ld	e,l
+	ld	d,h
+	add	hl,hl
+	ld	c,l
+	ld	b,h
+	jr	nc,rnd1
+	inc	bc
+rnd1:
+	add	hl,de
+	ld	(rndseed),hl
+	ld	hl,(rndseed+2)
+	ld	e,l
+	ld	d,h
+	adc	hl,hl
+	add	hl,de
+	add	hl,bc
+	ld	(rndseed+2),hl
+	pop	de		; restore range
+	jp	_MUL32
+
+	dseg
+rndseed:	dw	1235h,7f3ah
+	cseg
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	di()
+{
+/*%
+	MODULE	DI
+
+DI@::
+	di
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	ei()
+{
+/*%
+	MODULE	EI
+
+EI@::
+	ei
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+/*%
+	end
+*/
+                                                                                  

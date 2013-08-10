@@ -1,0 +1,56 @@
+;
+;       Entry:  HL = range
+;
+;       Exit:   HL = random number between 0..range-1
+;
+;
+rndseed:dw      1231
+	dw      1951
+;
+rnd@::
+	push    hl              ; save range
+	ld      hl,(rndseed)
+	ld      e,l
+	ld      d,h
+	add     hl,hl
+	ld      c,l
+	ld      b,h
+	jr      nc,rnd1
+	inc     bc
+rnd1:
+	add     hl,de
+	ld      (rndseed),hl
+	ld      hl,(rndseed+2)
+	ld      e,l
+	ld      d,h
+	adc     hl,hl
+	add     hl,de
+	add     hl,bc
+	ld      (rndseed+2),hl
+;
+;       hl = full 16 bit random number
+;
+	ex      de,hl           ; DE = random number
+	pop     bc              ; restore range
+;
+;       hl:bc = bc * de
+;
+	ld      hl,0
+	ld      a,b
+	ld      b,17
+	jr      shfmul
+mullp:
+	jr      nc,noadd
+	add     hl,de
+noadd:
+	rr      h
+	rr      l
+shfmul:
+	rra
+	rr      c
+	djnz    mullp
+	ld      b,a             ;result in bc
+	ret
+;
+	end
+

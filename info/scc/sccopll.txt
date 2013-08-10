@@ -1,0 +1,85 @@
+
+How to use SCC and OPLL, look following text.
+I fell that SCC is similar to PSG, and OPLL is similar to OPL2.
+
+----------------------------------------
+To use SCC:
+
+Write xx111111b at address 9000-97ffh on a slot where SCC exist,
+then SCC appears at 9800-9fffh.
+
+9800-981fh      wave memory 0(ch.A)     (32 * signed char)
+9820-983fh      wave memory 1(ch.B)
+9840-985fh      wave memory 2(ch.C)
+9860-987fh      wave memory 3(ch.D,E)
+
+9880-9889h      frequency of ch.A-E(12bit)      F=CLOCK/32/(1+nn)
+988A-988Eh      output level of ch.A-E(max 15)
+988fh           output switch(1 is ON)         (b0:ch.A,...,b4:ch.E)
+
+98e0-98ffh      test?
+                write 0 is to initialize, 1 is to be silent.
+
+9800-987fh      be able to read/write.
+9880-988fh      write only.
+9890-98dfh      dummy.
+98e0-98ffh      write only.
+
+Wave data is waveform of the sound itself.
+
+ex: square wave(7fh is 127, 80h is -128)
+7f 7f 7f 7f 80 80 80 80 7f 7f 7f 7f 80 80 80 80.....
+
+ref: 'MCTR-SCC.TXT' by TSUJIKAWA.K.
+
+-----------------------------------------
+To use OPLL(FM-PAC):
+
+I/O port 7ch	OPLL register address.
+         7dh	OPLL data address.
+
+3.36 micro seconds wait needed after writing 7ch.
+23.52 micro seconds wait needed after writing 7dh.
+
+OPLL registers:
+reg. |  b7   |  b6   |  b5   |  b4   |  b3   |  b2   |  b1   |  b0   |
+00h  |  AM   |  VIB  | EGTYP |  KSR  |          MULTIPLE             |  (MOD)
+01h  |  AM   |  VIB  | EGTYP |  KSR  |          MULTIPLE             |  (CAR)
+02h  |      KSL      |               TOTAL LEVEL                     |  (MOD)
+03h  |      KSL      |       |  DM   |  DC   |      FEEDBACK         |  (CAR)
+04h  |           ATTACK RATE         |          DECAY RATE           |  (MOD)
+05h  |           ATTACK RATE         |          DECAY RATE           |  (CAR
+06h  |          SUSTAIN LEVEL        |        RELEASE RATE           |  (MOD)
+07h  |          SUSTAIN LEVEL        |        RELEASE RATE           |  (CAR)
+0Eh  |       |       | RHYTHM|  BD   |  SD   |  TOM  |TOP-CY |  HH   |
+10h- |                         F-Number(b7-b0)                       |  ch.A-
+18h  |                         F-Number(b7-b0)                       |  ch.I
+20h- |       |       |SUS-ON |KEY-ON |         BLOCK         |F-Num  |  ch.A-
+28h  |       |       |SUS-ON |KEY-ON |         BLOCK         |F-Num  |  ch.I
+30h- |            INST               |           VOL                 |  ch.A-
+38h  |            INST               |           VOL                 |  ch.I
+when RHYTHM mode:
+36h  |       |       |       |       |          BASS DRUM LEVEL      |
+37h  |         HIHAT LEVEL           |         SNARE DRUM LEVEL      |
+38h  |         TOM-TOM LEVEL         |         TOP-CYMBAL LEVEL      |
+
+VIB: frequency vibration ON/OFF.
+AM: amplitude moduration ON/OFF.
+EG-TYP: 1 - DECAYING envelop pattern, 0 - SUSTAINING envelop pattern.
+DM: rectification to output of modulator opelator ON/OFF.
+DC: rectification to output of carrier opelator ON/OFF.
+RHYTHM: RHYTHM mode ON/OFF. (ch.G,H,I is used for RHYTHM.)
+
+BLOCK: octave data
+F-Number: (frequency * 2^18 / 50000) / 2^(BLOCK-1)
+
+INST: OPLL voice number.
+	 0 User		 1 Violin	 2 Guitar	 3 Piano
+	 4 Flute	 5 Clarinet	 6 Oboe		 7 Trumpet
+	 8 Organ	 9 Tube		10 Synthesizer	11 Harpsicode
+	12 Vibraphone	13 Synth bass	14 Wood bass	15 Elec. bass
+
+
+ref: MSX2+ powerful katsuyouhou(ASCII pub.) by SUGIYA Seiichi
+-----------------------------------
+

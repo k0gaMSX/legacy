@@ -1,0 +1,606 @@
++ 1 SS
+                        *  SpreadSheet Help Menu  *
+ 
+ 
+ 
+         COMMANDS                      Setting Up A SpreadSheet
+      ..............          .......................................
+      |  COMPUTE   |          |  COMPUTE  || Starting a SpreadSheet |
+      |  CLEAN     |          |  COL      || Column Equations       |
+      |  COMBINE   |          |  ROW      || Row Equations          |
+      |............|          |...........||........................|
+ 
+ 
+                               Other Stuff
+....................................    ......................................
+| TERM   || Built-in Formulas      |    | RC      || Re-Calculation          |
+| LABELS || Column Labels & Text   |    | FORMAT  || Changing Column Formats |
+| ZV     || Zero Value Assignment  |    | FRAME   || Framing & Scrolling     |
+| STORE  || Store & Fetch  Values  |    | COMBINE || Linking SpreadSheets    |
+| OCALC  || Order of Calculation   |    | AA      || Active Areas            |
+|........||........................|    |.........||.........................|
++ 1 COMPUTE
+ 1/1 WHAT NEXT?     <COMPUTE>
+ 
+ 
+ COMPUTE tells T/Maker to "calculate" values according to the  row and
+ column equations placed in a T/Maker work area.
+ 
+ ----------------------------------------------------------------------
+ 
+ Every T/Maker SpreadSheet has:
+ 
+ *  An "Example Line" starting a spreadsheet.
+ 
+    ("Model Numbers"on Example Line locate where columns of numbers are
+     placed, and dictate what   format & accuracy  those numbers have.)
+ 
+ *  "Column Equations" that are equations  between numbers in a column.
+    ( Equations occupy the first  7  columns in the work area. )
+ 
+ *  "Row Equations" that  are  equations  between the numbers in a row.
+    ( Equations are placed above each row. )
++ 2 EX
+The EXAMPLE LINE:
+ 
+  (1)  Starts with the word  "EXAMPLE" in the first  7  columns .
+  (2)  Provides "Column Model Numbers"
+ 
+         *  Locates where columns of numbers are positioned.
+         *  Dictate   accuracy &  format  of  numbers  in  each  column.
+         *  Are  separated  from  each  other  by  one  or  more spaces.
+         *  Are  formed by any string of characters. (13 digit accuracy)
+         *  Are "invisible" if started with a comma.  (see Column ",C" )
+ 
+         Note:  Numbers can be entered anywhere  under the Model Number.
+                COMPUTE will align these numbers correctly.
+ 
+  (3)  Must be below the top of the screen before a COMPUTE is invoked.
+                   ( See  [ AA ] for  more  information. )
+...........................................................................
+1234567
+Example    AAAAA     BBB,BBB.BB       ,C       D.DDDD           EE
+:::::::    :::::     ::::::::::                ::::::           ::
++
+Math equations are formed using "operators"  &  "terminators".
+ 
+..............................................................................
+Operators are just ordinary "math signs", just like those used on a calculator.
+ 
+ 
+           ( + )   addition          ( * )    multiplication
+           ( - )   subtraction       ( / )    division
+ 
+Note:  Every row & column equation must have at least one ( + ) sign in it.
+ 
+...............................................................................
+Terminators are "result signs".
+ 
+           ( = )
+ 
+Also, there are   23  "advanced"  result signs that perform more sophisticated
+calculations.  (eg., finding a square root of a result.)
+ 
+                 ( See  Help section  [ TERM ]  for  examples. )
++ 2 AA
+            This line is defined as the TOP OF THE SCREEN Line.
+ 
+ 
+ 
+ 
+It was the line the cursor was on before Exiting the Editor.
+ 
+ 
+Everything below the Top of the Screen Line is considered ACTIVE.
+ 
+ 
+Commands  (e.g, COMPUTE, PRINT, ALIGN )  will work only in the active area.
+So,  it's a good idea to Home The Cursor before the command.
++ 2 COL
+  COLUMN EQUATIONS  ARE MADE UP OF MATH SYMBOLS.
+  ----------------
+* The math symbols in a comn equation must line up under one of
+  the letters in the word  "Example", forming a "Vertical Strip".
+ 
+* Once a result symbol ( = ) has been used in a Vertical Strip, a
+  new column equation can begin under it in the same Strip.
+ 
+* When two or more result symbols are on the same row,  the final
+  result will be the sum of each column equation result.
+ 
+ .............................................
+ Example    aa,aaa    bb,bbb     cc,ccc.cc   |
+                                             |      COLUMN EQUATIONS Also:
+   +        10,000    20,000        100.25   |
+   +        10,000    20,000        100.25   |      *  Work on all columns
+            ------    ------        ------   |         in a table.
+   = +      20,000    40,000        200.50   |
+     *           2         2            10   |      *  Can be linked.
+     =      40,000    80,000      2,005.00   |
++
+ *  SAMPLE  SPREADSHEET  *
+ -----------------------------------------------------------------------------
+ Example                      aaa,aaa        bbb,bbb         ccc,ccc
+ 
+                            *PRODUCT A*    *PRODUCT B*     *PRODUCT C*
+ 
+  +       Units Sold            1,000          1,500           5,000
+  *       Unit Price               50             20              10
+ 
+  =   +      REVENUES          50,000         30,000          50,000
+ 
+ 
+  +       Materials            20,000         15,000          25,000
+  +       Labor                 5,000          5,000          20,000
+ 
+  =   -      EXPENSES          25,000         20,000          45,000
+ 
+ 
+      =             PROFIT  $  25,000      $  10,000       $   5,000
+ 
++ 2 ROW
+ ROW  EQUATIONS  show the  MATH  RELATIONSHIP  between  numbers in a row.
+ --------------
+ 
+ Each entered row of numbers must have an operator (a math sign) somewhere
+ in the first  7  columns of that row.   This lets T/Maker  know there are
+ numbers on this row.
+ 
+ Each row of numbers has an equation above it,  called a "row equation".
+ 
+ 
+                                        ROW EQUATIONS:
+ .....................................
+ Example   aaa     bbb    ccc        |  *  Always begin with a row code in
+ ....................................|     column 1 (eg, the jc in "jc1").
+ jc1         +       +      =        |
+ +           5       5     10        |  *  Always have a "Row Code Number".
+ ....................................|     (eg, the  1  in "jc1")
+ jc1         +       *      =        |
+ +           5       5     25        |  *  Contain  math signs that appear
+ ....................................|     above the number it'll work on.
++
+ The "JC1" ROW CODE:
+ 
+ .................................
+ Example   aaa     bbb    ccc    |
+ ................................|         .......
+ jc1         +              =    |     The | JC1 |  row code  tells T/Maker to
+ +          10             10    |         |.....|
+ ................................|    "JUST COMPUTE"  the NEXT row of numbers
+ jc1         +       +      =    |
+ +          10       5     15    |    (the next row starting with a math sign)
+ ................................|
+ jc1         +       -      =    |    according to the equation on the JC1 row.
+ +          10       5      5    |
+ ................................|
+ jc1         +       *      =    |
+ +          10       5     50    |
+ ................................|
+ jc1         +       /      =    |
+ +          10       5      2    |
+ ................................|
++
+ ROW CODE NUMBERS
+ 
+ Up to 30 Equations can operate on a single  row of numbers.  T/Maker stores
+ an equation according to it's row code number.
+ 
+ At a row of  entered  data,  T/Maker   will  get  the  equation  stored  in
+ .............................................   the  first row code  number
+ Example   aaa     bbb    ccc    ddd    eee  |   location (jc1) and performs
+ ............................................|   that calculation on the row
+ jc1         +       +      =                |   of entered data.
+ jc2                        +      -      =  |
+ +          10       5     15     12      3  |   T/Maker  then  looks at  the
+ ............................................|   second row code number (jc2)
+ jc1         +       +      =                |   location and  performs  that
+ jc1                        +      -      =  |   equation on the row of data.
+ +          10       5      0     12    -12  |
+ ............................................|   And so on.
+ 
+ Each equation has a unique row code number.  Re-using a number will
+ cancel the previously stored equation.    (Note last example above.)
++
+ MULTIPLE ROW EQUATIONS        *  SHORT CUT  *
+ 
+ 
+ Equations that operate on numbers from left to right can be placed
+ on the same row code line.
+ 
+ For example, the second JC1 performs the same math on the data row
+ as the first series of JC'S  ( jc1, jc2, jc3 ).
+ 
+ .............................................................
+ Example   aaa     bbb    ccc    ddd    eee    fff    ggg    |
+ ............................................................|
+ jc1         +       +      =                                |
+ jc2                        +      -      =                  |
+ jc3                                      +      *      =    |
+ +          10       5     15     12      3      2      6    |
+ ............................................................|
+ jc1         +       +     =+      -     =+      *      =    |
+ +          10       5     15     12      3      2      6    |
+ ............................................................|
++ 3 AC
+ MORE ROW CODES:  "Special"  ROW CODES  can act on a combination of rows.
+ 
+ .......
+ | AC1 | "ALWAYS COMPUTE"  row code tells T/Maker to apply this equation
+ |.....|  to  EVERY  ROW in a spreadsheet.
+              ----------
+ 
+ 
+ .....................................    ....................................
+ Example           aaa   bbb    ccc  |    |Example           aaa   bbb    ccc
+                  Food   Gas   Total |    |                 Food   Gas   Total
+ jc1                 +     +      =  |    |ac1                 +     +      =
+ +        1981:     10    10     20  |    |+         1981     10    10     20
+ jc1                 +     +      =  |    |+         1982     20    20     40
+ +        1982:     20    20     40  |    |+         1983     30    30     60
+ jc1                 +     +      =  |    |+         1984     40    40     80
+ +        1983:     30    30     60  |    |...................................
+ jc1                 +     +      =  |
+ +        1984:     40    40     80  |         These two examples COMPUTE
+ ....................................|               the same result !
++
+ .......
+ | AC1 | "ALWAYS COMPUTE" row code tells T/Maker to apply this equation
+ |.....|  to every row in a spreadsheet.
+ 
+ 
+ 
+ Remember,  "JC" acts on the next row of data only,  almost as  if  the
+ equation was stored within T/Maker temporarily.
+ 
+ 
+ However, the other row code lines (such as AC) are stored  in  T/Maker
+ permanently until replaced by any other  row equation  using the  same
+ row code number.
++  4 UC
+.......                                 || .......
+| UC1 | "USUALLY COMPUTE" applies       || | RC1 | "RARELY COMPUTE" applies
+|.....|  to  every DATA row.            || |.....|  to  every DERIVED row.
+                                        ||
+(The equation on the UC row code line   || (The equation on the RC code line
+ will only "work" on DATA rows.)        ||  will only "work" on  DERIVED rows.)
+                                        ||
+DATA rows don't have any result signs.  || A DERIVED row has a result sign (=).
+                                        ||
+     * COMPUTE with "UC" *              ||        * COMPUTE with "RC" *
+ ............................           || ...........................
+ Example  aaa   bbb    ccc  |           || Example  aaa   bbb    ccc |
+ uc1        +     *      =  |           || rc1        +     *      = |
+ ...........................|           || ..........................|
+   +        1     1      1  |DATA ROW   ||   +        1     1      0 |data row
+ ...........................|           || ..........................|
+   +        3     3      9  |DATA ROW   ||   +        3     3      0 |data row
+ ...........................|           || ..........................|
+   =        4     4     10  |derived row||   =        4     4     16 |DERIVED
+ ...........................|           || ..........................|
++
+ * MORE  ROW  CODES *
+ 
+.......                                     .......
+| SC  | "SUSPEND COMPUTE"                   | CC  |  "CANCEL COMPUTE"
+|.....|                                     |.....|
+ 
+All previous row codes will                   All previous row codes
+not apply to next row.                        are canceled.
+ 
+ 
+For both  SC  &  CC  row  codes,  a row code number can be specified
+to suspend or cancel a particular row code equation.
+ 
+ 
+======================================================================
+ 
+ 
+Remember . . . All row equations can be accomplished with the JC code.
+ 
+         All other row codes are short cuts for the JC code.
++ 2 ZV
+ The  ZERO  VALUE  LINE
+ 
+ You can tell T/Maker how a "null value" ( or zero value ) will be
+ displayed.
+ 
+ The  Zero Value line follows the Example Line  and:
+ 
+ *  Starts with the letters   ZV   in the first two columns.
+ *  "Zero value symbols" are placed on this line under column and
+     will be  used to represent any Zero Value in this column.
+ 
+ .....................................
+ Example   aaaaa   bbb   ccccc   ddd |
+ ZV          ...          zip      0 |
+ ....................................|
+  +            5     5       5     5 |
+  +           -5    -5      -5    -5 |
+ ....................................|
+  =          ...          zip      0 |
+ ....................................|
++ 2 LABELS
+Example::aaaaa::::bbbbbb:::::::::::::::::::::::::::::::::::::::::::::::ccccc:::
+:::::::
+::::::: JAN 82    FEB 82                                               MAR 82
+::: + :  :::::    ::::::      We can put labels & text anywhere        :::::
+::::::: JAN 83    FEB 83      except:                                  MAR 83
+::: + :  :::::    ::::::                                               :::::
+:::::::                       * On an Example Line
+:::::::  TOTAL     TOTAL        (Text mistaken for Model Numbers)      TOTAL
+: + = :  :::::    ::::::                                               :::::
+:::::::                       * In first 7 columns under Example Line
+:::::::                         (Area reserved for math signs)
+:::::::
+:::::::                       * Intersection of math sign & Model Number
+:::::::                         (Numbers go there)
+:::::::
+:::::::
+Example
+ 
+ --> We can put text under a "Blank Example Line" (one with no Model Numbers).
+Because of this, it's a good idea to end all Tables with a Blank Example Line.
++ 2 STORE
+STORING & FETCHING  VALUES
+ 
+.......                         .......
+| stA | STORE value in          | ftA | FETCH value residing in
+|.....|   "slot A"              |.....|        "slot A"
+ 
+ 
+ You can STORE a value for every letter of the alphabet,  and FETCH
+ that  value back again in a  different part  of  the  spreadsheet.
+ 
+ ............................................
+ Example   aaa   bbb    ccc    ddd    eee   |  * If T/Maker  FETCHes a value
+ ZV                                         |    from a "slot" where nothing
+ ...........................................|    was STOREd to,  a zero will
+ jc1       stA   stB                        |    will be FETCHed.
+ +          10     5                        |
+ ...........................................|
+ jc1                    ftB           ftA   |
+ +                        5            10   |
+ ...........................................|
++ 2 OCALC
+ 1/1 WHAT NEXT?   <COMPUTE>        *  ORDER  OF  CALCULATION  *
+ 
+ 
+ 
+ A COMPUTE sends T/Maker calculating "left to right" - "top to bottom" once.
+ 
+ 1) T/Maker finds the firrst row that has a math sign on it in the first 7 cols.
+ 
+ 2) T/Maker calculates any applicable  row equations  for this row in the order
+    determined by their row code numbers.
+ 
+ 3) T/Maker then goes to the next row with a math sign (in first 7 cols)   and
+    calculates the column values if the math sign is a terminator. T/Maker now
+    goes back to Step 2.
+ 
+    This loop continues until T/Maker can't find any more rows with math signs
+    or until it finds a  Blank Example Line  (contains no Model Numbers).
++ 3 RC
+ 1/1 WHAT NEXT?   <COMPUTE C C C C C ...>       *  RE-CALCULATION  *
+ 
+ 
+ You can ask T/Maker to make another  COMPUTE pass at a table by following
+ COMPUTE with a " C " (the number of " C "s will be the number of passes).
+ 
+ Thus, you can STORE values calculated at the bottom of a column and FETCH
+ them for use at the top of another column by  "re-COMPUTING".
+ 
+ 
+ ...............................           ...............................
+ Example   aaaa   bbbb   cccc  |           |Example   aaaa   bbbb   cccc
+ ..............................|           |..............................
+ jc1               fta    ftb  |           |jc1               fta    ftb
+ +            5                |           |+            5     50    500
+ *           10     10     10  |           |*           10     10     10
+ ..............................|           |..............................
+ jc1        sta    stb         | Result of |jc1        sta    stb
+ =                             |COMPUTE C C|=           50    500   5000
+ ..............................|           |...............................
++ 2 FORMAT
+CHANGING COLUMN FORMATS  (Multiple  Example Lines)
+ 
+ 
+Example   aaaa    b,bbb.bb     cccc              * Columns always retain their
+          ----    --------     ----                relative order.   A  Column
+ +        2500    1,500.00     1000                can be  "plugged"  with the
+          ::::    ::::::::     ::::                use of a Comma Model Number,
+          ::::    ::::::::     ::::                A  "plugged"  column can be
+Example  aa,aaa.aaa    ,         ccc               re-opened at any time.
+         ----------              ---
+ = +      2,500.000              ***             * If  a  Model Number  is too
+          :::::::::              :::               small   for    a    result,
+          :::::::::              :::               Asterisks (***) will appear
+Example   a,aaa      b,bbb.b    xx,xxx,xxx,xxx     as  the  temporary  result.
+          -----      -------    --------------
+   =+     2,500      1,500.0    :::::::::1,000   * Any character (except a ",")
+          :::::      :::::::    ::::::::::::::     can make up a  Model Number.
+          :::::      :::::::    ::::::::::::::
+Example                                          * Blank Example Lines will
+    =                                              stop a T/Maker COMPUTE.
++ 2 FRAME
+ <ESC> <F>   FRAMES any portion of the T/Maker screen.
+ 
+ 
+Frame  will freeze one portion of the screen,  while allowing you to scroll
+through the other portion.  (Exception: Frame will not work in row 1/col 1)
+ 
+ 
+ 
+ 
+Example                aaaaa        ggggg    hhhhh     iiiii    jjjjj    kkkkk
+                                ///////////////////////////////////////////////
+                                //
+                        JAN     //    AUG     SEPT       OCT      NOV      DEC
+                                //
+   +    Revenues:        100    //    250      265       275      450      525
+   -    Expenses:         25    //     55       65        75      100      125
+        ------------------------//--------------------------------------------
+   =    PROFITS:      $   75    // $  195  $   200    $  200   $  350   $  400
+                                //
+                                //
++ 2 TERM
+            SUMMARY OF BUILT-IN ROW & COLUMN RESULTS TERMINATORS
+ 
+  =     Simple result                   sin   Sine of result (radians)
+  %     Result multiplied by 100        cos   Cosine of result
+  #     Result divided by 100           tan   Tangent of result
+  rec   Reciprocal of result            atn   Arctangent
+  sqr   Square root of result           sgn   Sign of result (+1, 0, -1)
+  abs   Absolute value of result        ply   Max of zero and result
+  avr   Simple Average (only + signs)   nly   Max of zero and (-)result
+  exp   e to power of result            sfh   Result subtracted from 100
+  log   Natural log of result           sfo   Result subtracted from 1
+  /10   log to base 10 of result
+ 
+                   SPECIAL TERMINATORS FOR ROW & COLUMNS
+ 
+  cnt   Total Count of "+" signs        ~  Percent Change (between 2 #'s)
+  max   Max of two numbers              ^  Raised to Power of
+  min   Min of two numbers
+ 
+(Type:  Y  for examples of above formulas as well as more advanced formulas.)
++
+...............................................................................
+|SIMPLE RESULT  | RESULT x 100  | RESULT ö 100  |  1 - RESULT   |100 - RESULT |
+|    ( = )      |     ( % )     |    ( # )      |     (sfo)     |   ( sfh )   |
+|...............|...............|...............|...............|.............|
+|Example  aa    |Example  aaa   |Example  aaa   |Example  a.aa  |Example  aaa |
+|      +   5    |      -    4   |      +  100   |+        0.10  |+          5 |
+|      +   5    |      +    5   |               |+        0.20  |+          5 |
+|      =  10    |      %  100   |      #    1   |sfo      0.70  |sfh       90 |
+|...............|...............|...............|...............|.............|
+ 
+.................................................................
+|SIMPLE AVERAGE |  SQUARE ROOT  | ABSOLUTE VALUE|  RECIPROCAL   |
+|    (avr)      |    ( sqr )    |    ( abs )    |    ( rec )    |   BUILT-IN
+|...............|...............|...............|...............|
+|Example  aa    |Example   aa   |Example  aa    |Example  aa    |   FORMULAS
+|  +       5    | +         2   | +        5    |+         5    |
+|  +      15    | *         8   | -       10    |/        10    |       &
+|  avr    10    | sqr       4   | abs      5    |rec       2    |  TERMINATORS
+|...............|...............|...............|...............|
+     (  Type:   Y   for   special  built-in  formulas  )
++
+                  SPECIAL FORMULAS FOR ROW & COLUMN EQUATIONS
+ 
+..............................................................................
+| MAX of two   |  MIN of two  |   PERCENT    |  The "+ number" |  The Total  |
+|  numbers     |   numbers    |   CHANGE     | RAISED  TO  THE | COUNT   of  |
+|  denoted     |   denoted    |from + number |      POWER      |  + signs in |
+| by + and *   |  by + and *  | to  * number |of the "* number"| an equation |
+|..............|..............|..............|.................|.............|
+|              |              |              |                 |             |
+|Example  aaa  |Example  aaa  |Example  aaa  |Example   aaa    |Example  aaa |
+|              |              |              |                 |  +       50 |
+|  +       10  |  +       10  |     +     4  |     +     10    |  +       60 |
+|  *        5  |  *        5  |     *     6  |     *      2    |  +       75 |
+|              |              |              |                 |             |
+|  max     10  |  min      5  |     ~    50 %|     ^    100    |  cnt      3 |
+|..............|..............|..............|.................|.............|
++ 3 CONSTANTS
+CONSTANTS  can be used in a spreadsheet with use of special row code lin.
+ 
+ 
+The row code and row code number is followed by the math symbol which will
+operate on the constant value.
+ 
+ 
+ 
+Example     aaaa    bbbb
+ac1            +       =
+ac2*                1.10
+ 
+ +           100     110
+ +           200     220
+ +           300     330
+ 
+ 
+ 
+               ( See reference manual for more on constants )
++
+SPECIAL NOTATIONS FOR ROW EQUATIONS      (Horizontal Calculations only)
+ 
+ 
+*  These  special  row equations appear on their own row equation-line.
+*  The  math  symbols  need  not  appear  in  the  order  shown  below.
+ 
+ .......................................
+ Example  aaa     bbb     ccc     ddd  |
+ ......................................|
+ jc1      dis       +       +     net  |  NET PRESENT VALUE:  Discount   rate
+ +         10 %    20      40      56  |  applied  to  + columns.
+ ......................................|
+ jc1      prj       +       +       +  |  COMPOUND PROJECTIONS:  The leftmost
+ +         10 %   100     110     121  |  + column projected  to right  based
+                                       |  on the growth rate in  PRJ  column.
+ ......................................|
+ jc1      inc       +       +       +  |  INCREMENTAL  (LINEAR)  GROWTH : The
+ +         10 %   100     110     120  |  leftmost + column is projected to
+ ......................................|  right based on increment in INC.
+      (Type:  [ Y ]  for  more.)
++
+ SPECIAL NOTATIONS FOR ROW EQUATIONS     [con't]     (Horizontal Calcs only)
+ 
+  - +  /  grw     GROWTH RATE  in  going from  -  to  +  columns.   The / is
+                  is  the  number  of  periods.
+ 
+  - * * + grw     GROWTH RATE  in  going  from  -  to  +  columns.  The * is
+                  used  to  mark  intervening  periods.
+ 
+  + + + + pch     PERCENT CHANGE :  %  change  from one  + column to another.
+ 
+  + + + + pct     PERCENT OF :  +  columns  are converted to % of PCT column.
+ 
+  + + + + cum     CUMULATIVE DISTRIBUTION :  +  columns  are converted to CD.
+ 
+  + + + + chg     ABSOLUTE CHANGE BETWEEN COLUMNS: + columns are converted to
+                  represent  difference between a + col. and the col. to left
+ 
+  + + + + mvr     MOVE COLUMN RIGHT: Value of + columns moved over one
+ 
+  + + + + mvl     MOVE COLUMN LEFT : Value of + columns moved over one
++ 1 CLEAN
+1/1 WHAT NEXT?   <CLEAN>
+ 
+ 
+CLEAN  eliminates the first  7  columns of text, as well as all row &
+column equation notation. (CLEAN won't affect Print Design commands.)
+ 
+Warning:   If you iissue CLEAN command without SAVE-ing a spreadsheet,
+you cannot get your  Vertical or Horizontal Equations  back.   Always
+SAVE before CLEANing.
+ 
+ 
+ ................
+ .clean         |      Hint:  Always use the   ( .clean/.noclean  )
+ Example   aa   |             Print Design command.
+ +          1   |
+ +          1   |      This will allow you to specify the areas to
+ =          2   |      be temporarily "cleaned".
+ .noclean       |
+ ...............|
++ 1 COMBINE
+1/1 WHAT NEXT?   <COMBINE>
+ 
+ 
+COMBINE allows you to "combine" a spreadsheet in the work file area  with
+a similar spreadsheets on disk on a spreadsheet by spreadsheet basis.
+ 
+ 
+ 
+ 
+1/1 WHAT NEXT?   <TRANSFER>
+ 
+ 
+TRANSFER  allows you to "transfer" values in a spreadsheet stored on disk
+into a spreadsheet in the working area.  (Cell by cell TRANSFER.)
+ 
+ 
+ 
+         ( See  Reference Manual for more on both these Topics.)
+

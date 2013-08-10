@@ -1,0 +1,167 @@
+
+THE USE OF HOOKS
+ Hooks provide a way to intercept the BASIC interpreter or operating system at
+certain points,enabling additional,or alternative,processing to be carried
+out.To
+expand on the last sentence it i s easiest to use an to be carried out.To
+expand
+on the last sentence it iseasiest to use an example.Consider for example the
+BIOS
+call CHPUT(see section 2.3).This routine is used to print text on the
+screen.Here
+is a disassembly of the first few instructions of CHPUT :
+        PUSH    HL      SAVE ALL THE REGISTERS USED
+        PUSH    DE
+        PUSH    BC
+        PUSH    AF
+        CALL    FDA4    CALL THE HOOK HCHPU
+ First of all registers HL,BC,DE and AF are pushed on to the stack.Then memory
+address FDA4 is called.Normally,the contents of FDA4 and the following 4
+bytes,is a Z80 RET instruction,immediately passing control to the instruction
+following the CALL.However,FDA4 is in RAM,so its contents can be altered.Let
+the 3 bytes,starting at FDA4 be changed,so that control is passed to another
+subroutine at D000,i.e.
+FDA4    C3 00 D0        JP      D000
+Also let the code at D000 be as shown below :
+        POP     HL      GET RID OF THE FIRST ITEM ON THE
+                        STACK(i.e.RETURN TO HOOK ADDRESS)
+        POP     AF      RESTORE THE REGISTERS
+        POP     BC
+        POP     DE
+        POP     HL
+        RET             EXIT BIOS CALL CHPUT.
+ Now the item on the top of the stack is 3 more than the address from which
+FDA4 was called,i.e.the return address to CHPUT.Therefore,if this is removed
+from the stack,this will restore the stack to the state it was in immediately
+before calling FDA4.Also,if the next four items are popped as shown above,the
+stack will be as it was on entering CHPUT,so the RET instruction will exit the
+subroutine CHPUT.Consequently the character which was to be printed will not be
+!
+This example demonstrates how the operating system can be intercepted.The five
+bytes,starting at address FDA4,are know as a hook.Similar "hook" exist at many
+other points in the operating system and BASIC interpreter,and a list of
+them,in
+alphabetical order,is contained in the following pages.
+
+
+-----------------------------------------------------------------
++       No RET on hook
++/c     No RET on hook if network is present
++/sc    Hook doesn't change for sc 8
+-----------------------------------------------------------------
++/c     FD9A+   HKEYI   0C4A  Interrupt handler
+        FD9F+   HTIMI   0C53  Interrupt handler
+        FDA4+/scHCHPU   08C0  до CHPUT(A-character;SAVE ALL)
+        FDA9+/scHDSPC   09E6  Display cursor    (no param.)
+        FDAE+/scHERAC   0A33  Errase cursor     (no param.)
+        FDB3+/scHDSPF   0B2B  DSPFNK std routine(no param.)
+        FDB8+/scHERAF   0B15  ERAFNK std routine(no param.)
+        FDBD    HTOTE   0842  TOTEXT std routine
+        FDC2+   HCHGE   10CE  CHGET  std routine
+        FDC7+   HINIP   071E  Copy character set to VDP
+        FDCC    HKEYC   1025  Keyboard decoder
+        FDD1    HKYEA   0F10  Keyboard decoder
+        FDD6    HNMI    1398  NMI std routine
+        FDDB    HPINL   23BF  PINLIN std routine
+        FDE0    HQINL   23CC  QINLIN std routine
+        FDE5    HINLI   23D5  INLIN std routine
+        FDEA    HONGO   7810  "ON DEVICE GOSUB"
+        FDEF+   HDSKO   7C16  "DSKO$"
+        FDF4    HSETS   7C1B  "SET"
+        FDF9+   HNAME   7C20  "NAME"
+        FDFE+   HKILL   7C25  "KILL"
+        FE03    HIPL    7C2A  "IPL"
+        FE08+   HCOPY   7C2F  "COPY"
+        FE0D    HCMD    7C34  "CMD"
+        FE12+   HDSKF   7C39  "DSKF"
+        FE17+   HDSKI   7C3E  "DSKI$"
+        FE1C    HATTR   7C43  "ATTR$"
+        FE21+   HLSET   7C48  "LSET"
+        FE26+   HRSET   7C4D  "RSET"
+        FE2B+   HFIEL   7C52  "FIELD"
+        FE30+   HMKI$   7C57  "MKI$"
+        FE35+   HMKS$   7C5C  "MKS$"
+        FE3A+   HMKD$   7C61  "MKD$"
+        FE3F+   HCVI    7C66  "CVI"
+        FE44+   HCVS    7C6B  "CVS"
+        FE49+   HCVD    7C70  "CVD"
+        FE4E+   HGETP   6A93  Locate FCB
+        FE53    HSETF   6AB3  Locate FCB
+        FE58+   HNOFO   6AF6  "OPEN": not found
+        FE5D+   HNULO   6B0F  "OPEN"
+        FE62+   HNTFL   6B3B  Close I/O buffer 0
+        FE67    HMERG   6B63  "MERGE/LOAD"
+        FE6C    HSAVE   6BA6  "SAVE"
+        FE71+   HBINS   6BCE  "SAVE"
+        FE76+   HBINL   6BD4  "MERGE/LOAD"
+        FE7B+   HFILE   6C2F  "FILES"
+        FE80+   HDGET   6C3B  "GET/PUT"
+        FE85+   HFILO   6C51  Sequential output
+        FE8A+   HINDS   6C79  Sequential input
+        FE8F    HRSLF   6CD8  "INPUT$"
+        FE94    HSAVD   6D03"LOC",6D14"LOF",6D25"EOF",6D39"FPOS"
+        FE99+   HLOC    6D0F  "LOC"
+        FE9E+   HLOF    6D20  "LOF"
+        FEA3+   HEOF    6D33  "EOF"
+        FEA8    HFPOS   6D43  "FPOS"
+        FEAD+   HBAKU   6E36  "LINE INPUT#"
+        FEB2+   HPARD   6F15  Parse device name
+        FEB7+   HNODE   6F33  Parse device name
+        FEBC+   HPOSD   6F37  Parse device name
+        FEC1    HDEVN   This hook not used
+        FEC6    HGEND   6F8F  I/O function despatcher
+        FECB    HRUNC   629A  Run-clear
+        FED0    HCLEA   62A1  Run-clear
+        FED5    HLOPD   62AF  Run-clear
+        FEDA    HSTKE   62F0  Reset stack
+        FEDF    HISFL   145F  ISFLIO std routine
+        FEE4    HOUTD   1B46  OUTDO std routine
+        FEE9    HCRDO   7328  CR,LF to OUTDO
+        FEEE    HDSKC   7374  Mainloop line input
+        FEF3    HDOGR   593C  Line draw
+        FEF8    HPRGE   4039  Program end
+        FEFD+   HERRP   40DC  Error handler
+        FF02    HERRF   40FD  Error handler
+        FF07    HREAD   4128  Mainloop "OK"
+        FF0C    HMAIN   4134  Mainloop
+        FF11    HDIRD   41A8  Mainloop direct statement
+        FF16    HFINI   4237  Mainloop finished
+        FF1B    HFINE   4247  Mainloop finished
+        FF20    HCRUN   42B9  Tokenise
+        FF25    HCRUS   4353  Tokenise
+        FF2A    HISRE   437C  Tokenise
+        FF2F    HNTFN   43A4  Tokenise
+        FF34    HNOTR   44EB  Tokenise
+        FF39    HSNGF   45D1  "FOR"
++/c     FF3E+   HNEWS   4601  Runloop new statement
+        FF43    HGONE   4646  Runloop execute
+        FF48    HCNRG   4666  CHRGTR std routine
+        FF4D    HRETU   4821  "RETURN"
+        FF52    HPRTF   4A5E  "PRINT"
+        FF57    HCOMP   4A94  "PRINT"
+        FF5C    HFINP   4AFF  "PRINT"
+        FF61    HTRMN   4B4D  "READ/INPUT" error
+        FF66    HFRME   4C6D  Expression Evaluator
+        FF6B    HNTPL   4CA6  Expression Evaluator
+        FF70    HEVAL   4DD9  Factor Evaluator
+        FF75    HOKNO   4F2C  Factor Evaluator
+        FF7A    HFING   4F3E  Factor Evaluator
+        FF7F    HISMI   51C3  Runloop execute
+        FF84    HWIDT   51CC  "WIDTH"
+        FF89    HLIST   522E  "LIST"
+        FF8E    HBUFL   532D  Detokenise
+        FF93    HFRQI   543F  Convert to integer
+        FF98    HSCNE   5514  Line number to pointer
+        FF9D    HFRET   67EE  Free descriptor
+        FFA2    HPTRG   5EA9  Variable search
+        FFA7+   HPHYD   148A  PHYDIO std routine
+        FFAC+   HFORM   148E  FORMAT std routine
+        FFB1    HERRO   406F  Error handler( начало )
+        FFB6    HLPTO   085D  LPTOUT std routine
+        FFBB    HLPTS   0884  LPTSTT std routine
+        FFC0    HSCRE   79CC  "SCREEN"
+        FFC5    HPLAY   73E5  "PLAY" statement
+        FFCA    H????:
+        FFCF    HBGFD   before physical operation with disk controller
+        FFD4    HENFD   after physical operation with disk controller
+

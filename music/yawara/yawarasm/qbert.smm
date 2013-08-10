@@ -1,0 +1,150 @@
+;
+;                        QBert.SMM
+;
+;            "Q-Bert" Source Game Music Module
+;
+; Version Amalthea-1-1 (1st Ver., 1st Release, 1st Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =QBert.SMM
+;   L80 QBert,QBert.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Q-Bert" cartridge mapping:
+;
+;   4000 5FFF
+;      |M|?|?|?|
+;   0000       7FFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '             Q-Bert             '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   0C000H
+GMPNam:db   'Yawara  C00'
+OpenMN:db   000H
+StrtSE:db   000H
+ChATDD:dw   0E011H
+ChBTDD:dw   0E031H
+ChCTDD:dw   0E051H
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'QBertOpnSc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'QBertMnuSc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00010010B
+
+SetupR:ret  nz
+       ld   hl,04000H
+       xor  a
+       ld   (hl),a
+       inc  hl
+       ld   (hl),a
+       ld   hl,0E000H
+       ld   de,0E001H
+       ld   bc,000FFH
+       ld   (hl),000H
+       ldir
+       ld   a,0BFH
+       call 05096H
+SilnRt:ld   a,059H
+StMsRt:jp   04C5AH
+
+PlayRt:jp   04CCCH
+
+GmBlNm:db   'QBert   ROM'
+GmBlSz:dw   08000H
+LoadAd:dw   04000H
+       dw   0FFFFH
+MusicT:db   020H,'   Playing The Cubes   '
+       db   023H,'     Q*Bert - Title    '
+       db   017H,'           17*         '
+       db   01AH,'           1A*         '
+       db   01DH,'           1D          '
+       db   026H,'           26*         '
+       db   029H,'           29*         '
+       db   041H,'           41*         '
+       db   044H,'           44*         '
+       db   047H,'           47          '
+       db   04AH,'           4A*         '
+       db   04DH,'           4D*         '
+       db   050H,'           50*         '
+       db   053H,'           53          '
+       db   0FFH,0FFH
+EffctT:db   001H,'           01*         '
+       db   002H,'           02*         '
+       db   003H,'           03*         '
+       db   004H,'           04*         '
+       db   005H,'           05*         '
+       db   006H,'           06          '
+       db   007H,'           07*         '
+       db   008H,'           08*         '
+       db   009H,'           09          '
+       db   00AH,'           0A*         '
+       db   00BH,'           0B*         '
+       db   00CH,'           0C*         '
+       db   00DH,'           0D*         '
+       db   00EH,'           0E*         '
+       db   00FH,'           0F*         '
+       db   010H,'           10*         '
+       db   011H,'           11*         '
+       db   012H,'           12          '
+       db   013H,'           13*         '
+       db   014H,'           14*         '
+       db   015H,'           15*         '
+       db   016H,'           16*         '
+       db   02CH,'           2C*         '
+       db   02FH,'           2F*         '
+       db   032H,'           32*         '
+       db   035H,'           35*         '
+       db   038H,'           38*         '
+       db   03BH,'           3B*         '
+       db   03EH,'           3E*         '
+       db   056H,'         Pause!        '
+       db   059H,'       Silence...      '
+       db   0FFH,0FFH
+
+       end

@@ -1,0 +1,764 @@
+
+	MSX-DOS2 cache disk controler [DOS2CASH] V.1.23
+
+					Quick Reference DOS2CASH.ENG
+					Copyright TSUYOSHI 1994,1995
+
+					Written by Kenji KITAYAMA(TEAM-PMK)
+
+
+DOS2CASH is a cache disk controler for floppy & harddisk of MSX-DOS2.
+Original is uploaded to Illusion-City(Sakai, Japan) by author, and 
+reproduced in NIFTY-Serve FMSX(Japan).
+
+DOS2CASH.DOC(original document) is wrttten in Japanese.
+DOS2CASH.ENG isn't translated it from first to end. Because it is 
+very large and complicated. But, at least, DOS2CASH.ENG is explained
+about many options, examples and legal issues, for you are available.
+
+
+Introduction
+============
+
+DOS2CASH is cache disk controler for floppy & harddisk on MSX-DOS2 or MSX-View. 
+
+Characteristic:
+
+	- DOS2CASH can cache every file structure in 1DD and 2DD.
+	- It can handle maximum even 8 drives in floppydrives and harddrives.
+	- Whenever you can flash cache disk.
+	- 1 floppydrive can handle as 2 drive at 2 drive simulater.
+	- Many options.
+	- Auto flash after disk change (only turboR).
+	- It can memorize directry and FAT for speedy using.
+	- Flashed cache data can be recovered.
+
+
+v1.23(Oct.8.94):
+
+	- Transmit algorithm of cache disk is improved, and it became very 
+	  speedy.
+	- A option that cache disk can secure segments from primary mapper 
+	  priority, is added.
+	- A bug that /C option can be given excepting turboR, is killed.
+	- A bug that /N and /P option don't work well in 8 drives 
+	  with harddisk, is killed.
+	- A bug that DOS2CASH believe floppydrive as SCSI disk after red
+	  Ryoga's 800kbytes formatted disk and rebooted, is killed.
+	- A bug that drive information by /S is difference from /D, is killed.
+	- /L option is available with RAM disk access.
+	- /C option can be given with parameter for built FDC
+	  (Floppy Disk Controler)
+	- DOS2CASH secures primary mapper segments priority when it is given 
+	  /V option.
+
+
+Environment
+===========
+
+MSX personal computer(MSX2/2+/turboR)
+MSX-DOS2 or MSX-View
+Mapper memory more than 48kbytes or 80kbytes(harddisk)
+
+Author confirmed to use two harddisk interfaces right. 
+Harddisk-Interface(ASCII) and SCSI-Interface(MSX Club GOUDA)
+
+
+How to use
+==========
+
+Usage : DOS2CASH 	[num] [/R] [/K[num]] [/S]
+			[/L[num][[C][H][F][R][num]]]
+			[/M[num1][num2]..[num8]]
+			[/H[num1][num2]..[num8]]
+			[/B[num1][num2]..[num8]]
+			[/V[num]]
+			[/A[num1][num2]] [/F[num]]
+			[/D[[F][H][num1][num2]..[num8]]]
+			[/P[[F][H][num1][num2]..[num8]]]
+			[/T[[F][H][num1][num2]..[num8]]]
+			[/N[[F][H][num1][num2]..[num8]]]
+			[/Z[num]] 
+			[/C[num1][num2]][[S][U][D][num]]]
+			[/W] [/U] [/O] [/Y] [/?]
+			[/X	[[L][filename]][[M][num]][R][C][P]
+				[[F][num]][[N][num]][[H][num1][num2]]]
+
+
+Options : 
+
+	[num]	New cache disk size.
+		DOS2CASH makes a new cashdisk from 16[KB] upto 4096[KB]. 
+		Cache disk is maken multiples of 16KBytes all the time, 
+		all numbers is rounded up next multiples of 16KB.
+		0 is not any to make. If cache disk is already exists, 
+		DOS2CASH promts to make a new cache disk or not.
+		You will cut down this option if it is given /O.
+
+	[ /R]	Remove cache disk.
+		DOS2CASH removes a cache disk controler.
+
+	[ /K]	Key sens.
+		DOS2CASH sets a key for flash operation. Give a number 
+		from 0 upto 2 with /K. 0..[SHIFT] 1..[GRAPH] 2..[JIKKOU]
+		If you don't give a number with turboR, it becomes [JIKKKO].
+
+	[ /S]	See Drive information.
+		DOS2CASH appears a infomation of your diskdrives and 
+		cache disks. Drive letter is described physically.
+
+	[ /L]	Monitor LED.
+		DOS2CASH sets LED to monitor. If /L is given with 0, 
+		it means monitor off, and the other number means monitor on.
+		If /L is with a number is from 1 upto 255, [CAPS] LED is 
+		brilliant at every cache disk access, [KANA] is at harddisk 
+		access and [PAUSE] is at disk change on turboR.
+
+		In additon, you can register each LED for 4 devices. 
+		[C]..Cache disk
+		[H]..Harddisk
+		[F]..Floppy change 
+		[R]..RAM disk
+
+		Give numbers from 0 upto 4 with C, H, F or R. 
+		0..none 1..[CAPS] 2..[KANA] 3..[PAUSE] 4..[Turbo]
+		You can write a same number for all devices.
+
+	[ /M]	Partition for Floppy disk.
+		DOS2CASH partitions a cache disk from 0[KB] upto 4096[KB] 
+		among floppydrives. Write the cache size after /M from young 
+		drives even maximum 8 drives.
+
+		If numbers is smaller than maximum cache disk size, DOS2CASH 
+		decreases numbers automatically. And id number is bigger than 
+		maximum disket size, DOS2CASH also adjusts automatically.
+
+		/M option sweepout individually and doesn't break partitions 
+		of other drives if cache disk filled. It is convenience when 
+		you want to cache many drives.
+
+		Cache disk is maken multiples of 16KBytes all the time, 
+		all numbers is rounded up next multiples of 16KB.
+
+	[ /H]	Partition for Hard disk.
+		DOS2CASH partitions a cache disk from 0[KB] upto 4096[KB] 
+		among harddrives. Write the numbers of cache size after /H 
+		even 8 drives.
+
+	[ /B]	Check Boot sector.
+		DOS2CASH checks boot secter ID at every floppy access.
+		If ID is different from latest ID, DOS2CASH will flash the 
+		cache disk. If the number from 1 upto 255 is given with /B, 
+		it means waiting time. 0 means ID check off. 
+		This option makes become slowly the disk access because 
+		DOS2CASH must check boot secter at every disk access.
+
+	[ /V]	Reserve user segment.
+		DOS2CASH reserves the memory mapper for MSX-View on MSX-View.
+		If number from 16[KB] to 4096[KB] is given with /V, it means 
+		segment size which does not use by cache disk controler. 
+		0 doesn't make any one.
+
+	[ /A]	Auto flash mode for MSX turboR.
+		DOS2CASH flashes the cache data automatically after every 
+		your floppy change. It uses disk change check of MSX-DOS2. 
+		But it's only for turboR built drive. 0 means auto flash off. 
+		If you give two numbers, DOS2CASH sets it two each built 
+		drives from young.
+
+	[ /F]	Full flash mode.
+		DOS2CASH flashes cache data of many drives with hit a key. 
+		It is convenience for one-touch operation, it needs /K 
+		option because DOS2CASH can't memorize a flash key without /K.
+
+		If DOS2CASH is given 8 numbers from 1 upto 8 with /F, 
+		it flashes all cache disks of physical drive as soon as 
+		you hit a flash key. 
+
+	[ /D]	None flash mode for Directry and FAT.
+		DOS2CASH doesn't sweepout the root directry and FAT data.
+		DOS2CASH becomes speedy. Because if it filled cache disk with 
+		cache data, DOS2CASH doesn't access the root directry and FAT.
+		In case of floppydisk, DOS2CASH reads the root directry and 
+		FAT automatically as soon as cache disk is flashed.
+
+		If DOS2CASH is with this option, it caches root directry and 
+		FAT data all the time. So it needs memory over 16KBytes.
+		If DOS2CASH can't find 32KBytes mapper memory for cache,
+		you can't use this option.
+
+		You can set /D option for each floppydrives and harddrives 
+		if DOS2CASH is given it with F or H.
+
+		If /D is with numbers, you can assign to (or not to) sweepout
+		the root directry and FAT for each drives from young even 8. 
+		0 means sweepout on. not 0 (more than root directry and FAT 
+		sector number) means to assign first sweepout area. 
+		This number is sector one.
+
+		If you write larger sector number than root directry 
+		and FAT area, you can use big protected cache disk.
+		But if DOS2CASH is given bigger than cachesize, it will ignore.
+
+		/DF is given priority over /DH.
+
+	[ /P]	None flash mode for path and user path.
+		DOS2CASH doesn't sweepout directries written in e.v.PATH.
+
+		DOS2CASH becomes speedy like given /D option. Because it 
+		memorizes directries none sweepout and there is no access 
+		after filled cache disk with data.
+
+		For using this option DOS2CASH needs 16KBytes memory 
+		because it caches directries and FAT all the time. So it 
+		ignores this option if there isn't memory at least 32KBytes. 
+		And DOS2CASH needs a little time for set up than it isn't 
+		given /P.
+
+		If DOS2CASH is given only /P option, it memorizes directries 
+		written in e.v. PATH, and sets it none sweepout.
+		DOS2CASH can memorize all directries written in SET PATH 
+		and e.v.DOS2PATH.
+
+		If DOS2CASH is given /P option with F or H, it memorizes 
+		directries in each floppydrives and harddrives. 
+		Be with the physical drive numbers even 8 drives from young 
+		if you want. 
+		0    ..Path and user path are flashed
+		1-255..None flash mode for path and user path
+
+		/PF is given priority over /PH.
+
+	[ /T]	Turbo mode for MSX turboR.
+		DOS2CASH makes become RAM disk speedy because it doesn't 
+		turn to Z80 mode at access. This option is only for turboR.
+
+		If DOS2CASH is given /T option with /F or /H, you can sets 
+		this function for floppydrives and harddrives individually. 
+		Be with the physical drive numbers even 8 drives from young.
+		0..All the time Z80 mode
+		1..All reading is on R800 mode
+		2..All writing is on R800 mode
+		3..All the time R800 mode
+		Maximum drive numbers which is able to set, 8.
+
+		This option makes be speedy RAM disk access, but it may break 
+		diskdata or occur the read/write error if you use wrong.
+		Use it after understood this information.
+		Particulary it accesses FDCROM directly without calling 
+		input/output routine of physical disk in page 3. 
+		So softwares which expect to call physical I/O routine in 
+		page 3 will go to cyber space nobody known. Take care it. 
+		But DOS2CASH calls I/O routine in page 3 at diskchange and 2 
+		drive simulater.
+
+	[ /N]	Read only cache mode.
+		DOS2CASH is set the read-only mode.
+		If DOSCASH is given /N, it doesn't sweepout cached data. 
+		And it doesn't cache after cache disk is filled.
+
+		If DOS2CASH is given /N option with F or H, it sets 
+		read only each floppydrives and harddrives. Be with the 
+		physical drive numbers even 8 drives from young if you want. 
+		0 means that it isn't set read only and the others sets 
+		read only.
+		0    ..DOS2CASH isn't set read only cache mode
+		1-255..Read only cache mode
+
+	[ /Z]	Beep on.
+		DOS2CASH plays beep at diskchange.
+		If DOS2CASH is given this /Z, it plays beep at diskchange 
+		with cache disk flashing. If /Z is with /X option, it will 
+		ignores. 
+		0    ..beep off
+		1-4  ..beep on(Beep changes like MSX-BASIC)
+
+	[ /C]	Fast seek mode for turboR.
+		DOS2CASH becomes speedy a little on turboR because floppydrive 
+		head gathers speed.
+
+		If DOS2CASH is given this option, it cut down the head moving 
+		time and it becomes speedy a little. This is only for turboR 
+		built drive.
+
+		If /C option is given with numbers from 0 upto 3, you can 
+		set to cut (or not to cut) for reading or writing. 
+		0..Normal speed
+		1..Fast seek mode for reading
+		2..Fast seek mode for writing
+		3..Fast seek mode for reading/writing
+
+		If you don't write any number, DOS2CASH sets speedy only 
+		for reading. If you set two numbers, DOS2CASH sets speedy 
+		for each drives from young.
+
+		If /C option is given with S, U or D, you can set head 
+		mooving, removing and stabilizing time directly.
+
+		If S, U or D is given with number, DOS2CASH give the number 
+		to FDC directly. If DOS2CASH isn't given the number, it is 
+		given standard one.
+		[S]..Head moving time      [0- 15]
+		[U]..Head removing time    [1- 15]
+		[D]..Head stabilizing time [1-127]
+
+		I omit a explanation because these numbers are supposing that 
+		user know about FDC well. If you want to know them, refer to 
+		PD765A manual.
+
+		/C is for speedy disk access, but it may break 
+		disk data or occur the read/write error if you use wrong.
+		Use it after you understood this information.
+
+	[ /W]	Write cache mode.
+		DOS2CASH caches data at writing.
+		Moreover, if DOS2CASH isn't given this option, DOS2CASH 
+		updates the cache data in cache disk in case of writing area 
+		is already cached. DOS2CASH prevent from existing different 
+		data between cache disk and other disk.
+
+	[ /U]	Recover cache disk.
+		DOS2CASH with /U option recovers last cache disk at reboot 
+		if you reset your machine when DOS2CASH is exists.
+		It prompts to choose recovering yes or no. But if /O option is 
+		given, it doesn't prompt it.
+
+		/U option is that if last memory mapper, slot number and 
+		drive construction is as well as them at reboot, DOS2CASH 
+		recovers a cachedisk.
+
+		If you already removed DOS2CASH before reboot by /R, DOS2CASH 
+		can't recover a cache disk.
+
+		Moreover, DOS2CASH must accesses floppy disk to compare ID 
+		after cache disk recovered because it prevent disk from 
+		change miss.
+
+		If other programs used the datas in cache disk, DOS2CASH 
+		doesn't judge that mapper segment already broken. In this 
+		case, recovering isn't perfectly.
+		Use /U option after understanding this information.
+
+	[ /O]	Kill cache disk.
+		DOS2CASH makes a cache disk compulsority.
+		Usually other cache disks is already exists, DOS2CASH prompts 
+		to choose yes or no. But if it is given /O, it doesn't prompt 
+		it.
+
+	[ /Y]	DOS2CASH uses primary mapper priority.
+		Usually DOS2CASH uses excepting primary mapper because other 
+		softwares may use it. If DOS2CASH is given this option, it 
+		uses primary mapper priority for cache disk.
+		In turboR DOS2CASH will be speedy a little because memory 
+		access waits and slot change times decreases.
+
+		If other software uses prinary mapper with DOS2CASH /Y option,
+		it may occur a inconvenience because if DOS2CASH is given 
+		this option, it secures primary mapper priority.
+		Then use /V option for securing user mapper.
+
+	[ /?]	Help message.
+		DOS2CASH appears the help message.
+
+	[ /X]	DOS2CASH plays PCM at flashing cache disk for floppydisk.
+		If DOS2CASH is given this option, you can play PCM 
+		when flashing occurs at floppydisk change.
+
+		This option uses PCM play function built in turboR.
+		DOS2CASH plays PCM sample data automatically at flashing which 
+		already red.
+		The machines excepting turboR, DOS2CASH uses PSG to play 
+		PCM sample data.
+
+		And you can these option with /X:
+
+		[L [filename]] DOS2CASH remains the PCM datafile. 
+			If filename isn't given, DOS2CASH reads a file 
+			written in e.v.DOS2PCM
+
+		[ /M[num]] DOS2CASH make sure of mapper memory from 16[KB] to 
+			4096[KB] which PCM uses. If 0 is given, DOS2CASH 
+			don't make sure of memory. DOS2CASH uses empty mapper 
+			memory priority.
+
+			Mapper memory for PCM and cache disk is memorized
+			separately. So If DOS2CASH doesn't find enough memory,
+			PCM data isn't red anything. And If mapper memory is 
+			smaller than PCM data, DOS2CASH reads PCM data as 
+			many as possible.
+
+		[R]	DOS2CASH deletes PCM data in memory, and releases 
+			mapper for PCM. This option doesn't break cache data.
+
+		[C]	DOS2CASH sets to play the PCM on or off. If this 
+			option is given, DOS2CASH changes the condition 
+			at present.
+
+		[P]	DOS2CASH plays the PCM file which remained yet.
+
+		[F[num]] DOS2CASH assigns a frequency of PCM sample.
+
+			[0]	No assigns
+			[1]	Frequency = 22kHz	Macintosh SPEAK data
+			[2]	Frequency = 11kHz	Macintosh SPEAK data
+			[3]	Frequency = 15.75k	MSX turbo R
+			[4]	Frequency = 7.875k	MSX turbo R
+			[5]	Frequency = 3.9375k	MSX turbo R
+
+		[N[num]] DOS2CASH knows that PCM file is compressed or not.
+			If this option is given with 0, DOS2CASH knows it 
+			is compressed. 1 means PCM file is uncompressed.
+
+		[H[num1][num2]] DOS2CASH skips the PCM file from first 
+			to num1[Bytes], and memorizes. 
+
+			Num1 can be given from 0 to 999999. 0 means 
+			not to skip. If number is larger than PCM file size, 
+			DOS2CASH doesn't remain the PCM file and doesn't play.
+
+			If they are given with num2, DOS2CASH skips 
+			the PCM file from first to num1, and memorizes 
+			as num2[Bytes]. 0 means ignore.
+			If num2 is larger that PCM file size, DOS2CASH 
+			remain to last.
+
+
+		PCM file defaults:
+			.SPK	Frequency = 22kHz    Uncompressed  Skip = 0
+			.PCK	Frequency = 15.75kHz Uncompressed  Skip = 7
+			.PCM	Frequency = 7.875kHz Compressed    Skip = 7
+
+
+		You can set all options in e.v.DOS2PCM.
+		Option entry at command line has priority tnan e.v. setting.
+
+		E.v. form is:
+			SET DOS2PCM [filename][option1][option2]...
+
+		If /U option is given, DOS2CASH recovers PCM data 
+		with cache data.
+
+
+	You can set all options in e.v.DOS2CASH. Option entry at command line 
+	has priority than e.v. setting.
+
+	You can use small-letters for options.
+
+
+Examples
+========
+
+This software is stationed on MSX-DOS2 system, and it overwatch every disk 
+access. And whenever you can be stationed and removed because it checks empty 
+memory automatically and manages as cache. 
+Hereafter I explain to use DOS2CACH with some options.
+
+	DOS2CACH
+		If environment variable DOS2CASH exists, it starts running.
+
+	DOS2CASH 4096
+		It makes a cache disk as large as possible. If other 
+		cache disk is already exists at making, DOS2CASH prompts 
+		to choose continuing or not. Hit a key [Y] or other key.
+
+	DOS2CASH /O
+		It makes a cache disk as large as possible. DOS2CASH doesn't
+		prompt to choose if other cache disk is already exists.
+
+	DOS2CASH 128
+		It makes a 128KBytes cache disk. And if other cache disk is 
+		exists, DOS2CASH prompts to choose making or not.
+
+	DOS2CASH 128 /O
+		It makes a 128KBytes cache disk . DOS2CASH doesn't prompt 
+		to choose if other cache disk is exists.
+
+	DOS2CASH 1024 /M 256 128 /H 512 128
+		It makes a 1024KBytes cache disk, and assigns 256K and 
+		128K for floppydrives from young drive letter, 512K and 
+		128K for harddrive. And if other cache disk is exists, 
+		DOS2CASH prompts to choose. This option is a example to 
+		assign each floppydrive and harddrive.
+
+	DOS2CASH 768 /M 0
+		It makes a 768KBytes cache disk, and assigns all for 
+		floppydrives. Harddrive is not assigned.
+		If other cache disk is exists, DOS2CASH prompts choosing.
+		This option is a example to assign only floppydrive.
+		If you rewrite /M to /H, it is only for harddrive.
+
+	DOS2CASH 1024 /M 512 256
+		It makes a 1024KBytes cache disk, and assigns 512K and 256K 
+		for floppydrives from young drive letter, others for harddrive.
+		If other cache disk is exists, DOS2CASH prompts choosing.
+		Hit a key [Y] as yes. This option is a example to assign 
+		one by one for only floppydrive. If you rewrite /M to /H,
+		it means one by one for only harddrive.
+
+	DOS2CASH 4096 /M 512 256
+		It makes a cache disk as large as possibele, and assigns 512K,
+		256K for floppydrives, others for harddrive.
+		If other cache disk is exists, DOS2CASH prompts choosing.
+		This option is a exmple to assign one by one for only 
+		floppydrive, and make a cache disk as large as possible.
+		If you rewrite /M to /H, it means for harddrive.
+
+	DOS2CASH /M 512 256 /H 128 768 /O
+		It makes a cache disk, and assigns 512K, 256K for floppydrives, 
+		128K, 768K for harddrive. And if other cache disk is exist,
+		DOS2CASH doesn't prompt choosing yes or no.
+		This option is a example to cut down a setting of the maximum 
+		cache disk size.
+
+	DOS2CASH 768 /B 0 2 /D
+		It makes a 768KBytes cache disk, and sets boot sector ID check 
+		is none, 2 second waiting, from young floppydrives.
+		In addition, DOS2CASH doesn't sweepout directry and FAT.
+		If other cache disk is exists, DOS2CASH prompts choosing.
+		This option is a example not only to flash the system but data.
+
+	DOS2CASH 1024 /DF 1 0 /DH 1 1 0 0
+		It makes a 1024KBytes cache disk, and sets sweepout directry 
+		and FAT for floppydrives off, on, and for harddrives is off, 
+		off, on, on. If DOS2CASH fills cache disk, it doesn't sweepout 
+		the cache data. If other cache disk is exists, DOS2CASH prompts 
+		choosing yes or no. This option is a example to flash 
+		directry and FAT individually.
+
+	DOS2CASH 1024 /DF 100 50/DH 60 200 1 0
+		It makes a 1024KBytes cache disk, and sets directry and
+		FAT sweepout for floppydrives and harddrives.
+		following:
+		+-------------+-------+-------+-------+-------+-------+	
+		 floppydrive  |	100   |	 50   |       |	      |	      	
+		 harddrive    |	 60   |	200   |	 80   |	on    |	off   	
+		+-------------+-------+-------+-------+-------+-------+	
+				-> from young driveletter    (n=sector)
+		If other cache disk is exists, DOS2CASH prompts choosing.
+		This option is a example to assign making protected cache disk 
+		larger than directry and FAT. If you want to assign for 
+		subdirectry, you should use /PF and /PH.
+
+	DOS2CASH 1024 /P
+		It makes a 1024KBytes cache disk, and search the directry 
+		set by environment variable PATH. And sweepout is off.
+		If other cache disk is exists, DOS2CASH prompts choosing.
+		This option is a example for highspeed access because 
+		it is sweepout off which directry is set e.v.PATH.
+
+	DOS2CASH 1024 /PF 1 0 /PH 1 1 0 0
+		It makes a 1024KBytes cache disk, and sets direcotry 
+		sweepout for floppydrives and harddrives as the following:
+		+-------------+-------+-------+-------+-------+-------+	
+		 floppydrive  |	off   |	on    |       |	      |	      	
+		 harddrive    |	on    |	on    |	 off  |	off   |	      	
+		+-------------+-------+-------+-------+-------+-------+	
+				-> from young driveletter    (n=sector)
+		If other cache disk is exists, DOS2CASH prompts choosing.
+		This option is a example for highspeed access because 
+		all directry is protected directry in cache disk.
+
+	DOS2CASH 1024 /DF /DH /PF /PH
+		It makes a 1024KBytes cache disk, and all directry and FAT 
+		in cache disk is protected. If other cache disk is exists, 
+		DOS2CASH prompts choosing yes or no.
+		This option is a example for highspeed access because 
+		the all directry and FAT in cache disk is protected. If you 
+		think that to use /D and /F option is difficult, 
+		it is very useful.
+
+	DOS2CASH 512 /V /A
+		It makes a 512KBytes cache disk, and secures mappered 
+		memory for MSX-View. In addition, flashing the cache disk 
+		at disk change is done automatically.
+		If other cache disk is exists, DOS2CASH prompts choosing.
+		This option is a example to use for MSX-View.
+
+	DOS2CASH 512 /V32
+		It makes a 512KBytes cache disk in primary mapper and secures 
+		32KBytes memory mapper for user. If other cache disk is 
+		exists, DOS2CASH prompts choosing yes or no. This option is 
+		a example to use for software needs mapper RAM.
+
+	DOS2CASH 512 /T
+		It makes a 512KBytes cache disk, and RAM disk access is done 
+		with R800 mode of turboR. If other cache disk is exists, 
+		DOS2CASH prompts choosing. This option is a example to be 
+		speedy RAMdisk access on turboR. If your machine is not 
+		turboR, this assign is not to mean.
+
+	DOS2CASH /O /TF 3 3 0 0  /TH 3 2 1 1
+		It makes a cache disk as large as possible, and RAM disk access 
+		is done with R800 mode of turboR. In addition, it is setten a 
+		floppydrives and harddrives access with R800 mode or not:
+		+-------------+-------+-------+-------+-------+-------+	
+		 floppydrive  |	on    |	on    | off   |	off   |	      	
+		 harddrive    |	R/W   |	Write |	Read  |	Read  |	      	
+		+-------------+-------+-------+-------+-------+-------+	
+				-> from young driveletter
+		This option is a example to be speedy floppy and harddrives 
+		access on turboR. If your machine is not turboR, this assign 
+		is not to mean.
+
+	DOS2CASH /O /C3
+		It makes a cache disk as large as possible, and all floppy 
+		reading and writing becomes speedy.
+		This option is a example to be sppedy floppydrives access.
+		If your machine is not turboR, this assign is not to mean.
+
+	DOS2CASH /O /C3 /CS14 /CU11 /CD1
+		It makes a cachedisk as large as possible, and all floppy 
+		reading and writing becomes speedy.
+		In addition:
+		FDC seek step time	      ..  4ms
+		    head removing time	      ..352ms
+		    head stabilizing wait time..  4ms
+		This option is a example to be sppedy floppydrives access.
+		If your machine is not turboR, this assign is not to mean.
+
+	DOS2CASH 512 /U
+		It makes a 512KBytes cache disk, and recovers the last 
+		cache data at reboot. If other cache disk is exists, DOS2CASH 
+		prompts choosing. If you reset and reboot at DOS2CASH running,
+		you can recover the cache data with [Y] key.
+
+	DOS2CASH /O /U
+		It makes a 512KBytes cache disk, and recovers the last 
+		cache data automatically at reboot. This option is useful 
+		because if you write it in AUTOEXEC.BAT, DOS2CASH makes 
+		and recover a cache disk automatically.
+
+	DOS2CASH /R
+		It removes a cache disk controler.
+
+	DOS2CASH /K1
+		It makes set a flash key as [GRAPH].
+
+	DOS2CASH /K0 /F
+		It makes set a flash key as [SHIFT], and all cache data 
+		will flash at [SHIFT].
+
+	DOS2CASH /S
+		It makes appear the all diskdrives and cache assigning.
+		All drive letter is physically. And floppy free size is not 
+		appeared.
+
+	DOS2CASH /L1
+		It makes monitor a cache disk as [CAPS] lamp.
+
+	DOS2CASH /LC2 /LH3 /LF1
+		It makes monitor a cache disk as [Kana], 
+		harddisk access as [PAUSE] and diskchange as [CAPS].
+
+	DOS2CASH /F2
+		It makes flash cache data of floppy B:.
+
+	DOS2CASH /?
+		It makes appear a quick help message and DOS2CASH is end.
+
+	DOS2CASH /O /Z3
+		It makes a cache disk as large as possible, and the Beep of 
+		diskchange is MSX-BASIC No.3.
+
+	DOS2CASH /O /XM 80 /XF 1 /XL a:\pcm\action.spk /XH 4096 80000 /XN /XP
+		It makes a cache disk as large as possibe, and assigns 80KBytes 
+		the memory for the PCM file of playing every diskchange, 
+		frequency is 22KHz, filename is action.spk, skip 4096KBytes 
+		from first of file, read 80000bytes, silent compression is 
+		none, play the PCM file.
+
+	DOS2CASH /XR
+		It makes elase the PCM file already remained in memory,
+		and release the mapper for PCM.
+
+
+	SET DOS2CASH = /S /L1 /V /A /D /T /W
+		You can set the options written in e.v.DOS2CASH. If you write 
+		frequent option here, you will cut down to hit some keys 
+		from command line.
+
+	SET DOS2PATH = A:\UTILITY;A:\KIDS;B:\MAG;B:\PI;C:\LOG;
+		You can set the PATH for directry search in e.v.DOS2PATH.
+		It needs /P option.
+
+	SET DOS2PCM  = A:\PCM\OSIOKI.SPK /XM 32 /XF 1 /XH 128 /XN
+		You can set the options about PCM file for every flashing 
+		written in e.v.DOS2PCM. If you write a filename first, DOS2CASH
+		need not request one at using /XL option, you will cut down 
+		to hit some keys from command line.
+
+
+	You can use many way excepting that already explained if DOS2CASH is 
+	given some option.
+
+	Usually you can use DOS2CASH well by DOS2CASH 4096
+
+
+Special thanks
+==============
+
+	I used these free softwares for checking at development:
+
+	BLS.COM		Multi-format graphic viewer made by Seiga.
+	MAG.COM		MAG format graphic viewer made by MERON.
+	MASAPI.COM	16 colors PI format graphic viewer made by Masaru-N.
+	FMTM.COM	File manager made by Horii.
+	KJFOS.COM	File magager made by KYOJU.
+	MM.COM		File manager made by MOGU.
+	MTR.COM		Kanji terminal software made by Mabuchi.
+	RAETRS.COM	Kanji terminal software made by Karino.
+	MGSDRV.COM	MUSIC driver made by Ain.
+	PMEXT.COM	File extracter made by Papermint Star.
+	PMM.COM		Archived file mentenance tool made by I-TA.
+	DS.COM		File sorter made by KYOJU.
+	OFD.COM		800kbytes format driver made by Ryoga.
+
+	And PCM play routine is refered PCMPLAY official one made 
+	by MR Funahashi.
+
+	Everybody of Illusion City, Natsume Net and MARIO-NET are cooperated
+	for development. 
+
+	Thanks for all.
+
+
+For using, copy, 
+translating to other machine, updating by others
+================================================
+
+This software is FREE SOFTWARE which Author does not, did not and will not 
+abandon the Copyrights. You must subject to these terms for using:
+
+	- DO NOT CHANGE the copyrights marking.
+	- Copy with DOS2CASH.DOC
+	- If you change the code like translating to other machine 
+	  or updating, you must write down your name, address
+	  and changed thing in document.
+	- Author don't assure any dameges by using.
+	- Author don't have any duties to update.
+
+
+E-Mail address
+==============
+
+	RYOKUN-NET		R800
+	Erupare Net 2		LLP00335
+	Illusion City		R800
+	YM-NET GROOVE		TSUYOSHI
+	Nuinui Fankids!		R800
+	MSX Networker's Point	R800
+
+(C)TSUYOSHI 1994,1995
+
+
+From translater
+===============
+
+If you want to send E-mail to author, please send it to translater.
+
+Kenji KITAYAMA(TEAM-PMK Foreign Working Section)
+HQE00031@niftyserve.or.jp
+
+Kisaragi(February).07.1995
+
+

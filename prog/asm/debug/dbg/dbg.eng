@@ -1,0 +1,140 @@
+
+                       Screen Debugger
+                             DBG
+
+                           MSX/MSX2
+
+                         Leonid BARAZ
+
+
+   DBG is a debugger with full screen edit capability  for  Z80
+codes. It runs on MSX2 or MSX personal computers with VDP  9938
+under the MSX-DOS.
+
+   Using this program you may:
+- load programs and their  symbol  tables  (filename.SYM)  into
+  memory and save them onto disk;
+- display and edit memory in characters and/or hexadecimals, as
+  well as in assembly language instructions in any slot  and/or
+  mapper page;
+- display and edit  Video  RAM  (VRAM  and  ERAM)  contents  in
+  characters and/or hexadecimals;
+- display and edit the contents of Z80 registers;
+- use symbolic names of the program, define and/or  kill  them;
+  symbolic names may be relocated instantly;
+- hardcopy current window;
+- define break points (using counters);
+- define "check bytes";
+- run program, trace, trace over CALL  (visualisation  mode  is
+  also available);
+- return control to debugger:  when  program  breaks  or  exits
+  successfully or changes "check byte", or  when  user  presses
+  <STOP> key;
+- count running profiles for all symbolic names;
+- look at the system screen when program is running or  stopped
+  (when VDP is set to graphics mode as well);
+- move memory; fill in memory; search character or  hexadecimal
+  target in memory;
+- use hexadecimal calculator;
+- get brief instant help.
+
+   When started, debugger loads desired program, if its name is
+placed in start  command.  Symbol  table  of  program  is  also
+loaded.
+
+   During the session debugger places data into  "data  fields"
+of the screen. Cursor always locates in one of such fields, and
+they are the only thing to change. When you  alter  some  field
+and exit cursor from it, debugger checks up its new  value  and
+then stores it  to  corresponding  "room".  Debugger  may  also
+change the other fields to correspond to  altered  field  value
+(if needed and possible). Therefore, if you want to change some
+byte or word, you just  type  its  new  value  instead  of  the
+previous one. If you want to move "list" or  "dump"  window  to
+desired memory area, you just type the symbol or the address in
+the symbol or address field. In order to create new symbol  you
+just type it in the symbol field against the  desired  address,
+and in order to kill symbol you just replace it by new name  or
+blank its field.
+
+   The debugger provides 3 permanent windows ("dump","list" and
+"registers") and 1 optional ("title", "file",  "memory"  etc.).
+To move cursor inside the  window  you  may  use  cursor  keys,
+carriage return, <tab>, <ctrl>+F. To move one  page  up  (down)
+you must press <ctrl>+J(<ctrl>+Q). To edit data fields you  may
+type alphanumeric keys and <ins>, <del>, <bs>. If you  want  to
+pass cursor into the other window (and also, maybe,  create  or
+delete optional window), you must type in  key  sequence  <esc>
+<letter>.
+
+     Sample screen formats:
+
+NA
+             "Listing" mode
+EB>
+ mode
+ field                  title window
+ XWWWY  XWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWY
+XWWWWWRWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWRWWWWWWWWWWWWWWWWY
+VList V DEBUGGER Version 4.5        Help:<Esc>?  Visual:Trace V EI PC=D827     V
+TWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS8B/02/8B/8B I=00V
+V     V       7FF8:60           LD    H,B                     VFB/FA/F9/F8 R=58V
+V     V       7FF9:4B           LD    C,E                     VT=882B:D0C1/323CV
+V00¶00V       7FFA:03           INC   BC                      TWWWWWWWWWWWWWWWWS
+V     V       7FFB:1A           LD    A,(DE)                  V A=00 . sZxHxpNCV
+V     V       7FFC:FE 38        CP    38                      V BC=0240: 00  . V
+V     V       7FFE:FF           RST   38                      V DE=0000: C3 "Ã"V
+V     V       7FFF:FF           RST   38                      V HL=7FFD: 38 "8"V
+V     VMEM80@:8000:00           NOP                           V IX=1377: 2A "*"V
+VC0-C0V       8001:00           NOP                           V IY=0A00: 53 "S"V
+V     V       8002:00           NOP                           TWWWWWWWWWWWWWWWWS
+V20+1AV       8003:20 FB        JR    NZ,MEM80@:8000          VA'=00 . szxhxpncV
+V     V       8005:DD 2A 08 80  LD    IX,(PRED:8008)          VBC'=0120: E1 "á"V
+V00+00V       8009:C1           POP   BC                      VDE'=0A00: 53 "S"V
+V     V       800A:CD CD D9     CALL  D9CD                    VHL'=1100: 0E  . V
+TWRWWWQWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWUWWWWWWWWWWWWWWWWS
+V V       3FC0:E7 38 EB 2A E9 38 7D 93 6F 7C 9A 67 22 EB 38 2AVç8ë*é8}.o|.g"ë8*V
+V-V       3FD0:E7 38 EB 21 18 39 C3 0A 1F CD 36 11 22 E9 38 EBVç8ë!.9Ã..Í6."é8ëV
+V V       3FE0:2A E7 38 7B 95 6F 7A 9C 67 22 EB 38 2A E9 38 EBV*ç8{.oz.g"ë8*é8ëV
+V+V       3FF0:21 1E 39 C3 0A 1F 0E 07 25 3D 20 03 E9 3C 32 03V!.9Ã....%= .é<2.V
+V VDRIVER:4000:41 42 6F 57 76 65 00 00 00 00 00 00 00 00 00 00VABoWve..........V
+V V       4010:C3 F5 74 C3 86 78 C3 09 79 C3 23 79 C3 50 79 C3VÃõtÃ.xÃ.yÃ yÃPyÃV
+V¶V       4020:82 78 C3 35 5B 37 C3 AC 60 C3 14 62 00 C3 AE 5FV.xÃ5[7Ã¬`Ã.b.Ã®_V
+V V       4030:2A 4B F3 C9 DD E5 DD 21 B7 00 CD AB 40 DD E1 30V*KóÉÝåÝ!·.Í«@Ýá0V
+ZWQWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWQWWWWWWWWWWWWWWWW[
+
+NA
+             "Program loading" mode
+EB>
+ mode                      request window
+ field                (optional "file" window)
+ XWWWY  XWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWY
+XWWWWWRWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWRWWWWWWWWWWWWWWWWY
+VInputV File:B:PROG    .COM  Area:07F0-8A1B  Reloc:0100->07F0 V EI PC=0100     V
+TWWWWWUWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWS8B/8B/8B/8B I=00V
+V     V       012F:CB 16        RL    (HL)                    VFB/FA/F9/F8 R=7BV
+V     V       0131:30 0F        JR    NC,0142                 VT=8A1A:CFC5/75C3V
+V     V       0133:E5           PUSH  HL                      TWWWWWWWWWWWWWWWWS
+V     V       0134:DD 66 00     LD    H,(IX+00)               V A=00 . szxhxpncV
+V     V       0137:DD 6E FF     LD    L,(IX-01)               V BC=0000: C3 "Ã"V
+V     V       013A:19           ADD   HL,DE                   V DE=0000: C3 "Ã"V
+V     V       013B:DD 74 00     LD    (IX+00),H               V HL=0000: C3 "Ã"V
+V     V       013E:DD 75 FF     LD    (IX-01),L               V IX=0000: C3 "Ã"V
+V     V       0141:E1           POP   HL                      V IY=0000: C3 "Ã"V
+V     V       0142:DD 23        INC   IX                      TWWWWWWWWWWWWWWWWS
+V     V       0144:0B           DEC   BC                      VA'=00 . szxhxpncV
+V     V       0145:78           LD    A,B                     VBC'=0000: C3 "Ã"V
+V     V       0146:B1           OR    C                       VDE'=0000: C3 "Ã"V
+V     V       0147:20 DF        JR    NZ,0128                 VHL'=0000: C3 "Ã"V
+TWRWWWQWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWUWWWWWWWWWWWWWWWWS
+VVV      02020:17 17 17 17 17 17 17 17 17 17 17 17 17 17 17 17V................V
+VVV      02030:17 17 17 17 17 17 17 17 17 17 17 17 17 17 12 17V................V
+VVV      02040:17 17 17 17 17 17 17 17 17 17 17 17 17 17 17 19V................V
+VVV      02050:16 49 6E 70 75 74 16 20 46 69 6C 65 3A 20 70 72V.Input. File:B:PV
+VVV      02060:6F 67 20 20 20 20 20 20 20 20 41 72 65 61 3A 20VROG    .COM  AreV
+VVV      02070:30 37 46 30 2D 38 41 31 42 20 20 52 65 6C 6F 63Va:07F0-8A1B  RelV
+VVV      02080:3A 20 30 31 30 30 2D 3E 30 37 46 30 20 20 16 20Voc:0100->07F0 . V
+VVV      02090:45 49 20 50 43 3D 30 31 30 30 20 52 3D 37 42 16VEI PC=0100     .V
+ZWQWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWQWWWWWWWWWWWWWWWW[
+NA
+

@@ -1,0 +1,943 @@
+
+
+	M U L T I - Z ' 98    R E F E R E N C E
+
+
+
+
+Section 1. Multi-Z Application Program Interface (API)
+------------------------------------------------------
+
+MultiZ API are called in the following manner:
+	+ API number is loaded into IY register
+	+ program makes a call to 0F39Ch
+
+All registers can be modified during MultiZ API processing.
+
+
+
+
+======================= INIT  MODULE =========================
+
+
+API	0	VOID	ScreenInit()
+Initializes graphic screen, sets up palette and installs cursor-moving
+resident at a timer hook.
+IN:	none
+OUT:	none
+
+
+API	2	VOID	ScreenToText()
+Switches screen back to the text mode, resets hooks, sets up default
+MSX palette.
+IN:	none
+OUT:	none
+
+
+API	4	(internal)
+Must be called every timer interrupt for the purpose of cursor moving
+IN:	none
+OUT:	none
+
+
+API	6	(internal)
+Scans available hardware. Should not be called from user program
+
+
+API	8	(internal)
+Processes internal mouse-key queue.
+
+
+API	10	VOID	SetMouseParams(BYTE velocity, BYTE sensivity)
+Sets sensivity of a double-click and velocity of mouse move
+IN:	A=0 to get parameters
+	A=1 to set parameters
+	L=velocity,
+	H=sensivity
+OUT:	if A=0 => L=velocity, H=sensivity
+
+
+API	12	BYTE	getpid()
+Returns process ID of the current process
+IN:	none
+OUT:	A=process ID
+
+
+API	14	(internal)
+Sets process ID. Should never be called from a user program.
+IN:	A=process ID
+OUT:	none
+
+
+
+====================== LOWGRP MODULE =======================
+
+NOTE:	All coordinates are physical (relative to screen)
+        Do not draw anything higher than Y=12 and lower the
+        bottom of the screen. No clipping! you can easily
+        destroy your menu, cursor or whatever.
+
+
+API	16	(internal)
+Saves desktop from page-0 to page-1
+IN:	none
+OUT:	none
+
+
+API	18	(internal)
+Restores desktop from page-1
+IN:	none
+OUT:	none
+
+
+API	20	HorizontalSep(WORD X, WORD Y, WORD length)
+Draws a horizontal 'engraved' style separator line.
+IN:	HL=X
+	DE=Y
+	BC=length
+OUT:	none
+
+
+API	22	VerticalSep(WORD X, WORD Y, WORD length)
+Draws a vertical 'engraved' style separator line.
+IN:	HL=X
+	DE=Y
+	BC=length
+OUT:	none
+
+
+API	24	BitBlt(BITMAP * data, WORD x, WORD y)
+Copies a bitmap from RAM to VRAM. Uses a hi-speed copy, so BITMAP shall
+have odd width.
+IN:	DE = X
+	BC = Y (0..511, all VRAM may be accessed)
+	HL -> BITMAP structure
+OUT:	none
+
+
+API	26	cls()
+Clears the screen with the wallpaper color. Menu is destroyed
+IN:	A=color
+OUT:	none
+
+
+API	28	iniplt()
+Initializes default Multi-Z palette
+IN:	none
+OUT:	none
+
+
+API	30	setplt(WORD *plt)
+Changes palette for a specifyed color
+IN:	HL -> palette data (32 bytes)
+OUT:	none
+
+
+API	32	SetActivePage(BYTE page)
+Changes page number for drawing. Shall be used with a great care in user
+programs, shall NEVER be used in programs working with PFI.
+IN:	A=page no
+OUT:	none
+
+
+API	34	DrawPolyline()
+Draws a polyline with a specifyed color
+IN:	A=logical operation
+	C=color
+	HL->POLYLINE structure
+OUT:	none
+
+
+API	36	_box()
+API	38	_boxf()
+API	40	_rect()
+This is a group of box-drawing functions.
+IN:	IX->RECT structure
+	C=color 0..15, 
+	also, for RECT: 16..128 - pressed button rect,
+			128..255 - not pressed button rect
+	A=logical operation.
+	B: for BOX -> right/bottom line thickness
+	   for BOXF -> ignored
+	   for RECT -> color of border (if C>15, ignored)
+OUT:	none
+
+
+API	42	scroll(RECT *r, int lines, BYTE clear_color)
+Scrolls a rectangular area of the screen up/down.
+IN:	IX->RECT structure
+	C=clear color
+	A=line count to scroll, if negative => scrolls down.
+OUT:	none
+
+
+API	44	BYTE	SetTextColor(BYTE color)
+Sets new text color, returns the previous one.
+IN:	A=new color
+OUT:	A=old color
+
+
+API	46	BYTE	SetTextLOP(BYTE lop)
+Sets new text logical operation, returns previous one.
+IN:	A=new logopr
+OUT:	A=old logopr
+
+
+API	48	<VER 4.0> SetTextBgColor(BYTE color)
+Sets new text background color, returns the previous one.
+IN:	A=new color
+OUT:	A=old color
+
+
+API	50	SetTextWindow(BYTE color, TEXTWND *window)
+Sets up a window for text output; clears background with supplied color.
+IN:	A=color
+	IX->TEXTWND structure
+OUT:	none
+
+
+API	52	gputc(BYTE c, TEXTWND *window)
+Draws one character at cursor position in a supplied text window. Clipping
+occurs if character don't fit. Coordinates are advanced.
+
+Supported special codes:
+	1 - Graphic header
+	2 <n> - choose font number N (VER 4.0)
+	3 <n> - choose color N (VER 4.0)
+	4 <n> - choose background color N (VER 4.0)
+	5 <n> - choose attribute N (VER 4.0)
+	6 <n> - chhose logical operation N (VER 4.0)
+	10 - line feed
+
+IN:	A=character
+	IX->TEXTWND structure
+OUT:	CY set if clipping occured
+	A=clipping factor: 0- character drawn ok, 1-character went out to
+	the right, 2-character went out too low.
+
+
+API	54	gputs(BYTE c, TEXTWND *window)
+Draws an ASCIIZ string. All characters are output via gputc routine (see)
+IN:	HL->ASCIIZ string
+	IX->TEXTWND structure
+OUT:	CY set if clipping occured
+	A=clipping factor: 0- character drawn ok, 1-character went out to
+	the right, 2-character went out too low.
+
+
+API	56	<VER 4.0> SetFont(BYTE fntno)
+Select font for character output.
+IN:	A=font number
+OUT:	A=previous font number
+
+
+API	60	lcopy()
+Copy vram-vram with logop
+IN:	A=logical operation
+	HL-> struct {WORD srcX, WORD srcY, WORD dstX, WORD dstY,
+	     	     WORD w, WORD h}
+OUT:	none
+
+
+API	62	lbitblt(BITMAP *data, WORD x, WORD y)
+Copy logical from RAM(bitmap structure) to VRAM
+IN:	DE = X
+	BC = Y (0..511, all VRAM may be accessed)
+	HL -> BITMAP structure
+OUT:	none
+
+
+
+==================== CURSOR MODULE =========================
+
+API	68	DisableCursor()
+Removes cursor from screen. Must be used before any drawing occures.
+BeginPaint does this automaticaly, so only use of it is when LOWGRP
+functions are used.
+IN:	none
+OUT:	none
+
+
+API	70	EnableCursor()
+Enables cursor drawing.
+IN:	none
+OUT:	none
+
+
+API	72	LoadCursor(CURSOR *p)
+Loads 12x10 bitmap as a new cursor shape. Cursor drawing must be disabled
+before loading and enabled after.
+IN:	HL -> cursor bitmap
+OUT:	none
+
+
+API	80	int GetVersion()
+Returns version for Graphic Engine.
+IN:	none
+OUT:	
+
+
+API	88	beep()
+Guess, what is the function :-)
+IN:	none
+OUT:	none
+
+
+
+=================== RESOURCE MODULE ===================
+
+API	92	DrawMenu(MENU *ptr)
+Draws a menu resource. Should not be used in PFI programs, because
+menus are redrawn automaticaly by PFI manager.
+IN:	HL->MENU structure
+OUT:	none
+
+
+API	94	WORD GetMenuMesg()
+Messageloop function. Should be called in the main loop of an application
+IN:	none
+OUT:	A=0 if no menu item selected
+	A=1, HL=menu item ID if selected
+
+
+API	96	DrawWindowResource(int x,y, RESOURCE *ptr)
+Internal. Draws resource template using supplied coordinates as base.
+IN:	IX->RESOURCE
+	DE=x
+	L=y
+OUT:	none
+
+
+API	98	SenseWinow(RESOURCE *ptr)
+Senses cursor hit into a resource element. Internal.
+IN:	IX->RESOURCE
+OUT:	CY if any sensable element is hit.
+	IX -> RESOURCE template of the smallest element hit.
+	Resource ID is at IX-2,IX-1.
+
+
+API	100	AnalyzeResource(RESOURCE *ptr)
+Does the same as API#98 but returns resource ID also.
+IN:	IX->RESOURCE
+OUT:	CY if any sensable element is hit.
+	IX -> RESOURCE template of the smallest element hit.
+	HL= resource ID
+
+
+API	102	WORD DialogBox(RESOURCE *ptr)
+Outputs, processes and closes simple dialog box without attached window
+procedure. Returns resource ID of a control, that caused window closing.
+IN:	IX->RESOURCE
+OUT:	HL=resource ID.
+
+
+API	104	WORD DialogWindow(RESOURCE *ptr, BYTE (*wndproc)())
+Outputs and processes a complex dialog box with attached window procedure.
+All user activities are redirected to the windowproc by appropriate messages.
+Returns as API#102.
+IN:	IX->RESOURCE
+	HL->windowproc
+OUT:	HL=resource ID.
+
+
+API	106	WORD	MessageBox(char *text, BYTE icon, BYTE style)
+Outputs a message box with a multiline text, an icon and one of four sets
+of buttons. Returns button number pressed (left to right in order)
+IN:	HL->ASCIIZ text
+	D=icon ID
+	E=button set:
+		0 -- "Ok"
+		1 -- "Yes","No"
+		2 -- "Yes","No","Cancel"
+		3 -- "Abort","Retry","Ignore"
+OUT:	HL=Button number left to right 0..2
+
+
+API	108	<Dummy in VER 4.0> ExitDialog()
+** This API must be called to 8000h directly, since when it can be called
+** Graphic Engine page is already mapped-in.
+Closes dialog box. This API must be used from a window procedure
+of a dialog box that is used for notification only and has no controls
+for example "formatting disk... wait a moment".
+IN:	none
+OUT:	does not return; control transfers to upper level of nested
+	dialog boxes or to the main loop of the application.
+
+
+API	110	RESOURCE *GetResourcePtr(RESOURCE *ptr, WORD ID)
+Returns address of a resource elemet having supplied ID.
+IN:	HL->RESOURCE (dialog box or other group)
+	DE=ID
+OUT:	IX=HL->RESOURCE (found)
+
+
+API	112	SetText(RESOURCE *ptr,WORD ID, WORD data)
+Sets text (or other attribute) of a resource.
+IN:	HL->RESOURCE (dialog box or other group)
+	DE=ID
+	BC=data (sometimes only C is used, see below)
+OUT:	none
+
+
+API	114	WORD GetText(RESOURCE *ptr,WORD ID)
+Gets text (or other attribute) of a resource.
+IN:	HL->RESOURCE (dialog box or other group)
+	DE=ID
+OUT:	HL=returned attribute (see below)
+
+
+Table 1. Resource attributes for SetText/GetText
+-------------------------------------------------
+Resource	Data set/returned
+GROUP		none
+HLINE/VLINE	none
+RECT		none
+TEXT		text (pointer to ASCIIZ)
+EDIT		text
+BITBLT		pointer to bitmap
+BOX		none
+BOXF		none
+STRING		pointer to string array
+SYSBUTT		button ID
+ICON		icon ID
+VSCROLL		button position(low byte) and size (high)
+HSCROLL		button position(low byte) and size (high)
+SELECT		pointer to string array
+BUTTON		button's text
+LISTBOX		pointer to string array
+
+
+API	116	GetMenuFlags(MENU *ptr, WORD ID)
+Gets menu flags of a menu item.
+IN:	HL -> MENU structure
+	DE = menu item ID
+OUT:	A = flags
+
+
+API	118	SetMenuFlags(MENU *ptr, WORD ID)
+Gets menu flags of a menu item.
+IN:	HL -> MENU structure
+	DE = menu item ID
+	A = flags
+OUT:	none
+
+Table 2. Menu flags bits
+------------------------------------------------
+Bit #	Meaning
+0	separator line only
+1	AUTOCHECK
+2	AUTOSEL (bit 1 must be set also)
+3	CHECKED
+7	Visible
+------------------------------------------------
+If menu flags byte is 0 then menu item is grayed
+
+
+API	120
+Returns number of nested dialog boxes and active drawing page.
+IN:	none
+OUT:	A = drawing page
+	C = number of dialog boxes on screen.
+
+
+
+
+==================== WINDOW DRAW MANAGER MODULE ======================
+
+API	122	ClearWindow()
+Clears the drawing window with current background color
+IN:	none
+OUT:	none
+
+
+API	124	BeginPaint()
+Initializes painting context. Removes cursor. Switches to
+page-1 if background PFI window is drawn. Sets drawing color
+to 7 (==default text color) and background color to 3 (35% gray)
+IN:	none
+OUT:	none
+
+
+API	126	ClientToScreen(WORD x, WORD y, POINT *pt)
+Converts coordinates from logical to screen
+IN:	DE=x
+	L=y
+OUT:	DE=x
+	L=y	converted
+
+
+API	128	draw_dot(int x, int y)
+Draws a dot with a current brush.
+IN:	HL=x
+	DE=y
+OUT:	none
+
+
+API	130	draw_line(int x1, y1, x2, y2)
+Draws a line.
+IN:	HL->structure { WORD x1, BYTE y1, WORD x2, BYTE y2 }
+OUT:	none
+
+
+API	132	draw_box(RECT *r)
+Draws a filled box.
+IN:	HL -> RECT structure
+OUT:	none
+
+
+API	134	draw_copy(int from_x,from_y,to_x,to_y, len_x,len_y)
+Copies block of picture logicaly. Source Y is word-long, so source
+can be anywhere in VRAM.
+IN:	hl->struct {WORD from_x,WORD from_y,WORD to_x,BYTE to_y, WORD len_x
+		BYTE len_y}
+OUT:	none
+
+
+API	136	drawtext(int x, y, char *text)
+Draws a text. Text can contain newlines and is clipped in the window.
+IN:	DE=x
+	L=y
+	BC -> ASCIIZ text
+OUT:	A= clipping flags, same as for gputs()
+
+
+API	138	drawtemplate(RESOURCE *p)
+Draws a resource template. All information is taken from resource structure.
+IN:	HL->RESOURCE structure
+OUT:	none
+
+
+API	140	set_brush(BITMAP *brush)
+Sets specified bitmap (8x8 dots max) as a brush for PSET call.
+IN:	HL=0 -> single dot
+	HL=1 -> round brush
+	or
+	HL-> bitmap data structure
+
+
+API	142	set_style(WORD style)
+Sets line style. Currently has no effect but shall be implemented in future.
+IN:	HL=bit pattern of line
+OUT:	none
+
+
+API	144	set_color(BYTE color, bgrcolor)
+Sets drawing colors.
+IN:	A=pen color
+	E=background color
+OUT:	none
+
+
+API	146	set_logic(BYTE logop)
+Sets logic operation.
+IN:	A= logic operation (as used in V9938)
+OUT:	none
+
+
+API	148	EndPaint()
+Called at the end of painting. Enables cursor.
+IN:	none
+OUT:	none
+
+
+API	150	PaintInArea(RECT *area)
+Alternate function for BeginPaint. You may specify any rectangular area
+as a paint rectangle. Cursor is disabled.
+IN:	HL->RECT structure - in absolute coordinates
+OUT:	none
+
+
+API	152	BeginPFIUpdate(RECT *wrect)
+Alternate BeginPaint for using in responce to WM_PAINT message. Must be
+used in PFI painting *ONLY* cause it doesn't switch off cursor.
+IN:	IX->RECT structure (part of PFIWINDOW structure)
+OUT:	none
+
+
+API	154	draw_bitmap(BITMAP *bits, int X, int Y)
+Draws a bitmap resource from RAM.
+IN:	HL->Bitmap structure
+	DE=X
+	C=Y
+OUT:	none
+
+
+=================== HOOK MODULE ========================
+
+API	156	SetHook(WORD pHookProc)
+Sets a Multi-Z hook procedure which is called from strategic places
+during application lifetime.
+IN:	HL = hook procedure pointer
+OUT:	HL = old hook procedure pointer
+
+API	158	ClearHook(void)
+Clears Multi-Z hook
+IN:	none
+OUT:	none
+
+===================== PFI MODULE =======================
+
+API	174	char PFIOpenWindow(PFIWINDOW *template)
+Opens a new PFI window
+IN:	HL  -> PFIWINDOW structure
+OUT:	A=window ID
+
+
+API	176	char PFICloseWindow(char wID)
+Closes a PFI window
+IN:	A=window ID
+OUT:	none
+
+
+API	178	GetClientRect(BYTE wID, RECT *rc)
+Returns window's client area rectangle of a PFI window.
+IN:	A=window ID
+	HL->RECT structure
+OUT:	CY if error,
+	else RECT is filled
+
+
+API	180	PFISetFocus(BYTE wID)
+Brings specified widow to the front, makes it active window.
+IN:	A= window ID
+OUT:	CY if error
+
+
+API	182	PFIDrawWindow(BYTE wID)
+Redraws specified window. Both active and background windows
+supported. If background window drawn, any drawing operations must
+be executed on page-1. Screen is updated automaticaly.
+IN:	A=window ID
+OUT:	CY if error
+
+
+API	184	PFIMoveWindow(BYTE wID, RECT *newrect)
+Erases window and then redraws it with supplied RECT as a window
+rectangle. Shall be used for user-drawn windows only, because
+resource-drawn windows must not change size.
+IN:	A=window ID
+	HL->RECT structure
+OUT:	CY if error
+
+
+API	186	PFIMessageLoop()
+This is PFI messageloop function. It must be called in the main message
+loop BEFORE menu analyzing API.
+IN:	none
+OUT:	none
+
+
+API	188	PFIWINDOW *PFIGetWindowPtr()
+Returns pointer to PFIWINDOW record of a currently updated PFI window.
+Returns correct result only when called in responce to WM_DRAW message
+when redrawing user-drawn PFI window.
+IN:	none
+OUT:	HL->PFIWINDOW struct.
+
+
+API	190	PFI_init(BYTE *workarea)
+This routine should be called BEFORE any other PFI calls are done.
+This must be done at the start of PFI application, and then, any
+time when control returns to the PFI application from any other
+application called. In the latter case any PFI windows opened
+before the other application started, will be automaticaly redrawn.
+IN:	HL->work area (300 bytes long)
+OUT:	none
+
+
+API	192	<useful for assembly ONLY>
+Calculate value: A := A * E / D (useful in proportional window sizing)
+IN:	A,E,D - values for calculation
+OUT:	A - result
+
+
+
+
+
+Section 2. Messages and window procedures
+-----------------------------------------
+
+Messages are posted by MultiZ system in strategic places of operation to
+enable user interception of any operation and creating of custom controls.
+
+When a message is posted to a window, appropriate window procedure is called
+with A register set to a message code. Window procedure must return a value
+in A register as following:
+	A=0 allows standard reaction to a message
+	A=1 disables standard reaction.
+
+Other parameters supplied to a window procedure:
+
+	DE=dialog window's X (screen coordinates)
+	L =dialog window's Y
+	IX->RESOURCE structure of a control that caused message posting
+	BC=dialog item ID of the control
+
+For ASCII C programmers callback window procedure header must look like this:
+	char callback(	char msg,	;Message No
+			int winX,	;WindowLU X position
+			int ID,		;Resource's ID
+			int winY,	;WindowLU Y position
+			RESOURCE *pRes,	;pointer to resource
+			POINT *cursor)	;pointer to cursor XY
+
+	Here is a brief list of MultiZ messages:
+
+MZ_INIT	((char)0)
+Posted at the beginning of resource drawing.
+
+MZ_TERM	((char)1)
+Posted at the end of dialog box processing, before closing
+
+MZ_LBDOWN	((char)2)
+Posted when a dialog control is clicked once.
+
+MZ_NONCLIENT	((char)3)
+Posted when non-client click occures.
+
+MZ_MOVE	((char)4)
+Posted when dialog box is moved.
+
+MZ_SIZE	((char)5)
+Posted when window is sized.
+
+MZ_LBDBLCLICK	((char)6)
+Posted when a dialog control is double-clicked.
+
+MZ_LBUP	((char)7)
+Posted when a mouse button is released on a control.
+
+MZ_SBDRAW	((char)10)
+Posted before scrollbar drawing.
+
+MZ_SELBRAW ((char)11)
+Posted after a select box index is changed
+
+MZ_USER	((char)16)
+Posted when a user-drawn control must be redrawn.
+
+MZ_DRAWITEM ((char)17)
+Posted when user-drawn select box item must be drawn
+
+MZ_EDITCHANGED ((char)18)
+Posted when editor contents is changed
+
+MZ_LOOP ((char)19)
+Posted in a diadlog-box message loop. Can be used
+to synchronize with a part of processing (compile one string,
+format one track etc).
+
+
+SB_LINEUP	41
+Scroll bar one point up/left
+
+
+SB_HOME		42
+Scroll bar to home
+
+
+SB_THUMB	43
+Scroll bar tracking to some position (post after tracking)
+
+
+SB_END		44
+Scroll bar to end
+
+
+SB_LINEDOWN	45
+Scroll bar right/down one point
+
+
+MZ_RBDOWN	50
+Right button down on the control
+
+
+MZ_RBUP		51
+Right button up
+
+
+MZ_RBDBLCLICK	52
+Double click right button
+
+
+
+
+
+Section 3. PFI notes
+---------------------
+
+Before using any PFI functions you must first initialize PFI engine.
+This is done by API#190 of Graphic Engine. The supplied work area
+must be at least 300 bytes long, it must be located in the lower RAM
+addresses (100h..3FFFh) and be INITIALIZED at the moment of first
+call. If the area is not initialized then PFI module assumes that
+this is a restore call and tries to redraw windows using data
+in the work area, result of which is unpredictable.
+Initial condition of work area is following:
+
+	db	0	;number of windows
+	ds	17,255	;window priority table
+	<zeros>		;the rest is zero initialized.
+
+
+PFIWINDOW structure
+-------------------
+PFIWINDOW structure is used when creating window. It is 18 bytes long
+and contains the following fields (see Appendix B):
+	flags: contains window bit-flags
+		bit7 set -- active (set & reset automaticaly)
+		bit6 set -- has "close" system button
+		bit5 set -- title text right aligned, else centered
+
+	window_title_pointer: pointer to ASCIIZ text in the window title.
+
+	wndproc_pointer: pointer to window message callback procedure.
+
+	resource_pointer: pointer to a resource template (same as for
+		dialog box, or NULL for user-drawn window.
+
+	pointer_to_scroller_data: used to control scrollers of a user
+		drawn window only. contains a pointer to a following
+		structure:
+		BYTE	length_of_horizontal_scroll_button
+		BYTE	offset_of_horizontal_scroll_button
+		BYTE	length_of_vertical_scroll_button
+		BYTE	offset_of_vertical_scroll_button
+                If lengths are 0 then lengths of buttons are assumed
+		to be equal to the scroll bar length (no scrolling
+		possible)		
+
+	menu_pointer: pointer to the MENU resource associated with the
+		window (menu is redrawn any time when the window
+		becomes active or explicitly redrawn by PFI_draw.
+
+
+PFI window life
+---------------
+Each PFI window has an associated callback procedure, which is almost
+the same  as a dialog box window procedure.
+A new message is used in the PFI: WM_INIT(20h)
+It is posted before drawing a window, so user program can prepare any
+data to be drawn in the window. At entry, IX points to the PFIWINDOW
+structure.
+
+
+Redrawing of PFI background windows.
+-----------------------------------
+Background windows are redrawn on the second screen page, then clipped
+by more-high-priority windows' "shades" and copied to displayed page.
+Foreground (active) window is redrawed as-is.
+
+
+
+
+Section 4. Multi-Z'98 and memory management
+-------------------------------------------
+
+Multi-Z memory usage module is written in such a way that it will work
+with the following operating systems/memory managers:
++ DOS2;
++ MISIX 2.1, 2.2x, 3.0, 3.1;
++ Any memory manager compatible with DOS2 mapper interface;
++ Pure DOS1 (in this case mapper shall not be used by other applications).
+Multi-Z'98 is *NOT* compatible with MemMan, but will probably work if
+MemMan is installed on DOS2 and there's enough free mapper memory (64K
+required at least).
+
+For executing in pure DOS1 Multi-Z'98 contains a simple memory manager,
+which can perform the following tasks:
++ allocate and free pages;
++ read page number in a specified memory area;
++ select page for a specified memory area.
+The manager uses direct port I/O, and thus Multi-Z'96 can be run
+only on those MSX computers which provide transpagent mapper interface
+(i.e. read back as much bits as were written to ports 0FCh..0FFh).
+
+Multi-Z loader program (MZ.COM) detects which OS/which memory manager
+is installed and takes appropriate actions. For the sake of compatability
+Multi-Z provides uniform memory management interface for all of listed
+environments. The interface is similar to DOS2 memory mapper interface.
+
+Jump vector in Multi-Z'96 contains only the following valid entries:
++ allocate page;
++ free page;
++ putp0..putp2;
++ getp0..getp2,
+All other jump vector entries should be considered invalid and never
+should be used. If your Multi-Z program is intended for use in DOS2
+environment only, you can use DOS2 jump vector functions as well.
+
+
+
+Appendix A. Resource script commands
+------------------------------------
+
+this section has moved to Resource Compiler's documentation.
+See file RC.DOC for details.
+
+
+Appendix B. Types and structures
+-----------------------------------
+BYTE	- unsigned byte 0..256
+WORD	- unsigned 16 bit integer 0..65535
+
+
+POINT:
+	WORD	x
+	BYTE	y
+
+
+RECT:
+	WORD	x
+	BYTE	y
+	WORD	w
+	BYTE	h
+
+
+TEXTWND:
+	POINT	cur_pos
+	RECT	text_rect
+
+
+BITMAP:
+	WORD	width
+	WORD	height
+	<packed bitmap data>
+
+
+POLYLINE:
+	BYTE	point_count
+	POINT	points[point_count]
+
+
+DIALOG
+	BYTE	flags
+	BYTE	type
+	WORD	x
+	BYTE	y
+	WORD	wid
+	BYTE	height
+	BYTE	cnt
+	VOID	*ptrs[1]
+
+
+PFIWINDOW:
+	BYTE	flags
+	BYTE	flags_reserved
+	WORD	x
+	BYTE	y
+	WORD	width
+	BYTE	height
+	WORD	psTitle
+	WORD	fpWndProc
+	WORD	pWndRes
+	WORD	pExData
+	WORD	pMenu
+
+======================================================================
+This documentation is public domain.
+If you have any ideas about Multi-Z system please email
+to <msxegor@glasnet.ru>
+
+MultiZ is (c) 1993..1998 by E. Voznessenski, SOLiD Software
+======================================================================

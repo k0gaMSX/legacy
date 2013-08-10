@@ -1,0 +1,184 @@
+;
+;                      Titanic.SMM
+;
+;           "Titanic" Source Game Music Module
+;
+; Version Amalthea-1-0 (1st Ver., 1st Release, No Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =Titanic.SMM
+;   L80 Titanic,Titanic.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Titanic - Part II" game mapping:
+;
+;                                 F31B FFFF
+;      |?|?|?|?|?|?|?|?|?|?|?|?|?|?|?|M|
+;   0000                               FFFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+; Program addresses and constants.
+
+HOLD8  equ  0F806H
+EBTb0  equ  HOLD8
+Where  equ  EBTb0+039H
+
+
+; Program special constants.
+
+Offset equ  06000H
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '            Titanic             '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   06000H
+GMPNam:db   'Yawara  600'
+OpenMN:db   000H
+StrtSE:db   000H
+ChATDD:dw   0F86EH-Offset+4
+ChBTDD:dw   0F89CH-Offset+4
+ChCTDD:dw   0F8CAH-Offset+4
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'Titanic0Sc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'Titanic1Sc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00010010B
+
+SetupR:ret  nz
+       ld   a,(0F31FH-Offset)
+       cp   0F0H
+       jr   c,SilnRt
+       xor  a
+       ld   (0F347H-Offset),a
+       call Where
+Here0: ld   de,There-Here0
+       add  hl,de
+Reloc0:ld   e,(hl)
+       inc  hl
+       ld   d,(hl)
+       inc  hl
+       ld   a,e
+       or   d
+       jr   z,Reloc1
+       ex   de,hl
+       ld   bc,Offset
+       sbc  hl,bc
+       push hl
+       ld   a,(hl)
+       inc  hl
+       ld   h,(hl)
+       ld   l,a
+       or   a
+       sbc  hl,bc
+       ld   b,h
+       ld   c,l
+       pop  hl
+       ld   (hl),c
+       inc  hl
+       ld   (hl),b
+       ex   de,hl
+       jr   Reloc0
+
+Reloc1:call Where
+Here1: ld   de,RetAd0-Here1
+       add  hl,de
+       push hl
+       ld   hl,0F843H-Offset
+       ld   bc,Offset
+       ld   a,15
+       jr   RelBlk
+
+RetAd0:call Where
+Here2: ld   de,SilnRt-Here2
+       add  hl,de
+       push hl
+       ld   hl,0F9B1H-Offset
+       ld   bc,Offset
+       ld   a,21
+RelBlk:ld   e,(hl)
+       inc  hl
+       ld   d,(hl)
+       dec  hl
+       ex   de,hl
+       sbc  hl,bc
+       ex   de,hl
+       ld   (hl),e
+       inc  hl
+       ld   (hl),d
+       inc  hl
+       dec  a
+       jr   nz,RelBlk
+       ret
+
+SilnRt:jp   0F332H-Offset
+
+StMsRt:jp   0F31BH-Offset
+
+PlayRt:jp   0F390H-Offset
+
+There: dw   0F31EH,0F321H,0F325H,0F328H,0F32CH,0F32FH,0F339H,0F33FH,0F344H
+       dw   0F377H,0F37AH,0F396H,0F399H,0F39CH,0F3A3H,0F3ACH,0F3B0H,0F3BBH
+       dw   0F3C1H,0F3C6H,0F3C9H,0F3CEH,0F3D3H,0F3D6H,0F3E3H,0F3E6H,0F3EDH
+       dw   0F455H,0F47BH,0F4C0H,0F4EAH,0F4EEH,0F50CH,0F512H,0F527H,0F52CH
+       dw   0F52FH,0F533H,0F537H,0F53AH,0F574H,0F591H,0F597H,0F59CH,0F5A6H
+       dw   0F5B1H,0F5BEH,0F5C1H,0F5C5H,0F5C8H,0F5CBH,0F5D6H,0F5DFH,0F5E7H
+       dw   0F5EBH,0F5F0H,0F5F8H,0F5FBH,0F601H,0F604H,0F608H,0F617H,0F624H
+       dw   0F629H,0F63AH,0F646H,0F64AH,0F64EH,0F65EH,0F661H,0F671H,0F697H
+       dw   0F69BH,0F6A0H,0F6A7H,0F6AAH,0F6AFH,0F6C7H,0F6CBH,0F6CEH,0F6D1H
+       dw   0F6D9H,0F6DDH,0F6E7H,0F6ECH,0F6F1H,0F6FBH,0F702H,0F705H,0F70AH
+       dw   0F70DH,0F714H,0F71BH,0F71FH,0F725H,0F728H,0F72EH,0F76FH,00000H
+
+GmBlNm:db   'Titanic 000'
+GmBlSz:dw   00900H
+LoadAd:dw   0F31BH-Offset
+       dw   0FFFFH
+MusicT:db   001H,'    Theme of Titanic   '
+       db   0FFH,0FFH
+EffctT:db   000H,'       Silence...      '
+       db   0FFH,0FFH
+
+       end

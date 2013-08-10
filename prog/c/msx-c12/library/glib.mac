@@ -1,0 +1,2477 @@
+;/*
+.comment%
+	(C) Copyrighted by ASCII corp., 1988
+		All rights Reserved.
+
+		File:	glib.mac
+
+    GLIB.MAC --- Graphic library
+
+	This file is coded with dirty tricks (or magic) to serve as a
+	source file;
+
+	    1.	for MX to generate actual library,
+
+	    2.	for CF to generate TCO file for FPC and
+
+	    3.	for M80 to get fast turn-around testing new library
+		"trial and error".
+
+ */
+
+/*%
+;------ Faking stuff for M80 and MX ------------------------------------
+module	macro		;; "module" must be lower cased
+	endm
+
+endmodule macro 	;; "endmodule" must be lower cased
+	endm
+
+extrn	macro
+	endm
+;-----------------------------------------------------------------------
+.comment%*/
+
+VOID	ginit()
+{
+/*%
+	MODULE	GINIT
+
+EXPTBL	equ	0FCC1h
+;
+GINIT@::
+	ld	hl,6
+	ld	a,(EXPTBL)
+	call	000Ch
+	ei			;*** make sure interrupts are enabled
+	ld	(VDPIO@),a
+	ret
+
+	dseg
+VDPIO@::	defb	98h	; This initial value is for ill-behaviored
+				; programs
+	cseg
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	interlace(mode)
+TINY	mode;
+{
+/*%
+	MODULE	INTERLAC
+
+WRTVDP	equ	0047h
+RG9SAV	equ	0FFE8h
+;
+INTERLACE@::
+	rrca				; make IL, EO
+	jr	nc,intlac_1
+	or	10b
+intlac_1:
+	and	11b
+	add	a,a
+	add	a,a
+	ld	b,a
+	ld	a,(RG9SAV)
+	and	11110011b
+	or	b
+	ld	b,a
+	ld	c,9
+	ld	ix,WRTVDP
+	jp	_CALBIO##
+
+	ENDMODULE
+.comment %*/
+}
+
+NAT	gtxmax()
+{
+/*%
+	MODULE	GTXMAX
+
+SCRMOD	equ	0FCAFh
+;
+GTXMAX@::
+	ld	hl,255			; assume 2..5, 8
+	ld	a,(SCRMOD)
+	sub	5
+	ret	m			; 2..4
+	and	a			; affect parity flag
+	ret	pe			; 5 or 8
+	inc	h
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+NAT	gtymax()
+{
+/*%
+	MODULE	GTYMAX
+
+SCRMOD	equ	0FCAFh
+;
+GTYMAX@::
+	ld	hl,191			; assume 2..4
+	ld	a,(SCRMOD)
+	cp	5
+	ret	m			; good assumption
+	ld	l,211			; 5..8
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+/*%
+	MODULE	GSPSIZ
+
+;
+;	Return the size of sprite
+;
+;	Used internally
+;
+RG1SAV	equ	0F3E0h		;save area for register 1
+;
+_GSPSIZ::
+	ld	a,(RG1SAV)
+	rrca
+	rrca
+	ld	a,8
+	ret	nc
+	ld	a,32
+	ret
+
+	ENDMODULE
+
+	MODULE	SELSTT
+;
+;	Select status register
+;
+;	Entry:	C = VDP port address + 1
+;		A = data to be set
+;
+;	Used internally
+;
+_SLST0::
+	xor	a
+_SELSTT::
+	out	(c),a			; set data to be written
+	ld	a,80h+15		; get register number
+	out	(c),a
+	ret
+
+	ENDMODULE
+
+	MODULE	SETADR
+;
+;	low level routine for SETRD and SETWRT
+;
+;	entry:		HL = read/write address
+;
+;	Used internally
+;
+EXBRSA	equ	0FAF8h
+SCRMOD	equ	0FCAFh
+ACPAGE	equ	0FAF6h
+	extrn	VDPIO@
+;
+_SETADR::
+	push	de
+	ld	a,(VDPIO@)
+	ld	c,a
+	inc	c
+	ld	a,(EXBRSA)		; MSX1?
+	and	a
+	jr	z,setaddress_1		; yes
+	ld	a,h			; extract the high address
+	rlca
+	rlca
+	and	00000011b
+	ld	d,a			; save a15,a14
+	ld	a,(SCRMOD)
+	cp	7
+	ld	a,(ACPAGE)
+	jr	c,set_high		; page size is 32k
+	add	a,a
+set_high:
+	add	a,a
+	add	a,d
+	di
+	out	(c),a			; set data to be written
+	ld	a,80h+14		; set it to register #14
+	out	(c),a
+setaddress_1:
+	di
+	out	(c),l			; set the low address
+	ld	a,h			; prepare to set the middle address
+	and	00111111b
+	pop	de
+	ret
+
+	ENDMODULE
+
+	MODULE	SETIND
+;
+;	Set indirect register pointer
+;
+;	Used internally
+;
+	extrn	VDPIO@
+	extrn	_SELSTT
+;
+_SETI36::
+	ld	a,36
+_SETIND::
+	push	af			; save register number
+	ld	a,(VDPIO@)
+	ld	c,a
+	inc	c			; C = command/status port
+	pop	af			; restore register number
+	di
+	out	(c),a			; set data to be written
+	ld	a,17+80h
+	ei
+	out	(c),a
+;
+;	wait for vdp to become ready
+;
+waitvdp:
+	ld	a,2			; prepare to read register #2
+	di
+	call	_SELSTT
+	in	a,(c)			; read status
+	rra				; CE bit 0 (command end?) to carry
+	ld	a,0			; enable register #0 (not XOR A)
+	call	_SELSTT
+	ei
+	jr	c,waitvdp		; no, wait more
+	inc	c			; C = indirect register port
+	inc	c
+	ret
+
+	ENDMODULE
+
+	MODULE	ROMLINE
+;
+;	Low level routine to call LINE, BOXLINE, BOXFILL in ROM BASIC
+;
+;	Used internally
+;
+ATRBYT	equ	0F3F2h
+GXPOS	equ	0FCB3h
+GYPOS	equ	0FCB5h
+;
+_ROMLINE::
+	ld	(ATRBYT),a
+	push	bc			; save routine address
+	ld	(GXPOS),ix		; set end x
+	ld	(GYPOS),iy		; set end y
+	ld	c,e			; set start x
+	ld	b,d
+	ex	de,hl			; set start y
+	pop	ix			; restore routine address
+	jp	_CALBAS##
+
+	ENDMODULE
+
+.comment %*/
+
+VOID	setrd(adr)
+NAT	adr;
+{
+/*%
+	MODULE	SETRD
+;
+;	SETRD	sets up the VDP for read.
+;	Entry:	HL.
+;	Exit:	None.
+;
+	extrn	_SETADR
+;
+SETRD@::
+	call	_SETADR
+	ei
+	out	(c),a
+	dec	c
+	ret
+
+	ENDMODULE
+.comment%*/
+}
+
+TINY	invdp()
+{
+/*%
+	MODULE	INVDP
+
+	extrn	VDPIO@
+;
+INVDP@::
+	ld	a,(VDPIO@)
+	ld	c,a
+	in	a,(c)
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	setwrt(adr)
+NAT	adr;
+{
+/*%
+	MODULE	SETWRT
+;
+;	SETWRT	sets up the VDP for write.
+;
+	extrn	_SETADR
+;
+SETWRT@::
+	call	_SETADR
+	or	01000000b		;set the low address with write bit
+	ei
+	out	(c),a
+	dec	c
+	ret
+
+	ENDMODULE
+.comment%*/
+}
+
+VOID	outvdp(data)
+TINY	data;
+{
+/*%
+	MODULE	OUTVDP
+
+	extrn	VDPIO@
+;
+OUTVDP@::
+	ld	bc,(VDPIO@)
+	out	(c),a
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+TINY	vpeek(adr)
+NAT	adr;
+{
+/*%
+	MODULE	VPEEK
+;
+;	VPEEK	reads the VRAM addressed by [HL].
+;	Entry:	[HL] = VRAM address.
+;	Exit:	[A]  = data.
+;
+	extrn	SETRD@
+;
+VPEEK@::
+	call	SETRD@
+	in	a,(c)
+	ret
+
+	ENDMODULE
+.comment%*/
+}
+
+VOID	vpoke(adr, value)
+NAT	adr;
+TINY	value;
+{
+/*%
+	MODULE	VPOKE
+;
+;	VPOKE	writes to the VRAM addressed by [HL].
+;	Entry:	[HL] = VRAM address.
+;		[E]  = data.
+;	Exit:	None.
+;
+	extrn	SETWRT@
+;
+VPOKE@::
+	call	SETWRT@
+	out	(c),e
+	ret
+
+	ENDMODULE
+.comment%*/
+}
+
+VOID	filvrm(adr, len, data)
+NAT	adr;
+NAT	len;
+TINY	data;
+{
+/*%
+	MODULE	FILVRM
+;
+;	FILVRM	fills the VRAM with the specified data.
+;
+	extrn	SETWRT@
+;
+FILVRM@::
+	push	bc		; save data
+	call	SETWRT@
+	pop	hl		;  L = data
+				; DE = length
+				;  C = VDPIO@
+	ld	b,e		; set lower byte of length
+	ld	a,d		; set higher byte of length
+	inc	e		; is lower byte of length 0?
+	dec	e
+	jr	z,filvrm_1	; yes
+	inc	a
+filvrm_1:
+	out	(c),l
+	djnz	filvrm_1
+	dec	a
+	jp	nz,filvrm_1
+	ret
+
+	ENDMODULE
+.comment%*/
+}
+
+VOID	ldirmv(dst, src, len)
+TINY	*dst;
+NAT	src;
+NAT	len;
+{
+/*%
+	MODULE	LDIRMV
+;
+;	LDIRMV	moves block from VRAM to memory.
+;
+	extrn	SETRD@
+;
+LDIRMV@::
+	push	bc		; save length
+	ex	de,hl		; HL = pointer to source
+	call	SETRD@
+	ex	de,hl		; HL = pointer to destination
+	pop	de		; DE = length
+				; C  = VDPIO@
+	ld	b,e		; set lower byte of length
+	ld	a,d		; set higher byte of length
+	inc	e		; is lower byte of length 0?
+	dec	e
+	jr	z,ldirmv_1	; yes
+	inc	a
+ldirmv_1:
+	ini			; INIR cannot be used (VDP may fail)
+	jp	nz,ldirmv_1
+	dec	a
+	jp	nz,ldirmv_1
+	ret
+
+	ENDMODULE
+.comment%*/
+}
+
+VOID	ldirvm(dst, src, len)
+NAT	dst;
+TINY	*src;
+NAT	len;
+{
+/*%
+	MODULE	LDIRVM
+;
+;	LDIRVM	moves block from memory to the VRAM.
+;
+	extrn	SETWRT@
+;
+LDIRVM@::
+	push	bc		; save length
+	call	SETWRT@
+	ex	de,hl		; HL = pointer to source
+	pop	de		; DE = length
+				; C  = VDPIO@
+	ld	b,e		; set lower byte of length
+	ld	a,d		; set higher byte of length
+	inc	e		; is lower byte of length 0?
+	dec	e
+	jr	z,ldirvm_1	; yes
+	inc	a
+ldirvm_1:
+	outi			; OTIR cannot be used (VDP may fail)
+	jp	nz,ldirvm_1
+	dec	a
+	jp	nz,ldirvm_1
+	ret
+
+	ENDMODULE
+.comment%*/
+}
+
+VOID	wrtvdp(regnum, value)
+TINY	regnum;
+TINY	value;
+{
+/*%
+	MODULE	WRTVDP
+;
+;	WRTVDP	writes to the VDP register.
+;	Entry:	[A] = Register # (passed to BIOS in [C]).
+;		[E] = data	 (passed to BIOS in [B]).
+;	Exit:	None.
+;
+WRTVDP	equ	0047h
+;
+WRTVDP@::
+	ld	c,a
+	ld	b,e
+	ld	ix,WRTVDP
+	jp	_CALBIO##
+
+	ENDMODULE
+.comment%*/
+}
+
+TINY	rdvdp(vreg)
+TINY	vreg;
+{
+/*%
+	MODULE	RDVDP
+;
+;	RDVDP	simulates read from the VDP write-only register.
+;	Entry:	Register #
+;	Exit:	Data
+;
+RG0SAV	equ	0F3DFh		;save area for register 0 to 7
+RG8SAV	equ	0FFE7h		;save area for register 8 to 23
+;
+RDVDP@::
+	cp	8		; register 0..7?
+	ld	hl,RG0SAV	; assume so
+	jr	c,old_vdpreg	; good assumption
+	ld	hl,RG8SAV-8
+old_vdpreg:
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	ret
+
+	ENDMODULE
+.comment%*/
+}
+
+TINY	rdvsts(sreg)
+TINY	sreg;
+{
+/*%
+	MODULE	RDVSTS
+;
+;	RDVSTS	read from the VDP status register.
+;	Entry:	Register #
+;	Exit:	Data
+;
+STATFL	equ	0F3E7h
+	extrn	_SELSTT
+	extrn	_SLST0
+	extrn	VDPIO@
+;
+RDVSTS@::
+	and	a			; status register #0?
+	jr	z,rdsts0		; yes
+	ld	bc,(VDPIO@)
+	inc	c
+_RDVSTS::
+	di
+	call	_SELSTT
+	in	l,(c)			; read status
+	call	_SLST0			; re-select status register #0
+	ei
+	ld	a,l
+	ret
+;
+rdsts0:
+	ld	a,(STATFL)
+	ret
+
+	ENDMODULE
+.comment%*/
+}
+
+VOID	color(fore, back, bord)
+TINY	fore, back, bord;
+{
+/*%
+	MODULE	COLOR
+;
+;	COLOR	changes the color of the screen.
+;	Entry:	Foreground color in A
+;		Background color in E
+;		Border	   color in C
+;	Exit:	None.
+;
+CHGCLR	equ	0062h
+FORCLR	equ	0F3E9h
+BAKCLR	equ	0F3EAh
+BDRCLR	equ	0F3EBh
+;
+COLOR@::
+	ld	(FORCLR),a
+	ld	a,e
+	ld	(BAKCLR),a
+	ld	a,c
+	ld	(BDRCLR),a
+	ld	ix,CHGCLR
+	jp	_CALBIO##
+
+	ENDMODULE
+.comment%*/
+}
+
+VOID	iniplt()
+{
+/*%
+	MODULE	INIPLT
+
+INIPLT	equ	0141h
+;
+INIPLT@::
+	ld	ix,INIPLT
+	jp	_CALSUB##
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	rstplt()
+{
+/*%
+	MODULE	RSTPLT
+
+RSTPLT	equ	0145h
+;
+RSTPLT@::
+	ld	ix,RSTPLT
+	jp	_CALSUB##
+
+	ENDMODULE
+.comment %*/
+}
+
+NAT	getplt(pal)
+TINY	pal;
+{
+/*%
+	MODULE	GETPLT
+
+GETPLT	equ	0149h
+;
+GETPLT@::
+	ld	ix,GETPLT
+	call	_CALSUB##
+	ld	h,c			; set G
+	ld	l,b			; set RB
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	setplt(pal, grbdat)
+TINY	pal;
+NAT	grbdat;
+{
+/*%
+	MODULE	SETPLT
+
+SETPLT	equ	014Dh
+;
+SETPLT@::
+	ld	l,a
+	ld	a,e		; set RB
+	ld	e,d		; set G
+	ld	d,l		; set palette number
+	ld	ix,SETPLT
+	jp	_CALSUB##
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	pset(x, y, color, logop)
+NAT	x, y;
+TINY	color;
+TINY	logop;
+{
+/*%
+	MODULE	PSET
+
+DOPSET	equ	57F5h
+GRPACX	equ	0FCB7h
+GRPACY	equ	0FCB9h
+ACPAGE	equ	0FAF6h
+SCRMOD	equ	0FCAFh
+ATRBYT	equ	0F3F2h
+	extrn	_SETI36
+;
+PSET@::
+	ld	(GRPACX),hl
+	ld	(GRPACY),de
+	ld	a,c			; Acc = color
+	pop	ix			; get return address
+	pop	bc
+	push	bc
+	push	ix			; push return address
+	ld	b,c			; B = logop
+	push	af
+	ld	a,(SCRMOD)
+	cp	4+1
+	jr	c,old_pset
+	call	_SETI36			; begin writing from register #36
+	out	(c),l			; set x start
+	out	(c),h
+	out	(c),e			; set y start
+	ld	a,(ACPAGE)
+	add	a,d
+	out	(c),a
+	out	(c),a			; dummy
+	out	(c),a
+	out	(c),a
+	out	(c),a
+;
+;	time to set the color
+;
+	pop	af			; restore color
+	out	(c),a
+;
+;	time to set the argument register
+;
+	xor	a
+	out	(c),a
+;
+;	time to set the pset command
+;
+	ld	a,b			; restore operation code
+	or	01010000b		; issue pset command
+	out	(c),a
+	ret
+;
+old_pset:
+	pop	af			; restore color
+	ld	(ATRBYT),a
+	ld	c,l			; BC = x
+	ld	b,h
+	ld	ix,DOPSET
+	jp	_CALBAS##
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	line(x1, y1, x2, y2, color, logop)
+NAT	x1, y1, x2, y2;
+TINY	color;
+TINY	logop;
+{
+/*%
+	MODULE	LINE
+
+GRPACX	equ	0FCB7h
+GRPACY	equ	0FCB9h
+SCRMOD	equ	0FCAFh
+;
+LINE@::
+	ex	de,hl		; DE = x1, HL = y1
+	push	bc		; IX = x2
+	pop	ix
+	exx
+	pop	hl		; get return address
+	exx
+	pop	iy		; IY = y2
+	dec	sp
+	pop	af		; get color
+	pop	bc		; get logop
+	dec	sp
+	push	af		; adjust stack
+	push	af
+	exx
+	push	hl		; set return address
+	exx
+	ld	(GRPACX),ix
+	ld	(GRPACY),iy
+	push	af
+	ld	a,(SCRMOD)
+	cp	4+1
+	jp	c,old_line
+	pop	af
+;
+;	draw a line
+;
+;	entry		a  = color
+;			b  = operation
+;			de = x start
+;			hl = y start
+;			ix = x end
+;			iy = y end
+;
+DOLINE	equ	58FCh
+ACPAGE	equ	0FAF6h
+	extrn	_SETI36
+	extrn	_ROMLINE
+
+_D_LINE::
+	push	de
+	push	hl
+	push	ix
+	push	iy
+	push	af
+	push	af
+	push	hl
+	call	_SETI36			; begin writing from register #36
+	push	ix
+	pop	hl
+	out	(c),l			; set x start
+	out	(c),h
+	push	iy
+	pop	hl
+	out	(c),l			; set y start
+	ld	a,(ACPAGE)
+	add	a,h
+	out	(c),a
+	ld	a,00001100b		; initialize value for ARG
+	push	ix
+	pop	hl
+	sbc	hl,de			; hl = x_end - x_start
+	jr	nc,xdel_pos		; x offset is positive
+	ex	de,hl			; negate hl
+	ld	hl,1
+	sbc	hl,de
+	and	11111011b
+xdel_pos:
+	push	hl
+	pop	ix
+	pop	de			; restore y_start
+	push	iy
+	pop	hl
+	sbc	hl,de			; hl = y_end - y_start
+	jr	nc,ydel_pos		; y offset is positive
+	ex	de,hl			; negate hl
+	ld	hl,1
+	sbc	hl,de
+	and	11110111b
+ydel_pos:
+	push	ix
+	pop	de			; de = x_delta
+	push	hl			; compare y_delta with x_delta
+	sbc	hl,de
+	pop	hl
+	jr	c,xdel_bigger		; x_delta is bigger than y_delta
+	ex	de,hl
+	or	00000001b
+xdel_bigger:
+	out	(c),e			;set major delta
+	out	(c),d
+	out	(c),l			;set minor delta
+	out	(c),h
+;
+;	time to set the color
+;
+	ld	e,a
+	pop	af			; restore color
+	out	(c),a
+;
+;	time to set the argument register
+;
+	out	(c),e
+;
+;	time to set the line command
+;
+	ld	a,b			; restore operation code
+	or	01110000b		;issue line command
+	out	(c),a
+	pop	af
+	pop	iy
+	pop	ix
+	pop	hl
+	pop	de
+	ret
+
+old_line:
+	pop	af			; restore color
+	ld	bc,DOLINE
+	jp	_ROMLINE
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	boxline(x1, y1, x2, y2, color, logop)
+NAT	x1, y1, x2, y2;
+TINY	color;
+TINY	logop;
+{
+/*%
+	MODULE	BOXLINE
+
+BOXLIN	equ	5912h
+GRPACX	equ	0FCB7h
+GRPACY	equ	0FCB9h
+SCRMOD	equ	0FCAFh
+	extrn	_D_LINE
+	extrn	_ROMLINE
+;
+BOXLINE@::
+	ex	de,hl		; DE = x1, HL = y1
+	push	bc		; IX = x2
+	pop	ix
+	exx
+	pop	hl		; get return address
+	exx
+	pop	iy		; IY = y2
+	dec	sp
+	pop	af		; get color
+	pop	bc		; get logop
+	dec	sp		; adjust stack
+	push	af
+	push	af
+	exx
+	push	hl
+	exx
+	ld	(GRPACX),ix
+	ld	(GRPACY),iy
+	push	af			; save color
+	ld	a,(SCRMOD)
+	cp	4+1
+	jr	c,old_box
+	pop	af			; restore color
+					; make SURE that Acc will not be
+					; changed till the end of routine!
+	push	hl			; save y1
+	push	ix			; HL = x2
+	pop	hl
+	and	a
+	push	hl
+	sbc	hl,de			; x2 - x1
+	pop	hl
+	jr	z,boxline_vert		; x1 == x2
+	jr	nc,draw_box_xok		; x2 is greater
+	ex	de,hl
+	and	a			; make sure of NC (for next SBC)
+draw_box_xok:
+;
+;	Now, x1 (in DE) are x2 (in HL) are normalized. (x1 < x2)
+;
+	ex	(sp),hl			; save x2
+					; restore y1 in HL
+	push	de			; save x1
+	push	iy			; DE = y2
+	pop	de
+	push	hl
+	sbc	hl,de
+	pop	hl
+	jr	z,boxline_horiz		; y1 == y2
+	jr	c,draw_box_yok		; y2 is greater
+	ex	de,hl
+draw_box_yok:
+;
+;	Now, y1 (in HL) and y2 (in DE) are normalized. (y1 < y2)
+;
+	push	de			; IY = y2
+	pop	iy
+	pop	de			; DE = x1
+	pop	ix			; IX = x2
+;
+;	Draw upper-horizontal line
+;
+	push	iy
+	push	hl
+	pop	iy
+	dec	ix
+	call	_D_LINE			; (x1, y1) - (x2-1, y1)
+;
+;	Draw right-vertical line
+;
+	inc	ix
+	pop	hl
+	dec	hl
+	push	iy
+	push	de
+	push	ix
+	pop	de
+	call	_D_LINE			; (x2, y2-1) - (x2, y1)
+;
+;	Draw lower-horizontal line
+;
+	inc	hl
+	pop	ix
+	inc	ix
+	push	hl
+	pop	iy
+	call	_D_LINE			; (x2, y2) - (x1+1, y2)
+;
+;	Draw left-vertical line
+;
+	dec	ix
+	pop	hl
+	inc	hl
+	push	ix
+	pop	de
+jp_d_line:
+	jp	_D_LINE			; (x1, y1+1) - (x1, y2)
+;
+boxline_vert:
+	pop	hl			; restore y1
+	jr	jp_d_line
+;
+boxline_horiz:
+	pop	de			; restore x1
+	pop	ix			; restore x2
+	jr	jp_d_line
+;
+old_box:
+	pop	af			; restore color
+	ld	bc,BOXLIN
+	jp	_ROMLINE
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	boxfill(x1, y1, x2, y2, color, logop)
+NAT	x1, y1, x2, y2;
+TINY	color;
+TINY	logop;
+{
+/*%
+	MODULE	BOXFILL
+
+DOBOXF	equ	58C1h
+ACPAGE	equ	0FAF6h
+GRPACX	equ	0FCB7h
+GRPACY	equ	0FCB9h
+SCRMOD	equ	0FCAFh
+	extrn	_SETI36
+	extrn	_ROMLINE
+;
+BOXFILL@::
+	ex	de,hl		; DE = x1, HL = y1
+	push	bc		; IX = x2
+	pop	ix
+	exx
+	pop	hl		; get return address
+	exx
+	pop	iy		; IY = y2
+	dec	sp
+	pop	af		; get color
+	pop	bc		; get logop
+	dec	sp		; adjust stack
+	push	af
+	push	af
+	exx
+	push	hl		; push return address
+	exx
+	ld	(GRPACX),ix
+	ld	(GRPACY),iy
+	push	af
+	ld	a,(SCRMOD)
+	cp	4+1
+	jp	c,old_fill
+	pop	af
+	push	af			; save color
+	push	hl
+	push	ix
+	pop	hl
+	and	a
+	push	hl
+	sbc	hl,de
+	pop	hl
+	jr	nc,d_fill_xok
+	ex	de,hl
+	and	a
+d_fill_xok:
+	ex	(sp),hl
+	push	de
+	push	iy
+	pop	de
+	push	hl
+	sbc	hl,de
+	pop	hl
+	jr	c,d_fill_yok
+	ex	de,hl
+d_fill_yok:
+	push	de			; now, everything is in order
+	pop	iy
+	pop	de
+	pop	ix
+	call	_SETI36			; begin writing from register #36
+	out	(c),e			; set x start
+	out	(c),d
+	out	(c),l			; set y start
+	ld	a,(ACPAGE)
+	add	a,h
+	out	(c),a
+	push	hl
+	push	ix
+	pop	hl
+	and	a
+	sbc	hl,de			; hl = x_end - x_start
+	inc	hl
+	out	(c),l			; set x extension
+	out	(c),h
+	ld	a,l
+	or	e			; a = x_start or x_extension
+	push	iy
+	pop	hl
+	pop	de
+	sbc	hl,de			; hl = y_end - y_start
+	inc	hl
+	out	(c),l			; set y extension
+	out	(c),h
+	ld	e,a
+;
+;	see if we can use high-speed move
+;
+	pop	hl			; restore color in h
+	inc	b
+	djnz	d_fill_logical		; logical operation specified
+	ld	a,(SCRMOD)
+	cp	8
+	jr	z,d_fill_hs_8
+	cp	7
+	jr	z,check_2
+	cp	6
+	jr	z,check_4
+check_2:
+	ld	a,e
+	rrca
+	jr	nc,d_fill_hs_4
+	jr	d_fill_logical
+
+check_4:
+	ld	a,e
+	and	11b
+	jr	z,d_fill_hs_2
+d_fill_logical:
+;
+;	time to set the color
+;
+	out	(c),h
+;
+;	time to set the argument register
+;
+	xor	a
+	out	(c),a
+;
+;	time to set the lmmv command
+;
+	ld	a,b
+	or	10000000b		;issue lmmv command
+	out	(c),a
+	ret
+
+;
+;	time to set the color
+;
+d_fill_hs_2:
+	ld	a,h
+	add	a,a
+	add	a,a
+	or	h
+	ld	h,a
+d_fill_hs_4:
+	ld	a,h
+	add	a,a
+	add	a,a
+	add	a,a
+	add	a,a
+	or	h
+	ld	h,a
+d_fill_hs_8:
+	out	(c),h
+;
+;	time to set the argument register
+;
+	xor	a
+	out	(c),a
+	ld	a,11000000b		; issue hmmv command
+	out	(c),a
+	ret
+;
+old_fill:
+	pop	af			; restore color
+	ld	bc,DOBOXF
+	jp	_ROMLINE
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	circle(x, y, r, color, s_angl, e_angl, aspect)
+NAT	x, y, r;
+TINY	color;
+int	s_angl, e_angl;
+NAT	aspect;
+{
+/*%
+	MODULE	CIRCLE
+
+KBUF	equ	0F41Fh			; temp
+DO_CIRC equ	5B19h
+BASROM	equ	0FBB1h
+GRPACX	equ	0FCB7h
+GRPACY	equ	0FCB9h
+;
+CIRCLE@::
+	push	bc			; save radius
+	ld	(GRPACX),hl
+	ld	(GRPACY),de
+	ld	hl,cir_skeleton 	; copy skeleton
+	ld	de,KBUF
+	ld	bc,cir_skeleton_len
+	ldir
+	pop	bc			; restore radius
+	pop	de			; get return address
+	pop	hl			; get color
+	ld	a,l
+	ld	(KBUF+2),a		; set color
+	pop	hl
+	ld	(KBUF+5),hl		; set s_angle
+	pop	hl
+	ld	(KBUF+15),hl		; set e_angle
+	pop	hl
+	ld	(KBUF+29),hl		; set aspect
+	ld	(KBUF+43),hl
+	push	hl			; adjust stack
+	push	hl
+	push	hl
+	push	hl
+	push	de			; save return address
+	ld	e,c			; DE = radius
+	ld	d,b
+	ld	hl,BASROM		; disable Control-STOP
+	ld	a,(hl)
+	push	af
+	ld	(hl),1
+	ld	hl,KBUF
+	ld	ix,DO_CIRC
+	call	_CALBAS##
+	pop	af
+	ld	(BASROM),a
+	ret
+
+;
+;	Skeleton BASIC text for circle
+;
+;	',color,s_angl*0.000191748,e_angl*0.000191748
+;	 ,(ABS(aspect)/32768)^((aspect<0)*2+1)'
+;
+??????	equ	0
+cir_skeleton:
+	defb	','
+	defb	0fh,??????		; color
+	defb	','
+	defb	1ch,??????,??????	; start angle
+	defb	0f3h			; *
+	defb	1dh,3dh,19h,17h,48h	; pi/4000h
+	defb	','
+	defb	1ch,??????,??????	; end angle
+	defb	0f3h			; *
+	defb	1dh,3dh,19h,17h,48h	; pi/4000h
+	defb	','
+	defb	'(',0ffh,86h,'('	; (ABS(
+	defb	1ch,??????,??????	; aspect
+	defb	')',0f4h		; )/
+	defb	1dh,45h,32h,76h,80h	; 32768
+	defb	')',0f5h,'(('		; )^((
+	defb	1ch,??????,??????	; aspect
+	defb	0f0h,11h,')',0f3h,13h	; <0)*2
+	defb	0f1h,12h,')'		; +1)
+	defb	0
+
+cir_skeleton_len	equ	$-cir_skeleton
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	paint(x, y, color, b_color)
+NAT	x, y;
+TINY	color, b_color;
+{
+/*%
+	MODULE	PAINT
+
+O_PAINT	equ	59E3h
+N_PAINT equ	266Eh
+STREND	equ	0F6C6h
+BASROM	equ	0FBB1h
+SCRMOD	equ	0FCAFh
+BRDATR	equ	0FCB2h
+ATRBYT	equ	0F3F2h
+GRPACX	equ	0FCB7h
+GRPACY	equ	0FCB9h
+;
+PAINT@::
+	ld	(GRPACX),hl
+	ld	(GRPACY),de
+	ld	a,c
+	ld	(ATRBYT),a		; set fill color
+	pop	bc			; get return address
+	dec	sp
+	pop	af
+	ld	(BRDATR),a		; set border color
+	dec	sp
+	push	bc			; set return address
+	push	hl			; save x
+	push	de			; save y
+	ld	hl,0			; get the start of free area
+	call	SBRK@##
+	bit	7,h			; above 8000h?
+	jr	nz,set_strend		; yes
+	ld	hl,8000h
+set_strend:
+	ld	(STREND),hl
+	pop	de			; set y
+	pop	bc			; set x
+	ld	hl,BASROM		; disable Control-STOP
+	ld	a,(hl)
+	push	af
+	ld	(hl),1
+	ld	a,(SCRMOD)
+	cp	4+1
+	jr	c,pnt_old
+	ld	ix,N_PAINT
+	call	_CALSUB##
+	jr	pnt_done
+;
+pnt_old:
+	ld	ix,O_PAINT
+	call	_CALBAS##
+pnt_done:
+	pop	af
+	ld	(BASROM),a
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+TINY	point(x, y)
+NAT	x, y;
+{
+/*%
+	MODULE	POINT
+
+SCALXY	equ	010Eh
+MAPXYC	equ	0111h
+READC	equ	011Dh
+ACPAGE	equ	0FAF6h
+SCRMOD	equ	0FCAFh
+	extrn	_RDVSTS
+	extrn	_SETIND
+;
+POINT@::
+	ld	a,(SCRMOD)
+	cp	4+1
+	jr	c,old_point
+	ld	a,32			; begin writing from register #32
+	call	_SETIND
+	out	(c),l			; set x
+	out	(c),h
+	out	(c),e			; set y
+	ld	a,(ACPAGE)
+	add	a,d
+	out	(c),a
+	out	(c),a			; dummy
+	out	(c),a
+	out	(c),a
+	out	(c),a
+	out	(c),a
+	out	(c),a
+	out	(c),a
+	out	(c),a
+	out	(c),a
+;
+;	time to set the argument register
+;
+	xor	a
+	out	(c),a
+;
+;	time to set the point command
+;
+	ld	a,01000000b		; issue pset command
+	out	(c),a
+	dec	c			; point to command/status register
+	dec	c
+	ld	a,7			; status register #7
+	jp	_RDVSTS
+;
+old_point:
+	ld	c,l			; BC = x
+	ld	b,h
+	ld	ix,SCALXY
+	call	_CALBIO##
+	ld	ix,MAPXYC
+	call	_CALBIO##
+	ld	ix,READC
+	jp	_CALBIO##
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	inispr(size)
+TINY	size;
+{
+/*%
+	MODULE	INISPR
+
+WRTVDP	equ	0047h
+CLRSPR	equ	0069h
+RG1SAV	equ	0F3E0h		;save area for register 1
+RG8SAV	equ	0FFE7h		;save area for register 8
+EXBRSA	equ	0FAF8h
+;
+INISPR@::
+	push	af			; save new size
+	ld	ix,CLRSPR		; clear all sprites in advance
+	call	_CALBIO##
+	pop	af			; restore new size
+	cp	4			; disable sprites?
+	jr	z,dis_spr		; yes
+	ld	b,a
+	ld	a,(RG1SAV)
+	and	11111100b
+	or	b
+	ld	b,a
+	ld	c,1
+	call	jp_wrtvdp		; modify SI, MAG
+	ld	a,(EXBRSA)		; MSX1?
+	and	a
+	ret	z			; yes, sprite cannot be disabled
+	ld	a,(RG8SAV)		; make sure sprite is enabled
+	and	11111101b
+	jr	wrtvdp_8
+;
+dis_spr:
+	ld	a,(RG8SAV)		; disable sprite
+	or	00000010b
+wrtvdp_8:
+	ld	b,a
+	ld	c,8
+jp_wrtvdp:
+	ld	ix,WRTVDP
+	jp	_CALBIO##
+
+	ENDMODULE
+.comment%*/
+}
+
+NAT	calpat(patnum)
+TINY	patnum;
+{
+/*%
+	MODULE	CALPAT
+
+PATBAS	equ	0F926h
+	extrn	_GSPSIZ
+;
+CALPAT@::
+	ld	l,a			; 0 <= Acc <= 255
+	ld	h,0
+	add	hl,hl			; x8
+	add	hl,hl
+	add	hl,hl
+	call	_GSPSIZ			; check current sprite size
+	jr	nc,gspad1		; 8x8 sprite
+	add	hl,hl			; x32
+	add	hl,hl
+gspad1:
+	ld	de,(PATBAS)
+	add	hl,de
+	ret
+
+	ENDMODULE
+.comment%*/
+}
+
+NAT	calatr(plane)
+TINY	plane;
+{
+/*%
+	MODULE	CALATR
+
+ATRBAS	equ	0F928h
+;
+CALATR@::
+	add	a,a			; 0 <= Acc <= 31 (normally)
+					; 0 <= Acc <= 124 (when used by putspr)
+	ld	e,a
+	ld	d,0
+	ld	hl,(ATRBAS)
+	add	hl,de
+	add	hl,de
+	ret
+
+	ENDMODULE
+.comment%*/
+}
+
+VOID	sprite(pat, data)
+TINY	pat, *data;
+{
+/*%
+	MODULE	SPRITE
+
+	extrn	CALPAT@
+	extrn	_GSPSIZ
+	extrn	LDIRVM@
+;
+SPRITE@::
+	push	de
+	call	CALPAT@			; get pointer to pattern table
+	pop	de
+	call	_GSPSIZ			; get size of sprite in bytes
+	ld	c,a
+	ld	b,0
+	jp	LDIRVM@
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	colspr(plane, color)
+TINY	plane, *color;
+{
+/*%
+	MODULE	COLSPR
+
+	extrn	CALATR@
+	extrn	_GSPSIZ
+	extrn	LDIRVM@
+;
+COLSPR@::
+	add	a,a			; get pointer to color table
+	add	a,a
+	push	de
+	call	CALATR@
+	pop	de
+	dec	h
+	dec	h
+	call	_GSPSIZ			; check sprite size
+	ld	c,a			; assume 8x8
+	jr	nc,colspr1		; good assumption
+	ld	c,16			; 16x16, 16 lines in all
+colspr1:
+	ld	b,0
+	jp	LDIRVM@
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	putspr(plane, x, y, color, pat)
+TINY	plane;
+int	x, y;
+TINY	color, pat;
+{
+/*%
+	MODULE	PUTSPR
+
+LINWRK	equ	0FC18h
+SCRMOD	equ	0FCAFh
+GRPACX	equ	0FCB7h
+GRPACY	equ	0FCB9h
+	extrn	_GSPSIZ
+	extrn	CALATR@
+	extrn	SETRD@
+	extrn	SETWRT@
+;
+PUTSPR@::
+	ld	(GRPACX),de
+	ld	(GRPACY),bc
+	pop	ix			; get return address
+	pop	hl			; get color L
+	pop	iy			; get pat in IYL
+	push	iy
+	push	hl
+	push	ix
+	ld	b,c			; B = y
+	push	af			; save plane number
+	push	iy
+	dec	sp
+	pop	af			; A = pat
+	inc	sp
+	ld	h,a			; set pattern to H
+	call	_GSPSIZ			; check sprite size
+	jr	nc,put8x8		; 8x8 sprite
+	sla	h			; 16x16, multiply pattern by 4
+	sla	h
+put8x8:
+	pop	af			; get plane number
+	push	af			; save plane number
+	push	hl			; save pat, color
+	push	de			; save x (H)
+	call	CALATR@			; get address of attribute table
+	call	SETWRT@
+	pop	de			; restore x
+	pop	hl			; restore pat (H), color (L)
+	out	(c),b			; set y
+	ld	a,d			; get high of x
+	and	10000000b
+	ld	b,a			; set correct EC bit
+	ld	a,e			; get low of x
+	jr	z,spr_xpos		; x is positive
+	add	a,32			; negative, offset by 32
+spr_xpos:
+	out	(c),a			; set x
+	nop
+	nop
+	nop
+	out	(c),h			; set pat
+	ld	a,(SCRMOD)
+	cp	4
+	jr	nc,new_sprite
+;
+;	old sprite mode
+;
+	ld	a,l			; get color
+	or	b			; set currect EC bit
+	out	(c),a			; set color
+	pop	af			; discard plane number
+	ret
+;
+;	new sprite mode
+;
+new_sprite:
+	pop	af			; restore plane number
+	add	a,a
+	add	a,a
+	call	CALATR@
+	dec	h			; -512
+	dec	h
+	push	hl			; save pointer to color table
+	call	SETRD@
+	ld	e,b			; E = EC bit
+	call	_GSPSIZ			; check sprite size
+	ld	d,a			; assume 8x8
+	jr	nc,nspr_8x8		; good assumption, 8 lines in all
+	ld	d,16			; 16x16, so 16 lines in all
+nspr_8x8:
+	ld	hl,LINWRK		; read to LINWRK
+	ld	b,d
+nspr_rd:
+	ini
+	jp	nz,nspr_rd
+	pop	hl			; restore pointer to color table
+	call	SETWRT@
+	ld	hl,LINWRK		; write it back
+	ld	b,d
+nspr_wr:
+	ld	a,(hl)			; get current color table
+	and	01111111b		; strip off EC bit
+	or	e			; set correct EC bit
+	out	(c),a
+	inc	hl
+	djnz	nspr_wr
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	cpyv2v(sx1, sy1, sx2, sy2, sp, dx, dy, dp, logop)
+NAT	sx1, sy1, sx2, sy2;
+TINY	sp;
+NAT	dx, dy;
+TINY	dp;
+TINY	logop;
+{
+/*%
+	MODULE	CPYV2V
+
+LINWRK	equ	0FC18h			; temp
+CPYSRC	equ	LINWRK
+CPYDST	equ	CPYSRC+2
+SCRMOD	equ	0FCAFh
+GRPACX	equ	0FCB7h
+GRPACY	equ	0FCB9h
+	extrn	_SETIND
+;
+CPYV2V@::
+	ex	de,hl			; DE = sx1, HL = sy1, BC = sx2
+	exx				; save sx1, sy1, sx2
+	pop	bc			; get return address
+	pop	iy			; get sy2
+	pop	hl			; get sp
+	ld	a,l
+	ld	(CPYSRC),a
+	pop	hl			; get dx
+	ld	(GRPACX),hl
+	pop	hl			; get dy
+	ld	(GRPACY),hl
+	pop	hl			; get copy source page
+	ld	a,l
+	ld	(CPYDST),a
+	pop	hl			; get logop
+	push	hl			; adjust stack
+	push	hl
+	push	hl
+	push	hl
+	push	hl
+	push	hl
+	push	bc			; push return address
+	ld	a,l
+	exx				; restore sx1, sy1, sx2
+	push	bc			; set sx2
+	pop	ix
+	ld	b,a
+	push	de			; save source x start
+	push	bc			; save logical operation
+	ld	a,32			; begin writing from register #32
+	call	_SETIND
+	out	(c),e			; set source x start
+	out	(c),d
+	out	(c),l			; set source y start
+	ld	a,(CPYSRC)
+	add	a,h
+	out	(c),a
+	push	hl			; save source y start
+	ld	hl,(GRPACX)		; set destination x
+	out	(c),l
+	out	(c),h
+	ld	hl,(GRPACY)		; set destination y
+	out	(c),l
+	ld	a,(CPYDST)
+	add	a,h
+	out	(c),a
+	ld	b,0			; initialize value for ARG
+					; i.e. assume x/y is to the right/down
+	ld	a,(GRPACX)		; get destination x
+	or	e			; OR with x source
+	push	ix
+	pop	hl
+	sbc	hl,de			; hl = x_end - x_start
+	jr	nc,xdot_pos		; x offset is positive
+	ld	a,(GRPACX)
+	cpl
+	ld	d,a
+	ld	a,e
+	cpl
+	or	d
+	ex	de,hl			; negate hl
+	ld	hl,0
+	sbc	hl,de
+	set	2,b
+xdot_pos:
+	inc	hl
+	out	(c),l			; set number of dots for x
+	out	(c),h
+	or	l			; or with number of dots for x
+	pop	de			; restore y_start
+	push	iy
+	pop	hl
+	sbc	hl,de			; hl = y_end - y_start
+	jr	nc,ydot_pos		; y offset is positive
+	ex	de,hl			; negate hl
+	ld	hl,1
+	sbc	hl,de
+	set	3,b
+ydot_pos:
+	inc	hl
+	out	(c),l			; set number of dots for y
+	out	(c),h
+	out	(c),a			; dummy (skip register #44)
+	out	(c),b			; set the argument register
+;
+;	see if we can use high speed move
+;
+	ld	b,a			; set byte boundary flag in b
+	pop	hl			; restore logical operation code in h
+	pop	de			; restore source x start
+	ld	a,h			; logical operation specified?
+	and	a
+	jr	nz,vv_logical		; yes, move logically
+	ld	a,(SCRMOD)
+	cp	8			; screen 8?
+	jr	z,vv_hs 		; yes, always use high speed
+	cp	6			; screen 6?
+	jr	z,vv_check_4		; yes, check lower 2 bits
+	ld	a,b			; on byte boundary?
+	rrca
+	jr	nc,vv_hs		; yes, use high speed move
+	jr	vv_logical		; no, use logical move
+
+vv_check_4:
+	ld	a,b			; on byte boundary?
+	and	11b
+	jr	z,vv_hs 		; yes, use high speed move
+vv_logical:
+	ld	a,h			; get the logical operation code
+	or	10010000b		; issue lmmm command
+	out	(c),a
+	ret
+;
+;	we can use high speed moves
+;
+vv_hs:
+	ld	a,11010000b
+	out	(c),a
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	cpyv2m(sx1, sy1, sx2, sy2, sp, dest)
+NAT	sx1, sy1, sx2, sy2;
+TINY	sp;
+TINY	*dest;
+{
+/*%
+	MODULE	DOTS
+
+;
+;	Calculate number of bytes from number of pixels (X and Y)
+;
+;	For screen 5/7
+;
+_DOT_5::
+	push	hl
+	push	bc
+	push	de
+	ld	l,b			; HL = pixels per line
+	ld	h,d
+	ld	d,0			; DE = lines
+	call	_MUL32##		; HL:BC = HL * DE
+	rr	l			; divide by 2 to get number of bytes
+	rr	b
+	rr	c
+	jr	dots_6_0
+
+;
+;	For screen 6
+;
+_DOT_6::
+	push	hl
+	push	bc
+	push	de
+	ld	l,b			; HL = pixels per line
+	ld	h,d
+	ld	d,0			; DE = lines
+	call	_MUL32##		; HL:BC = HL * DE
+	xor	a			; clear to check remainder
+	rr	l			; divide by 4 to get number of bytes
+	rr	b
+	rr	c
+	rra
+	rr	b
+	rr	c
+	rra
+	add	a,0FFh			; set carry if Acc<>0
+dots_6_0:
+	ld	a,c			; round up
+	adc	a,0
+	jr	z,dots_6_1		; lower byte is 0
+	inc	b			; increment higher byte
+dots_6_1:
+	pop	de
+	ld	e,b			; E = higher byte of loop count
+	pop	bc
+	ld	b,a			; B = lower byte of loop count
+	pop	hl
+	ret
+
+	ENDMODULE
+
+	MODULE	CPYV2M
+
+LINWRK	equ	0FC18h			; temp
+CPYSRC	equ	LINWRK
+CPYDST	equ	CPYSRC+2
+SCRMOD	equ	0FCAFh
+GRPACX	equ	0FCB7h
+GRPACY	equ	0FCB9h
+	extrn	_SETIND
+	extrn	_SELSTT
+	extrn	_SLST0
+	extrn	_DOT_5
+	extrn	_DOT_6
+;
+CPYV2M@::
+	ex	de,hl			; DE = sx1, HL = sy1, BC = sx2
+	exx				; save sx1, sy1, sx2
+	pop	bc			; get return address
+	pop	iy			; get sy2
+	pop	hl			; get sp
+	ld	a,l
+	ld	(CPYSRC),a
+	pop	hl			; get dest
+	ld	(CPYDST),hl
+	push	hl			; adjust stack
+	push	hl
+	push	hl
+	push	bc			; push return address
+	exx				; restore sx1, sy1, sx2
+	push	bc			; set sx2
+	pop	ix
+	ld	(GRPACX),ix
+	ld	(GRPACY),iy
+	ld	a,32			; begin writing from register #32
+	call	_SETIND
+	out	(c),e			; set source x start
+	out	(c),d
+	out	(c),l			; set source y start
+	ld	a,(CPYSRC)
+	add	a,h
+	out	(c),a
+	push	hl			; save source y start
+	out	(c),a			; dummy
+	out	(c),a
+	out	(c),a
+	out	(c),a
+	ld	b,0			; initialize value for ARG
+					; i.e. assume x/y is to the right/down
+	push	ix
+	pop	hl
+	sbc	hl,de			; hl = x_end - x_start
+	jr	nc,v2m_xdot_pos		; x offset is positive
+	ex	de,hl			; negate hl
+	ld	hl,0
+	sbc	hl,de
+	set	2,b
+v2m_xdot_pos:
+	inc	hl
+	out	(c),l			; set number of dots for x
+	out	(c),h
+	pop	de			; restore y_start
+	push	hl			; save dots/line
+	push	iy
+	pop	hl
+	sbc	hl,de			; hl = y_end - y_start
+	jr	nc,v2m_ydot_pos		; y offset is positive
+	ex	de,hl			; negate hl
+	ld	hl,1
+	sbc	hl,de
+	set	3,b
+v2m_ydot_pos:
+	inc	hl
+	out	(c),l			; set number of dots for y
+	out	(c),h
+	out	(c),a			; dummy (skip register #44)
+	out	(c),b			; set the argument register
+	ld	a,10100000b		; set LMCM command
+	out	(c),a
+	pop	de			; restore number of pixels per line
+	ld	ix,(CPYDST)
+	ld	(ix),e			; set X extent
+	ld	(ix+1),d
+	ld	(ix+2),l		; set Y extent
+	ld	(ix+3),h
+	ld	b,e
+	ld	e,l
+	dec	c
+	dec	c
+	ld	hl,(CPYDST)
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
+;
+;	DB = number of pixels per line
+;	E  = number of lines
+;	C  = (VDPIO@)+1
+;	HL = pointer to destination
+;
+	ld	a,(SCRMOD)
+	cp	8			; screen 8?
+	jr	nz,v2m_5		; no
+;
+;	screen 8
+;
+	ld	d,b			; save counter for a line
+v2m_8_loop:
+	ld	b,d			; initialize pixel counter
+	di
+	ld	a,7
+	call	_SELSTT
+v2m_8_line:
+	ini				; transfer a line
+	jr	nz,v2m_8_line
+	call	_SLST0
+	ei
+	dec	e			; done all lines?
+	jr	nz,v2m_8_loop		; no
+	ret
+;
+v2m_5:
+	cp	6			; screen 6?
+	jr	z,v2m_6			; yes
+;
+;	screen 5 or 7
+;
+	call	_DOT_5			; calculate total number of bytes
+v2m_5_loop:
+	di
+	ld	a,7
+	call	_SELSTT
+	in	a,(c)			; get color
+	add	a,a
+	add	a,a
+	add	a,a
+	add	a,a
+	in	d,(c)			; get color
+	or	d			; combine
+	ld	(hl),a			; set to destination
+	call	_SLST0
+	ei
+	inc	hl
+	djnz	v2m_5_loop
+	dec	e
+	jr	nz,v2m_5_loop
+	ret
+;
+;	screen 6
+;
+v2m_6:
+	call	_DOT_6			; calculate total number of bytes
+v2m_6_loop:
+	di
+	ld	a,7
+	call	_SELSTT
+	in	a,(c)			; get color
+	add	a,a
+	add	a,a
+	nop
+	in	d,(c)			; get color
+	or	d			; combine
+	add	a,a
+	add	a,a
+	in	d,(c)			; get color
+	or	d			; combine
+	add	a,a
+	add	a,a
+	in	d,(c)			; get color
+	or	d			; combine
+	ld	(hl),a			; set to destination
+	call	_SLST0
+	ei
+	inc	hl
+	djnz	v2m_6_loop
+	dec	e
+	jr	nz,v2m_6_loop
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	cpym2v(src, dir, dx, dy, dp, logop)
+TINY	*src;
+TINY	dir;
+NAT	dx, dy;
+TINY	dp;
+TINY	logop;
+{
+/*%
+	MODULE	CPYM2V
+
+LINWRK	equ	0FC18h			; temp
+CPYSRC	equ	LINWRK
+CPYDST	equ	CPYSRC+2
+DIR	equ	CPYDST+2
+LOGOPR	equ	0FB02h
+SCRMOD	equ	0FCAFh
+GRPACX	equ	0FCB7h
+GRPACY	equ	0FCB9h
+	extrn	_SETI36
+	extrn	_DOT_5
+	extrn	_DOT_6
+;
+CPYM2V@::
+	ld	(CPYSRC),hl
+	ld	a,e
+	ld	(DIR),a			; save dir
+	pop	ix			; get return address
+	pop	hl			; get dy
+	pop	de			; get dp
+	ld	a,e
+	ld	(CPYDST),a
+	pop	de			; get logop
+	ld	a,e
+	ld	(LOGOPR),a
+	push	de			; adjust stack
+	push	de
+	push	de
+	push	ix			; push return address
+	ld	e,c			; DE = dx
+	ld	d,b
+	ld	(GRPACX),de
+	ld	(GRPACY),hl
+	call	_SETI36
+	out	(c),e			; set destination x start
+	out	(c),d
+	out	(c),l			; set destination y start
+	ld	a,(CPYDST)
+	add	a,h
+	out	(c),a
+	ld	hl,(CPYSRC)
+	ld	b,(hl)			; set pixels per line (DB)
+	inc	hl
+	out	(c),b
+	ld	d,(hl)
+	inc	hl
+	out	(c),d
+	ld	e,(hl)			; set lines (E)
+	inc	hl
+	out	(c),e
+	ld	a,(hl)
+	inc	hl
+	out	(c),a
+;
+;	see if we can use high speed move
+;
+	ld	a,(DIR)			; get direction
+	and	1			; is X to the left?
+	jr	nz,jrnz_m2v_logical	; yes, move logically
+	ld	a,(LOGOPR)		; logical operation specified?
+	and	a
+jrnz_m2v_logical:
+	ld	a,(SCRMOD)
+	jr	nz,m2v_logical		; yes, move logically
+	cp	8			; screen 8?
+	jr	z,m2v_8 		; yes, always use logical move
+					; because there will be no improvement
+					; in speed even if we use HMMC
+	push	hl
+	ld	a,(GRPACX)		; get dx
+	or	b			; OR with the number of pixels per line
+	ld	l,a			; save it
+	ld	a,(SCRMOD)		; restore screen mode
+	cp	6			; screen 6?
+	ld	a,l			; get byte boundary flag
+	pop	hl
+	jr	z,m2v_check_4		; yes, check lower 2 bits
+	rrca				; on byte boundry?
+	jr	nc,m2v_5_hs		; yes, use high speed move
+	jr	m2v_5_lm		; no, use logical move
+;
+m2v_logical:
+	cp	8
+	jr	z,m2v_8
+	cp	6
+	jr	z,m2v_6_lm
+	jr	m2v_5_lm
+;
+m2v_check_4:
+	and	11b			; on byte boundry?
+	jr	nz,m2v_6_lm 		; no, use logical move
+;
+;	screen 6, high speed move
+;
+;	DB = number of pixels per line
+;	E  = number of lines
+;	HL = pointer to source
+;
+	call	_DOT_6			; calculate total number of bytes
+m2v_hs:
+	outi				; set first data
+	ld	a,(DIR)
+	add	a,a
+	add	a,a
+	out	(c),a			; set arg
+	ld	a,11110000b		; issue HMMC command
+	out	(c),a
+	call	seti44
+	inc	b
+	dec	b
+	jr	z,m2v_hs_cont		; done with a partial block
+m2v_hs_loop:
+	outi
+	jr	nz,m2v_hs_loop
+m2v_hs_cont:
+	dec	e
+	jr	nz,m2v_hs_loop
+	ret
+
+;
+;	screen 5/7, high speed move
+;
+m2v_5_hs:
+	call	_DOT_5
+	jr	m2v_hs
+
+;
+;	screen 8
+;
+m2v_8:
+	ld	d,b			; save counter for a line
+	outi				; set first data
+	ld	a,(DIR)
+	add	a,a
+	add	a,a
+	out	(c),a			; set arg
+	ld	a,(LOGOPR)		; get logop
+	or	10110000b		; issue LMMC command
+	out	(c),a
+	call	seti44
+	inc	b
+	dec	b
+	jr	z,m2v_8_cont		; done with a line
+	jr	m2v_8_loop
+;
+m2v_8_loop0:
+	ld	b,d			; initialize pixel counter
+m2v_8_loop:
+	outi
+	jr	nz,m2v_8_loop
+m2v_8_cont:
+	dec	e
+	jr	nz,m2v_8_loop0
+	ret
+
+;
+;	screen 5/7, logical
+;
+m2v_5_lm:
+	call	_DOT_5			; calculate total number of bytes
+	ld	a,(hl)
+	rlca
+	rlca
+	rlca
+	rlca
+	out	(c),a			; set color
+	ld	a,(DIR)
+	add	a,a
+	add	a,a
+	out	(c),a			; set arg
+	ld	a,(LOGOPR)		; get logop
+	or	10110000b		; issue LMMC command
+	out	(c),a
+	call	seti44
+	jr	m2v_5_lm_cont
+;
+m2v_5_lm_loop:
+	ld	a,(hl)			; get data
+	rlca
+	rlca
+	rlca
+	rlca
+	out	(c),a			; set color
+	nop
+	nop
+m2v_5_lm_cont:
+	ld	a,(hl)
+	out	(c),a			; set color
+	inc	hl
+	djnz	m2v_5_lm_loop
+	dec	e
+	jr	nz,m2v_5_lm_loop
+	ret
+
+;
+;	screen 6, logical
+;
+m2v_6_lm:
+	call	_DOT_6			; calculate total number of bytes
+	ld	a,(hl)
+	rlca
+	rlca
+	out	(c),a			; set color
+	ld	d,a			; save it
+	ld	a,(DIR)
+	add	a,a
+	add	a,a
+	out	(c),a			; set arg
+	ld	a,(LOGOPR)		; get logop
+	or	10110000b		; issue LMMC command
+	out	(c),a
+	call	seti44
+	ld	a,d
+	jr	m2v_6_lm_cont
+;
+m2v_6_lm_loop:
+	ld	a,(hl)
+	rlca
+	rlca
+	out	(c),a			; set color
+m2v_6_lm_cont:
+	nop
+	rlca
+	rlca
+	out	(c),a			; set color
+	nop
+	rlca
+	rlca
+	out	(c),a			; set color
+	nop
+	rlca
+	rlca
+	out	(c),a			; set color
+	inc	hl
+	djnz	m2v_6_lm_loop
+	dec	e
+	jr	nz,m2v_6_lm_loop
+	ret
+
+;
+;	Set the indirect register pointer to #44
+;
+seti44:
+	dec	c			; point to command/status register
+	dec	c
+	di
+	ld	a,80h+44		; inhibit auto increment
+	out	(c),a
+	ld	a,17+80h
+	ei
+	out	(c),a
+	inc	c			; point to indirect register
+	inc	c
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	totext()
+{
+/*%
+	MODULE	TOTEXT
+;
+;	TOTEXT	forces the screen to text mode.
+;
+TOTEXT	equ	00D2h
+;
+TOTEXT@::
+	ld	ix,TOTEXT
+	jp	_CALBIO##
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	grpprt(c, logop)
+char	c;
+TINY	logop;
+{
+/*%
+	MODULE	GRPPRT
+;
+;	GRPPRT	prints a character on the graphic screen.
+;
+GRPPRT	equ	008Dh
+LOGOPR	equ	0FB02h
+;
+GRPPRT@::
+	ld	c,a			; save character code
+	ld	a,e			; set logical operation
+	ld	(LOGOPR),a
+	ld	a,c			; restore character code
+	ld	ix,GRPPRT
+	jp	_CALBIO##
+
+	ENDMODULE
+.comment%*/
+}
+
+VOID	knjprt(c, logop, mode)
+NAT	c;
+TINY	logop;
+TINY	mode;
+{
+/*%
+	MODULE	KNJPRT
+;
+;	KNJPRT	prints a Kanji character on screen
+;
+KNJPRT	equ	01BDh
+FORCLR	equ	0F3E9h
+ATRBYT	equ	0F3F2h
+LOGOPR	equ	0FB02h
+;
+KNJPRT@::
+	ld	a,(FORCLR)		; KNJPRT expects color in ATRBYT
+	ld	(ATRBYT),a
+	ld	a,e
+	ld	(LOGOPR),a
+	ld	a,c			; set mode
+	ld	c,l			; set JIS code
+	ld	b,h
+	ld	ix,KNJPRT
+	jp	_CALSUB##
+
+	ENDMODULE
+.comment%*/
+}
+
+VOID	glocate(x, y)
+NAT	x, y;
+{
+/*%
+	MODULE	GLOCATE
+;
+;	Move graphic cursor
+;	Entry:	HL = x, DE = y
+;	Return: None
+;
+GRPACX	equ	0FCB7h
+GRPACY	equ	0FCB9h
+;
+GLOCATE@::
+	ld	(GRPACX),hl
+	ld	(GRPACY),de
+	ret
+
+	ENDMODULE
+.comment%*/
+}
+
+VOID	setpg(dsppag, actpag)
+TINY	dsppag, actpag;
+{
+/*%
+	MODULE	SETPG
+
+SETPAG	equ	013Dh
+DPPAGE	equ	0FAF5h
+ACPAGE	equ	0FAF6h
+;
+SETPG@::
+	ld	(DPPAGE),a
+	ld	a,e
+	ld	(ACPAGE),a
+	ld	ix,SETPAG
+	jp	_CALSUB##
+
+	ENDMODULE
+.comment %*/
+}
+
+NAT	vramsize()
+{
+/*%
+	MODULE	VRAMSIZE
+
+MODE	equ	0FAFCh
+;
+VRAMSIZE@::
+	ld	a,(MODE)
+	and	00000110b		; extract VRAM size
+	ld	hl,16			; assume 16K (MSX1)
+	ret	z			; good assumption
+	cp	00000010b		; 64K?
+	ld	l,64			; assume so
+	ret	z			; good assumption
+	add	hl,hl			; 128K
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+/*%
+	end
+*/
+                                                     

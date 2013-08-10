@@ -1,0 +1,36 @@
+Manual of the block fade.
+
+The block fade is a machine language program (blok.bin) to fade pictures
+smoothly. The program works in principal on all the MSX 2(+) screens, so it
+does work on screen 5,6,7,8,10,11 and 12. However, the x-coordinate remains
+between 0 and 255 and the routine works with blocks with a size of 2 pixels
+by 2 pixels. Because of this you can use the routine in practice only on
+screen 5 and 8 (on screen 6 and 7 only the left half is faded and on the 2+
+screens you get color mistakes because of the yjk system).
+The routine works with a randomly chosen x-step and y-step. It is also possible
+to poke a x-step and a y-step into the routine.
+
+Some addresses are:
+&HD400  :  start addres of the routine
+&HD40D  :  x-step choise addres
+&HD418  :  y-step choise addres
+
+To make the routine use a constant x-step works as follows:
+POKE &HD40D,&H3E:POKE &HD40E,XSTEP
+with XSTEP the size of the x-step.
+
+To put the routine back to using a random x-step works as follows:
+POKE &HD40D,&HED:POKE &HD40E,&H5F
+
+The y-step choise works at the same manner.
+
+The routine always works from an invisible page to the visible page. The
+following combinations are always used:
+vissible page   source page
+   0                  1
+   1                  0
+   2                  3
+   3                  2
+
+You can find an example of the usage of the routine in the program BLOK.ENG.
+

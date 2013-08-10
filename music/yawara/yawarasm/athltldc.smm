@@ -1,0 +1,228 @@
+;
+;                      AthltLdC.SMM
+;
+; "Athletic Land - Colecovision" Source Game Music Module
+;
+; Version Amalthea-1-1 (1st Ver., 1st Release, 1st Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =AthltLdC.SMM
+;   L80 AthltLdC,AthltLdC.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Athletic Land - Colecovision" cartridge mapping:
+;
+;     2000 3FFF
+;      |?|M|
+;   0000   3FFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+; MSX standard addresses and constants.
+
+HKEYI  equ  0FD9AH
+HTIMI  equ  0FD9FH
+
+LINTTB equ  0FBB2H
+SysDB  equ  LINTTB
+SavHok equ  SysDB+010H
+
+HOLD8  equ  0F806H
+EBTb0  equ  HOLD8
+Where  equ  EBTb0+039H
+
+
+; MSX PSG constants.
+
+PSGAdr equ  0A0H
+PSGWrP equ  0A1H
+PSGRdP equ  0A2H
+PChnCt equ  007H
+PAVol  equ  008H
+PBVol  equ  009H
+PCVol  equ  00AH
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '  Athletic Land - Colecovision  '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   0C000H
+GMPNam:db   'Yawara  C00'
+OpenMN:db   000H
+StrtSE:db   000H
+ChATDD:dw   0E011H
+ChBTDD:dw   0E01BH
+ChCTDD:dw   0E025H
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'AthlLnd0Sc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'AthlLnd1Sc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00010010B
+
+SetupR:jr   z,Start
+       ld   de,00001H
+       ld   a,(de)
+       ld   (SavHok),a
+       inc  de
+       ld   a,(de)
+       ld   (HTIMI),a
+       ld   hl,04000H        ; Restore BIOS.
+       ld   de,00000H
+       ld   bc,04000H
+       ldir
+       ret
+
+Start: ld   a,(00000H)
+       cp   'A'
+       jr   z,SilnRt
+       ld   hl,00000H        ; Save BIOS.
+       ld   de,04000H
+       ld   bc,04000H
+       ldir
+       ld   hl,08000H        ; Move game block.
+       ld   de,00000H
+       ld   bc,04000H
+       ldir
+       ld   a,0C9H
+       ld   hl,SavHok
+       ld   de,00001H
+       ldi
+       dec  hl
+       ld   (hl),a
+       ld   hl,HTIMI
+       ldi
+       dec  hl
+       ld   (hl),a
+       call Where
+Here:  ld   de,There-Here
+       add  hl,de
+       ld   de,00038H
+       ld   bc,GmBlNm-There
+       ldir
+SilnRt:ld   hl,0E000H
+       ld   de,0E001H
+       ld   bc,000FFH
+       ld   (hl),000H
+       ldir
+       ld   a,PChnCt
+       out  (PSGAdr),a
+       ld   a,10111000B
+       out  (PSGWrP),a
+       ld   a,PAVol
+       out  (PSGAdr),a
+       xor  a
+       out  (PSGWrP),a
+       ld   a,PBVol
+       out  (PSGAdr),a
+       xor  a
+       out  (PSGWrP),a
+       ld   a,PCVol
+       out  (PSGAdr),a
+       xor  a
+       out  (PSGWrP),a
+       ret
+
+StMsRt:ld   d,000H
+       jp   0339EH
+
+PlayRt:jp   033EFH
+
+There: push hl
+       push de
+       push bc
+       push af
+       exx
+       ex   af,af'
+       push hl
+       push de
+       push bc
+       push af
+       push iy
+       push ix
+       call HKEYI
+
+GmBlNm:db   'AthltLndCol'
+GmBlSz:dw   04000H
+LoadAd:dw   08000H
+       dw   0FFFFH
+MusicT:db   08EH,'           8E*         '
+       db   090H,'           90*         '
+       db   092H,'           92*         '
+       db   095H,'           95*         '
+       db   0FFH,0FFH
+EffctT:db   001H,'           01*         '
+       db   002H,'           02*         '
+       db   003H,'           03*         '
+       db   004H,'           04*         '
+       db   005H,'           05?         '
+       db   006H,'           06*         '
+       db   007H,'           07*         '
+       db   008H,'           08*         '
+       db   009H,'           09*         '
+       db   00AH,'           0A*         '
+       db   00BH,'           0B*         '
+       db   00CH,'           0C?         '
+       db   00DH,'           0D*         '
+       db   018H,'           18?         '
+       db   01BH,'           1B?         '
+       db   021H,'           21?         '
+       db   098H,'           98*         '
+       db   09BH,'           9B*         '
+       db   09FH,'           9F?         '
+       db   0B3H,'           B3?         '
+       db   0C0H,'           C0?         '
+       db   0C3H,'           C3?         '
+       db   0C7H,'           C7?         '
+       db   0C8H,'           C8?         '
+       db   0CAH,'           CA?         '
+       db   0CBH,'           CB?         '
+       db   0D8H,'           D8?         '
+       db   0D9H,'           D9?         '
+       db   0DAH,'           DA?         '
+       db   0DBH,'           DB?         '
+       db   0FFH,0FFH
+
+       end

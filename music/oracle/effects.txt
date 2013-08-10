@@ -1,0 +1,323 @@
+	  This text gives information about the effects used in ORACLE.
+
+       There are 4 types of effects with different modes namely:
+		 WWWWWWW			   WWWWW
+       type:		modes:
+       o Frequency	Normal, Arpeggio, Modulation and slide
+       o Volume 	Normal, Modulation and slide
+       o Brightness	Normal, Modulation and slide
+       o Keying 	Normal and retrig
+
+       Only ONE mode per effect_type can be used at one time!
+       On  the	next  pages,  the  effects  will  be  explained  with some 
+       examples.
+
+				      Notes
+				      WWWWW
+
+       The following notes are possible in a NOTE channel:
+
+		     C	C#  D  D#  E  F  F#  G	G#  A  A#  B
+
+
+       When  ever a note is presented, the corresponding frequency will be 
+       set, and a KEY_ON command will be executed.
+       However, a  NOTE_LINK effect  at the secundairy collumn of the same 
+       step will Not do a KEY_ON.
+
+
+				    Note_Link
+				    WWWWWWWWW
+
+       This  effect will  only set  the corresponding  frequency of a NOTE 
+       that's been given in the primairy collumn of a step.
+
+       example:
+			C_4  00 	Set note C4 frequency and TRIG it.
+			___  00 				  (KEY_ON)
+			___  00
+			___  00
+			G_4 lnk 	Set note G4 frequency (KEY
+			___  00 			       remains on)
+
+				   KEY_ON/OFF
+				   WWWWWWWWWW
+
+       A note will only be performed if the KEY of this note is set ON.
+       (see Note/Note_link).
+       When  ever  a  note  is	done,  it  can	be  killed with  the "OFF" 
+       instruction at the primairy collumn (see also SUSTAIN)
+
+       example: 	C_4  00 	Set note C4 frequency and TRIG it.
+			___  00 				  (KEY_ON)
+			OFF  00 	Kill note (KEY_OFF), no sustain.
+			___  00
+						
+
+			      SUSTAINED KEY_ON/OFF
+			      WWWWWWWWWWWWWWWWWWWW
+			      
+       When  ever   a  note   is  done,   it  can  be  killed with  either 
+       the  instruction "OFF" or "SUS". When SUStain is used, the KEY will 
+       be  set	OFF  and  the Sustain  of the  instrument will	handle the 
+       fade_out of the note (also see KEY_ON/OFF)
+
+       example: 	C_4  00 	Set note C4 frequency and TRIG it.
+			___  00 				  (KEY_ON)
+			SUS  00 	Kill note (KEY_OFF), with sustain.
+			___  00 			     WWWWWWWWWWWW
+
+
+				    VIBRATION
+				    WWWWWWWWW
+
+       This  is  a  FREQUENCY  MODULATION effect,  which is  given in  the 
+       primairy collumn  and printed as "VIB".
+
+       The  depth and  speed of  this modulation  is not (yet) adjustable. 
+       It's a SINUS formed modulation.
+
+
+
+
+
+
+				     TREMOLO
+				     WWWWWWW
+
+       This is a AMPLITUDE (read:volume) MODULATION effect, which is given 
+       in the primairy collumn and printed as "TRM".
+
+       The  depth and  speed of  this modulation  is not (yet) adjustable. 
+       It's a SINUS formed modulation.
+
+
+
+
+
+
+				     WAH_WAH
+				     WWWWWWW
+
+       This  is  a FILTER  (read: brighness)  MODULATION effect,  which is 
+       given in the primairy collumn and printed as "WAH".
+
+       The  depth and  speed of  this modulation  is not (yet) adjustable. 
+       It's a SINUS formed modulation.
+
+
+
+
+
+
+				    ARPEGGIO
+				    WWWWWWWW
+
+       This  effect  given in  the secundairy  collumn, will  act like	an 
+       one_channel chord.
+       It rapidly chanches the frequency of the channel without keying.
+       The max. 2 additional (half)notes are based on the original note.
+
+       example: 	C_4  47 	Plays the following 3 notes:
+			___  00 	  C4 / E4 / G4	    ^
+			C_4  44 	Plays the following 2 notes:
+			___  00 	  C4 / E4	    ^
+
+
+				     VOLUME
+				     WWWWWW
+
+       With  this  effect  it  is  possible  to alter  the Amplitude  of a 
+       channel from #00 to #3F.
+
+       Any Volume effect (see Tremolo) will be based on this value.
+       A volume given at the primairy collumn, will always be the same for 
+       this  channel untill  another volume  command is set. An instrument 
+       change does not affect the current volume of a channel!
+
+
+
+
+				   INSTRUMENT
+				   WWWWWWWWWW
+
+       Represents  the	voice/colour  of a  note.
+
+       Various	instruments  are  available  in Oracle	(see: ORIGINAL-  / 
+       STANDARD- /  STANDARD PLUS  instruments / SAMPLE and DRUMKIT at the 
+       Index files)
+
+       Instruments must be selected in the "Instrument List" before it can 
+       be used.
+       This function will NOT set a new volume! But the Brightness will be 
+       updated from the instrument voice data.
+ 
+				     TUNING
+				     WWWWWW
+
+       This command will adjust the Note_frequencies of a channel. 
+
+       The  value is signed, so it can be either Positive or Negative with 
+       a range from:
+			 -#F  to  +/-#0  to  +#F.
+
+
+
+
+
+
+				PITCH BEND	 
+				WWWWWWWWWW
+
+       Pitch_bending is another word for Frequency_sliding.
+       Once a note is given, a pitch_bend can be added.
+
+       The  value is signed, so it can be either Positive or Negative with 
+       a range from:
+			 -#F  to  +/-#0  to  +#F.
+
+
+
+
+
+				  VOLUME SLIDE
+				  WWWWWWWWWWWW
+
+       With this effect it is possible to make a fast (de-)cresendo.
+
+       The slide will be based on the current VOLUME (see Volume).
+       
+
+       The  value is signed, so it can be either Positive or Negative with 
+       a range from:
+			 -#F  to  +/-#0  to  +#F.
+
+
+
+				BRIGHNTESS SLIDE
+				WWWWWWWWWWWWWWWW
+
+       With this effect it is possible to make a fast brightness slide.
+
+       The   slide  will   be  based   on  the	 current  BRIGHTNESS  (see 
+       FILTER/BRIGHTNESS).
+       
+       The  value is signed, so it can be either Positive or Negative with 
+       a range from:
+			 -#F  to  +/-#0  to  +#F.
+
+
+
+				FILTER/BRIGHTNESS
+				WWWWWWWWWWWWWWWWW
+
+       Controls  the sound/voice  of a FM_instrument. It regulates sertain 
+       hi_frequencies which can sound very 'agresive'.
+
+       Therefore  a FILTER  (read: Brightness, also known as the X-effect) 
+       command is  needed to  make instruments	sound more  'softly'. Just 
+       experiment with it, to understand it's perpose. The max. X-value is 
+       set at #3F.
+
+       This function will only work with Original instruments!
+       An (org)instrument change updates the brightness of a channel.
+
+				      TEMPO
+				      WWWWW
+
+       This function regulates the current Tempo of a replayed song. It is 
+       Global, so all channels will respont on this.
+
+       The max. value is set at #1F.
+
+
+
+
+
+
+
+				    TRANSPOSE
+				    WWWWWWWWW
+
+       With this  command it  is possible to adjust all notes (global). It 
+       will add/Sub the (half)notes to each note.
+
+       It is a global function, so all channels will respont on it.
+       The  value is signed, so it can be either Positive or Negative with 
+       a range from:   -#F  to	+/-#0  to  +#F.
+
+       example: 	C_4  00 	Play note C4
+			___ q+3 	All following notes 3 half notes 
+			C_4  00 	Play note D#4 (C4+3)	      up.
+
+				     RETRIG
+				     WWWWWW
+
+       With this function a Note can be retriged (see: Note or KEY_ON/OFF)
+
+       The  value  given at  the secondairy  collumn represents  the speed 
+       (Vertical Blanks) between the Keying.
+ 
+       The value is set at max. #F
+
+
+
+
+
+				   TIMER BYTE
+				   WWWWWWWWWW
+
+       When  this  function  is  executed, the	application can  read it's 
+       contents to respond on the playing song.
+
+       For example  when a program needs to be timed on a sertain piece of 
+       music, it can simply read the TIMER_BYTE.
+       The value is set at max. #F
+
+       example: 	___ y05 	Set Timer_Byte contents at 5
+			___  00
+
+
+				  PATTERN BREAK
+				  WWWWWWWWWWWWW
+
+       Will  cut the  current playing  pattern, and  goes on  to the  next 
+       position/pattern.
+
+       It is needed to play other timings than just straight 4/4.
+
+       example: 	C_4  00 	Play the note C4
+			___  00
+			___  00
+			___ ptb 	Cut the pattern after 4 rows.
+
+
+				  RESET CHANNEL
+				  WWWWWWWWWWWWW
+
+       With this functin the original data (set at "Channel Routing") will 
+       be set at the current channel.
+
+       This comes in handy when a piece of music has to be restarted. Just 
+       give  each channel the Reset command at the secundairy collumn, and 
+       the Instrument/Volume  and Tuning  will be restored as given in the 
+       Channel Routing.
+
+
+
+
+				   KILL EFFECT
+				   WWWWWWWWWWW
+
+       The  Kill  command  will  cut  all Effects  playing at  the current 
+       channel.
+
+       example: 	C_4  48 	Play C4/E4/G4 (arpeggio)
+			TRM r04 	Tremolo and Retig ON
+			WAH  00 	Wah_Wah effect.
+			___ kil 	Cut all previous effects.
+
+
+
+
+

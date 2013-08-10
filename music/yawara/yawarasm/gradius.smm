@@ -1,0 +1,152 @@
+;
+;                       Gradius.SMM
+;
+;      "Gradius (Nemesis)" Source Game Music Module
+;
+; Version Amalthea-1-1 (1st Ver., 1st Release, 1st Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =Gradius.SMM
+;   L80 Gradius,Gradius.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Gradius (Nemesis)" cartridge mapping:
+;
+;    4000 5FFF     8000   BFFF
+;   00000 01FFF   0E000   11FFF
+;       |M|?|?|?|?|?|?|M|M|?|?|?|?|?|?|?|
+;   00000                               1FFFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '       Gradius (Nemesis)        '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   0C000H
+GMPNam:db   'Yawara  C00'
+OpenMN:db   0A6H
+StrtSE:db   041H
+ChATDD:dw   0E011H
+ChBTDD:dw   0E022H
+ChCTDD:dw   0E033H
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'Gradius0Sc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'Gradius1Sc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00010111B
+
+SetupR:ret  nz
+       ld   hl,04000H
+       xor  a
+       ld   (hl),a
+       inc  hl
+       ld   (hl),a
+       ld   hl,0E000H
+       ld   de,0E001H
+       ld   bc,000FFH
+       ld   (hl),000H
+       ldir
+       ret
+
+SilnRt:ld   a,0CDH
+StMsRt:jp   04A22H
+
+PlayRt:jp   08063H
+
+GmBlNm:db   'Gradius 000'
+GmBlSz:dw   02000H
+LoadAd:dw   04000H
+GmBlN1:db   'Gradius 001'
+GmBlS1:dw   04000H
+LoadA1:dw   08000H
+       dw   0FFFFH
+MusicT:db   0CDH,'       Silence...      '
+       db   0A6H,'   Star Battle - Demo  '
+       db   0ACH,'   Departure to Space  '
+       db   0AFH,' Mountains (1st Stage) '
+       db   096H,'           96          '
+       db   098H,'           98          '
+       db   09AH,'  Inverted (4th Stage) '
+       db   09CH,'           9C          '
+       db   09EH,'           9E          '
+       db   0A0H,'           A0          '
+       db   0A2H,'           A2          '
+       db   0A4H,'      Secret Stage     '
+       db   0A9H,'        Victory        '
+       db   0B5H,' Big Core - Boss Theme '
+       db   0CAH,'       Game Over       '
+       db   0FFH,0FFH
+EffctT:db   001H,'          Shot         '
+       db   002H,'           02          '
+       db   003H,'         Laser         '
+       db   004H,'           04          '
+       db   005H,'           05          '
+       db   006H,'     Hard Cover Hit    '
+       db   007H,'           07          '
+       db   008H,' Small Enemy Destroyed '
+       db   009H,'           09          '
+       db   00AH,' Medium Enemy Destroyed'
+       db   00BH,'        Bone Hit       '
+       db   00CH,'           0C          '
+       db   00DH,'           0D          '
+       db   00EH,'           0E          '
+       db   00FH,'           0F          '
+       db   010H,'     Bonus Capsule     '
+       db   011H,'     Weapon Capsule    '
+       db   012H,'   Mega Bomb Capsule   '
+       db   013H,' Large Enemy Destroyed '
+       db   014H,'    Weapon Activated   '
+       db   015H,'           15          '
+       db   032H,'  Huge Enemy Destroyed '
+       db   038H,' Bacterion Mother Ship '
+       db   03BH,' Mother Ship Implosion '
+       db   03EH,'    Cyberbrain Death   '
+       db   041H,'         Warp          '
+       db   044H,'        Return         '
+       db   047H,'  Vic Viper Destroyed  '
+       db   0FFH,0FFH
+
+       end

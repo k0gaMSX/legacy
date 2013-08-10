@@ -1,0 +1,891 @@
+*NEW
+> Nuevos mandatos y cambios para dBASE II version 2.31
+
+        Nuevos mandatos:       
+
+        HELP    - mandato de ayuda al usuario
+	REINDEX - reordena el fichero indice en uso
+	TEXT	- muestra multiples lineas de texto hasta hallar un ENDTEXT
+
+	Mandatos suplementados:
+
+	APPEND,  INSERT,  EDIT, CREATE - pueden usar un fichero de formato
+           para controlar la pantalla
+	BROWSE		- permite obtener una lista de campos a actualizar
+        DISPLAY STATUS  - muestra las bases de datos en uso con sus indices
+          y la configuracion de los parametros de SET
+        READ  &  REPLACE  - pueden evitar accesos al disco cuendo no  se
+          modifican datos clave
+        RELEASE         - puede restaurar subconj. de variables de memoria
+        RESTORE         - puede  restaurar variables de memoria sin modificar
+          las existentes 
+        SAVE            - puede grabar subconjuntos de variables de memoria
+        SET RAW ON      - elimina espacios extra de mandatos DISPLAY y ?        
+        UPDATE          - la clausula REPLACE puede usar frases WITH
+*END
+*?
+*??
+> ?	- muestra una expresion o lista de expresiones
+
+	? <exp> [,<exp>]
+
+> ??	- muestra una expresion sin saltar a la linea siguiente
+*END
+*@
+> @	- muestra datos del usuario formateados en pantalla o impresora
+
+	@  <coordenadas> [SAY <exp> [USING '<mascara>']]
+		[GET <variable> [PICTURE '<mascara>']]
+
+	<coordenadas> pueden ser expresiones numericas o
+		$+<expresion> para direccionamiento relativo
+
+	e.g. @ $,$+5 say 'HI'
+
+
+Posibles mensajes de error:
+
+ERROR DE SINTAXIS EN LA ESPECIFICACION DE FORMATO
+
+NO SE ENCUENTRA LA VARIABLE
+	Necesita crear la variable, o comprobar la ortografia.
+*END
+*ACCEPT
+> ACCEPT - permite la entrada de cadenas de caracteres en variables de memoria
+
+	ACCEPT ["<entrada>"] TO <variable>
+
+
+Posibles mensajes de error:
+
+ERROR DE SINTAXIS EN ESPECIFICACION DE FORMATO
+
+NO SE ENCONTRO LA FRASE "TO"
+
+*END
+*APPEND
+> APPEND - incorpora ficheros dBASE o ficheros en System Data Format (SDF) o
+		ficheros delimitados
+
+	APPEND [FROM <fichero> [SDF] [DELIMITED [WITH <delimitador>]]
+		[FOR <exp>]] o [BLANK]
+
+
+Posibles mensajes de error:
+
+NO SE ENCUENTRA LA VARIABLE
+	Necesita crear la variable, o comprobar la ortografia.
+*END
+*BROWSE
+> BROWSE - permite ver y editar los datos en pantalla completa
+
+	BROWSE [<lista de campos>]
+*END
+*CANCEL
+> CANCEL - cancela la ejecucion de un fichero de mandatos
+
+	CANCEL
+*END
+*CASE
+> CASE - es una extension posible en una estructura DO CASE
+
+	CASE <exp>
+
+   e.g.	DO CASE
+		CASE X=1
+			. sentencias
+			.
+		CASE X="
+			. sentencias
+			.
+		OTHERWISE
+			. sentencias
+			.
+	ENDCASE
+*END
+*CHANGE
+> CHANGE  - edicion de columnas o campos
+
+	CHANGE FIELD <lista> [<rango>] [FOR <exp>]
+
+
+Posibles mensajes de error:
+
+NO SE ENCONTRO LA FRASE "FIELD"
+
+NO SE ENCUENTRA LA VARIABLE
+	Necesita crear la variable, o comprobar la ortografia.
+*END
+*CLEAR
+> CLEAR cierra ficheros en uso, borra las variables y selecciona base primaria
+	CLEAR [GETS]
+*END
+*CONTINUE
+> CONTINUE continua la accion de un mandato LOCATE
+	CONTINUE
+*END
+*COPY
+> COPY	- copia bases de datos existentes para crear duplicados
+
+	COPY TO <fichero> [<rango>] [FIELD <lista>] [FOR <exp>]
+		[SDF] [DELIMITED [WITH <delimitador>]] o [STRUCTURE]
+
+NOTA: COPY tambien destruye el contenido existente del fichero TO
+
+
+Posibles mensajes de error:
+
+NOMBRE INCORRECTO DE FICHERO
+	Error de sintaxis en el nombre del fichero.
+
+NO SE ENCONTRO LA FRASE "TO"
+
+NO SE ENCUENTRA LA VARIABLE
+	Necesita crear la variable, o comprobar la ortografia.
+*END
+*COUNT
+> COUNT	- cuenta el numero de registros en el fichero en uso y puede
+		llevar una expresion condicional
+
+	COUNT [<rango>] [FOR <exp>] [TO <variable>]
+
+
+Posibles mensajes de error:
+
+NO QUEDA MEMORIA PARA VARIABLES DE MEMORIA
+	Reducir numero o longitud de las variables de memoria.
+
+*END
+*CREATE
+> CREATE - crea nuevas estructuras de ficheros de datos
+
+	CREATE [<nombre-fichero>]
+
+Posibles mensajes de error:
+
+NUMERO NO VALIDO DE DECIMALES EN EL CAMPO
+
+NOMBRE INCORRECTO DE FICHERO
+	Error de sintaxis en el nombre de fichero.
+
+NOMBRE DE CAMPO INCORRECTO
+
+TIPO DE CAMPO INCORRECTO
+	Debe ser C, N, o L.
+
+TAMANO INVALIDO DE CAMPO
+
+EL TAMANO DEL REGISTRO EXCEDE EL MAXIMO (DE 1000)
+
+ERROR DE SINTAXIS EN LA ESPECIFICACION DE FORMATO
+
+NO SE ENCUENTRA LA VARIABLE
+	Necesita crear la variable, o comprobar la ortografia.
+*END
+*DELETE
+> DELETE - borra ficheros y marca registros para ser borrados
+
+	DELETE [<rango>] [FOR <exp>]
+	DELETE FILE <fichero>
+*END
+*DISPLAY
+> DISPLAY - muestra registros, campos y expresiones
+
+	DISPLAY [<rango>] [FOR <exp>] [<lista de exp>] [OFF]
+	DISPLAY STRUCTURE
+	DISPLAY MEMORY
+	DISPLAY FILES [ON <disco>] [LIKE <mascara>]
+	DISPLAY STATUS
+*END
+*DO
+> DO	- provoca la ejecucion de ficheros de mandatos y permite bucles
+		estructurados en ficheros de mandatos
+
+	DO <fichero>
+	DO WHILE <exp>
+	DO CASE
+
+
+Posibles mensajes de error:
+
+NO SE HA ENCONTRADO TAL FICHERO DE MANDATO
+	Compruebe ortografia.
+
+
+SE HA EXCEDIDO EL LIMITE MAXIMO DE ANIDAMIENTO
+
+*END
+*EDIT
+> EDIT	- altera campos de datos especificados en una base de datos
+
+	EDIT [<numero registro>]
+
+
+Posibles mensajes de error:
+
+REGISTRO FUERA DE AMBITO
+	El numero de registro es mayor que el numero de registros en la base
+	de datos. El registro no existe.
+
+ERROR DE SINTAXIS EN LA ESPECIFICACION DE FORMATO
+
+NO SE ENCUENTRA LA VARIABLE
+	Necesita crear la variable, o comprobar la ortografia.
+*END
+*EJECT
+> EJECT	- efectua un salto de pagina en el dispositivo de listado
+
+	EJECT
+*END
+*ELSE
+> ELSE	- opcion alternativa durante la ejecucion de un mandato IF
+
+	ELSE
+*END
+*ENDCASE
+> ENDCASE - termina una estructura CASE
+
+	ENDCASE
+*END
+*ENDDO
+> ENDDO	- terminacion de un mandato DO WHILE
+
+	ENDDO
+*END
+*ENDIF
+> ENDIF	- terminacion de un mandato IF
+
+	ENDIF
+*END
+*ERASE
+> ERASE	- limpia la pantalla
+
+	ERASE
+*END
+*FIND
+> FIND	- apunta al registro correspondiente a una clave en ficheros indexados
+
+	FIND <clave>  o FIND '<clave>'
+
+
+Posibles mensajes de error:
+
+LA BASE DE DATOS EN USO NO ESTA INDEXADA
+	FIND solo esta permitido en bases de datos indexadas.
+
+NO SE HA ENCONTRADO
+	Es mas un mensaje de diagnostico que de error. dBASE no ha podido
+	encontrar la clave.
+
+*END
+*GO
+*GOTO
+> GOTO	- apunta a un registro especificado.
+
+	GO o GOTO [RECORD], o [TOP], o [BOTTOM], <n>
+
+
+Posibles mensajes de error:
+
+EL REGISTRO NO APARECE EN EL INDICE
+	No se ha actualizado el fichero de indices despues de insertar este
+               registro. Reindexar.
+
+REGISTRO FUERA DE AMBITO
+	El numero de registro es mayor que el numero de registros en la base
+	de datos. El registro no existe.
+
+*END
+*HELP
+> ?	- muestra una lista de expresiones
+> ??	- muestra una lista de expresiones sin saltar a la linea siguiente
+> @	- muestra datos formateados por usuario en pantalla o impresora
+> ACCEPT - permite entrar cadenas de caracteres en variables de memoria
+> APPEND - incorpora ficheros dBASE o ficheros en System Data Format (SDF) o
+		ficheros delimitados
+> BROWSE - muestra o edita datos usando la pantalla completa
+> CANCEL - cancela la ejecucion de un fichero de mandatos
+> CASE - una posibilidad de ejecucion mas en una estructura DO CASE
+> CHANGE  - edita columnas o campos
+> CLEAR - cierra los archivos y borra todas las variables de memoria
+> CONTINUE - continua la ejecucion de un mandato LOCATE
+> COPY	- copia bases de datos existentes para crear duplicados
+> COUNT	- cuenta el numero de registros siguiendo un cierto criterio
+> CREATE - crea una nueva estructura de fichero de base de datos
+> DELETE - borra ficheros y marca registros para ser borrados
+> DISPLAY - muestra registros, campos y expresiones
+> DO	- permite la ejecucion de ficheros de mandatos y permite bucles
+		estructurados en ficheros de madatos
+> EDIT	- altera campos de datos especificos en una base de datos
+> EJECT	- efectua un salto de pagina en el dispositivo de listado
+> ELSE	- opcion alternativa durante la ejecucion de un mandato IF
+> ENDCASE - termina una estructura CASE
+> ENDDO	- terminacion para un mandato DO WHILE
+> ENDIF	- terminacion para un mandato IF
+> ERASE	- limpia la pantalla
+> FIND	- apunta al registro correspondiente a una clave en ficheros indexados
+> GOTO	- apunta a un registro especifico
+> IF	- permite la ejecucion condicional de mandatos
+> INDEX  - crea un fichero de indices
+> INPUT	- permite la entrada de expresiones en variables de memoria
+> INSERT - introduce datos en un fichero
+> JOIN	- mezcla dos bases de datos
+> LIST - igual al mandato DISPLAY pero el rango asumido es todo el fichero
+> LOCATE  - encuentra un registro segun una condicion dada
+> LOOP	- salta al principio de DO WHILE
+> MODIFY  - permite editar ficheros de mandatos y la estructura de la base
+> PACK	- elimina los registros marcados para ser borrados
+> QUIT - sale de dBASE y vuelve al sistema operativo
+> READ	- muestra y pide datos en formato de pantalla completa
+> RECALL  - elimina las marcas para borrado de los registros
+> REINDEX - reordena un fichero de indices desactualizado
+> RELEASE - elimina variables de memoria inservibles liberando memoria
+> RENAME - renombra un fichero
+> REPLACE - sustituye valores en campos de datos
+> REPORT  - formatea y muestra un informe de datos
+> RESET - restaura el sistema para permitir cambios de disco
+> RESTORE - recupera de disco variables de memoria grabadas anteriormente
+> RETURN  - finaliza un fichero de mandatos
+> SAVE	- copia las variables de memoria en un archivo en disco
+> SELECT - cambia entre las bases primaria y secundaria
+> SET	- situa los parametros de control de dBASE
+> SKIP	- posiciona el apuntador de registro adelante o atras
+> SORT	- crea una copia de la base de datos ordenada por uno de sus campos
+> STORE	- almacena expresiones en variables de memoria
+> SUM	- calcula y muestra la suma de una expresion
+> TEXT - prepara un bloque de informacion solo para salida
+> TOTAL  - crea una copia con un sumario de la base de datos
+> UPDATE  - permite la actualizacion por lotes de la base de datos
+> USE	- especifica el fichero de base de datos a usar para todas las
+	operaciones hasta que se utiliza USE de nuevo
+> WAIT	- suspende el proceso del fichero de mandatos
+
+  OTRAS AYUDAS
+
+> NEW (FEATURES)
+> LIMITATIONS (AND CONSTRAINTS)
+> ERROR (MESSAGES)
+*END
+*IF
+> IF	- permite la ejecucion condicional de mandatos
+
+	IF <exp>
+	.
+	.  (sentencias)
+	.
+	ELSE			] ELSE es opcional
+	.			]
+	.  (sentencias)	        ]
+	.			]
+	ENDIF
+*END
+*INDEX
+> INDEX  - crea un fichero de indices
+
+	INDEX ON <exp cadena caracteres> TO <fichero indice>
+
+Posibles mensajes de error:
+
+NOMBRE INCORRECTO DE FICHERO
+	Error de sintaxis en nombre de fichero.
+
+NO SE HA ENCONTRADO LA FRASE "ON"
+
+NO SE HA ENCONTRADO LA FRASE "TO"
+
+*END
+*INPUT
+> INPUT	- permite la entrada de expresiones en variables de memoria
+
+	INPUT ["<cadena>"] TO <variable>
+
+
+Posibles mensajes de error:
+
+NO SE HA ENCONTRADO LA FRASE "TO"
+
+*END
+*INSERT
+> INSERT - introduce datos en un fichero
+
+	INSERT [BEFORE], o [BLANK]
+
+
+Posibles mensajes de error:
+
+NO SE PUEDE INSERTAR - NO HAY REGISTROS EN EL FICHERO
+	Utilice el mandato APPEND en su lugar.
+
+ERROR DE SINTAXIS EN LA ESPECIFICACION DE FORMATO
+
+NO SE ENCUENTRA LA VARIABLE
+	Necesita crear la variable, o revisar la ortografia.
+*END
+*JOIN
+> JOIN	- mezcla dos bases de datos
+
+	JOIN TO <fichero> FOR <expresion> [FIELDS <lista de campos>]
+
+
+Posibles mensajes de error:
+
+"JOIN" INTENTO GENERAR MAS DE 65.534 REGISTROS
+	La clausula FOR puede agrupar mas registros de los permitidos.
+	Hagalo mas compacto.
+
+
+NO HAY FRASE "FOR"
+
+*END
+*LIST
+> LIST - identico al mandato DISPLAY pero tomando como condicion por defecto
+		todos los registros del fichero
+
+	LIST
+*END
+*LOCATE
+> LOCATE  - encuentra un registro que cumpla con una condicion
+
+	LOCATE [<rango>] [FOR <exp>]
+
+
+Posibles mensajes de error:
+
+NO HAY FRASE "FOR"
+
+*END
+*LOOP
+> LOOP	- salta al principio de DO WHILE
+
+	LOOP
+*END
+*MODIFY
+> MODIFY  - permite editar ficheros de mandatos y estructuras de la base
+
+	MODIFY STRUCTURE
+	MODIFY COMMAND <fichero mandatos>
+
+Posibles mensajes de error:
+
+NOMBRE INCORRECTO DE FICHERO
+	Error de sintaxis en nombre de fichero.
+
+EL TAMANO DEL REGISTRO EXCEDE EL MAXIMO (DE 1000)
+
+*END
+*NOTE
+	NOTE o *
+*END
+*PACK
+> PACK	- elimina registros marcados para ser borrados
+
+	PACK
+*END
+*QUIT
+> QUIT - Finaliza dBASE y vuelve al sistema operativo arrancando
+		opcionalmente otros programas
+
+	QUIT [TO <lista de comandos o ficheros .COM>]
+*END
+*READ
+> READ	- muestra y toma informacion usando la pantalla completa
+
+	READ
+
+
+Posibles mensajes de error:
+
+ERROR DE SINTAXIS EN LA ESPECIFICACION DE FORMATO
+
+NO SE ENCUENTRA LA VARIABLE
+	Necesita crear la variable, o revisar la ortografia.
+*END
+*RECALL
+> RECALL  - elimina las marcas de borrado de los registros
+
+	RECALL [<rango>] [FOR <exp>]
+*END
+*REINDEX
+> REINDEX  reindexa un fichero de indices desactualizado
+
+	REINDEX
+*END
+*RELEASE
+> RELEASE - elimina de la memoria las variables inutiles liberando espacio
+
+	RELEASE [<lista de variables>], o [ALL]
+	RELEASE ALL LIKE <mascara>
+	RELEASE ALL EXCEPT <mascara>
+*END
+*REMARK - comentarios
+	REMARK
+*END
+*RENAME
+> RENAME - renombra un fichero
+
+	RENAME <nombre actual fichero> TO <nuevo nombre fichero>
+*END
+*REPLACE
+> REPLACE - sustituye valores en campos de datos
+
+	REPLACE [<rango>] <campo> WITH <exp> [AND <campo> WITH <exp>]
+
+
+Posibles mensajes de error:
+
+NO SE HA ENCONTRADO EL DATO
+
+LOS DATOS DE ORIGEN Y DE DESTINO SON DE ORIGEN DISTINTO
+
+*END
+*REPORT
+> REPORT  - formatea y muestra un informe de datos
+
+	REPORT [<rango>] [FORM <fich formato>] [TO PRINT] [FOR <exp>] [PLAIN]
+
+
+Posibles mensajes de error:
+
+ERROR DE SINTAXIS, VUELVA A INTRODUCIR
+
+*END
+*RESET
+> RESET restaura el sistema para permitir cambios de disco
+
+	RESET [<disco>]
+*END
+*RESTORE
+> RESTORE - recupera de disco conjuntos de variables de memoria
+
+	RESTORE [ADDITIVE]
+
+
+Posibles mensajes de error:
+
+NO SE PUEDE ABRIR EL FICHERO
+
+*END
+*RETURN
+> RETURN  - finaliza un fichero de mandatos
+
+	RETURN
+*END
+*SAVE
+> SAVE	- copia en disco las variables de memoria
+
+	SAVE TO <fichero> [ALL LIKE <mascara>]
+
+Posibles mensajes de error:
+
+NOMBRE INCORRECTO DE FICHERO
+	Error de sintaxis en nombre de fichero.
+
+NO SE ENCONTRO LA FRASE "TO"
+
+*END
+*SELECT
+> SELECT - cambia entre las bases de datos primaria y secundaria
+
+	SELECT [PRIMARY o SECONDARY]
+*END
+*SET
+> SET	- situa los parametros de control de dBASE II
+
+	SET <param> [ON], o [OFF]
+	SET ALTERNATE TO <fichero>
+	SET DEFAULT TO <disco>
+	SET DATE TO <cadena>
+	SET FORMAT TO <fichero formato>
+	SET HEADING TO <cadena>
+	SET INDEX TO <fichero indices>
+	SET MARGIN TO <n>
+*END
+*SKIP
+> SKIP	- posiciona el apuntador de registro adelante o atras <n> lugares
+
+	SKIP <+/-> [<n>]
+*END
+*SORT
+> SORT	- crea una copia de una base de datos ordenada por uno de sus campos
+
+	SORT ON <campo> TO <fichero> [ASCENDING], o [DESCENDING]
+*END
+*STORE
+> STORE	- almacena expresiones en variables de memoria
+
+	STORE <exp> TO <variable>
+
+
+Posibles mensajes de error:
+
+NO QUEDA MEMORIA PARA VARIABLES DE MEMORIA
+	Reduce el numero o el tamano de las variables de memoria.
+
+NO SE ENCONTRO LA FRASE "TO"
+
+*END
+*SUM
+> SUM	- calcula y muestra la suma de una expresion referida a un grupo
+		de registros de la base de datos
+
+	SUM <campo> [<rango>] [TO <lista variables>] [FOR <exp>]
+
+
+Posibles mensajes de error:
+
+HAY MAS DE 5 CAMPOS A SUMAR
+
+NO HAY EXPRESION A SUMAR
+
+NO ES UNA EXPRESION NUMERICA
+
+*END
+*TOTAL
+> TOTAL  - da salida a un sumario de los registros de la base de datos
+
+	TOTAL TO <fichero> ON <variable clave> [FIELDS <lista campos>]
+*END
+*UPDATE
+> UPDATE  - permite la actualizacion por lotes de una base de datos
+
+	UPDATE  FROM  <fichero>  ON <variable clave> [ADD  <lista campos>]
+		[REPLACE [    <lista campos>    ] ]
+			 [<campo> WITH <campo>]
+
+
+Posibles mensajes de error:
+
+NO HAY FRASE "FROM"
+
+NO HAY FRASE "ON"
+
+*END
+*USE
+> USE	- especifica el fichero de base de datos que se utilizara hasta
+	la aparicion del siguiente USE
+
+	USE <fichero> [INDEX <nombre fichero indices>]
+
+Posibles mensajes de error:
+
+NOMBRE INCORRECTO DE FICHERO
+	Error de sintaxis en nombre de fichero.
+
+SE PRESENTO UN FIN DE FICHERO INESPERADO
+	La base de datos en uso (USE) no tiene el formato correcto. Si todos
+	los registros son correctos y estan presentes, efectuar un PACK y
+	reindexar de nuevo la base de datos.
+
+EL INDICE NO CORRESPONDE A LA BASE DE DATOS
+	dBASE  no relaciona la clave con la base de datos. Probar con otro
+	fichero de indices.
+
+NO PUEDE ABRIRSE EL FICHERO INDICE
+	Revise la ortografia o indexe (INDEX) la base de datos.
+
+*END
+*WAIT
+> WAIT	- suspende el proceso de un fichero de mandatos
+
+	WAIT [TO <variable>]
+*END
+*@
+	@(<cadena1>,<cadena2>) - funcion AT
+*END
+**
+	* - funcion de registro borrado
+*END
+*#
+	# - funcion de numero de registro
+*END
+*!
+	!(<cadena>)   - funcion de conversion de cadena a mayusculas
+*END
+*$
+	$(<cadena>,<comienzo>,<longitud>) - funcion subconjunto de cadenas
+*END
+*CHR
+	CHR(<exp num>) - da el valor ASCII del la expresion numerica dada
+*END
+*DATE
+	DATE() - funcion de fecha del sistema
+*END
+*EOF
+	EOF - funcion de fin de fichero (end-of-file)
+*END
+*FILE
+	FILE(<fichero>) - funcion existencia
+*END
+*INT
+	INT(<exp num>) - funcion entera
+*END
+*LEN
+	LEN(<var,cadena>) - funcion longitud
+*END
+*STR
+	STR(<exp num>,<ancho>[,<decimales>])	funcion de cadena
+*END
+*VAL
+	VAL(<cadena>) - funcion valor
+*END
+*TRIM
+	TRIM(<cadena>) - funcion de ajuste
+*END
+*TYPE
+	TYPE(<exp>) - suministra tipo de dato
+*END
+*LIMITATIONS
+numero de campos por registro	                   32 max
+numero de caracteres por registro                1000 max
+numero de registros por base de datos           65535 max
+numero de caracteres en una cadena                254 max
+precision en campos numericos                      10 digitos
+numero mayor				 1.8 x 10**63 aprox
+numero menor        			1.0 x 10**-63 aprox
+numero de variables de memoria 			   64 max
+numero de caracteres en linea de mandato          254 max
+numero de expresiones en mandato SUM		    5 max
+numero de caracteres en encabezado de listado	  254 max
+numero de caracteres en clave de indices          100 max
+numero de GET's pendientes			   64 max
+numero de ficheros abiertos simultaneamente        16 max
+*END
+*ERROR
+
+NUMERO INVALIDO DE DECIMALES EN EL CAMPO
+
+NOMBRE INCORRECTO DE FICHERO
+	Error de sintaxis en el nombre del fichero.
+
+NOMBRE DE CAMPO INCORRECTO
+
+TIPO DE CAMPO INCORRECTO
+	Debe ser C, N, o L.
+
+TAMANO INVALIDO DE CAMPO
+
+NO SE PUEDE INSERTAR - NO HAY REGISTROS EN EL FICHERO
+	Use el mandato APPEND.
+
+NO SE PUEDE ABRIR EL FICHERO
+
+NO SE HA ENCONTRADO TAL FICHERO DE MANDATO
+	Revise la ortografia.
+
+NO SE HA ENCONTRADO EL DATO
+
+LA BASE DE DATOS EN USO NO ESTA INDEXADA
+	Solo en ficheros indexados se permite el mandato FIND.
+
+EL DIRECTORIO ESTA LLENO
+	El directorio CP/M del disco no acepta mas ficheros.
+
+EL DISCO ESTA LLENO
+
+SE PRESENTO UN FIN DE FICHERO INESPERADO
+	La base de datos en uso no tiene el formato correcto. Si todos
+	los registros son correctos y estan presentes, ejecute COMPACT
+	y reindexe la base de datos.
+
+NO SE ENCONTRO LA FRASE "FIELD"
+
+YA EXISTE TAL FICHERO
+
+NO EXISTE TAL FICHERO
+
+FICHERO ABIERTO ACTUALMENTE
+	Escriba el mandato USE o CLEAR para cerrar el fichero.
+
+NO SE PUEDE ABRIR EL FICHERO DE FORMATO
+
+NO SE HA SITUADO EL FICHERO DE FORMATO
+
+TIPO DE DATO NO VALIDO
+
+VALOR ILEGAL PARA "GOTO"
+
+NOMBRE DE VARIABLE NO VALIDO
+	Solo se permiten caracteres alfanumericos y ":" en los nombres
+	de variables y campos.
+
+EL INDICE NO CORRESPONDE A LA BASE DE DATOS
+	dBASE  no puede relacionar la clave con la base de datos. Intente
+	con otro fichero de indices.
+
+NO PUEDE ABRIRSE EL FICHERO INDICE
+	Revise la ortografia o indexe (INDEX) la base de datos.
+
+"JOIN" INTENTO GENERAR MAS DE 65.534 REGISTROS
+	La clausula FOR deja agrupar mas registros de los permitidos, 
+	hagalo mas compacto.
+
+LAS CLAVES SON DE DISTINTA LONGITUD
+
+MACRO NO ES UNA CADENA DE CARACTERES
+	& deben ser series de caracteres.
+
+HAY MAS DE CINCO CAMPOS A SUMAR
+
+SE HA EXCEDIDO EL LIMITE MAXIMO DE ANIDAMIENTO
+
+NO HAY EXPRESION A SUMAR
+
+NO HAY FRASE "FOR"
+
+NO HAY FRASE "FROM"
+
+NO SE HA ENCONTRADO
+	Es mas un mensaje de diagnostico que de error. dBASE no pudo
+	encontrar la clave.
+
+NO ES UNA EXPRESION NUMERICA
+
+NO EXISTE TAL FICHERO
+
+NO SE HA ENCONTRADO LA FRASE "ON"
+
+NO QUEDA MEMORIA PARA VARIABLES DE MEMORIA
+	Reduzca el numero o tamano de las variables de memoria.
+
+EL TAMANO DEL REGISTRO EXCEDE EL MAXIMO (DE 1000)
+
+EL REGISTRO NO APARECE EN EL INDICE
+	Fichero de indices no fue actualizado despues de introducir
+        un registro. Reindexar.
+
+REGISTRO FUERA DE AMBITO
+	El numero de registro es mayor que el numero de registros que
+	hay en la base de datos. El registro no existe.
+
+LOS DATOS DE ORIGEN Y DE DESTINO SON DE TIPOS DISTINTOS
+
+*** ERROR DE SINTAXIS ***
+
+ERROR DE SINTAXIS EN LA ESPECIFICACION DE FORMATO
+
+ERROR DE SINTAXIS, VUELVA A INTRODUCIR
+
+NO SE ENCONTRO LA FRASE "TO"
+
+DEMASIADOS CARACTERES
+
+HAY DEMASIADOS FICHEROS ABIERTOS
+	Solo se permiten 16 ficheros abiertos a un tiempo como maximo.
+
+HAY DEMASIADAS VARIABLES DE MEMORIA
+	Solo se permiten un maximo de 64 variables de memoria.
+
+HAY DEMASIADOS RETORNOS DE CARRO (RETURN)
+	Probablemente un error en la estructura del fichero de mandatos.
+
+NO SE HA ENCONTRADO LA FRASE "WITH"
+
+NUMERO DE FICHERO NO ASIGNADO
+	Error interno, consulte a su distribuidor.
+
+*** MANDATO DESCONOCIDO
+
+NO SE ENCUENTRA LA VARIABLE
+	Necesita crear la variable, o revisar la ortografia.
+*END
+

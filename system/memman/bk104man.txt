@@ -1,0 +1,478 @@
+MSX Computer Magazine's MemMan Filecopier BK : Handleiding 
+
+Geprogrammeerd door: Ries Vriend, juni/juli/augustus 1990
+
+Versie 1.04, bugfix door Ramon van der Winkel, BK werkt nu ook goed als
+er meer dan 4 MB geheugen in de computer aanwezig is, versie 1.02 kon
+daar niet mee overweg.
+
+Uitgegeven door:     MSX Computer Magazine
+                     Postbus 61264
+                     1005 HG Amsterdam
+                     Fax: 020-862719
+
+
+Hoofdstuk 1
+-----------
+
+Inleiding
+
+    BK is een luxe filecopier c.q. bestandskopi‰erprogramma, voor MSX2 compuú 
+ters. Het is ‚‚n van de eerste toepassingen die MCM's Memory Manager tot zijn 
+recht  laat komen.  Al het  geheugen dat  MemMan beschikbaar stelt, wordt als 
+buffergeheugen gebruikt.  Interne en externe Memory Mappers, `oude' RAM cartú 
+ridges en het Video RAM, het kan allemaal gebruikt worden.
+
+
+Opstarten
+
+    Voordat BK gestart kan worden, dient MemMan ge‹nstalleerd te zijn. Hoe de 
+installatieprocedure  van dit geheugen beheerprogramma in zijn werk gaat, kan 
+gelezen worden in de bijbehorende documentatie.
+
+    BK wordt  opgestart door  achter de prompt van MSX-DOS (meestal A>) BK in 
+te typen, gevolgd door een druk op de Return of Enter toets.
+
+
+Hoofdstuk 2
+-----------
+
+Schermindeling
+
+    Het scherm wordt door BK als volgt ingedeeld.
+
+    Het grootste  gedeelte van  het scherm  wordt in  beslag genomen door een 
+groot  vierkant dat onderverdeeld is in diverse regels en hokjes. Linksbovenú 
+aan is  de `volumename' van de huidige disk af te lezen. Dit is de `naam' van 
+de  disk, net  zoals ieder  bestand een  naam heeft.  Iedere disk kan met het 
+MSX-DOS2 besturingssysteem van zo'n naam worden voorzien, middels het commanú 
+do VOL.  Bij gebruik  van het  MSX-DOS1 systeem is het niet mogelijk een disk 
+een volume te geven, de disk is dan `naamloos'.
+
+    Onder  de volumename,  links in  het midden, wordt de inhouds- oftewel de 
+directorystruktuur  van  de  disk  getoond.  Dit  directoryoverzicht heet  de 
+directorytree.
+
+    Het is  niet toevallig  dat `tree' het Engelse woord voor `boom' is. Zo'n 
+directorytree  vertoont namelijk veel overeenkomsten met een familiestamboom. 
+Een omgekeerde boom dus, met de wortel - de `root' in goed Engels - bovenaan. 
+Deze stamvader  van alle overige directories heeft geen naam, maar wordt aanú 
+gegeven  met een  enkele backslash - het \ teken -, die voor de duidelijkheid 
+vooraf wordt  gegaan door  de driveletter.  Voor wat betreft MSX-DOS1 is kous 
+hiermee af, want dat systeem herkent alleen een root-directory.
+
+    DOS2  gebruikers kunnen  echter met  de DOS-commando's MKDIR en MD nieuwe 
+directories cre‰ren,  welke dan  als afstammelingen  van de  root in  de tree 
+getoond  worden. Deze  `kinderen' van  de rootdirectory worden subdirectories 
+genoemd. Subdirectories  kunnen op hun beurt ook weer `ouders' worden van een 
+nieuwe  generatie, zodat de boom zich steeds breder gaat vertakken. Door deze 
+directory-struktuur wordt  het rubriceren  van bestanden  veel eenvoudiger en 
+overzichtelijker,  op een - grote - harddisk is een goede directory-struktuur 
+zelfs onontbeerlijk.
+
+    Met de  cursortoetsen wordt de cursorbalk door de directorytree gestuurd, 
+zodoende kan een directory naar keuze geselecteerd worden.
+    Rechts  naast de  volumename wordt  het huidige directorypad getoond, dat 
+via de  tree is  geselecteerd. Het directorypad toont alle subdirectories die 
+vanaf  de root worden doorlopen om bij de huidige - door de cursorbalk aangeú 
+wezen - directory te komen.
+    Nog  even voor  de duidelijkheid:  Indien MSX-DOS1 gebruikt wordt, zal de 
+huidige directory  altijd de  rootdirectory zijn.  Op dat  systeem is de hele 
+directorytree in feite overbodig.
+
+
+Informatieblok
+
+    Naast de directorytree bevindt zich een informatieblok. Dit blok bevat de 
+volgende informatie regels:
+
+
+Inforegel               Betekenis
+
+Geheugen totaal:        Totale hoeveelheid beschikbaar geheugen
+Geheugen   vrij:        Huidige hoeveelheid beschikbaar geheugen
+
+Diskruimte bezet:       Diskruimte die in beslag genomen wordt door de 
+                        ingeladen bestanden. Zie ook de onderstaande 
+                        toelichting.
+Bestanden geladen:      Aantal bestanden dat in het geheugen ingeladen is
+Bestanden bewaard:      Aantal bestanden dat bewaard is
+
+Laden  -  Huidig bestand: Bestand dat op het huidige moment ingeladen wordt
+Bewaren - Huidig bestand: Bestand dat op het huidige moment bewaard wordt
+
+Aantal kopie‰n maken:   Aantal kopie‰n dat gemaakt moet worden van de 
+                        ingeladen bestanden.
+Aantal kopie‰n gemaakt: Aantal kopie‰n dat op het huidige moment reeds 
+                        bewaard is.
+
+    Achter  de  melding  `Diskruimte bezet'  wordt getoond  hoeveel kilobytes 
+diskruimte  bezet zal  worden wanneer  de ingeladen bestanden bewaard worden. 
+Aangezien de  meeste floppydisks ingedeeld zijn in blokken - clusters genaamd 
+-  van ‚‚n  kilobyte, zal  ieder bestand  op zo'n  floppy altijd een veelvoud 
+daarvan in  beslag nemen.  Zo neemt  een bestand  van ‚‚n byte evenveel diskú 
+ruimte  in als  een bestand van 1000 bytes, want beide passen ze ‚‚n cluster. 
+BK houdt  hier dus  netjes rekening  mee, zodat  voorkomen kan  worden dat de 
+bestanden  per ongeluk op een schijf met te weinig beschikbare ruimte bewaard 
+worden. De  clustergrootte kan  aangepast worden,  zie hiervoor de uitleg bij 
+het [I]nstel [C]luster commando.
+
+    De onderste regel van het grote vierkant toont algemene informatie, zoals 
+foutmeldingen,  extra uitleg  over ‚‚n  of twee  commando's of  invoerregels, 
+wanneer er iets vanaf het toetsenbord moet worden ingevoerd.
+
+
+Buttons
+
+    Helemaal  onderaan het  scherm bevindt  zich altijd een rijtje `buttons', 
+een soort  drukknoppen die  via een  druk op een toets bediend kunnen worden. 
+Welke  toets dat  is, wordt  door twee  vierkante haakjes  aangegeven. Via de 
+buttons  kunnen  snel allerlei  commando's gegeven  worden en  kunnen diverse 
+zaken ingesteld  worden. Door  het hele  programma heen wordt de ESCape-toets 
+gebruikt  om te  ontsnappen, dat wil zeggen: terug keren naar voorgaand menu, 
+of DOS.
+
+
+Hieronder volgt een omschrijving van de buttons en hun funkties.
+
+
+[ESC]ape   Springt,  vanuit  het hoofdmenu,  terug naar  DOS. Indien  er geen 
+           bestanden  ingeladen  zijn,  zal  direct  naar  DOS  terug  worden 
+           gesprongen. In  het andere geval wordt er eerst om een bevestiging 
+           gevraagd.
+           In  alle andere  menu's dan  het hoofdmenu  kan de ESCape gebruikt 
+           worden om het huidige menu te verlaten.
+
+
+[D]rive    Verandert  de  huidige  brondrive. Er  verschijnt een  invoerregel 
+           waarin  alle  aanwezige  drives getoond  worden. Met  de links  en 
+           rechts  cursortoetsen kan hieruit een brondrive gekozen worden. Na 
+           een druk  op de  spatiebalk of return wordt de vrije diskruimte op 
+           gekozen  drive ingelezen en op het scherm getoond. Indien MSX-DOS2 
+           aanwezig is,  zullen de de subdirectories van de disk worden ingeú 
+           lezen, en daarna in de directorytree worden getoond.
+           Het is  overigens ook  mogelijk om  een drive  te selecteren  door 
+           direct  de overeenkomstige drive-letter op  het toetsenbord aan te 
+           slaan.
+
+
+[W]is      Nadat er  om een bevesteging gevraagd is, worden de ingeladen besú 
+           tanden uit het geheugen gewist.
+
+
+[I]nstel   Nadat deze  drukknop bediend  is, wordt een tweede button-menu geú 
+           toond. Hieruit kunnen de volgende keuzes gemaakt worden.
+
+   [A]rchief
+           Met deze  funktie kan,  alleen onder MSX-DOS2, ingesteld worden of 
+           BK  al dan  niet het  archiefbit van een bestand moet wissen nadat 
+           het ingeladen  is. DOS2  zal het  archiefbit automatisch  weer AAN 
+           zetten  als er  naar het  bestand geschreven wordt. Ook als er een 
+           nieuw bestand  gecre‰erd wordt,  wordt het  archiefbit AAN  gezet. 
+           Hierdoor  is het mogelijk om met BK veiligheidskopie‰n (`backups') 
+           van disks te maken, waarbij alleen die bestanden gekopi‰erd worden 
+           die ook echt veranderd zijn, sinds de laatste backup.
+
+   [D]isk-test
+           Met deze funktie wordt, alleen onder DOS1, ingesteld of BK tijdens 
+           het laden  van bestanden een controle moet uitvoeren. Tijdens deze 
+           controle  wordt gekeken  of de juiste disk nog wel in de diskdrive 
+           zit.
+           Als  er  tijdens  het  inladen van  de bestanden  disks verwisseld 
+           moeten worden  - omdat het geheugen vol is en er bewaard moet worú 
+           den  -, dient  de gebruiker  er goed  op te letten dat de bron- en 
+           bestemmingsdisks niet gemixt worden. Om het risko van het invoeren 
+           van een  verkeerde disk  te verkleinen,  kan de disk-test controle 
+           AAN  gezet worden.  Deze controle is vooral nuttig voor gebruikers 
+           met slechts  ‚‚n diskdrive.  Gebruikers met twee diskdrives hoeven 
+           de bron- en bestemmingsdisks namelijk niet om te wisselen.
+           Normaal gesproken staat deze controle UIT, hetgeen een behoorlijke 
+           tijdwinst kan opleveren bij het inladen. Het normale gebrom van de 
+           diskkop -  dat ontstaat wanneer er grote afstanden afgelegd worden 
+           -  komt bijna  niet meer  voor. BK houdt namelijk de positie op de 
+           disk van  ieder bestand bij. Hierdoor hoeft de diskkop, tussen het 
+           laden  van twee  verschillende bestanden  in, niet steeds naar het 
+           begin van  de disk  - waar de directory sectors staan - verplaatst 
+           te  worden. Wanneer  er veel kleinere bestanden geladen worden, is 
+           de snelheidswinst goed merkbaar.
+           MSX-Dos  2 voert  zo'n controle automatisch en op een geavanceerde 
+           manier uit,  waardoor het  onder dat systeem vrijwel onmogelijk is 
+           om  van een verkeerde disk te laden, of er op te bewaren. Voor een 
+           goede werking  van deze nuttige faciliteit is het noodzakelijk dat 
+           de  disks van een uniek `volume ID' - een pseudo willekeurig volgú 
+           nummer -  zijn voorzien,  zie hiervoor  appendix 1, achter in deze 
+           handleiding.  Dos2 buffert  intern de  directory sectors, zodat BK 
+           zelf daar  geen voorziening  voor nodig  heeft. Het aantal buffers 
+           wordt door BK automatisch zo hoog mogelijk gezet, zodat de grootst 
+           mogelijke  snelheid verkregen wordt. Als BK be‰indigd wordt, wordt 
+           het originele aantal buffers weer hersteld.
+
+
+   [V]ram  Hier kan  ingesteld worden  of BK  ook het  Video-RAM geheugen mag 
+           gebruiken.  Normaal gesproken mag dit altijd. Sommige ramdisk-proú 
+           gramma's gebruiken echter ook het VRAM. Deze funktie dient ervoor, 
+           te voorkomen dat er geheugenconflicten optreden.
+
+   [C]luster
+           Bij deze instelling wordt getoond uit hoeveel sectoren een cluster 
+           op de bestemmingsdisk bestaat. Dit gegeven staat normaal gesproken 
+           op twee sectoren per cluster, de hoeveelheid die geldig is voor de 
+           3 1/2  inch floppies  die op  de MSX gebruikelijk zijn. De Ramdisk 
+           van DOS2 gebruikt echter slechts ‚‚n sector per cluster, en op een 
+           harddisk  kan weer  een andere - hogere - waarde gelden. De waarde 
+           achter de  melding `Diskruimte  bezet' geeft in deze gevallen niet 
+           meer  exact  aan,  hoeveel kilobytes  diskruimte bezet  zal worden 
+           wanneer  de ingeladen  bestanden bewaard worden. Op zich niet erg, 
+           maar diegenen  die het  hinderlijk vinden kunnen het alhier corriú 
+           geren.
+
+
+[F]ormat   Met het formateer commando kunnen disks geformateerd worden. Eerst 
+           dient  de gewenste drive gekozen te worden, op dezelfde manier als 
+           bij het  [D]rive commando.  Vervolgens worden  onderaan het scherm 
+           twee  instel-buttons  getoond,  de funktie  ervan wordt  hieronder 
+           beschreven.
+
+   [A]antal disks
+           Met  deze optie  kan ingesteld  worden hoeveel  disks geformateerd 
+           moeten worden. Dit aantal kan vari‰ren van ‚‚n tot en met 255.
+
+   [D]rives afwisselen
+           Bij het  formateren van meerdere disks, kan er afwisselend op twee 
+           drives  geformateerd worden. Hierdoor is het bijvoorbeeld mogelijk 
+           om -  terwijl er  op de  A: drive geformateerd wordt - de volgende 
+           schijf alvast in de B: drive te steken, en omgekeerd. Tussen welke 
+           drives  dit afwisselen  gebeurt, kan  met deze  optie worden ingeú 
+           steld.
+
+           In het  informatieblok bevindt zich een overzicht van de mogelijke 
+           formateeropties, waaruit met de cijfertoetsen een keuze kan worden 
+           gemaakt. Nadat de keuze gemaakt is wordt het formateren gestart.
+
+
+[B]ewaar   Bewaart de  ingeladen bestanden.  Zie de beschrijving in hoofdstuk 
+           4.
+
+
+[Return]/[Tab]
+           Toont een  lijst van  de bestanden in de huidige directory. Zie de 
+           beschrijving in het nu volgende hoofdstuk, hoofdstuk 3.
+
+
+Hoofdstuk 3           
+-----------
+
+Bestandslijst
+
+    Nadat de  gewenste brondrive  en -directory - via de [D]rive button en de 
+cursortoetsen  - geselecteerd zijn, kan middels een druk op TAB of Return een 
+overzicht van alle bestanden uit de brondirectory opgeroepen worden.
+
+    De bestandslijst toont alle relevante gegevens van ieder bestand. Achterú 
+eenvolgens worden de volgende items getoond:
+
+Naam; grootte in bytes; aanmaakdatum en -tijd; attributen (alleen onder DOS2)
+
+    De  datum  wordt  normaal  gesproken getoond  in de  Europese volgorde  - 
+dag/maand/jaar - en de tijd in 12 uren: voor- en namiddag. Indien DOS2 aanweú 
+zig is,  zal de  lay-out van  deze gegevens  echter uit  de environment - een 
+gereserveerd  stukje systeemgegeheugen - gelezen worden. De environment-items 
+kunnen door middel van het DOS2 SET-commando aangepast worden. Bijvoorbeeld:
+
+SET DATE=YY/MM/DD   stelt de datumvolgorde in op jaar/maand/dag
+SET TIME=24         stelt de 24-uursklok in.
+
+    Zie ook  de meegeleverde documentie bij het MSX-DOS2 systeem, betreffende 
+het SET commando.
+
+    De vier bestandsattributen worden alleen onder het DOS2 systeem getoond.
+    Deze  attributen zijn  aan/uit schakelaars. Indien ze UIT staan wordt een 
+minteken (-)  getoond, indien  ze AAN  staan wordt  de eerste  letter van het 
+attribuut getoond. Het DOS2 systeem ondersteunt de volgende attributen:
+
+Attribuut   Betekenis
+[R]ead only Het bestand  kan alleen  gelezen worden. Het is niet mogelijk het 
+            bestand te verwijderen of te veranderen.
+[H]idden    Het bestand  is `verborgen'.  Het bestand wordt niet getoond door 
+            het  DOS commando  DIR. Voor  BK heeft dit attribuut geen effect, 
+            ook `hidden' bestanden worden altijd in de bestandslijst getoond.
+[S]ystem    Het  bestand behoort  bij het  (dos) systeem. Dit attribuut wordt 
+            normaal gesproken niet gebruikt en staat altijd UIT.
+[A]rchive   Het bestand  is gewijzigd of toegevoegd na de laatste backup sesú 
+            sie. Zie ook de uitleg bij de [I]nstel [A]rchief funktie.
+
+Een voorbeeldoverzicht van de bestandsattributen zou er zo uit kunnen zien:
+
+-h-a        Dit houdt  in dat  het bestand  `verborgen' is,  en dat het na de 
+            laatste veiligheidskopie van de disk is toegevoegd of gewijzigd.
+
+    Met de  cursortoetsen kan door de bestandslijst gelopen worden. E‚n regel 
+omhoog  of omlaag  gaan, kan via de betreffende cursortoets. Met de links- en 
+rechtscursortoetsen kan met hele pagina's tegelijk omhoog en omlaag gebladerd 
+worden. Met de HOME toets wordt de cursor naar het eerste bestand in de lijst 
+verplaatst.
+
+
+Selecteren
+
+    Door  de  gebruiker geselecteerde  bestanden worden  door middel  van een 
+vinkje -  voor de  bestandsnaam -  gemarkeerd. Door middel van een druk op de 
+spatiebalk  kan het huidige bestand geselecteerd dan wel ge-deselecteerd worú 
+den. Er  zijn echter ook exotischere selectiecommando's aanwezig, welke staan 
+aangegeven in de buttons. Hieronder een overzicht:
+
+
+[R]eset    Wist alle markeringen
+
+
+[D]atum    Selecteert  bestanden op  datum en  tijd. Eerst  wordt de gewenste 
+           datum  ingevoerd,  in  het  formaat dag/maand/jaar.  Vervolgens de 
+           tijd, in  het formaat uren:minuten. Nadat de invoer van alle gegeú 
+           vens  bevestigd is  door middel  van een  druk op de return-toets, 
+           wordt gevraagd  welke selectie  methode toegepast  moet worden. Er 
+           zijn de volgende mogelijkheden:
+
+   [V]roegere data
+           Selecteert bestanden  met een  datum en tijd van v••r de opgegeven 
+           datum en tijd.
+
+   [G]elijke data
+           Selecteert bestanden  met een  datum en  tijd exact  gelijk aan de 
+           opgegeven datum en tijd.
+
+   [L]roegere data
+           Selecteert bestanden  met een datum en tijd later dan de opgegeven 
+           datum  en tijd.  Deze optie  wordt in  de informatieregel  met een 
+           hoofdletter  aangegeven.  Dit houdt  in dat  deze optie  standaard 
+           gekozen zal worden, wanneer er op return gedrukt wordt.
+
+
+[N]aam     Met  dit commando kunnen bestanden geselecteerd worden aan de hand 
+           van hun  bestandsnaam. Een  enkel bestand  kan geselecteerd worden 
+           door  de bestandsnaam in te typen. De zogenaamde wild-cards - * en 
+           ? -  kunnen gebruikt  worden om meerdere bestanden in ‚‚n keer aan 
+           te  duiden. Nadat de selectienaam is ingevoerd, kan worden opgegeú 
+           ven of  gelijke of juiste niet overeenstemmende bestanden geselecú 
+           teerd  moeten worden.  Door alleen return te typen, worden gelijke 
+           bestanden geselecteerd.
+
+
+[I]nverteer
+           Wisselt alle  markeringen in  de bestandslijst  om. Bestanden  die 
+           eerst  niet gemarkeerd  waren worden  dat wel,  en omgekeerd.  Dit 
+           commando kan bijzonder nuttig gebruikt worden. Een voorbeeld: Alle 
+           bestanden uit  de lijst,  waarvan de  extensie NIET  gelijk is aan 
+           .BAK  of .COM, moeten gekopieerd worden. Via de [N]aam button worú 
+           den dan  eerst -  door *.BAK  in te  voeren - de .BAK files gemarú 
+           keerd,  en vervolgens  de .COM  bestanden op  dezelfde manier. Een 
+           druk op  [I]nverteer resulteert  er daarna  in, dat alle files die 
+           ONGELIJK aan *.BAK Šn *.COM zijn, geselecteerd worden.
+
+
+[A]ttribuut
+           Met deze  button kan geselecteerd worden op de vier bestandsattriú 
+           buten  van het  DOS2 systeem.  Bestanden kunnen aldus geselecteerd 
+           worden aan  de hand  van de  Read only,  Hidden, System en Archief 
+           attributen.  Nadat ‚‚n  van deze  attributen geselecteerd  is, kan 
+           bepaald  worden  of het  geselecteerde attribuut  Aan of  Uit moet 
+           staan. Een druk op return selecteert automatisch Aan.
+
+
+Inladen
+
+    Nadat  de gewenste  bestanden geselecteerd zijn, kan het inlaadproces met 
+een druk op Return of Tab gestart worden.
+
+    Tijdens het  laden verdwijnt  de bestandslijst  weer van  het scherm,  om 
+plaats  te maken voor het informatieblok. Hierin kan afgelezen worden hoe het 
+inladen vordert.  Het aantal  ingeladen bestanden,  het huidige bestand en de 
+beschikbare geheugenruimte worden continu bijgehouden.
+
+    Nadat  de bestanden  in het  geheugen geladen  zijn, staat het het scherm 
+weer in dezelfde toestand als direct na het opstarten, alleen het beschikbare 
+geheugen is  natuurlijk minder. Eventueel kan er weer opnieuw een brondisk en 
+-directory geselecteerd worden, en kunnen er daarvan nog meer bestanden ingeú 
+laden worden.
+
+
+Hoofdstuk 4
+-----------
+
+Bewaren
+
+Door vanuit het hoofdmenu het [B]ewaar commando te geven, kan een bestemmings 
+drive geselecteerd worden. Met de cursortoetsen kan daarna de bestemmings 
+directory gekozen worden. Alvorens het bewaren met Return of TAB gestart 
+wordt, kunnen er via de volgende twee buttons instellingen worden gemaakt.
+
+[A]antal kopie‰n
+           Met deze  optie kan ingesteld worden op hoeveel disks de ingeladen 
+           bestanden  bewaard moeten  worden. Dit aantal kan vari‰ren van ‚‚n 
+           tot en met 255.
+
+[D]rives afwisselen
+           Bij het  bewaren op  meerdere disks,  kan er  afwisselend op  twee 
+           drives  bewaard worden. Hierdoor is het bijvoorbeeld mogelijk om - 
+           terwijl er  op de  A: drive bewaard wordt - de volgende schijf alú 
+           vast  in de  B: drive te steken, en omgekeerd. Tussen welke drives 
+           dit afwisselen gebeurt, kan met deze optie worden ingesteld.
+
+    De  hierboven beschreven instellingen werken alleen als alle bestanden in 
+hun geheel in het geheugen geladen zijn. Als het geheugen tijdens het inladen 
+vol raakt, kan er slechts op ‚‚n disk worden `gedumpt'. In de praktijk blijkt 
+namelijk dat  de verschillende bron- en bestemmingsdisks onvermijdelijk doorú 
+elkaar  gemixt worden  wanneer er  steeds tussen ‚‚n brondisk en bijvoorbeeld 
+tien bestemmingsdisks gewisseld wordt. Vooral onder DOS1 een groot risiko, de 
+disks zouden dan behoorlijk overhoop kunnen raken. Maar aangezien er zelfs op 
+de kaalste  MSX2 machine al een behoorlijke hoeveelheid geheugen aanwezig is, 
+zal deze beperking meestal niet voor problemen zorgen.
+
+    Als tijdens  het bewaren  de bestemmingsdisk vol raakt, kan verder worden 
+gegaan  op een  volgende disk.  Op de nieuwe disk wordt weer opnieuw begonnen 
+met het  bestand, dat  aangegeven staat in het informatieblok onder het kopje 
+`Bewaren - Huidig bestand.'
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+Appendix 1: Het `volume ID'
+
+Het MSX-DOS 2.20 besturingssysteem biedt een aantal geavanceerde opties. E‚n 
+hele nuttige is de controle op het `volume ID' van disks. Het MS-DOS 
+besturingssysteem kent deze voorziening ook, zij het pas sinds versie 4.0. De 
+MSX loopt dus netjes in pas met de nieuwste PC-ontwikkelingen.
+
+Het volume ID is een zo willekeurig mogelijk getal, dat DOS tijdens het 
+formateren ergens in sector 0 van iedere diskette plaatst. Dat getal is een 
+soort handtekening, het bepaalt de IDentiteit van het volume; "Volume" is in 
+dit geval dus een moeilijk woord voor diskette.
+Aangezien het gegenereerde getal ergens tussen de 0 en 268 miljoen ligt, kan 
+veilig gesteld worden dat de gemiddelde MSX-gebruiker nooit twee schijfjes 
+met hetzelfde Volume ID in zijn diskette bak heeft liggen.
+
+Iedere keer als een disk beschreven of gelezen wordt, wordt gekeken welk 
+volume-ID de betreffende disk heeft. Blijkt bij het aanspreken van een 
+bestand dat het volume-ID gewijzigd is, dan wordt de gebruiker netjes 
+getracteerd op de foutmelding `Wrong disk', en wordt er gevraagd om de goede 
+disk.
+Deze controle is vooral nuttig bij kopi‰erakties op computers met slechts ‚‚n 
+diskdrive. Tijdens het vaak - bij BK minder vaak - noodzakelijke diskwisselen 
+is de kans dan niet meer aanwezig dat de bron- en bestemmingsdisks foutief 
+ingevoerd worden, en de diskettes een puinhoop worden.
+
+Diskettes die niet onder DOS2 geformateerd zijn, zijn helaas niet volume-ID 
+voorzien. Om deze disks toch een zo'n volgnummer te geven, kan FIXDISK 
+gebruikt worden. Dit programma staat op de MSX-DOS2 systeem disk.
+De werking is simpel: na de dos prompt FIXDISK /S intypen, de te behandelen 
+disk invoeren, en tenslotte een willekeurige toetsaanslag om het proces te 
+starten. Deze behandeling laat de bestanden op disk overigens ongemoeid, 
+alleen sector 0 - de bootsector - wordt aangepast.
+
+Door deze behandeling wordt de schijf bovendien geschikt gemaakt om er het 
+UNDEL commando op los te laten. Een bijzonder plezierig commando kunnen we u 
+verzekeren, deze tegenhanger van DEL en KILL. Iedereen die wel eens, door wat 
+ongelukkig gekronkel van de vingers een paar uur werk gewist heeft, kan 
+erover meepraten.
+
+*** EINDE ***
+

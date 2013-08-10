@@ -1,0 +1,412 @@
+-----------------------------------------------------------------------------
+Subject : SCC
+Edited by : -NoXoR- , Cybernetic1996
+
+         MSX MIRC / Cobrasoftware Nederland 
+         MSX MIRC / K.Weeniet
+         Digital KC
+Thanks 2     : -Harri Meriruoko
+               -Arsoft
+-----------------------------------------------------------------------------
+The SCC is not connected to a IOport but acts just like normal memmory.
+If you write a value to a certain address, it will be written to the SCC
+The SCC is almost the same as the PSG so controlling it is no problem.
+
+
+Initialisation of the SCC
+-------------------------
+
+First of all the SCC has to switched in one of the pages of the Z80.
+This is done with the register at IO-port &HA8 that designates what is in 
+which page. This IO-port is not mounted in the SCC but in the MSX
+
+IO-port &Ha8:
+        b7  b6  b5  b4  b3  b2  b1  b0
+        PAGE3   PAGE2   PAGE1   PAGE0
+
+The meaning of the 2 bits that are available per page    : 00 = system
+                                                           01 = cart. slot 1
+                                                           10 = cart. slot 2
+                                                           11 = memmory mapper
+After resetting the computer and activating basic, it contents of port &HA8 
+wil probably be equal to &B11 11 00 00.
+
+If we want to use the SCC that is in cartridgeslot 1 then we have to write 
+&B11 01 00 00 to IO-port &HA8. Now it is in page 2 (&H8000-&Hbfff)
+Is the SCC in cartridge slot 2 then we have to write &B11 10 00 00 to IO-port 
+&HA8.
+
+Now we only have to write &H3f to address &h9000  and the SCC is ready for 
+usage.
+
+
+SCC FUNCTIONS
+-------------
+The SCC has 4 different functions         :-WAVEFORM    (32 bytes)
+                                           -FREQUENCY   (12 bits)
+                                           -VOLUME      ( 4 bits)
+                                           -KEYON       ( 5 bits)
+
+
+WAVEFORM
+--------
+
+This is the form of the wave that is used for generating the sound.
+It consists of 32 bytes that can be designated in any way you like.
+If the soundprocessor has read byte #31 it will again start with byte #0
+The meaning of each byte can be understod with the figure below.
+
+   7f |          -           ------
+      |        -   -       -
+      |      -      -    -
+    1 |     -         --- 
+    0 ----------------------------|31
+   ff |   - 
+      |  - 
+      | -
+   80 |- 
+
+0-&h7f    = 0    tot 127
+&H80-&hff = -127 tot -1
+
+If the SCC is in page 2 the following addresses are used for the waveform.
+
+channel 0   &h9800-&h981f 
+channel 1   &h9829-&h983f
+channel 2   &h9840-&h985f
+channel 3+4 &h9860-&h987f
+
+As you can see channel 4 has no waveform of it's own but uses the wave form of channel 3
+
+Frequency
+----------
+The frequency of the SCC consists out of 12 bits and is calculated in the same way as the frequency of the PSG.
+
+                             3579545
+The formula : value     = --------------
+                             (16*freq)
+
+The minimal value has to be 16 and the maximun value is 4095
+
+The value of the frequency has to be written to the following addresses
+           LSB (8bit)   MSB (4bit)
+channel 0    &H9880        &H9881
+channel 1    &H9882        &H9883
+channel 2    &H9884        &H9885
+channel 3    &H9886        &H9887
+channel 4    &H9888        &H9889
+
+VOLUME
+------
+Also this is the same as the PSG, a 4bit value
+&B0000 = soft
+&B1111 = loud
+
+The values of the volume has to be written to the following addresses
+
+channel 0 &H988a
+channel 1 &H988b
+channel 2 &H988c
+channel 3 &H988d
+channel 4 &H988e
+
+
+KEYON
+-----
+With this function the generation of sound is enabled or disabled.
+The keyon data for each channel is in just 1 byte:
+
+        b7    b6     b5     b4     b3      b2      b1      b0
+        X     X      X   channel4 channel3 channel2 channel1 channel0
+
+This byet is on address &H988F
+
+
+BASIC/ASSEMBLY
+--------------
+It is quite simple to use the SCC under BASIC.
+First of all the pointer to the startaddress of the work-area of BASIC has to 
+be set to address &HC000 or higher in order to use the SCC in page 2 (&H8000-
+&HBFFF).
+This is done by writing the new address to address &Hf676 (LSByte) and &HF677 
+(MSByte)
+
+POKE &HF676,&H00:POKE &HF677,&hc0:POKE &HC000,0:NEW
+
+Now the startaddress of basic has been set to &HC000.
+
+To switch the SCCi in slot 1 in page 2:
+
+OUT &HA8,&B11010000:POKE &H9000,&H3F
+
+Now the SCC is ready for usage.
+
+The next program generates a sinus with channel0 of the SCC
+10 PI=4*ATN(1)                                                  ;calculate PI
+20 FOR N=0 TO 31:POKE &H9800+N,128+127*SIN(N*PI/16)XOR128:NEXT N;WAVEFORM
+30 POKE &H988F,&B00000001                                       ;KEYON
+40 POKE &H988A,15                                               ;VOLUME
+50 POKE &H9880,128:POKE &H9881,1                                ;FREQUENTIE
+60 END                                                           
+
+To stop the tone we have to write 0 to address &G988f.
+
+I also found the following program, "called too.bas":
+
+10 IFPEEK(&HF677)=128THENPOKE&HF676,1:POKE&HF677,&HC0:POKE &HC000,0:
+    RUN"toon.BAS"
+20 REM SCC detection
+30 out&Ha8,&B11010000:GOSUB 60
+40 out&HA8,&B11100000:gosub 60
+50 print "SCC Not Found":end
+60 OUT&HA8,VAL("&B"+A$):POKE &H9000,50:poke &H9800,&h41:IF PEEK(&H9800)<>&H41
+   THEN RETURN ELSE RETURN 70
+70 REM NU STAAT DE SCC INGESCHAKELD IN PAGE2
+80 POKE &H9000,&H3F:FORX=&H9800TO&H981F:POKEX,0:NEXT: REM clean channel 0 wave
+90 POKE &H988F,1:                                     REM turn channel 0 on
+100 POKE &H988A,15:                                   REM VOLUME = 15
+120 FORX=&H9800 TO &H981Fstep5:POKE X,&H70:NEXT:           REM first tone
+130 POKE &H9880,172:POKE &H9881,1:                    REM FEQUENTIE
+140 GOSUB 200
+150 FORX=&H9800 TO &H981FSTEP2:POKE X,&H70:NEXT:      REM second tone
+160 GOSUB 200
+170 FORX=&H9800 TO &H981FSTEP1:POKE X,&H70:NEXT:      REM third tone
+180 END
+190 PRINT"Press a key for next tone"
+200 A$=INPUT$(1):RETURN
+
+Controlling the SCC in Assembly is quite simple. Seen the fact that you only 
+have to write values to address you can use normal LD instructions.
+Also there is no waiting time (like the PSG access) so form example a sample 
+can be move by a LDIR instruction.
+
+
+ld  a,&B11010000;scc in slot 1
+out (&Ha8),a
+ld  a,&H3f     ;
+ld  (&H9000),a   ;init SCC is now in page2
+;
+ld  hl,&Hc000 ;
+ld  de,&h9800 ;
+ld  bc,&H20   ;
+ldir          ; write a waveform for channel 0 to memmory
+
+DETECTION
+----------------------------------------------------------------------------
+There are a number of ways to search for an SCC but only one perfect.
+A lot of programs search for the ROM in the cartrdige but seen the fact that 
+this also can be disabled in purpose to use the SCC, it isn't a really 
+reliable search. The most reliable is to look if a value can be written en 
+read from the waveform adresses. The next program will show how it works.
+
+1 rem search.bas
+5  if peek(&Hf677)<>&Hc0 then poke &hf677,&hc0:poke&Hc000,0:run"search.bas"
+10 out &HA8,&B11010000 :rem  in slot 1?
+20 poke &h9000,&H3f
+30 poke &H9800,&h5f    :rem  random value to &H9800 (wavemem channel0)
+40 if peek(&H9800)=&H5f then s=1:goto 100
+50 out &HA8,&B11100000 :rem  in slot 2?
+60 poke &H9000,&H3f
+70 poke &H9800,&H5f    :rem  random value to &H9800 (wavemem channel0)
+80 if peek(&H9800)=&H5f then s=2:goto 100
+90 cls:print"SCC Not Found":goto 110                  
+100 cls:print"SCC Found In Slot ";s
+110 end
+
+As the random value any value except &HFF can be used.
+When the SCC is not in a slot it will give &HFF back when you read &H9800.
+You can also use this as a method of checking the SCC but in case the WAVEFROM 
+data is &HFF, the program will think there is no SCC. The chance is very small 
+but still it is possible.
+
+The control in assembly is exact the same as in BASIC so I think you will under
+stand how to do that.
+
+OTHER ADDRESSES
+-----------------------------------------------------------------------------
+If you switch the SCC to the addresses between  &H9800 and &H988f, it is also 
+posible to write the adressen to the following addresses:
+                     &H9900-&H998f
+                     &H9a00-&H9a8f
+                     &H9b00-&H9b8f
+                     &H9c00-&H9c8f
+                     &H9d00-&H9d8f
+                     &H9e00-&H9e8f
+                     &H9f00-&H9f8f
+The last 2 digits remain the same, only the first 2 digits have to be changed
+There is no special meaning to this, I suppose it is just a matter of hardware.
+
+WAVEMEM IS RAM
+--------------------------------------------------------------------------
+As you have maybe noticed, the WAVEMEM can be used as normal RAM. The other 
+addresses will only read back &HFF
+
+
+SNATCHER/SD-SNATCHER SCC
+------------------------------------------------------------------------------
+The SCC used with these games is a bit different then the SCC used in other 
+games. First of all, no switch is needed. Secondly, Channel 4 has its own 
+WAVEFORM. Thirdly, it is used at an other address.
+
+The addresses:
+waveform
+   o      &hb800-&hb81f
+   1      &hb820-&hb83f
+   2      &hb840-&hb85f
+   3      &hb860-&hb87f
+   4      &hb880-&hb89f   <<<=== extra!
+frequency
+           lsb   msb
+   0       &hb8a0  &hb8a1
+   1       &hb8a2  &hb8a3
+   2       &hb8a4  &hb8a5
+   3       &hb8a6  &hb8a7
+   4       &hb8a8  &hb8a9
+volume
+   0       &hb8aa
+   1       &hb8ab
+   2       &hb8ac
+   3       &hb8ad
+   4       &hb8ae
+keyon  
+   &hb8af
+
+In order to use it, &H80 has to be written to adres &HB0000.
+However, I have had this cartridge for some time a few years ago but i can't 
+remember having any problems using other SCC games (on disk). So i suppose it 
+is compatible with the 'normal' SCC, but I have not been able to confirm it.
+
+SCC Switch
+------------------------------------------------------------------------------
+Only the (SD)Snatcher SCC can be used just like it is. The other gamecartridges
+ that contain a SCC have to be modified. Quite simple I think. 
+
+There are 2 ways to change the game-cartridge in order to use the SCC.
+
+1. Disconnect the SlotSelect signal
+   This is to prevent the game from booting and the computer will just end up 
+   in basic or boot the program on the disk
+   It only takes a switch and a resistor, also quite cheap!
+  
+   This is how to change the cart.
+   a. open the cart. (the most difficult part)
+   b. look for pen 4 of the cartridgeconnector.
+      If you can see the IC's and put the cartridge conector pointing towards 
+      you, pin 4 will be the first pin on the rightside. Pin 2 will probably 
+      be missing. We have to cut the the line going to the IC. Put 2 wires on 
+      it (First scrap the green epoxy layer off, until you can see the yellow/
+      gold copper). connect the wires to the switch. Then we have to put in a 
+      pull-up resistor. On end of the resistor has to be put on the line going
+      to the IC. The most simple way is to mount it on top of the ic,          
+      connecting it to the pin that is connected to pin4 and connecting it to  
+      a pin that is connected to the +5v (that comes from from pin 45/48 
+      cartridge connector).
+   c. make a hole in the plastic cover and put the switch in it.
+   d. close the cartridge
+
+      If you put it in the computer, it is possible that the games will be 
+      booted. If this is so, turn the computer off, turn the switch an put the 
+      computer on. After the program from disk is beginning to load or when  
+      you end up in basic, tyou can turn the switch. Now the SCC is active.
+      If it doesn't work, please check if everything is connected as it should 
+      be connected.
+
+      The following ascii-drawing is not so good but I hope you can understand        it.
+                                       +5V
+                                        |
+                                        -
+                                       | | resister 3,3K - 10K
+                                        -
+                                --__    | 
+             O-----------------O   O----------------O 
+        pen 4 (SlotSelect)     switch              to IC
+
+
+2. Disconnect Chip Select 
+
+    a. Open the cartrdige
+    b. There are 2 kinds of SCC-games. Both have a very big IC and a smaller 
+       IC mounted. The small IC is the ROM.
+        -1Mb version (28 pin IC)
+        -2Mb version (32 pin IC)
+
+        For both versions it is almost the same.
+        First we look up pin 8 of the big IC. This is also connected to a 
+        capacitor of 22pF in most cartridges.
+        In case of a 28 pin IC this line is going to pen 20
+	In case of a 32 pin IC this line is going to pen 24
+        This signal is used to enable the ROM. So if we disconect it, the game
+        will not boot. But the SC will be active. The only difference between 
+        disconnecteing the slotselect signal is that you don't have to turn 
+        the switch.
+        We have to cut this line and connect it to the switch. Also a resistor 
+        of 3,3k - 10KOhm has to be mounted between pin 20 (or pin 24 in case of
+        a 32 pin IC) and the +5V. This is easly done by putting it on the ROM 
+        itself.
+        
+     c. mount the swith and close the cartridge.
+       In a ascii drawing it looks like below:
+                                  +5V
+                                   |
+                 GND               -   
+                  |               | | resistor 3,3K - 10K
+        capacitor =                -  
+                  |      --_       |       
+         O---------------O O-----------------------------O
+      p1n8 biggest IC   Switch                    pin 20 - 28 pins IC
+                                                  pin 24 - 32 pins IC
+
+
+     c. If the game boots when you turn on the computer, turn the switch and 
+        reset. Now the SCC will be active. There is not need to turn the switch
+        again.However a few programs check the ROM of the cartridge in order 
+        to search the SCC. In this case it may will not detect te SCC. Then 
+        you have to turn the switch again.
+
+NB.  The modification is not difficult but if you have no experience with 
+     hardware/electronics, please aks someone with experience to do it for 
+     you in order to prevent any damage.
+     The information I gave here is as far as I know correct. However, the 
+     author of this article is not resposible for any damage.
+
+Zemina
+---------------------------------------------------------------------------
+A Korean company called "ZEMINA"  also made a few Konami games with SCC (or is 
+it pirated?!). This SCC should be compatible. I have never seen one but I heard
+they do not use the Konami custom-IC but use a lot other components. To use only
+the SCC would be no problem I suppose. Disconnecting the SlotSelect signal 
+would work anyway.
+
+INTERVIEW
+----------------------------------------------------------------------------
+Once Konami gave a interview concering the SCC. Besides a lot of crap that most
+ Japanese articles consist of, the following interesting things were mentioned:
+
+-The idea for implementing a soundchip in a cartridge originated in (you won't 
+ believe this, I know it will be shock) the Nintendo! AAAAGGHGHGH :(:(:(:.
+ In Japan Nintendo once made a disksystem (not a copybox) and implemented a 
+ extra soundchip in it. Konami thought that was a good idea and started to use 
+ extra soundchips in the MSX-cartridges
+-The SCC is almost the same to control as the PSG. This was done on purpose. 
+ That why it is so easy to use in combination with the PSG.
+-For making music konami used 2 methods, MIDI and a MSX steptime editor.
+  Probably MIDI was used for making music and the soundeffects were made with 
+  the steptime editor.
+
+?????????????????????????????????????????????????????????????????????????
+------------------------------------------------------------------------
+A few things remain not clear to me.
+- in one article i read about the SCC the author mention that by putting &H00 
+  on adress &H98e0, the correct waveform would be used. I seen to have no 
+  problem with that. So does any one no if this is just a mistake? 
+- The SCC uses the clockchip for generating sound. In theorie if you would 
+  multiply the frequency value with 2, it would be possible to use it with 
+  7Mhz. I don't have 7Mhz so I haven't been able to try this (yet).
+- There is some SRAM in the (SD)Snatcher Cartrdige. Does anyone have 
+  information how to use it..
+- How does the blokswitching of the ROM work?
+
+If you have any suggestions, ideas, information or found a mistake in this text
+file, please mail me : Cybernetic -NoXoR- e1095005@ipc.akita-u.ac.jp (valid 
+until 1-8-1996) or contact MsxClubDrechtsteden.
+Questions are also welcome.

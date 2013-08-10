@@ -1,0 +1,313 @@
+---Make an Ese-SCC Disk! (2nd edition)---
+                                 1995/06/27 K.Tsujikawa.
+
+
+Files contained in this archive
+
+ESCC-MKE .HED	A header file for uploading to BBS.
+ESCC-MKE .TXT	This file
+ ESCC-APE .TXT	Technical resource about pin placement
+ ESCC-CI .SR7	Circuit diagram of an Ese SCC Disk
+ ESCC-FI .SR7	A real image of an Ese-SCC disk circuit
+
+
+*Foreword
+
+
+ This articles describes how to modify a mega ROM cartridge equipped SCC which were released from Konami, into an Ese SCC disk.
+
+ MegaROM controller for this cartridge is 2212P003, a Konami product.
+ For technical information about this chip, refer to other reverse-engineering resources.
+
+ This time, we assumed the object is a 1M-bit Konami game and applied a real image in addition to a circuit diagram. Note 2M-bit ones can be modified in same way.
+ As far as I know, "Gekitotsu Pennant Race 1", "Erugiiza no Fuuin", "Salamanders" are ones most likely to be sacrificed ;)
+
+ I advise you to print out this document or write down on paper.
+ Images are in BSAVE format, so you can easily display them through BASIC or other way.
+ If you change color palette for red and blue to black, you can achieve better printout result.
+
+ This time, circuit diagram is much more simplified, especially around 2212P003.
+ For details not drawn in the circuit diagram, refer to megaROM controller reverse-engineering resources, real image, an actual cartridge and likes.
+
+ The real image shows the view seen from back of the board (side where soldering is done). However, dark green patterns shown in slightly to the right of upper pattern indicates the front side of the board (side where parts are being placed).
+ Left part of the board is not drawn in the real image. Make sure never to cut it away.
+ It only indicates that left part need no works.
+
+
+*Necessary components
+
+ Required components are as follows.
+
+　　Items		Numbers	Remarks
+
+　　628128		　2	Slowest one(120nS or so) is enough.
+				Low power-consuming type is preferred (like 628128LP-12L).
+    74HC74		　1	LS74 or similar is OK. Should be of a DIP type.
+    74HC133		　1	LS13 or similar is OK. Should be of a DIP type.
+　　74HC139		　2	LS139 or similar is OK. Should be of a DIP type.
+　　10k ohm resistor	　2	4.7k to 100k ohm. Anything might work.
+　　1S1588		　1	Choose appropriate switching diode you like.
+　　Double-layer electrical condenser　1	1.0F capacity required for safety.
+　　0.1uF condenser	　3	Appropriate ceramic condenser for path controller.
+　　Game cartridge	　1	A "Salamander" or similar.
+　　Wiring line	    As required Any appropriate vinyl-coated line work. Thin ones are better.
+　　Tin-plaited line 	A few	The cut end bits of resistors are enough, maybe.
+　　Soldering metal	As required 0.8mm thick ones are most easy to handle.
+
+　For your convenience, here are some list of Akihabara shops you can buy them.
+　I know modifying your Konami game hurts you, but make up your mind and DO IT :)
+
+　　628128	Jinwa Denki, Wakamatsu Tsusho
+　　74HCxxx	Sengoku Densho and else
+　　10k ohm resistor	Sengoku Densho and else
+　　1S1588	Sengoku Densho and else
+　　Electrical double-layer condenser	Might be in one of Akizuki Denshi, Sengoku Densho, Suzusho or Ozawa Denki.
+		Also look for one in so-called Radio Department and the mall below railway bridge.
+
+　Other wiring equipment are available in basement of Sengoku Densho, Radio Department and the mall below railway bridge
+
+　Resistors, 1S1588s, 0.1uF ceramic condensers are small and can be easily lost. Also they are cheap, so it's recommended to buy a lot of them prior.
+　You can reserve them in case you fail. ;)
+
+　If you cannot visit Akihabara often, use mail-order service advertised in magazines like Transistor Gijutsu. 628128 or others may be acquired at modest price.
+
+
+*Disassembly of a cartridge
+
+　Konami cassettes are packed in "once closed, never be opened again" style, so opening one neatly is a difficult task.
+
+　There are 6 notches altogether - 2 on upper edge, 2 on lower edge, and 1 for each lateral sides.
+
+　I am not improved in opening, but at least I can tell you my own method.
+　4 wins, 2 losses (4 on upper and lower side are intact but lateral 2 are broken) is my approximate score.
+
+　2 to 4 thin screwdrivers are good for your convenience.
+
+　ｷ Peel of the stickers. You can see 2 square holes below them.
+　ｷ Insert your screwdriver in one of the holes, loosen the notch, and open.
+　ｷ Once some gap is achieved, insert another screwdriver in it so it does not close.
+　ｷ Repeat the same for another hole to force it open.
+　ｷ Insert your screwdriver into a lateral notch from side and force it open.
+　ｷ Open another lateral notch by same method.
+  ｷ After these, shake the cartridge being careful not to break 2 upper notches, then cassette will be fully disassembled.
+
+ After opening a cassette, compare the inside with real image, and make sure board and model code of mega ROM controller match.
+
+* Cutting a board
+
+　Konami board is huge, so if you leave it as is, there is no space for an electrical double-layer condenser. So, you should cut some part of the board to reserve some space. 
+
+ I cut one with metal saw, and finished with a lathe.
+ Cut the board referring to real image.
+ Some of the patterns will be gone, but by the time you had done wiring as shown in the real image, that part will be mended safe.
+
+
+* Removal of the ROM
+
+A ROM is a 28-pin chip on upper part of the board with a model code of the game noted on it.
+For example, a model code for Erugiiza no Fuuin, MSX2 version is RC760.
+You know the code is noted on the sticker on surface of the cartridge too.
+Take this ROM away and install a 628128 there.
+
+ A nipper, soldering iron, solder sucker or solder suction line are necessary instruments.
+
+ There are various methods to remove a ROM. Here I introduce you "legs chomp-chomp method". (a name I named without permission)
+
+ ｷ Chomp-chomp away the ROM plug ends at the beginning where it grows out of the ROM using a nipper.
+  Longer the part which remain stuck on the board remains, it'll prove more convenient later.
+  A ROM will be disposed anyway, so do not have any mercy to it ;)
+ ｷ By cutting away all plug ends, main black body of the chip is removed.
+  Then, using a soldering iron, pull away all the remaining legs one by one.
+  It's cumbersome since there are 28 legs in total, but do your best to finish off.
+ ｷ After pulling out the legs, then use solder sucker or solder suction line to suck away the solder adhered to the board to get through holes with enough space for 628128 to be fitted in.
+ If you heat the board too much patterns will be peeled off, so try to hasten the whole sequence. :)
+
+
+* Cutting the patters
+
+ Cut the 4 patterns noted on the real image using a cutter (a stationery cutter).
+ I mean where those blue diagonal marks are.
+ Do not apply too much force, since it may cause in cutting the nearby patterns. Be careful.
+
+
+* Works on IC plug ends
+
+ Perform works to legs of two 627128 chips referring to the diagram below.
+
+ It's easier to understand if you compare this with real image. I describe how to read this diagram for your convenience.
+
+ ｷ S1 means that you should straighten a leg and cut it at the point 1 mm away from the chip body.
+ ｷ S3 means that you should straighten a leg and cut it at the point 3 mm away from the body.
+ ｷ E2 means that you should cut the end of the leg by 2 mm so that the leg do not protrude to the back of the board.
+  (Cut just a little bit end of the leg)
+ ｷ BE means that you should bend a leg to 180 degrees opposite to the way it was originally bent, and cut the end of the leg.
+ (Be careful not to tear away the leg when you bend it back. Cut the leg in such a way that the remaining leg reach approximately same height with the uppermost surface of the IC body)
+  ｷ WF (Wide-Front) and WB (Wide-Back) are pairs. These pins do not go through holes in the board but go out of the board, and directly connect legs of SRAMs placed on front and back side of the board.
+ Make sure they do not contact with the board.
+ My description may not convince you, but once you have actually apply 628128s onto the board, you will nod in understanding.
+
+ ...So the story goes. The pins with no notes should remain as they are.
+
+	628128 for front side	628128 for back side
+
+	　　+--_--+		　　+--_--+
+	W1 |1  32|		W1|1  32|BE
+	WB |2  31|W3		WF|2  31|W3
+	　　|3  30|		BE|3  30|BE
+	　　|4  29|		BE|4  29|BE
+	　　|5  28|		BE|5  28|BE
+	　　|6  27|		BE|6  27|BE
+	　　|7  26|		BE|7  26|BE
+	　　|8  25|		BE|8  25|BE
+	　　|9  24|		BE|9  24|BE
+	　　|10 23|		BE|10 23|BE
+	　　|11 22|S2		BE|11 22|W3
+	　　|12 21|		BE|12 21|BE
+	　　|13 20|		BE|13 20|BE
+	　　|14 19|		BE|14 19|BE
+	　　|15 18|		BE|15 18|BE
+	WB|16 17|		WF|16 17|BE
+	　　+-----+		　　+-----+
+
+　If you cut other IC legs, the works later will be more smoothly done.
+ In basic, straighten those legs to sideway and cut them short.
+　Refer to real image.
+
+
+* Soldering the parts, wiring the lead lines.
+
+ Now the soldering step. There are a lot of wires compared to Ese-RAM disks.
+ Be patient and wire securely.
+ Assure yourself of firm understandings about correspondence of the line you are wiring to the circuit diagram, to decrease mistakes.
+ Use real image only as a reference and no more than that.
+
+ Wiring is best recommended to be done in HC133 => HC74 => HC139 => 628128 order.
+
+ Solder No. 3 to 30 and 32 pins of frontal 628128 chip which faces downward.
+ And solder only one end of a lead line to No. 22 pin from back.
+
+ Solder the No. 3 to 21, 23 to 30 and 32 pins of back 628128 chip together with legs of frontal chips using a large amount of soldering metal.
+ After this installation, reading the model code of the back 628128 chip is no longer possible, therefore knowing its direction becomes difficult. Be careful not to mistake where it faces.
+
+ That's all. Small paragraph, but a time-taking work. Stay patient... ;)
+
+
+* Installation of electrical double-layer condenser and diode
+
+ Now, there's only some miles to last. Employ your soldering iron with relax in your mind.
+ Most of the failures I have seen far had their causes in works around this step, I feel.
+
+ I scare you a little bit ;) that since this work concerns power source, if you make mistake it might be irrevocable.
+
+ If you check occasionally with an electronic tester during your work, it's perfect!
+
+ ｷ You will easily learn the mounting location and direction of 1S1588 from real image.
+
+ If an electronic double-layer condenser is swung in a cartridge case, their lead lines may snip. Securing them to the case or boards with double-sided adhesive tapes and Cemedine Bus Caulk (pate, silicone glues) or use tin-plaited lines wrapped with nonconductor tubes instead of lead lines may improve safety.
+
+
+* Check & Check
+
+Now, if you do not check for sure prior, an Ese-SCC might go suicide together with your faithful MSX;) These days, smashed MSX cannot be repaid by money.
+No precaution is too much.
+ At least, perform visual check of the wiring and power source check with a tester.
+
+ There are cases that when a faulty soldering is pressed by a tester terminal and the connection status improves, therefor giving you false result that the connection performance is correct.
+
+ No check is done too much.
+ Once you are 100 % sure that's OK, plug it into an MSX and turn the power ON.
+ If MSX does not boot normally, cut the power OFF immediately and check Ese-SCC again.
+
+ If booting is safely done, perform installing process.
+ Look for documents attached to installer document for details.
+ Once installing is correctly done and Ese-SCC is recognized as a system, it's probably OK.
+
+
+* When not working....Troubleshooting
+
+ It does not work by any way, I checked until I nearly died with exhaustion but,
+ It might be a bug in wiring diagram or software...is it?
+
+ If your Ese-SCC disk does not perform correctly, post your questions to BBS or assault Tsujikawa with e-mails.
+
+ Note: describe your situation neatly, and with clear information.
+
+ I cannot decide what's to answer to "It's nota workin', what's gonna do, NOOO!!!!" kind of obviously panicking questions.
+
+ Calm down as much as you can, and write down any details, even small things.
+ If you write a lot of amount, I can judge how much understandings you have in hardware, so I can give you reply according to your level.
+
+ Also, something which seem not important at all to you, might prove in fact to be a vital clue to the solution once you report it to me.
+ Do not judge and summarize by your own decision. Describe the situation thoroughly to minor details.
+ Do not mix up the facts and your own ideas when describing.
+ If you ask me in rush, it will slow the solution.
+
+
+ Bad example: Power seems to have short circuit. My Ese-SCC does not boot (crying)
+
+ Answer: Check again the power-related locations again. :-(
+
+
+ Good example:  My MSX is a Panasonic GT.
+	　An Ese-SCC disk is inserted into slot 1. Nothing is inserted into slot 2.
+	  After I have turned MSX power ON, the screen stays black. Even title logo does not show up.
+	　I barely succeeded when I made an Ese-RAM disk from a Synthesaurs cartridge. However, this time there are too much lines and I cannot make anything out.
+	　I bought a tester, but I've no idea how to check where....
+
+ Answer: Mmmm. SCC is troublesome since there are lot of wirings.
+	　Relatively few people are making them, therefore few failures are reported.
+	　Since you own a tester, don't you wanna check everything head to toe, don't you?
+	　Check lines one by one, as if you're wiring them again from the beginning.
+	　Check again, especially the lines drawn in red in wiring diagram.
+	　Honestly speaking, I do not know what to advice you.
+	　When you have learned some more, ask me again.
+
+
+* Improvement .... Make your own trick
+
+ By writing items to upgrade, some people may be anxious that if you do not follow them there might be trouble, but do not take them that serious.
+
+ If you have confidence in hardware skills, use these as references.
+
+ If you cannot understand the items below or do not have access to required parts, you have no need to pay attention.
+
+ ｷ Add an access indicator lamp (with a transistor and a light emitting diode).
+ ｷ Change the diode (to shot key type).
+ ｷ Change the backup power source (to lithium or Nickel-cadmium batteries or else)
+ ｷ Add power voltage watchdog circuit. (use PST521 or else)
+ ｷ Add a switch which negates booting, so no need to insert after MSX power-ON is necessary even if it contains a game or other software. (add switches and resistors)
+ ｷ Increase the capacity of SRAM. (possible up to 512KB)
+ ｷ Use pseudo-SRAM to construct. (Backup is very difficult. /OE timing is worth paying attention)
+
+ All cases were already done except pseudo-SRAM.
+ Someday we would like to try pseudo-SRAM.
+
+
+* Disclaimer, as usual
+
+ Construction and use of Ese-SCC disks should be done by your own personal responsibility.
+ Tsujikawa hold no responsibility over any accidents and losses that was caused related to this article.
+
+ This article belongs to Tsujikawa's authorship.
+
+ Distribution of this article is free, as long as the contents of this archive is not altered.
+However, exchange of money other than necessary fee required for distribution purpose is strictly forbidden.
+
+ Re-updating is basically appreciated. In that time, give me prior notice.
+* Afterword
+
+I think it was fairly hard. How was it?
+You, who say this is an easy job, try a MEGA-SCSI next time. : 
+
+ I had few successful reports of Ese-SCC disks, so I am eager of the report who made these.
+
+
+* Where to contact
+
+	NATSUME-NET	NAT26712
+	FALCON-NET	FALC0385
+	MARIO-NET	Tsuji
+	NIFTY-Serve	BXC04611				Tsujikawa
+        E-mail         bxc04611@niftyserve.or.jp
+			--- end of 'ESCC-MK .TXT' ---
+

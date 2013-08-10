@@ -1,0 +1,1081 @@
+
+
+
+
+
+
+
+
+
+
+
+
+                            Ü   Ü   Ü   Ü  ÜÜÜ  Ü
+                            Ü Üß ßÜ ÛßÜ Û Û   ß Û
+                            Û ÛÜÜÜÛ Û  ßÛ  ßßßÜ Û
+                            Û Û   Û Û   Û ßÜÜÜß Û
+                          ßß
+
+
+
+                            een TSR voor MemMan 2
+                     door Jan van der Meer en Ries Vriend
+                     Copyright (C) 1991 MSX Software Team
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      Inhoudsopgave
+
+      Inleiding . . . . . . . . . . . . . . . . . . . . . . . . .     2
+
+      Scherm stuurcodes . . . . . . . . . . . . . . . . . . . . .     3
+           Control-codes  . . . . . . . . . . . . . . . . . . . .     4
+           Overzicht control-codes  . . . . . . . . . . . . . . .     4
+
+      VT-52 codes . . . . . . . . . . . . . . . . . . . . . . . .     5
+
+      ANSI-codes  . . . . . . . . . . . . . . . . . . . . . . . .     6
+
+      jANSI-codes . . . . . . . . . . . . . . . . . . . . . . . .    10
+
+      TSR-Call routine  . . . . . . . . . . . . . . . . . . . . .    15
+
+      Index . . . . . . . . . . . . . . . . . . . . . . . . . . .    17
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                         Pagina 1
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      Inleiding
+
+      jANSI is  een TSR-programma  voor MSX2  computers. Het  maakt het 
+      mogelijk  om  scherm  stuurcodes  volgens  de  ANSI-standaard  te 
+      verwerken.  Deze door  het American  National Standards Institute 
+      vastgelegde  standaard  wordt  veel  toegepast op  IBM compatible 
+      computers en in vele Bulletin Board Systems, ofwel BBS'en.
+
+      Het is  dan ook  waarschijnlijk dat  er op korte termijn allerlei 
+      toepassingsprogramma's  geschreven worden,  die gebruik maken van 
+      de mogelijkheden van de jANSI TSR. Hierbij kan gedacht worden aan 
+      communicatieprogramma's  en   editors  om  ANSI-schermen  mee  te 
+      ontwerpen.  Maar ook  bestaande programma's die geori‰nteerd zijn 
+      op het  standaard tekstscherm,  kunnen vaak  door enkele  simpele 
+      toevoegingen  gebruik maken van de speciale ANSI-tekstmogelijkheú 
+      den zoals  kleurgebruik en speciale effecten zoals knipperende en 
+      onderstreepte tekst.
+
+      De  ANSI-standaard gaat uit van een tekstscherm van 80 tekens bij 
+      25 regels.  De tekst kan weergegeven worden in acht verschillende 
+      kleuren, die zowel gewoon als extra helder = high lighted = weerú 
+      gegeven kunnen worden. Verder zijn er onder andere codes beschikú 
+      baar om tekst te laten knipperen of te onderstrepen. 
+
+      Wanneer  jANSI geactiveerd wordt, wordt de video-processor in een 
+      grafische  schermmode   geschakeld.  De  tekstmode  van  de  MSX2 
+      video-processor  is  namelijk  niet  in  staat  om  aan  de  ANSI 
+      specificaties  te voldoen.  Het grafische  SCREEN 7  biedt echter 
+      meer dan genoeg mogelijkheden.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                         Pagina 2
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      Scherm stuurcodes
+
+      De  jANSI  schermmode  is  volledig  compatible  met  het tachtig 
+      kolommen  tellende MSX2  tekstscherm, voor  wat betreft de bestuú 
+      ringskarakters.  Dit  houdt in  dat alle  control-codes en  VT-52 
+      stuurcodes ondersteund worden.
+
+      Karakters en  stuurcodes kunnen naar het scherm worden geschreven 
+      middels   de  standaard  MSX-BASIC  statements  zoals  PRINT,  de 
+      schermfuncties van de MSX-DOS, de BIOS routine CHPUT of de snelle 
+      TSR-Call functie 'DmpStr'.
+
+      De  stuurcodes worden  in deze  handleiding als volgt omschreven. 
+      De  code  'Esc'  of  escape,  dient  gelezen te  worden als  "het 
+      karakter met  ASCII nummer 27". Na het escape-karakter volgen ‚‚n 
+      of  meerdere karakters  die de  functie van het commando bepalen. 
+      Zo'n code wordt een 'escape-reeks' of 'escape sequence' genoemd.
+
+      De  linkerbovenhoek  van  het  scherm  wordt  aangeduid door  het 
+      co”rdinaat 1,1 en de rechteronderhoek door 80,25.
+
+      In  escape-reeksen  wordt  onderscheid  gemaakt  tussen  hoofd en 
+      kleine  letters.  Hier  en  daar  zijn  spaties toegevoegd  om de 
+      leesbaarheid te  verhogen, wees  erop attent  dat spaties niet in 
+      een escape-reeks mogen voorkomen.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                         Pagina 3
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      Control-codes
+
+      Onder  'control-codes' worden  de karaktercodes verstaan, die een 
+      schermcommando  voorstellen  en  dus  niet als  een teken  op het 
+      scherm weergegeven  kunnen worden. In de bijgaande tabel staat de 
+      functie van de door jANSI ondersteunde control-codes weergegeven.
+
+      Indien de  MSX-karakterset actief  is, zullen  karakters met  een 
+      ASCII-waarde  vanaf 0  tot en met 31 genegeerd worden, tenzij het 
+      een control-code  betreft. In  de IBM-karakterset  worden de door 
+      de  control-codes  ongebruikte  ASCII-waarden  gebruikt voor  het 
+      weergeven van grafische symbolen
+
+      Overzicht control-codes
+
+      Nr  Naam  Functie
+      ==================================================================
+      0   NUL   Wordt genegeerd.
+      1   SOH   MSX   karakterset:  Voorloopteken   van  een  grafische 
+                karaktercode.  Het   grafische  vervolgteken  moet  een 
+                ASCII-waarde hebben tussen 64 en 96.
+      7   BEL   Laat een pieptoontje horen.
+      8   BS    Verplaatst de  cursor ‚‚n positie naar links. Indien de 
+                cursor  zich aan  het begin van de regel bevindt, wordt 
+                hij  naar  het einde  van de  bovenliggende regel  verú 
+                plaatst.
+      9   HT    Verplaatst  de  cursor  naar  de  volgende  horizontale 
+                tab-stop.
+      10  LF    Verplaatst  de  cursor ‚‚n  regel omlaag.  De verticale 
+                positie van  de cursor  blijft ongewijzigd.  Het scherm 
+                wordt  omhoog gescrolled  indien de  cursor zich  op de 
+                onderste regel bevindt.
+      11  VT    Verplaatst de cursor naar positie 1,1.
+      12  FF    Wist het  scherm en  verplaatst de  cursor naar positie 
+                1,1.
+      13  CR    Verplaatst  de cursor  naar positie  ‚‚n van de huidige 
+                regel.
+      27  ESC   Voorloopteken  voor  een reeks  stuurcodes. Dit  kunnen 
+                ANSI, VT52 of jANSI codes zijn.
+      28  FS    Verplaatst  de  cursor  ‚‚n  positie naar  rechts. Gaat 
+                eventueel verder  aan het  begin van de volgende regel, 
+                stopt in de rechter onderhoek van het scherm.
+      29  GS    Verplaatst  de  cursor  ‚‚n  positie  naar links.  Gaat 
+                eventueel  verder  aan  het eind  van de  vorige regel, 
+                stopt in de linker bovenhoek van het scherm.
+      30  RS    Verplaatst  de  cursor  ‚‚n regel  omhoog. Stopt  op de 
+                bovenste regel.
+      31  US    Verplaatst  de  cursor  ‚‚n regel  omlaag. Stopt  op de 
+                onderste regel.
+      127 DEL   Wist  het karakter  links van  de cursor.  Verplaats de 
+                cursor ‚‚n positie naar links.
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                         Pagina 4
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      VT-52 codes
+
+      De  VT-52 schermstuurcodes  vormen een onderdeel van de MSX-stanú 
+      daard. jANSI  herkent zowel  ANSI als VT-52 codes. De nu volgende 
+      tabel toont een overzicht van de functie van alle VT-52 codes.
+
+      Code      Functie
+      ==================================================================
+      Esc A     Verplaatst  de cursor  ‚‚n regel  omhoog. Stopt  bij de 
+                bovenste regel.
+
+      Esc B     Verplaatst de  cursor ‚‚n  regel omlaag.  Stopt bij  de 
+                onderste regel.
+
+      Esc C     Cursor rechts, stopt op het einde van de regel.
+
+      Esc D     Cursor links, stopt op het einde van de regel.
+
+      Esc E     Clear  screen. Het  scherm wordt gevuld met spaties. De 
+                cursor wordt verplaatst naar positie 1,1.
+
+      Esc H     Verplaatst de cursor naar positie 1,1.
+
+      Esc J     Wist het  scherm vanaf  de cursor, verplaatst de cursor 
+                niet.
+
+      Esc j     Clear  screen. Het  scherm wordt gevuld met spaties. De 
+                cursor wordt verplaatst naar positie 1,1.
+
+      Esc K     Wist de  regel vanaf  de cursor,  verplaatst de  cursor 
+                niet.
+
+      Esc L     Voegt  een lege  regel in boven de regel waar de cursor 
+                zich  bevindt.  de onderliggende  regels worden  omlaag 
+                gescrolled. De  cursor wordt  verplaatst naar het begin 
+                van de nieuwe lege regel.
+
+      Esc l     Wist de gehele regel, verplaatst de cursor niet.
+
+      Esc M     Verwijdert  de gehele  regel, scrolled de onderliggende 
+                regels onhoog.  Verplaatst de cursor naar het begin van 
+                de volgende regel.
+
+      Esc x 4   Schakelt een blokvormige cursor in.
+
+      Esc x 5   Maakt de cursor onzichtbaar.
+
+      Esc Y n m Verplaatst  de cursor  naar positie  naar regel  <n> en 
+                kolom   <m>.  De  linkerbovenhoek  van  het  scherm  is 
+                n=m=20h  (ASCII space).
+
+      Esc y 4   Schakelt de lijnvormige cursor in.
+
+      Esc y 5   Maakt de cursor zichtbaar.
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                         Pagina 5
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      ANSI-codes
+
+      ANSI  schermstuurcodes beginnen  altijd met  de karakters  escape 
+      (ASCII 27)  en de  rechte haak openen ("[", ASCII 91). Vervolgens 
+      volgt  eventueel een reeks getallen, gescheiden door puntcomma's. 
+      Deze getallen  zijn parameters  van de betreffende ANSI-functies. 
+      De ANSI-cijfers '0'-'9' worden gebruikt om de getallen te vormen. 
+      Een  ANSI-code eindigt  bij het  eerst volgende karakter dat geen 
+      ASCII-cijfer of  puntcomma is.  Dit afsluitende  karakter bepaalt 
+      welk ANSI-commando uitgevoerd moet worden.
+
+      Op  sommige details wijkt jANSI af van de ANSI standaard. Zo zijn 
+      er slechts 15 in plaats van 16 tekstkleuren beschikbaar: de kleur 
+      'wit'  is   namelijk  gelijk  aan  'helder  wit'.  Het  zestiende 
+      kleurnummer  wordt gebruikt  om knipperende  tekst weer te geven. 
+      Alle knipperende tekst op het scherm heeft dus dezelfde kleur.
+
+      jANSI  ondersteunt   alle  in   de  ANSI-standaard  gedefinieerde 
+      commando's,   alsmede  enkele   functies  uit  de  semi-standaard 
+      'PingAnsi'. Sommige  'ANSI device  drivers' van  MS-DOS computers 
+      ondersteunen  deze extra  commando's niet. Zie het commentaar bij 
+      de betreffende functies in het nu volgende overzicht.
+
+      Overzicht van alle jANSI codes
+
+      Naam:     Cursor position (CUP)
+      String:   Esc[<regel>;<kolom>H
+      Voorbeeld:PRINT CHR$(27);"[25;70H";
+      Functie:  Plaatst de cursor op de opgegeven scherm co”rdinaten.
+                <regel> = De regel  van de cursor. Indien <regel> wordt 
+                          weggelaten, wordt de waarde '1' aangenomen.
+                <kolom> = De  horizontale positie van de cursor. Indien 
+                          <kolom>  wordt  weggelaten,  wordt  de waarde 
+                          '1' genomen.
+ 
+      Naam:     Cursor position (HVP)
+      String:   Esc[<regel>;<kolom>f
+      Voorbeeld:PRINT CHR$(27);"[;10f";
+      Functie:  Zelfde als  CUP, het  wordt aangeraden om alleen de CUP 
+                functie te gebruiken.
+
+      Naam:     Cursor position
+      String:   Esc[<regel>;<kolom>R
+      Voorbeeld:PRINT CHR$(27);"[;2R";
+      Functie:  Zelfde als  CUP, het  wordt aangeraden om alleen de CUP 
+                functie te gebruiken.
+
+
+
+
+
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                         Pagina 6
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      Naam:     Cursor up (CUU)
+      String:   Esc[<aantal>A
+      Voorbeeld:PRINT CHR$(27);"[2A";
+      Functie:  Verplaatst   de  cursor   omhoog.  Stopt  bovenaan  het 
+                scherm.
+                <aantal>= Aantal  regels. Default  voor <aantal>  is de 
+                          waarde '1'.
+ 
+
+      Naam:     Cursor down (CUD)
+      String:   Esc[<aantal>B
+      Voorbeeld:PRINT CHR$(27);"[B";
+      Functie:  Verplaatst   de  cursor   omlaag.  Stopt  onderaan  het 
+                scherm.
+                <aantal>= Aantal  regels. Indien  <aantal> wordt weggeú 
+                          laten, wordt de waarde '1' genomen.
+
+
+      Naam:     Cursor forward (CUF)
+      String:   Esc[<aantal>C
+      Voorbeeld:PRINT CHR$(27);"[10C";
+      Functie:  Verplaatst  de  cursor  naar rechts.  Stopt wanneer  de 
+                rechter zijkant van het scherm bereikt is.
+                <aantal>=  Aantal posities. Default voor <aantal> is de 
+                           waarde '1'.
+
+
+      Naam:     Cursor backward (CUB)
+      String:   Esc[<aantal>D
+      Voorbeeld:PRINT CHR$(27);"[3D";
+      Functie:  Verplaatst  de  cursor  naar links.  Stopt wanneer  de 
+                linker zijde van het scherm bereikt is.
+                <aantal>= Aantal   posities.   Indien   <aantal>  wordt 
+                          weggelaten, wordt de waarde '1' aangenomen.
+
+
+      Naam:     Save cursor position (SCP)
+      String:   Esc[s
+      Voorbeeld:PRINT CHR$(27);"[s";
+      Functie:  Bewaart  de huidige  cursorpositie, zodat  deze door de 
+                RCP functie weer hersteld kan worden.
+
+
+      Naam:     Restore cursor position (RCP)
+      String:   Esc[u
+      Voorbeeld:PRINT CHR$(27);"[u";
+      Functie:  Herstelt de  cursorpositie, die door de laatste aanroep 
+                van SCP is opgeslagen.
+
+
+
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                         Pagina 7
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      Naam:     Erase in display (ED)
+      String:   Esc[<mode>J
+      Voorbeeld:PRINT CHR$(27);"[2J";
+      Functie:  Wist (een gedeelte van) het scherm.
+                <mode> =  0:   Wist vanaf  de linker  bovenhoek tot aan 
+                               de  cursorpositie. Laat de cursorpositie 
+                               onveranderd.
+                          1:   Wist  vanaf  de  cursor  tot  en  met de 
+                               rechter onderhoek.  Laat de  cursorposiú 
+                               tie onveranderd.
+                          2:   Wist   het  gehele  scherm.  Plaatst  de 
+                               cursor in de linker bovenhoek.
+
+                De  parameter   <mode>  mag   niet  worden  weggelaten. 
+                Sommige ANSI-drivers ondersteunen alleen mode 2.
+
+
+      Naam:     Erase in line (EL)
+      String:   Esc[<mode>K
+      Voorbeeld:PRINT CHR$(27);"[K";
+      Functie:  Wist  (een  gedeelte  van)  de  huidige regel.  Laat de 
+                cursor op de huidige positie staan.
+                <mode> =  0:   Wist vanaf  de cursorpositie  tot en met 
+                               het einde van de regel.
+                          1:   Wist  vanaf het  begin van  de regel tot 
+                               aan de cursorpositie. 
+                               cursor in de linker bovenhoek.
+                          2:   Wist de gehele regel.
+
+                Indien  de parameter  <mode> wort  weggelaten, wordt de 
+                waarde '0'  aangenomen. Sommige  ANSI-drivers herkennen 
+                alleen mode 0.
+
+
+      Naam:     Insert line (IL)
+      String:   Esc[<aantal>L
+      Voorbeeld:PRINT CHR$(27);"[3L";
+      Functie:  Voegt  lege regels  in boven  de regel  waar de  cursor 
+                zich  bevindt.  De onderliggende  regels worden  omlaag 
+                gescrolled. De  cursor wordt  verplaatst naar het begin 
+                van de bovenste lege regel.
+                <aantal> = Aantal regels dat ingevoegd moet worden.
+
+                Indien  <aantal> wordt  weggelaten, wordt de waarde '1' 
+                aangenomen.
+
+
+
+
+
+
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                         Pagina 8
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      Naam:     Delete line (DL)
+      String:   Esc[<aantal>M
+      Voorbeeld:PRINT CHR$(27);"[M";
+      Functie:  Verwijdert  gehele regels, te beginnen bij de cursorreú 
+                gel. De  onderliggende regels worden omhoog gescrolled. 
+                Verplaatst  de cursor  naar het  begin van  de volgende 
+                regel.
+                <aantal> = Aantal regels dat verwijdert moet worden.
+
+                Indien  <aantal> wordt  weggelaten, wordt de waarde '1' 
+                genomen.
+
+
+      Naam:     Set graphics rendition (SGR)
+      String:   Esc[<code>;<code>;...<code>m
+      Voorbeeld:PRINT CHR$(27);"[0;1;32;42m";
+      Functie:  Stelt de  huidige voor- en achtergrondkleuren in, of de 
+                attributen.  Wanneer meerdere parameters worden opgegeú 
+                ven, worden ze ‚‚n voor ‚‚n uitgevoerd.
+                <code> =  0:   Zet  alle attributen uit, stelt de voorú 
+                               grondkleur in  op 7  (wit) en de achterú 
+                               grond op kleur 0 (zwart).
+                          1:   High  lighted  aan. Maakt  de voorgrondú 
+                               kleur extra helder.
+                          4:   Onderstrepen aan.
+                          5:   Knipperen aan.
+                          7:   Inverse Video  aan. Wisselt  de voor- en 
+                               achtergrondkleuren om.
+                          8:   Onzichtbaar.   Maakt  de  voorgrondkleur 
+                               gelijk aan de achtergrondkleur.
+                        30-37: Stelt  de  voorgrondkleur in  volgens de 
+                               onderstaande tabel.
+                        40-47: Stelt de  achtergrondkleur in volgens de 
+                               volgende tabel.
+
+                Code  Kleur
+                ================
+                30/40 Zwart
+                31/41 Rood
+                32/42 Groen
+                33/43 Bruin/geel
+                34/44 Blauw
+                35/45 Magenta
+                36/46 Cyaan
+                37/47 Wit
+
+                Ingeschakelde  attributen  blijven  net zo  lang actief 
+                totdat de code 0 is gegeven.
+                Wanneer  er geen <code> wordt opgegeven, wordt 'code 0' 
+                uitgevoerd.
+
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                         Pagina 9
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      jANSI-codes
+
+      jANSI  bevat  diverse  extra commando's,  welke niet  door andere 
+      ANSI-drivers herkend worden. Ze kunnen worden gebruikt om 'vaste' 
+      instellingen  te  wijzigen,  zoals paletkleuren  en de  gebruikte 
+      karakterset.  Deze commando's  kunnen worden  gegeven vanuit  een 
+      toepassingsprogramma dat speciaal voor jANSI is geschreven, zoals 
+      een communicatieprogramma.
+
+      Het is  niet verstandig  om jANSI-codes  in gewone tekstbestanden 
+      te plaatsen, bijvoorbeeld in een menu van een bulletin-board. Ten 
+      eerste  is dan niet meer zeker wat het effect zal zijn wanneer de 
+      tekst wordt  afgedrukt door  andere ANSI-drivers  dan jANSI.  Ten 
+      tweede  zal de standaardinstelling van jANSI na het weergeven van 
+      zo'n tekst  gewijzigd zijn, wat door de gebruiker meestal niet op 
+      prijs gesteld zal worden.
+
+
+      De structuur van de jANSI-codes is als volgt:
+
+      Naam:     Init
+      Nummer:   0
+      String:   Esc[0. of Esc[.
+      Voorbeeld:PRINT CHR$(27);"[.";
+      Functie:  Initialiseert  jANSI. Dit commando moet zijn uitgevoerd 
+                voordat de  overige ANSI en jANSI-codes herkend worden. 
+                De  grafische schermmode SCREEN 7 wordt ingeschakeld en 
+                het scherm  wordt schoongemaakt.  De standaard   tekstú 
+                kleur  is wit  op een zwarte achtergrond. De IBM-karakú 
+                terset  wordt  ingeschakeld,  en  de  optie  om na  een 
+                Carriage  Retrun   automatisch  een  Line  Feed  af  te 
+                drukken wordt uitgeschakeld.
+
+                De  jANSI-mode  wordt  weer  verlaten  door  de  'Quit' 
+                (1)  functie.  Wanneer  SCREEN  7 wordt  verlaten  door 
+                een toepassingsprogramma, zal de jANSI-mode automatisch 
+                worden  uitgeschakeld. Dit is bijvoorbeeld het geval in 
+                de  BASIC-werkomgeving.  Iedere keer  wanneer een  proú 
+                gramma  wordt  verlaten,  wordt  door de  BASIC-ROM het 
+                standaard tekstscherm  ingeschakeld. Hierdoor  wordt de 
+                jANSI-mode uitgeschakeld.
+
+
+      Naam:     Quit
+      Nummer:   1
+      String:   Esc[1.
+      Voorbeeld:PRINT CHR$(27);"[1.";
+      Functie:  Verlaat   de  jANSI-mode.  De  standaard  MSX-tekstmode 
+                wordt  weer  ingeschakeld.  Gebruik de functie Init (0) 
+                om jANSI weer actief te maken.
+
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                        Pagina 10
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      Naam:     MSXChr
+      Nummer:   2
+      String:   Esc[2.
+      Voorbeeld:PRINT CHR$(27);"[2.";
+      Functie:  Activeert  de MSX  karakterset. Ook grafische karakters 
+                die vooraf  worden gegaan door het header-karakters SOH 
+                kunnen worden afgedrukt.
+
+ 
+      Naam:     IBMChr
+      Nummer:   3
+      String:   Esc[3.
+      Voorbeeld:PRINT CHR$(27);"[3.";
+      Functie:  Activeert  de IBM  karakterset. Grafische karakters met 
+                een  ASCII-code  tussen  0  en  16  kunnen rechtstreeks 
+                worden  afgedrukt,  tenzij  het  een stuurcode  betreft 
+                zoals CR, LF, en dergelijke.
+
+
+
+      Naam:     SetLF
+      Nummer:   4
+      String:   Esc[4;<mode>.
+      Voorbeeld:PRINT CHR$(27);"[4;1.";
+      Functie:  <mode> =  0:   Voer  geen regelopvoer  (Line Feed)  uit 
+                               nadat  een  CR-karakter (ASCII-code  13) 
+                               is  afgedrukt. Dit  is de  standaard inú 
+                               stelling van jANSI.
+                          1:   Voer  wel  regelopvoer  uit nadat het CR 
+                               is afgedrukt.
+
+                Indien  <mode>  wordt weggelaten,  wordt de  waarde '0' 
+                aangenomen.
+
+
+      Naam:     SavScr
+      Nummer:   5
+      String:   Esc[5.
+      Voorbeeld:PRINT CHR$(27);"[5.";
+      Functie:  Kopi‰ert het  huidige scherm  naar een tweede pagina in 
+                het  Video-RAM.  Ook  de  huidige  tekstkleuren  en  de 
+                arttributen  die  met  "Esc[m"  zijn  ingesteld, worden 
+                opgeslagen.
+
+
+      Naam:     GetScr
+      Nummer:   6
+      String:   Esc[6.
+      Voorbeeld:PRINT CHR$(27);"[6.";
+      Functie:  Haalt een schermpagina op, die door het SavScr  commanú 
+                do is opgeslagen.
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                        Pagina 11
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      Naam:     LinMov
+      Nummer:   7
+      String:   Esc[7;<bron>;<bestemming>.
+      Voorbeeld:PRINT CHR$(27);"[7;1;2.";
+      Functie:  Kopi‰ert een schermregel.
+                <bron> = Nummer van de te kopi‰ren regel
+                <bestemming> = Nummer van de bestemmingsregel
+
+
+      Naam:     jBeep
+      Nummer:   8
+      String:   Esc[8;<tijd>.
+      Voorbeeld:PRINT CHR$(27);"[8;5.";
+      Functie:  Geeft een geluidssignaal.
+                <tijd>  =  Duur  van het  signaal in  eenheden van  ‚‚n 
+                           vijfde seconden.
+
+                Indien  <tijd>  wordt weggelaten,  wordt de  waarde '1' 
+                genomen.
+
+
+      Naam:     StBlnk
+      Nummer:   9
+      String:   Esc[9;<voorgrondtijd>;<achtergrondtijd>.
+      Voorbeeld:PRINT CHR$(27);"[9;20;10.";
+      Functie:  Instellen van  de knippersnelheid. Tekst kan knipperend 
+                worden   gemaakt  door  middel  van  het  ANSI-commando 
+                "Esc[m".
+                <voorgrondtijd>   = Aantal  eenheden  van ‚‚n  vijftigú 
+                                    ste  seconde dat  de tekst in voorú 
+                                    grondkleur getoond wordt.
+                <achtergrondtijd> = Aantal  eenheden  van ‚‚n  vijftigú 
+                                    ste seconde  dat de  tekst in  achú 
+                                    tergrondkleur getoond wordt.
+
+                De  maximumwaarde voor  <voorgrondtijd> en achtergrondú 
+                tijd> is 255.
+
+
+      Naam:     ChgPlt
+      Nummer:   10
+      String:   Esc[10;<kleur>;<rood>;<groen>;<blauw>.
+      Voorbeeld:PRINT CHR$(27);"[10;1;6;2;1.";
+      Functie:  Wijzigt van het palet waaruit <kleur> is opgebouwd.
+                <kleur> = Nmmer  tusen  0 en  14 van  de in  te stellen 
+                          schermkleur. De  kleurnmmers 0-7 zijn de acht 
+                          standaard   ANSI-kleuren,  de   nummers  8-14 
+                          stellen de  zogenaamde 'high lighted' kleuren 
+                          voor.
+                <rood>  = Intensiteit van de paletkleur rood (0-7) 
+                <groen> = Intensiteit van de paletkleur groen (0-7)
+                <blauw> = Intensiteit van de paletkleur blauw (0-7)
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                        Pagina 12
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+                Aan  de kleurnummers  wordt na de installatie van jANSI 
+                de volgende paletinstelling toegekend.
+
+                Nr   Kleur          R G B
+                =========================
+                0:   zwart          0 0 0
+                1:   rood           5 0 0
+                2:   groen          1 4 1
+                3:   bruin          3 2 0
+                4:   blauw          1 2 5
+                5:   magenta        5 1 4
+                6:   cyaan          1 4 5
+                7:   wit            7 7 7
+                8:   grijs          4 4 4
+                9:   helder rood    7 2 2
+                10:  licht groen    3 7 3
+                11:  licht geel     6 6 0
+                12:  licht blauw    2 3 7
+                13:  helder magenta 7 2 5
+                14:  helder cyaan   3 7 7
+
+
+      Naam:     SetBdr
+      Nummer:   11
+      String:   Esc[11;<kleur>.
+      Voorbeeld:PRINT CHR$(27);"[11;4.";
+      Functie:  Stelt de borderkleur in.
+                <kleur> = Nummer  van 0-14.  zie voor  de betekenis van 
+                          de  kleurnummers  de  tabel  bij  functie  10 
+                          (ChgPlt).
+
+                Indien  <kler>  wordt weggelaten,  wordt de  waarde '0' 
+                genomen.
+
+
+      Naam:     Pause
+      Nummer:   12
+      String:   Esc[12;<tijd>.
+      Voorbeeld:PRINT CHR$(27);"[12;5.";
+      Functie:  Pauseert de schermuitvoer.
+                <tijd>  =   Aantal  eenheden  van  ‚‚n  vijfde van  een 
+                            seconde dat er gewacht moet worden.
+
+                Indien  <tijd>  wordt weggelaten,  wordt de  waarde '1' 
+                genomen.
+
+
+
+
+
+
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                        Pagina 13
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      Naam:     StScrl
+      Nummer:   13
+      String:   Esc[13;<mode>.
+      Voorbeeld:PRINT CHR$(27);"[13;1.";
+      Functie:  Stelt  de  methode  in  waarop  de schermregels  omhoog 
+                worden verplaatst, ofwel gescrolled.
+                <mode> =  0:   Hard  scroll. Het  beeld schuift  in ‚‚n 
+                               stap een regel omhoog.
+                          1:   Smooth scroll.  Het beeld schuift beeldú 
+                               lijn  voor beeldlijn  omhoog. De  smooth 
+                               scroll  wordt  via  de  interruptroutine 
+                               afgehandeld, tijdens het scrollen kan de 
+                               computer gewoon doorwerken.
+
+                Indien  <mode>  wordt weggelaten,  wordt de  waarde '0' 
+                genomen.
+
+
+      Naam:     Csrcol
+      Nummer:   14
+      String:   Esc[14;<kleur>.
+      Voorbeeld:PRINT CHR$(27);"[14;13.";
+      Functie:  Wijzigt de kleur van de cursor.
+                <kleur> = Kleurnummer  tussen  0  en  14 van  de in  te 
+                          stellen schermkleur.  Zie voor  een overzicht 
+                          van  de beschikbare kleurnummers de tabel bij 
+                          de functie  ChgPlt (10).  Om te voorkomen dat 
+                          de  cursor weg  zou vallen  tegen de  achterú 
+                          grondkleur, is  het verstandig  om ‚‚n van de 
+                          high-lighted kleuren (8-14) te kiezen.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                        Pagina 14
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      TSR-Call routine
+
+      De  Tsr 'jANSI'  kan vanit  machinetaal worden aangeroepen via de 
+      MemMan-routine 'TSR-Call'  - met  functienummer 63.  Onder MemMan 
+      2.3  kan ook  gebruik worden  gemaakt van  de functie  'XTsrCall' 
+      (61).
+
+      Om een  TsrCall te  kunnen uitvoeren,  moet eerst  de TSR ID-code 
+      worden opgevraagd middels de functie 62 'GetTsrID'. Hierbij dient 
+      de  identificatienaam van  jANSI te  worden opgegeven. De ID-naam 
+      van jANSI is: "MST jANSI".
+
+      De interactieroutine  van jANSI  versie 1.0  bevat vier functies. 
+      De  functiecode  moet  in het  'A'-register worden  geplaatst. De 
+      werking van deze functies is als volgt.
+
+
+      Naam:     GetVer
+      Nummer:   0
+      Functie:  Bepaal jANSI versienmmer
+      In:       Niets
+      Uit:      H = Versienummer
+                L = Update nummer
+                B = Debug nummer
+      Opm:      Het  versienmmer  heeft  volgende  formaat:  H.LB. Bijú 
+                voorbeeld,  voor  jANSI  versie 4.51  geldt dat  'H' de 
+                waarde  4 heeft,  registers 'L'  de waarde  5 en 'B' de 
+                waarde 1.
+
+
+      Naam:     GetSta
+      Nummer:   1
+      Functie:  Bepaal de status van jANSI
+      In:       Niets
+      Uit:      HL = Statusvlaggen.
+      Opm:      De betekenis van de bits in register HL is als volgt:
+
+                Bit  Functie
+                =======================================
+                0    1 = jANSI is ge‹nitialiseerd
+                1-15 Gereserveerd, moeten altijd 0 zijn
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                        Pagina 15
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      Naam:     IniDmp
+      Nummer:   2
+      Functie:  Initialiseert de 'DmpStr' functie
+      In:       HL = Statusvlaggen voor 'DmpStr'.
+      Uit:      Niets
+      Opm:      De betekenis van de bits in register HL is als volgt:
+
+                Bit  Functie
+                ===========================================
+                0    1 = Keer terug bij ieder vol scherm
+                1    1 = Keer terug voor ieder CLS-commando
+                2    1 = Negeer CLS-commando's
+                3    1 = Keer terug bij toesdruk
+                4-15 Gereserveerd, moeten altijd 0 zijn
+
+
+      Naam:     DmpStr
+      Nummer:   3
+      Functie:  Druk een tekststring af
+      In:       Hl = Startadres van de tekst (boven adres &H7FFF)
+                DE = Aantal af te drukken karakters
+      Uit:      A  = Statuscode
+                DE = Aantal nog af te drukken karakters
+                HL = Adres van eerst volgende karakter
+      Opm:      Deze  functie   kan  worden  gebruikt  om  tekstblokken 
+                sneller  af te drukken, dan mogelijk is door middel van 
+                de standaard BIOS routines.
+
+                Het  afdrukken  kan  door  de  'DmpStr'  routine  onder 
+                bepaalde  voorwaarden worden afgebroken. Deze voorwaarú 
+                den kunnen  middels de functie 'IniDmp' gesteld worden. 
+                De  conditie  waarop  het  afdrukken  werd onderbroken, 
+                wordt  aangegeven door  de statuscode  in register 'A'. 
+                De betekenis hiervan is als volgt:
+
+                Code Betekenis
+                =====================================================
+                0    De tekst is helemaal afgedrukt
+                1    Eerst volgende karakter is een CLS-commando
+                2    Scherm is vol, er zijn 25 regels afgedrukt
+                3    Er  is  een  toets  ingedrukt. Deze  toetscode kan 
+                     middels de BIOS-routine CHGET opgehaald worden 
+
+
+
+
+
+
+
+
+
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                        Pagina 16
+                          jANSI - TSR voor MemMan 2
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+      Alle VT-52 codes  . . . . . . . . . . . . . . . . . . . . . .   5
+      ANSI-codes  . . . . . . . . . . . . . . . . . . . . . . . . .   6
+      ChgPlt  . . . . . . . . . . . . . . . . . . . . . . . . . . .  12
+      Control-codes . . . . . . . . . . . . . . . . . . . . . . . .   4
+      CsrCol  . . . . . . . . . . . . . . . . . . . . . . . . . . .  14
+      Cursor backward (CUB) . . . . . . . . . . . . . . . . . . . .   7
+      Cursor down (CUD) . . . . . . . . . . . . . . . . . . . . . .   7
+      Cursor forward (CUF)  . . . . . . . . . . . . . . . . . . . .   7
+      Cursor position . . . . . . . . . . . . . . . . . . . . . . .   6
+      Cursor position (CUP) . . . . . . . . . . . . . . . . . . . .   6
+      Cursor position (HVP) . . . . . . . . . . . . . . . . . . . .   6
+      Cursor up (CUU) . . . . . . . . . . . . . . . . . . . . . . .   7
+      Delete lines (DL) . . . . . . . . . . . . . . . . . . . . . .   9
+      DmpStr  . . . . . . . . . . . . . . . . . . . . . . . . . . .  16
+      Erase in display (ED) . . . . . . . . . . . . . . . . . . . .   8
+      Erase in line (EL)  . . . . . . . . . . . . . . . . . . . . .   8
+      GetScr  . . . . . . . . . . . . . . . . . . . . . . . . . . .  11
+      GetSta  . . . . . . . . . . . . . . . . . . . . . . . . . . .  15
+      GetVer  . . . . . . . . . . . . . . . . . . . . . . . . . . .  15
+      IBMChr  . . . . . . . . . . . . . . . . . . . . . . . . . . .  11
+      IniDmp  . . . . . . . . . . . . . . . . . . . . . . . . . . .  16
+      Init  . . . . . . . . . . . . . . . . . . . . . . . . . . . .  10
+      Insert lines (IL) . . . . . . . . . . . . . . . . . . . . . .   8
+      jANSI-codes . . . . . . . . . . . . . . . . . . . . . . . . .  10
+      JBeep . . . . . . . . . . . . . . . . . . . . . . . . . . . .  12
+      LinMov  . . . . . . . . . . . . . . . . . . . . . . . . . . .  12
+      MSXChr  . . . . . . . . . . . . . . . . . . . . . . . . . . .  11
+      Overzicht control-codes . . . . . . . . . . . . . . . . . . .   4
+      Overzicht van alle jANSI codes  . . . . . . . . . . . . . . .   6
+      Pause . . . . . . . . . . . . . . . . . . . . . . . . . . . .  13
+      Quit  . . . . . . . . . . . . . . . . . . . . . . . . . . . .  10
+      Restore cursor position (RCP) . . . . . . . . . . . . . . . .   7
+      Save cursor position (SCP)  . . . . . . . . . . . . . . . . .   7
+      SavScr  . . . . . . . . . . . . . . . . . . . . . . . . . . .  11
+      Set graphics rendition (SGR)  . . . . . . . . . . . . . . . .   9
+      SetBdr  . . . . . . . . . . . . . . . . . . . . . . . . . . .  13
+      SetLF . . . . . . . . . . . . . . . . . . . . . . . . . . . .  11
+      StBlnk  . . . . . . . . . . . . . . . . . . . . . . . . . . .  12
+      StScrl  . . . . . . . . . . . . . . . . . . . . . . . . . . .  14
+      Stuurcodes  . . . . . . . . . . . . . . . . . . . . . . . . .   3
+      TSR-Call routine  . . . . . . . . . . . . . . . . . . . . . .  15
+      VT-52 codes . . . . . . . . . . . . . . . . . . . . . . . . .   5
+
+
+
+
+
+
+
+
+
+
+
+
+
+      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+      Copyright MSX Software Team 1991                        Pagina 17
+

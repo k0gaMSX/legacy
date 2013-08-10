@@ -1,0 +1,87 @@
+(1156)  Fri 19 Jan 96 12:46
+By: Sergi Martinez
+To: Second Foundation
+Re: Re: Tracker SCC
+St:
+------------------------------------------------------------
+@MSGID: 2:343/133.13 53B8D87B
+@REPLY: 2:341/78.7 30fbde46
+@PID: PM 3.21.571 Unreg.
+Hola!
+
+ SF> que s¢lo podiamos oir las voces del PSG. En fin, si nos pones las
+ SF> direcciones revisaremos el c¢digo, aunque nos ir¡a mejor usar alg£n
+
+Bien, te explico un poco como funciona el SCC. Para
+reproducir sonidos a traves del chip SCC no se utilizan OUTs
+(a diferencia del FMPAC) sino que lo que se hace es "pokear"
+en ciertas posiciones de memoria del slot en el que esta el
+cartucho. Es decir, cuando el programa tenga que producir
+sonido pondra en la pagina de ram que va de &H8000 a &hBFFF
+el slot en el que este el cartucho (puede que incluso esa
+pagina este seleccionada todo el tiempo).
+Una vez seleccionado el slot del cartucho tienes que acceder
+al mapper interno de los megaroms para activar la sub-pagina
+"controladora" del SCC. Esto se hace asi (con el slot del
+cartucho activado!!):
+LD A,&H3F
+LD (&H9000),A
+Atencion porque esto es para el SCC, en el SCC+ puede ser
+que haya otro valor en vez del 3F o que incluso no necesite
+esta parte, o sea que en caso de que sea distinto tendras o
+bien que modificarlo o bien que a¤adirlo justo despues de
+haber activado el slot del cartucho.
+Llegados a este punto solo te falta modificar las
+direcciones a las que se accede. Te explico lo que tienen en
+com£n el SCC y el SCC+ y que por tanto NO tienes que
+modificar:
+Direcciones de &H9800 a &H981F : sample para el canal A
+&H9820 a &H983F : sample para el canal B
+&H9840 a &H985F : sample para el canal C
+&H9860 a &h987F : sample para el canal D (en el SCC tambien
+es el sample para el canal E)
+Y aqui viene la diferencia: en el SCC+ el canal E tiene su
+propio sample, que va de &H9880 a &H989F. Al modificar esta
+parte del codigo tendras que decidir si eliminas los accesos
+al sample del canal E (por lo que por el canal E siempre
+escucharas el sample D) o bien redireccionarlo al sample del
+canal D (con lo que nunca sabes que sonara exactamente por
+el D y por el E ;-)
+Ahora te digo los registros que usa el SCC+ para controlar
+distintos aspectos:
+
+&H98A0, &H98A1 = Frecuencia canal A
+&H98A2, &H98A3 = Frecuencia canal B
+&H98A4, &H98A5 = Frecuencia canal C
+&H98A6, &H98A7 = Frecuencia canal D
+&H98A8, &H98A9 = Frecuencia canal E
+&H98AA = Volumen canal A
+&H98AB = Volumen canal B
+&H98AC = Volumen canal C
+&H98AD = Volumen canal D
+&H98AE = Volumen canal E
+&H98AF = Canales ON/OFF (&B000EDCBA , 0=off 1=on)
+
+En el SCC esto es exactamente lo mismo pero en otras
+direcciones, para convertirlo debes cambiar las "A" por "8",
+es decir, en vez de ser direcciones &H98AX seran &H988X. Por
+ejemplo, el volumen del canal A en el SCC+ es la direccion
+&H98AA y en el SCC es la &H988A.
+
+Y ya esta. Es mas facil de lo que parece, creeme ;-) Perdona
+por el rollo, ya me comentaras si consigues algo...
+
+ SF> programa espec¡fico para SCC y MSX1, si es que lo hay.
+
+Pues no tengo ni idea...
+Un saludo!
+
+|-,  ||  _|_,,  sergi@bbs-ce.uab.es    FidoNet: 2:343/133.13
+|__ / |/ -|-    AmigaNet: 39:190/2.13  RedBBS:  757:101/8.13
+
+--- Point Manager 3.21 Unreg.
+ * Origin: * This is Radio KNK...  Emergency news flash! # (Metal Gear) *
+(2:343/133.13)
+.13
+
+@PATH: 343/133 129 346/4 345/801

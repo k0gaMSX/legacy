@@ -1,0 +1,835 @@
+
+BIOS Entry list
+
+Comments:
+
+Following restarts (from RST 0 до RST 28) are reserved for
+BASIC-interpreter. RST 30 is reserved for interslot calls.
+RST 38 handles hardware interrupts.
+
+Name      Function Name
+Function  Function Description
+Entry     Arguments
+Return    Result
+Modifies  Modified Registers
+Notes     Comments (optional)
+
+------------------------------------------------------------
+
+0000
+
+Name            CHKRAM
+F               Check RAM and sets slot for command area.
+E               нет
+R               нет
+M               все
+N               When done,a jump to INIT must be made for
+                further initializator.
+
+
+0008
+
+Name            SYNCHR
+F               Checks if then current character pointed by
+                HL is one desired.If not,generates
+                'Syntax error',otherwise falls into CHRGTB.
+E               HL,character to be checked be placed at the
+                next location to this RST.
+R               HL points to next character,a has the
+                character.
+                Carry flag set if number, Z flag set if end
+                of statesment.
+M               AF,HL.
+
+
+000C
+
+Name            RDSLT
+F               Select the appropriate slot according to the
+                value given through registers, and reads the
+                 contents of memory from the slots.
+E               A:   FxxxSSPP
+                     |   ||||
+                     |   ||++--Primary slot #(0-3)
+                     |   ++----Secondary slots #(0-3)
+                     +---------If secondary slot # specified.
+R               A: Contents of memory.
+M               AF,BC,DE
+N               Interrupts are disabled automatically but
+                are never enabled by this routine.
+
+
+0010
+
+Name            CHRGTB
+F               Gets next character (on token) from BASIC text.
+E               HL
+R               HL points to next characted, A has the
+                character. Carry flag set if number,Z flag
+                set if end of statesment encountered.
+M               AF,HL.
+
+
+0014
+
+Name            WRTSLT
+F               Select the appropriate slot according to the
+                value given through registers, and writes to
+                memory.
+E               A: FxxxSSPP.(see RDSLT).
+                HL: Address of target memory.
+                E: Data to be written.
+R               None.
+M               AF,BC,D
+N               (see RDSLT)
+
+
+0018
+
+Name            OUTDO
+F               Output to the current device.
+E               A,RTFIL,PRTPGL.
+R               None.
+M               None.
+
+
+001C
+
+Name            CALSLT
+F               Performs inter-slot call to specified address.
+E               IY -FxxxSSPP (high) (see RDSLT)
+                IX: Adress to call
+R               None
+M               None
+N               Interrupt are disabled automatically but
+                never enabled to this routine. Argument can
+                never be passed via the alternate registers of
+                Z80 or IX and IY.
+
+
+0020
+
+Name            DCOMPR
+F               Compare HL with DE.
+E               HL,DE.
+R               Flag.
+M               AF.
+
+
+
+0024
+
+Name            ENASLT
+F               Select the appropriate slot according to the
+                value given through registers,and permanently
+                enables the slot
+E               A: FxxxSSPP.
+                HL:Address of target memory.
+R               None.
+M               All.
+N               (see RDSLT)
+
+
+
+0028
+
+Name            GETYPR
+F               Return the type FAC.
+E               FAC.
+R               Flags.
+M               AF.
+
+
+
+0030
+
+Name            CALLF
+F               Performs far_call (i.e. inter-slots call)
+E               None
+R               Flags.
+N               The calling sequence is as follows.
+
+
+                RST 6
+                DB              Destination slot.
+                DW              Destination address.
+
+                (see CALSLT)
+
+
+
+0038
+
+Name            KEYINT
+F               Performs hardware interrupt procedures.
+E               None.
+R               None.
+M               None.
+
+
+
+;-----------------------------------------------------------
+
+The following routined are used for I/O initialization.
+
+;-----------------------------------------------------------
+
+
+
+003B
+
+Name            INITIO
+F               Performed devise initialization.
+E               None
+R               None
+M               All
+
+
+
+003E
+
+Name            INIFNK
+F               Initializes function key strings.
+E               None
+R               None
+M               All
+
+
+;-----------------------------------------------------------
+
+The following routined are used to access the VDP (T19918)
+
+;-----------------------------------------------------------
+
+
+
+0041
+
+Name            DISSCR
+F               Disables screen display.
+E               None
+R               None
+M               AF,BC
+
+
+
+0044
+
+Name            ENASCR
+F               Enables screen display.
+E               None
+R               None
+M               AF,BC
+
+
+
+0047
+
+Name            WRTVDP
+F               Writes to the VDP register.
+E               Register in C,data in B.
+M               AF,BC.
+
+
+
+004A
+
+Name            RDVRM
+F               Reads the VRAM address by [HL].
+E               HL.
+R               A
+M               AF
+
+
+
+004D
+
+Name            WRTVRM
+F               Write to the VRAM address by [HL].
+E               HL,A.
+R               None
+M               AF
+
+
+
+0050
+
+Name            SETRD
+F               Sets up the VDP for read.
+E               HL
+R               None
+M               AF
+
+
+
+0053
+
+Name            SETWRT
+F               Sets up the VDP for write.
+E               HL
+R               None
+M               AF
+
+
+
+0056
+
+Name            FILVRM
+F               fill the vram with specified data
+E               addres [HL] , length [BC], data [a]
+R               none
+M               All
+
+
+
+
+0059
+
+Name            LDIRMV
+F               Moves a VRAM memory block to memory.
+E               Address of sourse [HL], destanation [DE]
+                lenght [BC] .
+R               none
+M               All
+
+
+
+005C
+
+Name            LDIRMV
+F               Move blok of memery from memory to Vram
+E               sourse [HL], destanation [DE], length [BC]
+R               None
+M               All
+
+
+
+005F
+
+Name            CHGMOD
+F               Sets the VDP mode according to SCRMOD.
+E               SCRMOD (0...3)
+R               None
+M               All
+
+
+
+0062
+
+Name            CHGCLR
+F               Changes the color of the screen.
+E               Foreground color in FOBCLR.
+                Background color in BAKCLR.
+                Border color in BDRCLR
+R               None
+M               All
+
+
+
+0066
+
+Name            NMI
+F               Performs non-maskable interrupt procedures.
+E               None
+R               None
+M               None
+
+
+
+0069
+
+Name            CLRSPR
+F               Initializes all sprites.
+                Patterns are set to nulls,sprite names are
+                set to sprite plane number,sprite colors are
+                set to foregroup color,vertical positions are
+                set to 209
+E               SCRMOD
+R               None
+M               All
+
+
+
+006C
+
+Name            INITXT
+F               Initializes screen for text mode (40*24) and
+                sets the VDP.
+E               TXTNAM,TXTCGP.
+R               None.
+M               All
+
+
+
+006F
+
+Name            INIT32
+F               Initializes screen for text mode (32*24) and
+                sets the VDP.
+E               T32NAM,T32GRP,T32COL,T32ATR,T32PAT.
+R               None
+M               All
+
+
+
+0072
+
+Name            INIGRP
+F               Initializes screen for high-resolution mode
+                and sets the VDP.
+E               GRPNAM,GRPCGP,GRPCOL,GRATR,GRPPAT.
+R               None
+M               All
+
+
+
+0075
+
+Name            INIMLT
+F               Initializes screen for multi-color mode and
+                sets the VDP.
+E               MLTNAM,MLTCGP,MLTCOL,MLTATR,MLTPAT.
+R               None
+M               All
+
+
+
+0078
+
+Name            SETTXT
+F               Sets the VDP for text (40*24) mode.
+E               TXTNAM,TXTCGT.
+R               None
+M               All
+
+
+
+007B
+
+Name            SETT32
+F               Sets the VDP for text (32*24) mode.
+E               T32NAM,T32CGT,T32COL,T32ATR,T32PAT.
+R               None
+M               All
+
+
+
+007E
+
+Name            SETGRP
+F               Sets the VDP for high-resolution mode.
+E               GRPNAM,GRPCGP,GRPCOL,GRPATR,GRPPAT.
+R               None
+M               All
+
+
+
+0081
+
+Name            SETMLT
+F               Sets the VDP for multicolor mode.
+E               MLTNAM,MLTCGRP,MLTCOL,MLTATR,MLTPAT.
+R               None
+M               All
+
+
+
+0084
+
+Name            CALPAT
+F               Returns address of sprite pattern table.
+E               Sprite ID in [Acc].
+R               Address in [HL]
+M               AF,DE,HL.
+
+
+
+0087
+
+Name            CALATR
+F               Returns address of sprite atribute table.
+E               Sprite ID in [Acc].
+R               Address in [HL].
+M               AF,DE,HL.
+
+
+
+008A
+
+Name            GSPSIZ
+F               Returns the current sprite size.
+E               None.
+R               Sprite size(# of bytes) in [Acc].
+                Carry set if 16*16 sprite is use,otherwise
+                reset the otherwise.
+M               AF
+
+
+
+008D
+
+Name            GRPPRT
+F               Prints a character on the graphic screen.
+E               Code to output in [Acc].
+R               None
+M               None
+
+
+;-----------------------------------------------------------
+
+The following routined are used to access the PSG.
+
+;-----------------------------------------------------------
+
+0090
+
+Name            GICINI
+F               Initializes PSG,and static data for PLAY
+                statement.
+E               None.
+R               None.
+M               All
+
+
+
+0093
+
+Name            WRTPSG
+F               Writes data to the PSG register.
+E               Register number in [Acc],data in [E].
+R               None
+M               None
+
+
+
+0096
+
+Name            RDPSG
+F               Reads data from PSG register.
+E               Register number in [Acc].
+R               Data in [Acc].
+M               None.
+
+
+
+0099
+
+Name            STRTMS
+F               Checks/starts background tasks for PLAY.
+E               None
+R               None
+M               All
+
+
+;-----------------------------------------------------------
+
+The following routined are used to access the console,
+i.e. the keyboard and the CRT.
+
+;-----------------------------------------------------------
+
+009C
+
+Name            CHSNS
+F               Check the status of keyboard buffer.
+E               None
+R               Z flag reset if any character in buffer.
+M               AF
+
+
+
+009F
+
+Name            CHGET
+F               Waits for character being input and returns
+                the character codes.
+E               None.
+R               Character code in [Acc].
+M               AF
+
+
+
+00A2
+
+Name            CHPUT
+F               Outputs a character to the console.
+E               Character code to be output in [Acc].
+R               None
+M               None
+
+
+
+00A5
+
+Name            LPTOUT
+F               Output a character to the line printer.
+E               Character codes to the output in [Acc].
+R               Carry flag set if aborted.
+M               F
+
+
+
+00A8
+
+Name            LPTSTT
+F               Check the line priter status.
+E               None.
+R               FF in [Acc] and Z flag reset if priter ready.
+                0 and Z flag set if not.
+M               AF.
+
+
+
+00AB
+
+Name            SNVCHR
+F               Check graphic header byte and converts codes.
+E               Character code in [Acc].
+R               Cy flag reset: graphic header byte
+                Cy and Z flags set converted graphic code.
+                Cy flag set,Z flag reset,non-converted code.
+M               AF.
+
+
+
+00AE
+
+Name            PINLIN
+F               Accepts a line from console until a CR or STOP
+                is typed,and stores the line in a buffer.
+E               None
+R               Address of buffer top-1 in [HL],carry flag
+                sets if STOP is input.
+M               All.
+
+
+
+00B1
+
+Name            INLIN
+F               Same as PINLIN,exept if AUTFLO if set.
+E               None
+R               Address of buffer top-1 in [HL],carry flag
+                set if STOP is input.
+M               All
+
+
+
+00B4
+
+Name            QINLIN
+F               Output a '?' mark and a space then falls into
+                the INLIN routine.
+E               None
+R               Address of buffer top-1 in [HL],carry flag
+                set if STOP is input.
+M               All.
+
+
+
+00B7
+
+Name            BREAKX
+F               Check the status of the Control-STOP key.
+E               None
+R               Carry flag set if being pressed.
+M               AF
+N               This routine is used to check Control-STOP
+                when interrupt are disabled.
+
+
+
+00BA
+
+Name            ISCNTC
+F               Check the status of the SHIFT-STOP key.
+E               None
+R               None
+M               None
+
+
+
+00BD
+
+Name            CKCNTC
+F               Same as ISCNTC,used by BASIC
+E               None
+R               None
+M               None
+
+
+
+00C0
+
+Name            BEEP
+F               Sounds the buffer
+E               None
+R               None
+M               All
+
+
+
+00C3
+
+Name            CLS
+F               Clear the screen.
+E               None.
+R               None.
+M               AF,BC,DE.
+
+
+
+00C6
+
+Name            POSIT
+F               Locate cursor at the specified position.
+E               Column in [H],row in [L]
+R               None
+M               AF
+
+
+00C9
+
+Name            FNKSB
+F               Check if function key display is active. If
+                it is,it display it,otherwise does nothing.
+E               FNKFLG
+R               None
+M               All
+
+
+
+00CC
+
+Name            ERAFNK
+F               Erased the function key diplay.
+E               None
+R               None
+M               All
+
+
+
+00CF
+
+Name            DSPFNK
+F               Display the function key display.
+E               None
+R               None
+M               All
+
+
+
+00D2
+
+Name            TOTEXT
+F               Forcidly places the screen in text mode.
+E               None
+R               None
+M               All
+
+
+
+;-----------------------------------------------------------
+
+The following routined are used for game I/O access.
+
+;-----------------------------------------------------------
+
+
+00D5
+
+Name            GTSTCK
+F               Return the current joystick status.
+E               Joystick ID in [Acc]
+R               Direction in [Acc]
+M               All
+
+
+
+00D8
+
+Name            GTTRIG
+F               Return the current trigger button status.
+E               Trigger button in ID in [Acc].
+R               Return 0 in [Acc] if not pressed,255
+                otherwise.
+M               AF
+
+
+
+00DB
+
+Name            GTPAD
+F               Check the current touch PAD status.
+E               ID in [Acc]
+R               Value in [Acc]
+M               All
+
+
+
+00DE
+
+Name            GTPDL
+F               Return the value of the paddle.
+E               Padle ID in [Acc].
+R               Value in [Acc]
+M               All
+
+
+;-----------------------------------------------------------
+
+The following routined are used to access the cassette tape.
+
+;-----------------------------------------------------------
+
+
+00E1
+
+Na 3) A jump to 'Device I/O error' is made when
+                    aborted.
+
+
+
+
+0150
+
+Name            GETVCP
+F
+E
+R
+M
+N               Used only to play music in the background.
+
+
+
+0153
+
+Name            GETVC2
+F
+E
+R
+M
+N               Used only to play music in barcground.
+
+
+
+0156
+
+Name            KILBUF
+F               Clears the keyboard buffer.
+E               None
+R               None
+M               HL
+
+
+
+0159
+
+Name            CALBAS
+F               Performs far_call (i.e.inter-slot call) into
+                the BASIC interpreter.
+E               Address in [IX]
+R
+M
+
+

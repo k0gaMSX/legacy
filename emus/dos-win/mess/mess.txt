@@ -1,0 +1,571 @@
+                   ==========================================
+                    M.E.S.S.  -  Multi-Emulator Super System
+                             Copyright (C) 1998-2000
+                                by the MESS team
+                    Official Page at: http://mess.emuverse.com
+                   ==========================================
+
+This document is generated for MESS 0.37 BETA 2 (May  8 2000)
+
+Please note that many people helped with this project, either directly or by
+releasing source code which was used to write the drivers. We are not trying to
+appropriate merit which isn't ours. See the acknowledgemnts section for a list
+of contributors, however please note that the list is largely incomplete. See
+also the CREDITS section in the emulator to see the people who contributed to a
+specific driver. Again, that list might be incomplete. We apologize in advance
+for any omission.
+
+All trademarks cited in this document are property of their respective owners.
+Especially, the MESS team would like to thank Nicola Salmoria and the MAME team
+for letting us play with their code and, in fact, incorporating MESS specific
+code into MAME.  Without it, MESS would be substantially less than what it is
+right now! ;-)
+
+Usage and Distribution Licence:
+===============================
+- MESS usage and distribution follows that of MAME.  Please read the MAME
+  readme.txt file distributed with MESS for further information.
+
+How to Contact The MESS Team
+============================
+Visit the web page at http://mess.emuverse.com to see a list of contributers
+If you have comments, suggestions or bug reports about an existing driver, check
+the page contacts section to find who has worked on it, and send comments to that 
+person. If you are not sure who to contact, write to Ben (ben@mame.net) - who is the 
+current coordinator of the MESS project [DOS]. 
+
+PLEASE DON'T SEND BINARY ATTACHMENTS WITHOUT ASKING FIRST, *ESPECIALLY* ROM IMAGES.
+THESE ARE NOT SUPPORT ADDRESSES. Support questions sent to these addresses
+*will* be ignored. Please understand that this is a *free* project, mostly
+targeted at experienced users. We don't have the resources to provide end user
+support. Basically, if you can't get the emulator to work, you are on your own.
+First of all, read this doc carefully. If you still can't find an answer to
+your question, try checking the beginner's sections that many emulation pages
+have, or ask on the appropriate Usenet newsgroups (e.g. comp.emulators.misc)
+or on the many emulation message boards.  The official MESS message board is at:
+   http://mess.emuverse.com
+
+Also, please DO NOT SEND REQUESTS FOR NEW SYSTEMS TO ADD, unless you have some original
+info on the hardware or, even better, have the technical expertise needed to
+help us. Please don't send us information widely available on the Internet -
+we are perfectly capable of finding it ourselves, thank you.
+
+
+Complete Emulated System List
+=============================
+Here is the list of systems supported by MESS 0.37 BETA 2 (May  8 2000)
+
+The meanings of the columns are as follows:
+Working - "No" means that the emulation has shortcomings that cause the system
+  not to work correctly. This can be anywhere from just showing a black screen
+  to not being playable with major problems.
+Correct Colors - "Yes" means that colors should be identical to the original,
+  "Close" that they are very similar but wrong in places, "No" that they are
+  completely wrong. 
+Sound - "Partial" means that sound support is either incomplete or not entirely
+  accurate. 
+Internal Name - This is the unique name that should be specified on the command
+  line to run the system. ROMs must be placed in the ROM path, either in a .zip
+  file or in a subdirectory of the same name. The former is suggested, because
+  the files will be identified by their CRC instead of requiring specific
+  names.  NOTE! that as well as required ROM files to emulate the system, you may
+  also attach IMAGES of files created for system specific devices (some examples of 
+  devices are cartridges, floppydisks, harddisks, etc).  See below for a complete list
+  of a systems supported devices and common file formats used for that device
+
+System Information can be obtained from the SysInfo.dat file (online in the MESS UI
+from the Machine history) or sysinfo.htm.  To generate sysinfo.htm, execute 
+dat2html.exe.
+
+
++-----------------------------------------+-------+-------+-------+----------+
+|                                         |       |Correct|       | Internal |
+| System Name                             |Working|Colors | Sound |   Name   |
++-----------------------------------------+-------+-------+-------+----------+
+| Atari 5200                              |  Yes  |  Yes  |  Yes  | a5200    |
+| Atari 7800                              |  Yes  |  Yes  |  Yes  | a7800    |
+| Bally Arcade/Astrocade                  |  Yes  |  Yes  |  Yes  | astrocde |
+| Colecovision                            |  Yes  |  Yes  |  Yes  | coleco   |
+| Nintendo Entertainment System/Famicom   |  Yes  |  Yes  |  Yes  | nes      |
+| GameBoy                                 |   No  |  Yes  |   No  | gameboy  |
+| PC-Engine                               |   No  |  Yes  |   No  | pce      |
+| Sega Game Gear                          |  Yes  |  Yes  |  Yes  | gamegear |
+| Sega Master System                      |  Yes  |  Yes  |  Yes  | sms      |
+| Sega Megadrive / Genesis                |  Yes  |  Yes  |  Yes  | genesis  |
+| GCE Vectrex                             |  Yes  |  Yes  |  Yes  | vectrex  |
+| RA+A Spectrum I+                        |  Yes  |  Yes  |  Yes  | raaspec  |
+| Adventurevision                         |  Yes  |  Yes  |   No  | advision |
+| Apple 1 8k                              |  Yes  |  Yes  |  Yes  | apple1   |
+| Apple //c                               |  Yes  |  Yes  |  Yes  | apple2c  |
+| Apple //c (3.5 ROM)                     |  Yes  |  Yes  |  Yes  | apple2c0 |
+| Apple //c Plus                          |  Yes  |  Yes  |  Yes  | apple2cp |
+| Apple //e                               |  Yes  |  Yes  |  Yes  | apple2e  |
+| Apple //e (enhanced)                    |  Yes  |  Yes  |  Yes  | apple2ee |
+| Apple //e (Platinum)                    |  Yes  |  Yes  |  Yes  | apple2ep |
+| Macintosh Plus                          |   No  |  Yes  |  Yes  | macplus  |
+| Atari 400 (NTSC)                        |  Yes  |  Yes  |  Yes  | a400     |
+| Atari 400 (PAL)                         |  Yes  |  Yes  |  Yes  | a400pal  |
+| Atari 800 (NTSC)                        |  Yes  |  Yes  |  Yes  | a800     |
+| Atari 800 (PAL)                         |  Yes  |  Yes  |  Yes  | a800pal  |
+| Atari 800XL                             | No(1) |  Yes  |  Yes  | a800xl   |
+| Commodore C16/C116/C232/C264 (PAL)      |  Yes  | Close |Partial| c16      |
+| Commodore C16/C116/C232/C264 (PAL), C155| No(1) | Close |Partial| c16c     |
+| Commodore +4 (NTSC)                     |  Yes  | Close |Partial| plus4    |
+| Commodore +4 (NTSC), C1551              | No(1) | Close |Partial| plus4c   |
+| Commodore 364 (Prototype)               |  Yes  | Close |Partial| c364     |
+| Commodore C64 (NTSC)                    |  Yes  |  Yes  |Partial| c64      |
+| Commodore C64/VC64/VIC64 (PAL)          |  Yes  |  Yes  |Partial| c64pal   |
+| Commodore C64GS (NTSC)                  |  Yes  |  Yes  |Partial| c64gs    |
+| Commodore CBM4064/Pet64/Educator64 (NTSC|  Yes  |  Yes  |Partial| cbm4064  |
+| Commodore Max (VIC10/Ultimax/Vickie)    |  Yes  |  Yes  |Partial| max      |
+| Commodore VIC64S (PAL, Swedish)         |  Yes  |  Yes  |Partial| vic64s   |
+| Commodore C65/C64DX (Prototype) NTSC    |   No  |  Yes  |Partial| c65      |
+| Commodore C65/C64DX (Prototype) German (|   No  |  Yes  |Partial| c65ger   |
+| Commodore C128 NTSC 656x216             |  Yes  |  Yes  |Partial| c128     |
+| Commodore C128 German (PAL) 336x216     |  Yes  |  Yes  |Partial| c128ger  |
+| Commodore C128 French (PAL) 656x432     |  Yes  |  Yes  |Partial| c128fra  |
+| Commodore C128 Italian (PAL) 656x432    |  Yes  |  Yes  |Partial| c128ita  |
+| Commodore VIC20 (NTSC)                  |  Yes  |  Yes  |Partial| vic20    |
+| Commodore VIC20 PAL, Swedish Expansion K|  Yes  |  Yes  |Partial| vic20swe |
+| Commodore VC20 (PAL)                    |  Yes  |  Yes  |Partial| vc20     |
+| Commodore PET2001/CBM2000 Series (Basic |  Yes  |  Yes  |   No  | pet      |
+| Commodore CBM3000 Series (Basic 2)      |  Yes  |  Yes  |   No  | cbm30    |
+| Commodore CBM3000 Series (Basic 2) (busi|  Yes  |  Yes  |   No  | cbm30b   |
+| Commodore CBM4000 FAT Series (CRTC) 60Hz|  Yes  |  Yes  |   No  | cbm40    |
+| Commodore CBM4000 FAT Series (CRTC) 50Hz|  Yes  |  Yes  |   No  | cbm40pal |
+| Commodore CBM4000 THIN Series (business |  Yes  |  Yes  |   No  | cbm40b   |
+| Commodore CBM8000 60Hz                  |  Yes  |  Yes  |   No  | cbm80    |
+| Commodore CBM8000 50Hz                  |  Yes  |  Yes  |   No  | cbm80pal |
+| Commodore CBM8000 German (50Hz)         |  Yes  |  Yes  |   No  | cbm80ger |
+| Commodore CBM8000 Swedish (50Hz)        |  Yes  |  Yes  |   No  | cbm80swe |
+| Commodore SP9000/MMF9000 (50Hz)         | No(1) |  Yes  |   No  | superpet |
+| Commodore B128-80HP/710                 |   No  |  Yes  |Partial| cbm710   |
+| Commodore B256-80HP/720                 |   No  |  Yes  |Partial| cbm720   |
+| Commodore B128-80LP/610 60Hz            |   No  |  Yes  |Partial| cbm610   |
+| Commodore B256-80LP/620 Hungarian 50Hz  |   No  |  Yes  |Partial| cbm620   |
+| Commodore B128-40/Pet-II/P500 60Hz      |   No  |  Yes  |Partial| cbm500   |
+| Amiga (NTSC)                            |   No  |  Yes  |  Yes  | amiga    |
+| Amstrad/Schneider CPC464                |  Yes  |  Yes  |  Yes  | cpc464   |
+| Amstrad/Schneider CPC664                |  Yes  |  Yes  |  Yes  | cpc664   |
+| Amstrad/Schneider CPC6128               |  Yes  |  Yes  |  Yes  | cpc6128  |
+| KC Compact                              |  Yes  |  Yes  |  Yes  | kccomp   |
+| KC 85/4                                 |   No  |  Yes  |  Yes  | kc85_4   |
+| Jupiter Ace 49k                         |  Yes  |  Yes  |  Yes  | jupiter  |
+| Enterprise 128K                         |  Yes  |  Yes  |   No  | ep128    |
+| Kaypro 2x                               |  Yes  |  Yes  |  Yes  | kaypro   |
+| Microbee 32K                            |  Yes  |  Yes  |  Yes  | mbee     |
+| Microbee 56K (CP/M)                     |  Yes  |  Yes  |  Yes  | mbee56k  |
+| Color Computer                          |  Yes  |  Yes  |  Yes  | coco     |
+| Color Computer 3                        |  Yes  |  Yes  |  Yes  | coco3    |
+| Prologica CP400                         |  Yes  |  Yes  |  Yes  | cp400    |
+| TRS-80 Model I (Level II Basic)         |  Yes  |  Yes  |  Yes  | trs80    |
+| MC-10                                   |  Yes  |  Yes  |  Yes  | mc10     |
+| Dragon 32                               |  Yes  |  Yes  |  Yes  | dragon32 |
+| Colour Genie EG2000                     |  Yes  |  Yes  |  Yes  | cgenie   |
+| System-80                               |  Yes  |  Yes  |  Yes  | sys80    |
+| Laser 110                               |  Yes  |  Yes  |  Yes  | laser110 |
+| Laser 200                               |  Yes  |  Yes  |  Yes  | laser200 |
+| Laser 210                               |  Yes  |  Yes  |  Yes  | laser210 |
+| Sanyo / Dick Smith VZ200                |  Yes  |  Yes  |  Yes  | vz200    |
+| Salora Fellow                           |  Yes  |  Yes  |  Yes  | fellow   |
+| Texet TX8000                            |  Yes  |  Yes  |  Yes  | tx8000   |
+| Laser 310                               |  Yes  |  Yes  |  Yes  | laser310 |
+| Sanyo / Dick Smith VZ300                |  Yes  |  Yes  |  Yes  | vz300    |
+| Laser 350                               |  Yes  |  Yes  |  Yes  | laser350 |
+| Laser 500                               |  Yes  |  Yes  |  Yes  | laser500 |
+| Laser 700                               |  Yes  |  Yes  |  Yes  | laser700 |
+| Oric 1                                  |  Yes  |  Yes  |  Yes  | oric1    |
+| Oric Atmos                              |  Yes  |  Yes  |  Yes  | orica    |
+| TI99/4 Home Computer (60 Hz)            |  Yes  |  Yes  |  Yes  | ti99_4   |
+| TI99/4 Home Computer (50 Hz)            |  Yes  |  Yes  |  Yes  | ti99_4e  |
+| TI99/4A Home Computer (60 Hz)           |  Yes  |  Yes  |  Yes  | ti99_4a  |
+| TI99/4A Home Computer (50 Hz)           |  Yes  |  Yes  |  Yes  | ti99_4ae |
+| IBM PC-XT MDA                           |  Yes  |  Yes  |  Yes  | pcmda    |
+| IBM PC-XT CGA                           |  Yes  |  Yes  |  Yes  | pccga    |
+| Tandy 1000TX                            |  Yes  | Close |  Yes  | tandy1t  |
+| Philips P2000T                          |  Yes  |  Yes  |  Yes  | p2000t   |
+| Philips P2000M                          |  Yes  |  Yes  |  Yes  | p2000m   |
+| Compukit UK101                          |  Yes  |  Yes  |  Yes  | uk101    |
+| Superboard                              |  Yes  |  Yes  |  Yes  | superbrd |
+| ZX-80                                   |   No  |  Yes  |  Yes  | zx80     |
+| ZX-81                                   |   No  |  Yes  |  Yes  | zx81     |
+| TS1000                                  |   No  |  Yes  |  Yes  | ts1000   |
+| ZX.Aszmic                               |   No  |  Yes  |  Yes  | aszmic   |
+| PC8300                                  |   No  |  Yes  |  Yes  | pc8300   |
+| Power 3000                              |   No  |  Yes  |  Yes  | pow3000  |
+| ZX-Spectrum 48k                         |  Yes  |  Yes  |  Yes  | spectrum |
+| Spectrum +4 (48K)                       |  Yes  |  Yes  |  Yes  | specpls4 |
+| Inves Spectrum 48K+                     |  Yes  |  Yes  |  Yes  | inves    |
+| TK90x Color Computer                    |  Yes  |  Yes  |  Yes  | tk90x    |
+| TK95 Color Computer                     |  Yes  |  Yes  |  Yes  | tk95     |
+| Timex Computer 2048                     |  Yes  |  Yes  |  Yes  | tc2048   |
+| Timex-Sinclair 2068                     |  Yes  |  Yes  |  Yes  | ts2068   |
+| Spectrum 128K                           |  Yes  |  Yes  |  Yes  | spec128  |
+| Spectrum +2                             |  Yes  |  Yes  |  Yes  | specpls2 |
+| Spectrum +2a                            |  Yes  |  Yes  |  Yes  | specpl2a |
+| Spectrum +3                             |  Yes  |  Yes  |  Yes  | specpls3 |
+| MSX1                                    |  Yes  |  Yes  |  Yes  | msx      |
+| MSX1 (Japan)                            |  Yes  |  Yes  |  Yes  | msxj     |
+| MSX1 (Korean)                           |  Yes  |  Yes  |  Yes  | msxkr    |
+| MSX1 (UK)                               |  Yes  |  Yes  |  Yes  | msxuk    |
+| Nascom 1                                |  Yes  |  Yes  |  Yes  | nascom1  |
+| Nascom 2                                |  Yes  |  Yes  |  Yes  | nascom2  |
+| Acorn Atom                              |  Yes  |  Yes  |  Yes  | atom     |
+| Sam Coupe                               |  Yes  |  Yes  |  Yes  | coupe    |
+| KIM-1                                   |  Yes  |  Yes  |  Yes  | kim1     |
+| PDP1 Spacewar!                          |  Yes  |  Yes  |  Yes  | pdp1     |
+| MTX 512                                 |  Yes  |  Yes  |  Yes  | mtx512   |
+| CPS Changer (Street Fighter ZERO)       |  Yes  |  Yes  |  Yes  | sfzch    |
++-----------------------------------------+-------+-------+-------+----------+
+(1) There are variants of the system that work correctly
+(2) Needs samples provided separately
+
+
+
+
+QUICK MESS USAGE GUIDE!
+=======================
+In order to use MESS, you must at least specify at the command line
+
+      MESS <system>
+
+This will emulate the system requested.  Note that most systems require ROMS for
+emulation.  These system ROM files are copyright and ARE NOT supplied with MESS.
+
+To use files created for the system emulated (IMAGES), MESS works by attaching an image
+of the file created for the particular device of that system, for example, a cartridge,
+floppydisk, harddisk, cassette, image etc.  Therefore, in order to attach an image to the
+system, you must specify at the command line:
+
+      MESS <system> <device> <image_name>
+
+To manually manipulate the emulation options, you must specify:
+
+      MESS <system> <device> <image_name> <options>
+
+*For a complete list of systems emulated,  use: MESS -listfull
+*For system files (ROMS) required by each system, use: MESS <system> -listroms
+*See below for valid device names and usage.
+*See the MAME readme.txt and below for a detailed list of options.
+
+Make sure you have ROMS and IMAGES in a subdirectory from your ROMPATH
+with the same name as the system (eg ROMS/COLECO)
+
+
+Examples:
+
+    MESS nes -cart zelda.nes
+        will attach zelda.nes to the cartridge device and run MESS in
+        the following way:
+        <system>      = nes             (Nintendo Entertainment System)
+        <device>      = CARTRIDGE
+        <image_name>  = zelda.nes       (Zelda cartridge)
+        <options>     = none specified, so default options (see mess.cfg)
+
+    MESS coleco -cart dkong -soundcard 0
+        will run MESS in the following way:
+
+        <system>      = coleco          (ColecoVision)
+        <device>      = CARTRIDGE
+        <image_name>  = dkong.rom       (Donkey Kong cartridge)
+        <options>     = default options without sound (see mess.cfg)
+
+    MESS trs80 -flop boot.dsk -flop arcade1.dsk
+        will run MESS in the following way:
+        <system>      = trs80           (TRs-80 model 1)
+        <device1>     = FLOPPYDISK
+        <image_name1> = boot.dsk        (The Trs80 boot floppy diskl)
+        <device2>     = FLOPPYDISK
+        <image_name2> = arcade1.dsk     (floppy Disk which contains games)
+        <options>     = default options (all listed in mess.cfg)
+
+    MESS cgenie -flop games1
+        will run the system Colour Genie with one disk image loaded,
+        automatically appending the file extension .dsk.
+
+
+If you dont want to type out device/image combinations, MESS supports 
+ALIASed command lines from MESS.cfg.  An example entry is:
+
+    [ti99_4a]
+    parsec = -cart parsecg.bin -cart parsecc.bin 
+
+So to load these images, you would simply then type:
+
+    MESS ti99_4a -alias parsec
+
+and both cartridges will be attached to the TI99_4a.
+
+
+
+
+DEVICE support list
+===================
+As mentioned, in order to fully utilise MESS, you will need to attach image files
+to the system devices.  The following list specifies all the devices and image 
+file extensions currently supported by MESS.  Remember to use the DEVICE name 
+(or the brief name) to attach an image.  This list can easily be generated by 
+specifying:
+
+    MESS -listdevices
+
+Also note that MESS has a preliminary built-in File Manager for attaching images to
+system devices.  Use the UI (TAB key) to access.
+
+
+
+ SYSTEM      DEVICE NAME (brief)   IMAGE FILE EXTENSIONS SUPPORTED    
+----------  --------------------  ------------------------------------
+a5200        Cartridge   (Cart)   .rom  .bin  
+a7800        Cartridge   (Cart)   .a78  
+astrocde     Cartridge   (Cart)   .bin  
+coleco       Cartridge   (Cart)   .rom  
+nes          Cartridge   (Cart)   .nes  
+gameboy      Cartridge   (Cart)   .gb   
+pce          Cartridge   (Cart)   .pce  
+gamegear     Cartridge   (Cart)   .gg   
+sms          Cartridge   (Cart)   .sms  
+genesis      Cartridge   (Cart)   .smd  .bin  .md   
+vectrex      Cartridge   (Cart)   .bin  .gam  
+raaspec      UNKNOWN     
+advision     Cartridge   (Cart)   .bin  
+apple1       UNKNOWN     
+apple2c      Floppydisk  (Flop)   .dsk  
+apple2c0     Floppydisk  (Flop)   .dsk  
+apple2cp     Floppydisk  (Flop)   .dsk  
+apple2e      Floppydisk  (Flop)   .dsk  
+apple2ee     Floppydisk  (Flop)   .dsk  
+apple2ep     Floppydisk  (Flop)   .dsk  
+macplus      Floppydisk  (Flop)   .dsk  
+a400         Cartridge   (Cart)   .rom  .bin  
+             Floppydisk  (Flop)   .atr  .dsk  .xfd  
+a400pal      Cartridge   (Cart)   .rom  .bin  
+             Floppydisk  (Flop)   .atr  .dsk  .xfd  
+a800         Cartridge   (Cart)   .rom  .bin  
+             Floppydisk  (Flop)   .atr  .dsk  .xfd  
+a800pal      Cartridge   (Cart)   .rom  .bin  
+             Floppydisk  (Flop)   .atr  .dsk  .xfd  
+a800xl       Cartridge   (Cart)   .rom  .bin  
+             Floppydisk  (Flop)   .atr  .dsk  .xfd  
+c16          Quickload   (Quik)   .p00  .prg  
+             Cartridge   (Cart)   .bin  .rom  
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .d64  
+c16c         Quickload   (Quik)   .p00  .prg  
+             Cartridge   (Cart)   .bin  .rom  
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .d64  
+plus4        Quickload   (Quik)   .p00  .prg  
+             Cartridge   (Cart)   .bin  .rom  
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .d64  
+plus4c       Quickload   (Quik)   .p00  .prg  
+             Cartridge   (Cart)   .bin  .rom  
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .d64  
+c364         Quickload   (Quik)   .p00  .prg  
+             Cartridge   (Cart)   .bin  .rom  
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .d64  
+c64          Quickload   (Quik)   .p00  .prg  
+             Cartridge   (Cart)   .crt  .80   
+             Floppydisk  (Flop)   .d64  
+c64pal       Quickload   (Quik)   .p00  .prg  
+             Cartridge   (Cart)   .crt  .80   
+             Floppydisk  (Flop)   .d64  
+c64gs        Cartridge   (Cart)   .crt  .80   
+cbm4064      Quickload   (Quik)   .p00  .prg  
+             Cartridge   (Cart)   .crt  .80   
+             Floppydisk  (Flop)   .d64  
+max          Quickload   (Quik)   .p00  .prg  
+             Cartridge   (Cart)   .crt  .e0   .f0   
+vic64s       Quickload   (Quik)   .p00  .prg  
+             Cartridge   (Cart)   .crt  .80   
+             Floppydisk  (Flop)   .d64  
+c65          Quickload   (Quik)   .p00  .prg  
+c65ger       Quickload   (Quik)   .p00  .prg  
+c128         Quickload   (Quik)   .p00  .prg  
+             Floppydisk  (Flop)   .d64  
+c128ger      Quickload   (Quik)   .p00  .prg  
+             Floppydisk  (Flop)   .d64  
+c128fra      Quickload   (Quik)   .p00  .prg  
+             Floppydisk  (Flop)   .d64  
+c128ita      Quickload   (Quik)   .p00  .prg  
+             Floppydisk  (Flop)   .d64  
+vic20        Quickload   (Quik)   .p00  .prg  
+             Cartridge   (Cart)   .a0   .20   .40   .60   .rom  .bin  
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .d64  
+vic20swe     Quickload   (Quik)   .p00  .prg  
+             Cartridge   (Cart)   .a0   .20   .40   .60   .rom  .bin  
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .d64  
+vc20         Quickload   (Quik)   .p00  .prg  
+             Cartridge   (Cart)   .a0   .20   .40   .60   .rom  .bin  
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .d64  
+pet          Quickload   (Quik)   .p00  .prg  
+cbm30        Quickload   (Quik)   .p00  .prg  
+cbm30b       Quickload   (Quik)   .p00  .prg  
+cbm40        Quickload   (Quik)   .p00  .prg  
+cbm40pal     Quickload   (Quik)   .p00  .prg  
+cbm40b       Quickload   (Quik)   .p00  .prg  
+cbm80        Quickload   (Quik)   .p00  .prg  
+cbm80pal     Quickload   (Quik)   .p00  .prg  
+cbm80ger     Quickload   (Quik)   .p00  .prg  
+cbm80swe     Quickload   (Quik)   .p00  .prg  
+superpet     Quickload   (Quik)   .p00  .prg  
+cbm710       Quickload   (Quik)   .p00  .prg  
+cbm720       Quickload   (Quik)   .p00  .prg  
+cbm610       Quickload   (Quik)   .p00  .prg  
+cbm620       Quickload   (Quik)   .p00  .prg  
+cbm500       Quickload   (Quik)   .p00  .prg  
+amiga        Floppydisk  (Flop)   .adf  
+cpc464       Cartridge   (Cart)   .sna  
+             Floppydisk  (Flop)   .dsk  
+             Cassette    (Cass)   .wav  
+cpc664       Cartridge   (Cart)   .sna  
+             Floppydisk  (Flop)   .dsk  
+             Cassette    (Cass)   .wav  
+cpc6128      Cartridge   (Cart)   .sna  
+             Floppydisk  (Flop)   .dsk  
+             Cassette    (Cass)   .wav  
+kccomp       Cartridge   (Cart)   .sna  
+             Floppydisk  (Flop)   .dsk  
+             Cassette    (Cass)   .wav  
+kc85_4       UNKNOWN     
+jupiter      Cartridge   (Cart)   .ace  
+             Cassette    (Cass)   .tap  
+ep128        Floppydisk  (Flop)   .dsk  
+kaypro       Floppydisk  (Flop)   .dsk  
+mbee         Cartridge   (Cart)   .rom  
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .dsk  
+mbee56k      Cartridge   (Cart)   .rom  
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .dsk  
+coco         Snapshot    (Snap)   .pak  
+             Cassette    (Cass)   .cas  .wav  
+             Floppydisk  (Flop)   .dsk  
+coco3        Snapshot    (Snap)   .pak  
+             Cassette    (Cass)   .cas  .wav  
+             Floppydisk  (Flop)   .dsk  
+cp400        Snapshot    (Snap)   .pak  
+             Cassette    (Cass)   .cas  .wav  
+             Floppydisk  (Flop)   .dsk  
+trs80        Cartridge   (Cart)   .rom  
+             Cassette    (Cass)   .cas  .cmd  
+             Floppydisk  (Flop)   .dsk  
+mc10         Cassette    (Cass)   .cas  .wav  
+dragon32     Snapshot    (Snap)   .pak  
+             Cassette    (Cass)   .cas  .wav  
+             Floppydisk  (Flop)   .dsk  
+cgenie       Cartridge   (Cart)   .rom  
+             Cassette    (Cass)   .cas  .cmd  
+             Floppydisk  (Flop)   .dsk  
+sys80        Cartridge   (Cart)   .rom  
+             Cassette    (Cass)   .cas  .cmd  
+             Floppydisk  (Flop)   .dsk  
+laser110     Cassette    (Cass)   .wav  .cas  
+             Snapshot    (Snap)   .vz   
+             Floppydisk  (Flop)   .dsk  
+laser200     Cassette    (Cass)   .wav  .cas  
+             Snapshot    (Snap)   .vz   
+             Floppydisk  (Flop)   .dsk  
+laser210     Cassette    (Cass)   .wav  .cas  
+             Snapshot    (Snap)   .vz   
+             Floppydisk  (Flop)   .dsk  
+vz200        Cassette    (Cass)   .wav  .cas  
+             Snapshot    (Snap)   .vz   
+             Floppydisk  (Flop)   .dsk  
+fellow       Cassette    (Cass)   .wav  .cas  
+             Snapshot    (Snap)   .vz   
+             Floppydisk  (Flop)   .dsk  
+tx8000       Cassette    (Cass)   .wav  .cas  
+             Snapshot    (Snap)   .vz   
+             Floppydisk  (Flop)   .dsk  
+laser310     Cassette    (Cass)   .wav  .cas  
+             Snapshot    (Snap)   .vz   
+             Floppydisk  (Flop)   .dsk  
+vz300        Cassette    (Cass)   .wav  .cas  
+             Snapshot    (Snap)   .vz   
+             Floppydisk  (Flop)   .dsk  
+laser350     Cartridge   (Cart)   .rom  
+             Cassette    (Cass)   .wav  .cas  
+             Floppydisk  (Flop)   .dsk  
+laser500     Cartridge   (Cart)   .rom  
+             Cassette    (Cass)   .wav  .cas  
+             Floppydisk  (Flop)   .dsk  
+laser700     Cartridge   (Cart)   .rom  
+             Cassette    (Cass)   .wav  .cas  
+             Floppydisk  (Flop)   .dsk  
+oric1        Cartridge   (Cart)   .tap  
+orica        Cartridge   (Cart)   .tap  
+ti99_4       Cartridge   (Cart)   .bin  .c    .d    .g    .m    .crom .drom .grom .mrom 
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .dsk  
+ti99_4e      Cartridge   (Cart)   .bin  .c    .d    .g    .m    .crom .drom .grom .mrom 
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .dsk  
+ti99_4a      Cartridge   (Cart)   .bin  .c    .d    .g    .m    .crom .drom .grom .mrom 
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .dsk  
+ti99_4ae     Cartridge   (Cart)   .bin  .c    .d    .g    .m    .crom .drom .grom .mrom 
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .dsk  
+pcmda        Floppydisk  (Flop)   .dsk  
+             Harddisk    (Hard)   .img  
+pccga        Floppydisk  (Flop)   .dsk  
+             Harddisk    (Hard)   .img  
+tandy1t      Floppydisk  (Flop)   .dsk  
+             Harddisk    (Hard)   .img  
+p2000t       UNKNOWN     
+p2000m       UNKNOWN     
+uk101        UNKNOWN     
+superbrd     UNKNOWN     
+zx80         Cassette    (Cass)   .80   .o    
+zx81         Cassette    (Cass)   .81   .p    
+ts1000       Cassette    (Cass)   .81   .p    
+aszmic       Cassette    (Cass)   .80   .o    
+pc8300       Cassette    (Cass)   .81   .p    
+pow3000      Cassette    (Cass)   .81   .p    
+spectrum     Snapshot    (Snap)   .sna  .z80  .tap  
+             Cassette    (Cass)   .wav  
+specpls4     Snapshot    (Snap)   .sna  .z80  .tap  
+             Cassette    (Cass)   .wav  
+inves        Snapshot    (Snap)   .sna  .z80  .tap  
+             Cassette    (Cass)   .wav  
+tk90x        Snapshot    (Snap)   .sna  .z80  .tap  
+             Cassette    (Cass)   .wav  
+tk95         Snapshot    (Snap)   .sna  .z80  .tap  
+             Cassette    (Cass)   .wav  
+tc2048       Snapshot    (Snap)   .sna  .z80  .tap  
+             Cassette    (Cass)   .wav  
+ts2068       Snapshot    (Snap)   .sna  .z80  .tap  
+             Cassette    (Cass)   .wav  
+spec128      Snapshot    (Snap)   .sna  .z80  .tap  
+             Cassette    (Cass)   .wav  
+specpls2     Snapshot    (Snap)   .sna  .z80  .tap  
+             Cassette    (Cass)   .wav  
+specpl2a     Snapshot    (Snap)   .sna  .z80  .tap  
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .dsk  
+specpls3     Snapshot    (Snap)   .sna  .z80  .tap  
+             Cassette    (Cass)   .wav  
+             Floppydisk  (Flop)   .dsk  
+msx          Cartridge   (Cart)   .rom  
+             Cassette    (Cass)   .wav  
+msxj         Cartridge   (Cart)   .rom  
+             Cassette    (Cass)   .wav  
+msxkr        Cartridge   (Cart)   .rom  
+             Cassette    (Cass)   .wav  
+msxuk        Cartridge   (Cart)   .rom  
+             Cassette    (Cass)   .wav  
+nascom1      UNKNOWN     
+nascom2      Cassette    (Cass)   .cas  .nas  .bin  
+atom         Cartridge   (Cart)   .atm  
+coupe        Floppydisk  (Flop)   .dsk  
+kim1         Cassette    (Cass)   .kim  
+pdp1         Cartridge   (Cart)   .bin  
+mtx512       Cartridge   (Cart)   .bin  
+sfzch        UNKNOWN     

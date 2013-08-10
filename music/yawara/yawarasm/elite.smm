@@ -1,0 +1,126 @@
+;
+;                      Elite.SMM
+;
+;          "Elite" Source Game Music Module
+;
+; Version Amalthea-1-1 (1st Ver., 1st Release, 1st Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =Elite.SMM
+;   L80 Elite,Elite.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Elite" game mapping:
+;
+;                 7400   8FFF
+;      |?|?|?|?|?|?|?|M|M|?|?|?|?|?|?|
+;   0000                             EFFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+; MSX standard addresses and constants.
+
+FNKSTR equ  0F87FH
+EBDBnk equ  FNKSTR
+SaveSP equ  EBDBnk+0000FH
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '             Elite              '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   06000H
+GMPNam:db   'Yawara  600'
+OpenMN:db   000H
+StrtSE:db   000H
+ChATDD:dw   0E011H
+ChBTDD:dw   0E01CH
+ChCTDD:dw   0E027H
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'EliteOpnSc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'EliteMnuSc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00000010B
+
+SetupR:jr   z,Start
+       pop  hl
+       ld   sp,(SaveSP)
+       jp   (hl)
+
+Start: ld   hl,07400H
+       ld   a,(hl)
+       or   a
+       jr   z,Reset
+       xor  a
+       ld   (hl),a
+       pop  ix
+       ld   sp,0BFFFH
+       push ix
+
+       ld   hl,07438H        ; Disable restart routine, avoiding the
+       ld   (07697H),hl      ; music to repeat over and over...
+
+Reset: ld   hl,0E000H
+       ld   de,0E001H
+       ld   bc,009FFH
+SilnRt:jp   07438H
+
+StMsRt:or   a
+       jr   z,SilnRt
+       ld   hl,07AE4H
+       jp   07603H
+
+PlayRt:jp   07645H
+
+GmBlNm:db   'Elite   000'
+GmBlSz:dw   01C00H
+LoadAd:dw   07400H
+       dw   0FFFFH
+MusicT:db   001H,'  Waltz on Blue Danube '
+       db   0FFH,0FFH
+EffctT:db   000H,'       Silence...      '
+       db   0FFH,0FFH
+
+       end

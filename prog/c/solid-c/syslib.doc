@@ -1,0 +1,351 @@
+SOLID Software International.                         UM002
+
+-----------------------------------------------------------
+Small C library for system programming.
+SLIB.IRL -- user's manual
+-----------------------------------------------------------
+
+     This library is designed for development of  standalone
+C programs like system utilities, games and  other  programs
+which do  not  require  all  the  complex  C  libraries  and
+functions like buffered and formatted  I/O,  dynamic  memory
+allocation etc.
+     The library is intended to use with SOLID  C  Compiler,
+AS assembler and LD linker working in Old REL  Mode  (16-bit
+offsets,  8-char  global  symbols).  The  version  for   New
+Extended REL Mode will be soon available.
+     The library contains all  necessary  support  code  for
+application initializing, all run time routines and may be
+used alone in the following way:
+
+     LD <outfile> = <relfile>,SLIB/S/GXMAIN
+
+     To use the library you must include SYSLIB.H into  your
+C program. The list of supported functions is given beneath.
+
+
+     DECLARED TYPES
+     ==============
+
+     BYTE, BOOL: unsigned 8-bit char
+     uint, WORD: unsigned 16-bit word
+     PCHAR: pointer to character
+     PINT: pointer to integer
+     FCB: structure of MSXDOS FCB
+     int_t: 5 byte array for hook holding.
+
+
+     DECLARED CONSTANTS
+     ==================
+
+     NULL	int	0
+     ERROR	int	-1
+     OK		int	0
+     CPMEOF	char	^Z (26, 0x1A)
+     QUIT_CH	char	^C (3)
+
+
+     ALPHABETICAL FUNCTION LIST
+     ==========================
+
+_ ---------------------------------------------------------
+     void	_exit()
+       Exits to MSXDOS immediately (does  RST  0).  See
+       also exit().
+
+     BOOL	_sense()
+       Checks for CTRL-C pressed. Returns NZ if  CTRL-C
+       was pressed.
+
+     void	_setupfcb(filename, pfcb)
+     char *  filename - pointer to ASCIIZ filename string;
+     FCB * pfcb - pointer to FCB structure;
+       Setups FCB with filename.  Wildchards  processed
+       as appropriate.
+
+A ---------------------------------------------------------
+     int	abs(val)
+     int val  - argument.
+       Returns absolute value of val.
+
+     void	atexit(pfun)
+     void (*fun)() - pointer to a hook function.
+       Adds  a  function  that  is  called  on  program
+       termination via  exit()  call.  Up  to  16  hook
+       functions may  be  installed.  When  program  is
+       exited functions are called one  by  one  in  an
+       order reverse to their atexit() definitions.
+
+     int	atoi(pstr)
+     char *  pstr - pointer to a character string representing a number.
+     Leading minus, 0 (octal) and 0x (hex) prefixes are detected.
+       Returns an integer number. If the  beginning  of
+       the string doesn't contain anything looking like
+       a decimal, octal or hex number, returns 0.
+
+B ---------------------------------------------------------
+     char	bdos(code, de, hl)
+     int	bdosh(code, de, hl)
+     char code - MSXDOS function code, placed into C register, mandatory.
+     WORD de  - parameter placed into DE pair, optional.
+     WORD hl  - parameter placed into HL pair, optional.
+       Call to MSXDOS. bdosh() is intended to  use  for
+       MSXDOS functions that return integer  result  in
+       HL, bdos() for all other function codes.
+
+     void	*brk(addr)
+     void * addr - a new value of free memory pointer.
+       At the start of program free memory  pointer  is
+       set after the end of program. It can be moved by
+       sbrk() function to allocate a block  of  memory.
+       Return value of BRK is equal to the argument.
+
+D ---------------------------------------------------------
+     void	di()
+       Disables interrupts.
+
+E ---------------------------------------------------------
+     void	ei()
+       Enables interrupts.
+
+     void	exit(code)
+     int code - error code to return.
+       Exits program with error code. If screen mode is
+       not text, sets SCREEN 0  mode,  calls  all  hook
+       functions defined by atexit().
+
+F ---------------------------------------------------------
+     free(arg)	#DEFINE
+       Added for more  compatability/portability.  Does
+       nothing. See malloc().
+
+G ---------------------------------------------------------
+     char	getch()
+       Returns a character input  from  keyboard.  Uses
+       BIOS, not BDOS.
+
+H ---------------------------------------------------------
+     void	hexb(c)
+     char c - byte to print.
+       Prints byte value in hex.
+
+     void	hexw(c)
+     uint c - word to print.
+       Prints word value in hex.
+
+I ---------------------------------------------------------
+     char	inp(port)
+     int port - port number to input from.
+       Inputs byte from a port with supplied address.
+
+     isalpha(c)	#DEFINE
+       Returns NZ if c is A..Z or a..z
+
+     isdigit(c)	#DEFINE
+       Returns NZ if c is 0..9
+
+     islower(c)	#DEFINE
+       Returns NZ if c is a..z
+
+     isspace(c)	#DEFINE
+       Returns NZ if c is space, newline or tabulation.
+
+     isupper(c)	#DEFINE
+       Returns NZ if c is A..Z
+
+K ---------------------------------------------------------
+     void	kilbat()
+       Stops MSXDOS batch processing. Useful for  batch
+       exiting at error.
+
+M ---------------------------------------------------------
+     malloc(len)	#DEFINE
+       Allocates  len  bytes  of  memory.   Added   for
+       compatability. Defined as sbrk(len).
+
+     char	*memchr(arg,chr,len)
+     char * arg - pointer to memory area
+     char chr - byte to find
+     int len - length of block to search in.
+       Returns  pointer  to  found  byte  or  zero   if
+       specified byte not found.
+
+     int	memcmp(src,dst,len)
+     void * src - first argument (pointer to any object)
+     void * dst - second argument (pointer to any object)
+     int len - length of arguments.
+       Compares two memory fields. Returns negative  if
+       src<dst, zero if src=dst,  positive  nonzero  if
+       src>dst.
+
+     void	*memcpy(dst,src,len)
+     void * src - source (pointer to any object)
+     void * dst - destination (pointer to any object)
+     int len - length of arguments.
+       Copies a block of len bytes.
+
+     void	*memmov(dst,src,len)
+     void * src - source (pointer to any object)
+     void * dst - destination (pointer to any object)
+     int len - length of arguments.
+       Copies a block of len bytes.
+
+     char	* memset(arg,chr,len)
+     char * arg - pointer to memory area
+     char chr - byte to fill with.
+     int len - length of block to fill.
+       Fills memory area with a specified byte.
+
+     void	*movmem(src,dst,len)
+     void * src - source (pointer to any object)
+     void * dst - destination (pointer to any object)
+     int len - length of arguments.
+       Copies a block of len bytes.
+
+N ---------------------------------------------------------
+     void	nexthook(hook)
+     int_t hook - saved hook to call.
+       Default hook processor. Must be  called  at  the
+       end of user hook-interception routine. Of course
+       hook must be initialized by sethook() procedure.
+
+O ---------------------------------------------------------
+     void	outp(port,val)
+     int port - port number
+     char val - byte to output
+       Outputs a byte into I/O port.
+
+P ---------------------------------------------------------
+     peek(a)	#DEFINE
+       Reads a byte from memory address a.
+
+     peekw(a)	#DEFINE
+       Reads a word from memory address a.
+
+     poke(a,b)	#DEFINE
+       Writes byte b to memory address a.
+
+     pokew(a,b)	#DEFINE
+       Writes word b to memory address a.
+
+     void	putc(ch)
+     char ch - character to print.
+       Prints  a  character  on  MSXDOS  console  using
+       MSXDOS function 2.
+
+     void	putch(ch)
+     char ch - character to print.
+       Prints a character on screen using BIOS.
+
+     void	putdec(num)
+     int num - value to print.
+       Prints an  unsigned  decimal  number  on  MSXDOS
+       console.
+
+     void	puts(str)
+     char * str - character string to print.
+       Prints a character string on MSXDOS console.
+
+R ---------------------------------------------------------
+     void	reshook(adr,hook)
+     WORD adr - an address of a hook
+     int_t hook - old hook, saved by sethook() function.
+       Restores original hook intercepted by sethook().
+
+S ---------------------------------------------------------
+     void	*sbrk(nbytes)
+     int nbytes - number of bytes to allocate.
+       Allocates a memory area of nbytes. If allocation
+       is not possible, returns -1, else returns addres
+       of the beginning of allocated memory.
+
+     void	screen(mode)
+     char mode - new screen mode.
+       Sets screen  mode  according  to  supplied  mode
+       parameter.
+
+     void	setfcb(file, pfcb,defext)
+     char *  file - pointer to ASCIIZ filename string;
+     FCB * pfcb - pointer to FCB structure;
+     char * defext - pointer to ASCIIZ default extension
+       Setups FCB with filename.  Wildchards  processed
+       as appropriate. If no  extension  supplied,  FCB
+       extension field set according to defext field.
+
+     void	sethook(adr,hook,proc)
+     WORD adr - hook address
+     int_t hook - buffer to save old hook
+     void (*proc)() - procedure address to install as a new hook.
+       Installs a new hook processing procedure.
+
+     char	*strcat(dst,src)
+     char * src - source
+     char * dst - destination
+       Adds an ASCIIZ string src to the end of dst.
+
+     char	*strchr(arg,chr)
+     char * arg - pointer to string
+     char chr - byte to find
+       Searches for FIRST occurance of  chr  in  string
+       str. Returns pointer to found byte  or  zero  if
+       specified byte not found.
+
+     int	strcmp(src,dst)
+     char * src - first argument
+     char * dst - second argument
+       Compares two ASCIIZ strings. Returns negative if
+       src<dst, zero if src=dst,  positive  nonzero  if
+       src>dst.
+
+     char	*strcpy(dst,src)
+     char * src - source
+     char * dst - destination
+       Copies an ASCIIZ string to a buffer.
+
+     int	strlen(str)
+     char * str - string argument.
+       Returns string length (number of  nonzero  bytes
+       in a string).
+
+     char	*strrchr(arg,chr)
+     char * arg - pointer to string
+     char chr - byte to find
+       Searches for LAST occurance  of  chr  in  string
+       str. Returns pointer to found byte  or  zero  if
+       specified byte not found.
+
+T ---------------------------------------------------------
+     uint	time()
+       Returns a value that is incremented  each  timer
+       interrupt.
+
+     char	tolower(ch)
+     char ch - character to convert.
+       Converts character to lower case.
+
+     char	toupper(ch)
+     char ch - character to convert.
+       Converts character to upper case.
+
+V ---------------------------------------------------------
+     void       vdp(reg,val)
+     char reg - VDP register number
+     char val - data to write to VDP
+       Sets one of VDP registers.
+
+     char	vdpstat(reg)
+     char reg - VDP status register number
+       Reads VDP status register
+
+     char	vpeek(adr)
+     WORD adr - VRAM address.
+       Read one byte from VRAM.
+
+     void	vpoke(adr,byte)
+     WORD adr - VRAM address.
+     BYTE byte - byte to write.
+       Writes one byte to VRAM.
+
+-----------------------------------------------------------
+(c) 1995, SOLIDSOFT
+

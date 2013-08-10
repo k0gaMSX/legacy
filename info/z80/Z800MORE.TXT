@@ -1,0 +1,176 @@
+Date: Thursday, 16 May 1985  07:29-MDT
+From: Jeff Skot
+Re:   Z800 preliminary specs
+
+There is much talk about the Z800.  I thought that I'd inject some
+facts straight from Zilog to substanciate the excitement.
+
+The following is taken from the
+"Z800 MPU Family Preliminary Product Specification" September 1983
+00-2259-01
+from	Zilog, Inc
+	1315 Dell Ave
+	Campbell, California 95008
+
+	(408) 370-8000
+	TWX 910-338-7621
+
+FEATURES:
+. enhanced Z80 instruction set that maintains object-code compatability
+	with Z80 microprocessor
+. on-chip paged Memory Management Unit (MMU)
+. large memory address space: 512K and 16M byte versions
+. On-chip, high speed local or cache memory
+. high performance 16 bit Z-BUS interface or 8-bit Z80-compatible bus interface
+. four on-chip 16 bit counter/timers
+. four on-chip DMA channels
+. On-chip full duplex UART
+. 10-25 MHz CPU processor clock
+
+chip #	# pins	data path	address space	on-chip peripherals
+Z8108	40	8 bits		512 K		no
+Z8116	40	16 bits		512 K		no
+Z8208	64	8 bits		16 M		yes (there are enough pins
+Z8216	64	1 bits		16 M		yes  left on the package)
+
+Central to the Z800 microprocessor is an enhanced version of the Z80 CPU.
+To assure system integrity, the Z800 microprocessor can operate in either user
+or system mode, allowing protection of system resources from user tasks
+and programs.  System mode operation is supported by the addition of the
+system Stack Pointer to the working register set.
+
+I/O address space has been expanded by the addition of an I/O page register
+used to select pages of I/O addresses.  The 8 bit I/O Page register can
+select one of 256 possible pages of I/O addresses to be active at one
+time, allowing a total of 64K I/O addresses to be accessed.
+[ The I/O instructions are still using 8 bit addresses so this
+register is appended to form a 16 bit I/O address ]
+
+There are 256 bytes of on-chip memory present on all members of the Z800
+family.  This memory can be configured as a high speed cache or as a
+fixed address local memory.  When configured as cache, the memory can be
+programmed to be instruction only, data only, or both data and instructions.
+The cache memory allows programs to run significantly faster by reducing
+the number of external bus accesses.  Operation and update of the cache
+is performed automatically and is completely transparent to the user.
+When used as a local memory, the addresses are programmable, allowing
+"RAMless" systems to be used.
+
+All members of the Z800 family contain an on-chip clock oscillator.  Also
+present is a refresh controller that provides 10 bit refresh addresses for
+dynamic memories.
+
+The 64 pin versions of the Z800 MPU contain additional on-chip peripherals
+to provide system design flexibility.  To support high-bandwidth data
+transmission, four DMA channels are incorporated on-chip.  Each DMA
+channel operates using fill 24 bit source and destination addresses with
+a 16 bit count.  The channels can be programmed to operate in single
+transaction, burst, or continuous mode.  System event counting and timing
+requirements are met with the help of the four 16 bit counter/timers.
+The countdown/timer functions can be externally controlled with gate and
+trigger inputs, and can be programmed as retriggerable or nonretriggerable.
+Also, a full duplex UART, capable of handling a variety of data and
+character formats, is present to facilitate asynchronous serial communication.
+
+An additional feature of the 16 bit bus interface is the ability to support
+"nibble-mode" dynamic RAMs.  Using this feature (known as burst-mode),
+the bus bandwidth of memory read transactions is essentially doubled.
+Burst mode transactions have the further benefit of allowing the cache
+to operate more efficiently by guaranteeing a high probability that the
+contents of the associated memory will be present in the cache.
+
+The Z800 CPU architecture supports four distinct address spaces ...
+. CPU register space
+. CPU control and status register space
+. Memory address space
+. I/O address space
+
+Status and control registers:
+There are ten status and control registers available to the programmer
+in the Z800 MPU.  Table 1 shows the addresses occupied by the
+registers in the status and control register addressing space:
+ control register name		address (hex)
+ ====================		===========
+ Bus timing and Control		control 02
+ Bus timing and initialization	control FF
+ Cache control			control 12
+ Interrupt Status		control 16
+ Interrupt/Trap Vector Table	control 06
+ I/O Page Register		control 08
+ Local Address Register		control 14
+ Master Status (MSR)		control 00
+ Stack Limit			control 04
+ Trap Control			control 10
+
+Interrupt/Trap Vector Table:
+The format of the Interrupt/Trap Vector Table consists of pairs of
+Master Status register and Program Counter words, one pair for each seperate
+on-chip interrupt or trap source.  For each external interrupt, there is a
+separate Master Status register word and Program Counter word (for use if
+the input is not vectored).  If the external interrupt is vectored, a vector
+table consisting of one Program Counter word for each of the 128 possible
+vectors that can be returned for each input line is used instead of the
+dedicated Program Counter word; thus for vectored interrupts, there is only
+one Master Status register for each interrupt type.
+
+	INTERRUPT/TRAP VECTOR TABLE
+address		contents
+=======		========
+00	unused
+04	NMI Vector
+08	Interrupt Line A Vector (End of Process)
+0C	Interrupt Line B Vector
+10	Interrupt Line C Vector
+14	C-T0
+18	C-T1
+1C	C-T2
+20	C-T3
+24	DMA0 Vector
+28	DMA1 Vector
+2C	DMA2 Vector
+30	DMA3 Vector
+34	UART Receiver Vector
+38	UART Transmitter Vector
+3C	Single-Step Trap Vector
+40	Breakpoint-on-Halt Trap Vector
+44	Division Exception Trap Vector
+48	Stack Overflow Warning Trap Vector
+4C	Page Fault Trap Vector
+50	System Call Trap Vector
+54	Priviledged Instruction Trap Vector
+58	EPU <- Memory Trap Vector
+5C	Memory <- EPU Trap Vector
+60	A <- EPU Trap Vector
+64	EPU Internal Operation Trap Vector
+68 - 6C	reserved
+70-16E	128 Program Counters for MNI and Interrupt line A Vectors
+	(MSR from 04 and 08, respectively)
+170-26E	128 Program Counters for Interrupt Line B Vectors
+	(MSR from 0C)
+270-36E	128 Program Counters for Interrupt Line C Vectors
+	(MSR from 10)
+
+
+***** my own observations *****
+
+Despite the system/user modes, they still have 'primary' and 'auxillary'
+sets of registers.  The only register duplicated for system/user
+is the SP (Stack Pointer).  A whole other set of registers for system
+would've been nice.  The only way to switch register banks is with
+EX (exchange Accumulator/flag with alternate bank) and
+EXX (exchange byte/word registers with alternate bank).  I think
+this limits the use of the registers since it is easy to forget which
+is in use (there is no way to see which is in use or say 'use primary',
+only 'use other').  EX and EXX are NOT priviledged instructions so you
+cannot reserve their use for the system mode.
+
+Priviledged instructions consist of the CPU controls, I/O and memory
+control.
+
+It would be nice if this ever came to pass, but Zilog is busy with
+their Z80,000 32 bit processor so this takes a back seat.  Sigh.
+
+			Jeff 'armed to the teeth in knowledge' Skot
+			at midtown Somerset, New Jersey
+			{ ihnp4 | mcnc | cbosgb} abnji ! jeff
+

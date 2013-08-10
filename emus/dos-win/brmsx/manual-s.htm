@@ -1,0 +1,1621 @@
+<html>
+
+<head>
+<title>BrMSX Manual</title>
+</head>
+
+<body>
+
+<center><font size=+2>BrMSX</font>
+<BR><font size=+1>the Brazilian MSX Emulator</font>
+<BR>
+by Ricardo Bittencourt
+</center>
+
+<P>
+<table width=100%>
+<td align=right>
+<I>
+"Empieza por el principio", dijo
+<BR>
+el Rey, "y contin&uacute;a hasta que
+<BR>
+llegues al final: entonces para."
+</I>
+<BR>
+(Lewis Carroll)
+</td></table>
+
+BrMSX es un emulador de MSX 1 para DOS. 
+<P>
+En estos d&iacute;as, cualquier chaval sabe lo que es un emulador. Saber lo
+que es un MSX, es otra historia.
+<P>
+El MSX es el mejor ordenador de 8 bits jam&aacute;s creado. La primera
+versi&oacute;n usa un Z80 a 3.57 Mhz, y ofrece paralelismo real, con tres
+procesadores secundarios. El Texas TMS9928 es el chip de v&iacute;deo y
+quien genera las interrupciones. El GI AY-3-8910A controla el sonido y los
+joysticks. El Intel 8255 controla el hardware restante, como el cassette, la
+memoria y el teclado.
+<P>
+El MSX se construy&oacute; en un mont&oacute;n de pa&iacute;ses. Tuvo
+&eacute;xito en Brasil, Jap&oacute;n, Espa&ntilde;a, Holanda, Francia, Italia,
+y la lista continuar&iacute;a. Todav&iacute;a hoy, muchos usuarios piensan
+que el MSX es mejor que un PC corriente. Y yo soy uno de ellos.
+<P>
+El MSX tiene mucho carisma. Fue el ordenador m&aacute;s poderoso de su 
+&eacute;poca, influenciando a una generaci&oacute;n de futuros ingenieros e
+inform&aacute;ticos. Con el MSX, casi todo el mundo era programador. Era tan
+f&aacute;cil, que todo el mundo pod&iacute;a desarrollar software para
+&eacute;l. Esto es algo que el PC nunca podr&aacute; conseguir.
+<P>
+Y por supuesto, tambi&eacute;n est&aacute;n los juegos! El MSX tiene montones
+de buenos juegos, producidos por Konami, Compile, Namco, Falcom, montones de
+conversiones de recreativa, juegos que nunca podr&aacute;s olvidar!
+<P>
+Desafortunadamente, el MSX ya no se construye. Los antiguos usuarios
+todav&iacute;a tienen sus m&aacute;quinas, pero las nuevas generaciones, nunca
+podr&aacute;n disfrutar la diversi&oacute;n del MSX.
+<P>
+Hasta ahora. Hasta BrMSX.
+<P>
+Con BrMSX puedes usar tu PC para sentir una muestra de la grandeza del MSX.
+Puedes jugar a juegos MSX, puedes programar con su BASIC, puedes usar su
+debugger para aprender ensamblador. Te puedes unir a la comunidad MSX.
+<P>
+Pero antes de que te sumerjas en la experiencia inolvidable del MSX, es mejor
+que aprendas m&aacute;s sobre este emulador. Lee este manual desde el
+principio hasta el final: entonces para y arranca BrMSX.
+<P>
+Estoy intentando hacer el emulador tan preciso y tan r&aacute;pido como me sea
+posible. Si encuentras algun error, o si quieres hacer cualquier comentario,
+m&aacute;ndame un e-mail. Mi direcci&oacute;n es
+<A HREF="mailto:ricardo@lsi.usp.br">ricardo@lsi.usp.br</A>.
+Tambi&eacute;n puedes querer visitar la p&aacute;gina oficial de tanto en
+tanto, ya que nuevas versiones salen frecuentemente. La direcci&oacute;n es
+<A HREF="http://www.lsi.usp.br/~ricardo/brmsx.htm">http://www.lsi.usp.br/~ricardo/brmsx.htm</A>
+<P>
+Por supuesto, el MSX te puede generar tanta addicci&oacute;n, que puedes
+querer llegar a comprar un MSX real. Todav&iacute;a hay grupos de usuarios
+que te pueden vender uno de segunda mano. En la p&aacute;gina de BrMSX
+encontrar&aacute;s las home-pages de muchos grupos brasile&ntilde;os activos.
+<P>
+Que te diviertas!
+<P>
+Versi&oacute;n actual: 1.160
+<P>
+<HR>
+<P>
+<font size=+1>Requerimientos</font>
+<P>
+BrMSX necesita un 386 o superior, ya que est&aacute; escrito 100% en
+ensamblador de 32 bits. La m&aacute;quina m&aacute;s lenta a la que tengo
+acceso es un 486sx25, y BrMsX funciona a pleno rendimiento dibujando todos los
+frames en ella. Algunos juegos funcionan a pleno rendimiento incluso en un
+386dx40.
+<P>
+BrMSX necesita 2Mb de RAM, 4Mb si quieres usar la emulaci&oacute;n de disco.
+<P>
+BrMSX se puede adaptar a los procesadores Pentium y MMX para aprovechar sus
+caracter&iacute;sticas especiales.
+<P>
+Una VGA con 256kb de VRAM es necesaria. Para usar la emulaci&oacute;n TV,
+necesitar&aacute;s una SuperVGA con un driver VESA 2.0.
+<P>
+La emulaci&oacute;n del sonido necesita una Sound Blaster con DMA
+auto-inicializada a 45455 Hz o tarjeta 100% compatible. Si no tienes una
+Sound Blaster, puedes activar el sonido a trav&eacute;s del Altavoz interno
+del PC.
+
+<P>
+Los juegos multiplayer necesitan dos ordenadores equipados con UARTs que
+soporten 57600 baudios.
+<P>
+BrMSX est&aacute; dise&ntilde;ado para ser ejecutado bajo DOS 6.22.
+Tambi&eacute;n funciona bajo Windows 3.11 y Windows 95, pero no
+funcionar&aacute; bajo Windows NT. Algunas opciones no se pueden usar bajo
+Windows.
+
+<P>
+<HR>
+<P>
+<font size=+1>Caracter&iacute;sticas</font>
+<P>
+BrMSX intenta parecerse al Expert 1.0 brasile&ntilde;o. Tiene montones de
+caracter&iacute;sticas interesantes:
+<P>
+<LI>Emulaci&oacute;n del Z80 muy precisa. BrMSX es el &uacute;nico emulador
+que pasa todos los tests ZEXALL de compatibilidad Z80. BrMSX emula todos los
+opcodes indocumentados as&iacute; como todos los flags indocumentados. BrMSX
+tambi&eacute;n emula caracter&iacute;sticas indocumentadas del VDP y del PSG.
+<P>
+<LI>Emulaci&oacute;n de disco port-based. BrMSX es el &uacute;nico emulador
+que puede ejecutar software brasile&ntilde;o como <i>Super Disk Copy</i> y
+<i>Chave Mestra</i>.
+<P>
+<LI>Emulaci&oacute;n del extensor de memoria brasile&ntilde;o MegaRAM, BrMSX
+es el &uacute;nico emulador de MSX que puede ejecutar perfectamente
+<i>ExecROM</i>.
+<P>
+<LI>Emulaci&oacute;n de sonido wave-based, BrMSX es el &uacute;nico emulador
+de MSX que puede reproducir samples PCM en juegos como <i>Super Laydock</i>,
+<i>Fuzzball</i> y <i>Oh Shit!</i>
+<P>
+<LI>Emulaci&oacute;n de los LEDs. BrMSX es el &uacute;nico emulador de MSX que
+maneja correctamente el LED de las may&uacute;sculas en el teclado.
+<P> 
+<LI>Emulaci&oacute;n TV y Monitor de f&oacute;sforo verde. BrMSX es el
+&uacute;nico emulador que maneja resoluciones VESA 2.0 con scanlines y filtros
+pasa-bajas.
+<P>
+<LI>Juegos multiplayer. BrMSX es el &uacute;nico emulador de MSX que soporta
+dos jugadores a la vez en ordenadores diferentes.
+<P>
+<LI>Emulaci&oacute;n r&aacute;pida. BrMSX es el emulador de MSX m&aacute;s
+r&aacute;pido que existe.
+<P>
+<LI>Un excelente debugger con ejecuci&oacute;n paso a paso y posibilidades
+para leer toda la informaci&oacute;n del hardware.
+<P>
+<LI>Muchas otras caracter&iacute;sticas interesantes como GUI, posibilidad
+de grabar y cargar el estado del MSX en cualquier momento, soporte para roms
+coreanas, y todav&iacute;a m&aacute;s cosas!
+
+<P>
+<HR>
+<P>
+<font size=+1>Opciones de la l&iacute;nea de comando</font>
+<P>
+BrMSX puede ser invocado desde la l&iacute;nea de comando de MS-DOS usando
+la siguiente sintaxis:
+
+<PRE>
+brmsx [CartA.ROM] [CartB.ROM] [opciones]
+</pre>
+
+Todo es opcional, excepto la palabra <tt>brmsx</tt> al principio. Si no se le
+pasan par&aacute;metros, BrMSX arrancar&aacute; la emulaci&oacute;n
+t&iacute;pica de la BIOS y el BASIC.
+<P>
+Los cartuchos pueden ser simples ROMs de 16kb, que empiecen en las direcciones
+0000h, 4000h, 8000h, Cartuchos BASIC de 16kb que empiecen en la
+direcci&oacute;n 8000h, cartuchos de 32kb que empiecen en la direcci&oacute;n
+4000h, o cartuchos MegaROM (con soporte para ocho mapeadores diferentes).
+<P>
+Si no le pasas ning&uacute;n cartucho en la l&iacute;nea de comando, un
+MegaRAM con 256kb sera introducido autom&aacute;ticamente en el slot 1.
+La cantidad normal de memoria RAM de BrMSX son 128kb v&iacute;a Memory Mapper.
+<P>
+Puedes seleccionar dos cartuchos a la vez. Esto es &uacute;til para programas
+residentes, como <I>Mega-Assembler</I>, y tambi&eacute;n para
+combinaciones de cartuchos. Para m&aacute;s informaci&oacute;n, lee la
+secci&oacute;n sobre combinaciones de cartuchos.
+<P>
+Hay un mont&oacute;n de opciones en la l&iacute;nea de comando. Todas ellas
+empiezan con un "-" y tienen que ponerse en min&uacute;sculas. Algunas
+necesitan un par&aacute;metro, que tiene que ser puesto justo despu&eacute;s
+de la opci&oacute;n, separado por un espacio.
+<P>
+Las opciones soportadas ser&aacute;n presentadas en bloques funcionales:
+<P>
+
+<B>Opciones de la CPU</B>
+<P>
+<table width=100% border=1>
+ <tr><td width=20%><tt>-normal</tt></td>
+ <td>Esta opci&oacute;n selecciona la velocidad normal de un MSX Expert. El
+ Z80 corre a 3.57 Mhz y las interrupciones llegan a 60 Hz. Esta opci&oacute;n
+ es la que funciona por defecto.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-fast</tt></td>
+ <td>En este modo, las interrupciones todav&iacute;a llegan a 60 Hz, pero el
+ Z80 corre tan r&aacute;pido como permita tu ordenador. En mi AMD-K6 233Mhz,
+ esto significa que el Z80 corre a 65 MHz (mucho m&aacute;s r&aacute;pido que
+ un Turbo-R). Este modo es &uacute;til para compilar con el MSX y para
+ acelerar el BASIC. El sonido est&aacute; desconectado en este modo.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-turbo</tt></td>
+ <td>En este modo, todo corre a toda velocidad. De todas maneras, la
+ proporci&oacute;n de opcodes emulados por cada interrupci&oacute;n "virtual"
+ es igual al de la velocidad normal de un MSX. Este modo es &uacute;til para
+ pasar de las intros de los juegos y, por supuesto, para ver la velocidad que
+ puede ofrecer BrMSX.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-ifreq &lt;n&gt;</tt></td>
+ <td>Con esta opci&oacute;n puedes cambiar la frecuencia de las interrupciones
+ El valor por defecto es de 60 (NTSC/PAL-M). Los usuarios europeos deben
+ poner "-ifreq 50". Esta opci&oacute;n puede ser usada tambi&eacute;n para
+ controlar la velocidad de los juegos.
+ </TD></tr>
+
+</table>
+
+<P>
+<B>Opciones de memoria</B>
+<P>
+
+<table width=100% border=1>  
+
+ <tr><td width=20%><tt>-roma &lt;mapper&gt;</tt></td>
+ <td>Esta opci&oacute;n selecciona el tipo de MegaROM Mapper usado por el
+ cartucho metido en el slot A. Los MegaROM Mappers soportados son los de tipo
+ #0, #2, #3, #4 ,#5 ,#6, #7 y #8, BrMSX intentar&aacute; autodetectar el tipo de
+ MegaROM si no especificas esta opci&oacute;n. M&aacute;s informaci&oacute;n
+ sobre esto en la secci&oacute;n MegaROM Mappers. Si un juego tiene SRAM para
+ guardar partidas, entonces esta memoria ser&aacute; grabada en disco con la
+ extensi&oacute;n ".SRM".
+ </TD></tr>
+
+ <tr><td width=20%><tt>-romb &lt;mapper&gt;</tt></td>
+ <td>Esta opci&oacute;n es exactamente igual que la anterior, pero para el
+ slot B.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-ramslot &lt;slot&gt;</tt></td>
+ <td>Esta opci&oacute;n selecciona en que slot aparecer&aacute; la RAM. Slots
+ v&aacute;lidos son el 2 y el 3. El Expert original tiene la RAM en el slot 2,
+ por lo que &eacute;ste es el valor por defecto. Es necesario cambiar la RAM
+ al slot 3 en dos casos: primero, si quieres emular perfectamente el HotBit,
+ segundo, si tienes juegos con un cargador mal constru&iacute;do, y necesitan
+ la RAM en el slot 3. Para saber m&aacute;s sobre esto, l&eacute;elo en la
+ secci&oacute;n sobre soluci&oacute;n de problemas.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-korean</tt></td>
+ <td>Usa esta opci&oacute;n para activar el modo de memoria necesario para
+ MSX coreanos. Necesitar&aacute;s un juegos de ROMs coreanas: Una MSX.ROM
+ coreana y una MSXHAN.ROM coreana. Esta &uacute;ltima ROM ser&aacute; cargada
+ en la p&aacute;gina 2 (8000h) del slot 0.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-megaram &lt;n&gt;</tt></td>
+ <td>Esta opci&oacute;n selecciona el tama&ntilde;o del MegaRAM. Los valores
+ v&aacute;lidos son 0=128kb, 1=256kb, 2=512kb, 3=1Mb y 4=2Mb. El valor por
+ defecto es de 256kb.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-mapper &lt;n&gt;</tt></td>
+ <td>Esta opci&oacute;n selecciona el tama&ntilde;o del Memory Mapper. Los
+ valores v&aacute;lidos son 0=64kb, 1=128kb, 2=256kb, 3=512kb,
+ 4=1Mb, 5=2Mb y 6=4Mb. El valor por defecto es de 128kb.
+ </TD></tr>
+
+</table>
+
+<p>
+<B>Opciones de v&iacute;deo</B>
+<P>
+
+<table width=100% BORDER=1>
+ <tr><td width=20%><tt>-res &lt;n&gt;</tt></td>
+ <td>Esta opci&oacute;n selecciona la resoluci&oacute;n usada por BrMSX.
+ Los valores permitidos son 0 (320x200), 1 (256x200), 2 (512x384), 3
+ (256x192) and 6 (512x384x15). La resoluci&oacute;n 0 es la que se selecciona
+ por defecto, porque funciona en cualquier VGA. La resoluci&oacute;n 1 usa un
+ modo VGA modificado para conseguir que la pantalla sea m&aacute;s ancha, pero
+ puede que no funcione en todos los monitores. La resoluci&oacute;n 2 necesita
+ una SuperVGA con un driver VESA 2.0, y as&iacute; podr&aacute;s disfrutar de la
+ impresionante emulaci&oacute;n TV, con scanlines y filtro pasa-bajas. La
+ resoluci&oacute;n 3 tambi&eacute;n usa un modo VGA modificado, pero es
+ m&aacute;s compatible que la resoluci&oacute;n 1 y tiene los pixels
+ cuadrados. La resoluci&oacute;n 6 es el video engine "Parrot", que usa un
+ modo gr&aacute;fico de 15 bits de color y dos filtros digitales para reducir
+ el aspecto cuadrado de los pixels de los juegos MSX.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-vsync</tt></td>
+ <td>Esta opci&oacute;n activa la sincronizaci&oacute;n con la retraza
+ vertical. Esto puede hacer que la emulaci&oacute;n sea m&aacute;s lenta, pero
+ algunos juegos lo necesitan para mostrar un scroll m&aacute;s suave
+ (como <i>Rally-X</I>), o para conseguir cambios de paleta suaves (como
+ <i>Penguin Adventure</I>).
+ </TD></tr>
+
+ <tr><td width=20%><tt>-green</tt></td>
+ <td>Usa esto para activar la emulaci&oacute;n del monitor de f&oacute;sforo
+ verde. Todo se ver&aacute; verdoso. Usado en combinaci&oacute;n con la
+ emulaci&oacute;n TV, se consigue una emulaci&oacute;n perfecta del monitor
+ original de Gradiente.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-frame &lt;n&gt;</tt></td>
+ <td>Esta opci&oacute;n ajusta el n&uacute;mero de frames no mostrados. El
+ valor por defecto de 1, significa que todos los frames son mostrados. Si
+ BrMSX es lento para ti, puedes incrementar este n&uacute;mero, pero con el
+ valor por defecto ya se consigue pleno rendimiento en un 486sx25 (e incluso
+ en 386dx r&aacute;pidos!!)
+ </TD></tr>
+
+ <tr><td width=20%><tt>-allspr</tt></td>
+ <td>Esta opci&oacute;n desactiva la ocultaci&oacute;n del quinto sprite. Esto
+ es &uacute;til para reducir el parpadeo en juegos como <i>Zanac</i> y
+ <i>Nemesis</i>, pero producir&aacute; errores gr&aacute;ficos en juegos como
+ <i>Antarctic Adventure</i> y <i>Parodius</i>.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-nosprcol</tt></td>
+ <td>Esta opci&oacute;n desactiva la detecci&oacute;n de la colsi&oacute;n
+  de sprites. Esto es &uacute;til para que algunos juegos sean m&aacute;s
+  f&aacute;ciles (como <i>Abu Simbel's Profanation</i>) y puede acelerar la
+  velocidad de la emulaci&oacute;n en ordenadores lentos.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-vdptiming</tt></td>
+ <td>Activa el timing correcto para el VDP. Cuando esta opci&oacute;n esta
+ activa, los accesos al VDP deben esperar al menos 50 ciclos de reloj para
+ que tengan &eacute;xito. Esta opci&oacute;n es &uacute;til para aquellos
+ programadores que quieran asegurarse de que sus programas funcionar&aacute;n
+ en un MSX real.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-nocache</tt></td>
+ <td>Esta opci&oacute;n desactiva la cache de v&iacute;deo. Esto har&aacute;
+ la emulaci&oacute;n mucho m&aacute;s lenta, pero puede ser usada en caso de
+ fallo de la cache de v&iacute;deo. Lee la secci&oacute;n dedicada a resolver
+ problemas para m&aacute;s detalles.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-cpugraph</tt></td>
+ <td>Esta opci&oacute;n activa el gr&aacute;fico del consumo de CPU, una
+ indicaci&oacute;n de cuanto tiempo gasta tu ordenador en cada paso de la
+ emulaci&oacute;n. La primera barra es el tiempo gastado en la
+ emulaci&oacute;n del Z80. La segunda es el tiempo gastado en dibujar los
+ fondos, y la tercera, los sprites. La cuarta barra mide el tiempo gastado
+ en copiar los datos desde la RAM de tu ordenador hasta la RAM de la tarjeta
+ gr&aacute;fica. La quinta barra es lo que gasta este mismo gr&aacute;fico.
+ Usa esta opci&oacute;n para ajustar el emulador a tus preferencias. Esta
+ opci&oacute;n solo funcionar&aacute; en CPU's con la instrucci&oacute;n RDTSC,
+ es decir, Pentium o superiores.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-psggraph</tt></td>
+ <td>Esta opci&oacute;n activa el gr&aacute;fico del PSG, que es bastante
+ interesante y que muestra las amplitudes para cada canal de sonido. Se
+ ver&aacute;n tres barras para el PSG y cinco m&aacute;s si el SCC est&aacute;
+ activado.
+ </TD></tr>
+
+</table>
+
+<p>
+<B>Opciones de Sonido</B>
+<P>
+
+<table width=100% BORDER=1>
+ 
+ <tr><td width=20%><tt>-nosound</tt></td>
+ <td>Desactiva el sonido. &Uacute;til si la detecci&oacute;n de la Sound
+ Blaster cuelga tu ordenador o por si juegas al Nemesis en la oficina.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-scc</tt></td>
+ <td>Activa la emulaci&oacute;n del SCC. Por defecto, no est&aacute; activado,
+ porque la emulaci&oacute;n del SCC todav&iacute;a no es perfecta. S&oacute;lo
+ funciona con los Mappers #0 y #2.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-sr &lt;n&gt;</tt></td>
+ <td>Cambia la frecuencia de muestreo del sonido. El valor por defecto es de
+ 45455 (calidad CD), aunque puedas necesitar disminuir este valor en
+ m&aacute;quinas lentas, o si tu tarjeta de sonido no es 100% compatible con
+ una Sound Blaster.
+ </TD></tr>
+ 
+ <tr><td width=20%><tt>-fmpac</tt></td>
+ <td>Activa la emulaci&oacute;n del FM-PAC (YM2413). La emulaci&oacute;n del
+ FM-PAC es bastante limitada de momento, y la calidad de sonido es bastante
+ pobre. Para activar correctamente el FM-PAC se necesita el FMPAC.ROM
+ original (64kb) como cartucho 1.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-speaker</tt></td>
+ <td>Activa el sonido a trav&eacute;s del altavoz interno del PC. El altavoz
+ puede reproducir los 3 canales de tono del PSG al mismo tiempo, usando un
+ algoritmo especial de multiplexaci&oacute;n temporal.
+
+ <tr><td width=20%><tt>-speaq &lt;n&gt;</tt></td>
+ <td>Cambia la calidad de sonido por el PC Speaker. Este valor controla la
+ velocidad con la que los canales son multiplexados. El valor por defecto es
+ de 1 y seguramente no querr&aacute;s aumentarlo mucho, ya que la calidad
+ empieza a bajar a partir de cierto punto. A mi me gusta "-speaq 2", pero
+ puedes probar otros valores. El rango es de 1 a 9.
+ </TD></tr>
+ 
+</table>
+
+<p>
+<B>Opciones de I/O</B>
+<P>
+
+<table width=100% BORDER=1>
+ 
+ <tr><td width=20%><tt>-diska &lt;f.dsk&gt;</tt></td>
+ <td>Activa la emulaci&oacute;n de la disketera y selecciona el fichero f.dsk
+ como la imagen de disco. Las im&aacute;genes de disco tienen que estar en
+ formato .DSK, y pueden ser de cuatro tipos diferentes: 40 pistas / 1 cara
+ (180kb), 40 pistas / 2 caras (360 kb), 80 pistas / 1 cara (360 kb) y el 
+ t&iacute;pico 80 pistas / 2 caras (720 kb). Im&aacute;genes multi-disco
+ creadas con COPY /B todav&iacute;a no son soportadas.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-disklow</tt></td>
+ <td>La emulaci&oacute;n de disco se har&aacute; a traves de los puertos I/O
+ D0h-D4h. Esta opci&oacute;n est&aacute; activa por defecto, y solo funciona
+ con DISK.ROMs brasile&ntilde;as port-based. Muchos programas
+ brasile&ntilde;os necesitan esta opci&oacute;n, como <I>Super Disk Copy</I>, 
+ <I>Hello</i>, <i>Chave Mestra</i> y la versi&oacute;n en disco de <i>Robocop</I>.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-diskhigh</tt></td>
+ <td>La emulaci&oacute;n de disco se har&aacute; a traves de los patches del
+ BDOS. Esta opci&oacute;n funciona con la mayor&iacute;a de DISK.ROMs, pero
+ es m&aacute;s restrictiva que la anterior, porque solo se pueden usar .DSK's
+ de 720kb, y el LED de la disketera no ser&aacute; emulado.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-mount &lt;dir&gt;</tt></td>
+ <td>Monta un directorio como la disketera <pre>A:</pre> del MSX. Con esta
+ opci&oacute;n, no necesitas crear un fichero imagen de disco .DSK para jugar
+ a juegos en formato .BIN. Mira en la secci&oacute;n de "Soluci&oacute;n de
+ Problemas" para m&aacute;s detalles.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-tape &lt;t.cas&gt;</tt></td>
+ <td>Activa la emulaci&oacute;n de cinta a traves de los patches de la BIOS,
+ y selecciona el fichero t.cas como la imagen de cinta. La emulaci&oacute;n
+ de cinta est&aacute; restringida en esta versi&oacute;n, porque la imagen
+ de cinta no puede ocupar m&aacute;s de 64kb.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-joy</tt></td>
+ <td>Activa la emulaci&oacute;n de joystick. El joystick ser&aacute; conectado
+ en el puerto A (en la mayor&iacute;a de los casos, esto significa como
+ player 1). Si quieres cambiar al port B, vete al debugger y aprende
+ c&oacute;mo hacerlo. El joystick se calibra automaticamente al arrancar
+ BrMSX, as&iacute; que no lo toques hasta que el emulador no arranque.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-joysens &lt;n&gt;</tt></td>
+ <td>Ajusta la sensibilidad del joystick. Valores v&aacute;lidos van de 0 a 7,
+ y el valor por defecto es 3. Los usuarios de joypads deber&iacute;an probar
+ esta opci&oacute;n para conseguir m&aacute;s precisi&oacute;n.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-fakejoy</tt></td>
+ <td>Mapea el joystick A a trav&eacute;s del teclado, con esta opci&oacute;n
+ puedes jugar a juegos que necesitan joystick obligatoriamente (como
+ <i>Gauntlet</i>) con el teclado. El mapeo para este modo es: Cursores=
+ 4 Direcciones, Control Izq.= Bot&oacute;n 1, Alt Izquierdo= Bot&oacute;n 2.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-autofire</tt></td>
+ <td>Esta opci&oacute;n activa el disparador autom&aacute;tico (La barra
+ espaciadora se pulsar&aacute; autom&aacute;ticamente). Esto es genial para
+ juegos de naves como <i>Gall Force</i>.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-autorun</tt></td>
+ <td>Esta opci&oacute;n es similar a la de arriba, pero para los cursores
+ izquierdo y derecho. &Uacute;sala en juegos como <i>Decathlon</i> o
+ <i>Hyper Sports</i>. Aprieta las teclas izquierda y derecha a la vez para
+ correr.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-autospeed &lt;n&gt;</tt></td>
+ <td>Ajusta la velocidad para "-autofire" y "-autorun". El rango es desde 0
+ (m&aacute;s r&aacute;pido) a 9 (m&aacute;s lento). El valor por defecto es 5.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-snespad</tt></td>
+ <td>Activa un pad de SNES conectado al puerto LPT1 y lo hace funcionar como
+ si fuera el joystick en el port A. Para aprender a constru&iacute;r un
+ interface para el pad de la SNES, miralo en la p&aacute;gina oficial de BrMSX.
+ </TD></tr>
+ 
+
+</table>
+ 
+<p>
+<B>Opciones para Multiplayer</B>
+<P>
+
+<table width=100% BORDER=1>
+ 
+ <tr><td width=20%><tt>-server</tt></td>
+ <td>Selecciona el ordenador como servidor. S&oacute;lo el monitor conectado
+ al servidor mostrar&aacute; la pantalla del MSX. Siempre usa el ordenador
+ m&aacute;s r&aacute;pido como servidor.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-client</tt></td>
+ <td>Selecciona el ordenador como cliente. El teclado de este ordenador
+ actuar&aacute; como el joystick B del MSX. La velocidad de este ordenador
+ no importa, puedes usar un 386 lento como cliente de BrMSX.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-com &lt;port&gt;</tt></td>
+ <td>Selecciona el puerto serie COM en el que conectar&aacute;s el cable
+ serie. Esta opci&oacute;n es necesaria en ambos ordenadores. Puedes leer
+ m&aacute;s sobre juegos multiplayer en la secci&oacute;n Multiplayer.
+ </TD></tr>
+
+</table>
+
+<p>
+<B>Opciones de control</B>
+<P>
+
+<table width=100% BORDER=1>
+
+ <tr><td width=20%><tt>-nommx</tt></td>
+ <td>Deshabilita las optimizaciones MMX. Usa este par&aacute;metro si BrMSX
+ detecta una CPU MMX cuando realmente no la tienes.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-nomouse</tt></td>
+ <td>Deshabilita la detecci&oacute;n del driver de rat&oacute;n. &Uacute;sala
+ en caso de conflictos con el driver del rat&oacute;n. Sin driver de
+ rat&oacute;n el GUI no funciona.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-novesa</tt></td>
+ <td>Desactiva la autodetecci&oacute;n del driver VESA. &Uacute;sala solo
+ en caso de tener conflictos con el driver de tu tarjeta gr&aacute;fica. Sin
+ VESA 2.0, no podr&aacute;s usar la emulaci&oacute;n TV.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-noled</tt></td>
+ <td>Desactiva la emulaci&oacute;n de los LEDs. &Uacute;sala solo si tu
+ teclado parece que no detecta bien algunas veces las teclas.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-nopentium</tt></td>
+ <td>Desactiva las extensiones Pentium y la autodetecci&oacute;n de la CPU.
+ &Uacute;sala solo si la autodetecci&oacute;n falla y provoca que se cuelgue
+ tu ordenador. Si no tienes un Pentium no podr&aacute;s ver el gr&aacute;fico
+ de la CPU gastada.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-noenter</tt></td>
+ <td>No habr&aacute; que pulsar enter al arrancar. &Uacute;til para los
+ autores de front-ends.
+ </TD></tr>
+
+ <tr><td width=20%><tt>-help</tt></td>
+ <td>Muestra una peque&ntilde;a pantalla de ayuda.
+ </TD></tr>
+
+</table>
+ 
+<P>
+<HR>
+<P>
+<font size=+1>Dentro del emulador</font>
+<P>
+El MSX tiene algunas teclas que no existen en el PC. El mapeo de ellas se
+describe en la siguiente tabla:
+<P>
+<center>
+<table width=50% border=1>
+<tr>
+<td width=50%><center>Tecla en el MSX</center></td>
+<td><center>Tecla en el PC</center></TD>
+</tr>
+<tr>
+<td width=50%>LGRA (GRAPH)</td>
+<td>Left ALT</TD>
+</tr>
+<tr>
+<td width=50%>RGRA (CODE/KANA)</td>
+<td>Right ALT</TD>
+</tr>
+<tr>
+<td width=50%>STOP</td>
+<td>Page Up</TD>
+</tr>
+<tr>
+<td width=50%>SELECT</td>
+<td>Page Down</TD>
+</tr>
+<tr>
+<td width=50%>HOME/CLS</td>
+<td>Home</TD>
+</tr>
+<tr>
+<td width=50%><tt>'`^~</tt></td>
+<td><tt>`~</tt></TD>
+</tr>
+<tr>
+<td width=50%>&Ccedil;</td>
+<td>End</TD>
+</tr>
+</table>
+</center>
+
+<P>
+
+Los LEDs del telcado tambi&eacute;n son emulados:
+
+<P>
+<center>
+<table width=50% border=1>
+<tr>
+<td width=50%><center>LED del MSX</center></td>
+<td><center>LED del PC</center></TD>
+</tr>
+<tr>
+<td width=50%>Caps Lock</td>
+<td>Caps Lock</TD>
+</tr>
+<tr>
+<td width=50%>Kana</td>
+<td>Num Lock</TD>
+</tr>
+<tr>
+<td width=50%>Disketera ocupada</td>
+<td>Scroll Lock</TD>
+</tr>
+</table>
+</center>
+
+<P>
+Algunas teclas tienen un significado especial:
+<P>
+<center>
+<table width=70% border=1>
+<tr>
+<td width=20%>F6</td>
+<td>Rebobina la cinta</TD>
+</tr>
+<tr>
+<td width=20%>F9</td>
+<td>Graba un screenshot en el fichero BRMSX.PCX</TD>
+</tr>
+<tr>
+<td width=20%>F10</td>
+<td>Para la emulaci&oacute;n y entra en el debugger</TD>
+</tr>
+<tr>
+<td width=20%>F12</td>
+<td>Para la emulaci&oacute;n y entra en el GUI</TD>
+</tr>
+<tr>
+<td width=20%>NumLock</td>
+<td>Tecla para avance rapido, activando el modo TURBO cuando la pulses</td>
+</tr>
+<tr>
+<td width=20%>+ (keypad)</td>
+<td>Sube el volumen</TD>
+</tr>
+<tr>
+<td width=20%>- (keypad)</td>
+<td>Baja el volumen</TD>
+</tr>
+</table>
+</center>
+
+<P>
+El GUI tambi&eacute;n puede ser llamado con el bot&oacute;n izquierdo del
+rat&oacute;n.
+
+<P>
+<HR>
+<P>
+<font size=+1>Interfaz Gr&aacute;fica de Usuario</font>
+<P>
+El GUI es muy f&aacute;cil de usar (despu&eacute;s de todo, esa es la
+intenci&oacute;n!)
+<P>
+El men&uacute; se muestra en la parte izquierda de la pantalla, y tienes que
+usar el rat&oacute;n con el bot&oacute;n izquierdo para elegir las opciones.
+Toca en cualquier sitio fuera de la ventana para volver a activar la
+emulaci&oacute;n.
+<P>
+Las opciones del GUI son:
+<P>
+
+<table width=100% BORDER=1>
+ 
+ <tr><td width=20%>Reset</td>
+ <td>Resetea el MSX. Este reset es un soft-reset, ya que el contenido de la
+ RAM y la VRAM queda intacto.
+ </TD></tr>
+
+ <tr><td width=20%>Turn OFF</td>
+ <td>Apaga el ordenador. Esto es como un reset, pero borra toda la RAM y la
+ VRAM. Tienes que tocar en Turn ON para volver al emulador.
+ </TD></tr>
+ 
+ <tr><td width=20%>Load ROM</td>
+ <td>Esta opci&oacute;n carga una nueva ROM en el slot A. Las ROMs tienen que
+ estar en el mismo directorio que BrMSX.
+ </TD></tr>
+
+ <tr><td width=20%>CPU Graph</td>
+ <td>Esta opci&oacute;n enciende y apaga el gr&aacute;fico de la CPU.
+ </TD></tr>
+
+ <tr><td width=20%>PSG Graph</td>
+ <td>Esta opci&oacute;n enciende y apaga las barras de volumen del PSG.
+ </TD></tr>
+
+ <tr><td width=20%>Save state</td>
+ <td>Esta opci&oacute;n graba el estado del MSX en un fichero llamado
+ BRMSX.STA. Esto es genial para acabarse los juegos!
+ </TD></tr>
+
+ <tr><td width=20%>Load state</td>
+ <td>Esta opci&oacute;n carga un estado previamente grabado.
+ </TD></tr>
+
+ <tr><td width=20%>Quit</td>
+ <td>Esta opci&oacute;n sale de BrMSX y vuelve al DOS.
+ </TD></tr>
+
+</table>
+</p>
+
+
+<P>
+<HR>
+<P>
+<font size=+1>Debugger</font>
+<P>
+Si presionas ESC al principio, o F10 dentro de la emulaci&oacute;n,
+entrar&aacute;s en el Fudebug (<i>Full Debugger</i>). No explicar&eacute; las
+muchas cosas que aparecen en la pantalla. Si no entiendes nada de lo que
+aparece, entonces el debugger no es para ti.
+<P>
+El Fudebug es una herramienta muy poderosa para ayudar al programador MSX.
+Los comandos siempre tienen una letra, y algunos de ellos pueden recibir
+argumentos. Ten cuidado cuando pases argumentos, porque no hay backspace. Los
+valores introducidos tienen que ser siempre en hexadecimal.
+<P>
+Los comandos soportados son:
+<P> 
+<table width=100% BORDER=1>
+ 
+ <tr><td width=20%>S</td>
+ <td>Salir del debugger y seguir con la emulaci&oacute;n
+ </TD></tr>
+
+ <tr><td width=20%>Q</td>
+ <td>Salir del debugger y salir al DOS.
+ </TD></tr>
+
+ <tr><td width=20%>F7</td>
+ <td>Trazar una sola instrucci&oacute;n del Z80.
+ </TD></tr>
+
+ <tr><td width=20%>F8</td>
+ <td>Trazar una instrucci&oacute;n del Z80 por encima. Usa este comando para
+ saltar las instrucciones CALL y RST.
+ </TD></tr>
+
+ <tr><td width=20%>U dddd</td>
+ <td>Desensamblar desde la direcci&oacute;n dddd.
+ </TD></tr>
+
+ <tr><td width=20%>D dddd</td>
+ <td>Volcar la memoria desde la direcci&oacute;n dddd.
+ </TD></tr>
+
+ <tr><td width=20%>Page Up</td>
+ <td>Mover la regi&oacute;n del volcado de memoria hacia arriba.
+ </TD></tr>
+
+ <tr><td width=20%>Page Down</td>
+ <td>Mover la regi&oacute;n del volcado de memoria hacia abajo.
+ </TD></tr>
+
+ <tr><td width=20%>Cursor Arriba</td>
+ <td>Mueve la ventana del desensamblador un byte hacia arriba.
+ </TD></tr>
+
+ <tr><td width=20%>Cursor Abajo</td>
+ <td>Mueve la ventana del desensamblador un opcode hacia abajo.
+ </TD></tr>
+
+ <tr><td width=20%>E dddd xx</td>
+ <td>Edita el byte que est&aacute; en la direcci&oacute;n dddd,
+ machacandolo con el valor xx.
+ </TD></tr>
+
+ <tr><td width=20%>R rr dddd</td>
+ <td>Edita el valor del par de registros rr. "rr" puede ser AF, BC, DE, HL,
+ PC, SP, IX, IY, AX(=AF'), BX(=BC'), DX(=DE') y HX(=HL').
+ </TD></tr>
+
+ <tr><td width=20%>B dddd</td>
+ <td>Sigue con la emulaci&oacute;n pero habiendo puesto un breakpoint en la
+ direcci&oacute;n dddd.
+ </TD></tr>
+
+ <tr><td width=20%>F2</td>
+ <td>Graba el estado del MSX al fichero BRMSX.STA
+ </TD></tr>
+
+ <tr><td width=20%>F3</td>
+ <td>Carga el estado del MSX del fichero BRMSX.STA
+ </TD></tr>
+
+ <tr><td width=20%>1</td>
+ <td>Selecciona la pantalla 1 del debugger.
+ </TD></tr>
+
+ <tr><td width=20%>2</td>
+ <td>Selecciona la pantalla 2 del debugger.
+ </TD></tr>
+
+ <tr><td width=20%>0</td>
+ <td>Para ver la pantalla del MSX.
+ </TD></tr>
+
+ <tr><td width=20%>M</td>
+ <td>Selecciona el modo de emulaci&oacute;n (normal, fast, turbo)
+ </TD></tr>
+
+ <tr><td width=20%>Y</td>
+ <td>Enciende y apaga la VSync.
+ </TD></tr>
+
+ <tr><td width=20%>V</td>
+ <td>Var&iacute;a entre las diferentes resoluciones (320x200, 256x200,
+ 512x384, 256x192)
+ </TD></tr>
+
+ <tr><td width=20%>J</td>
+ <td>Cambia la emulaci&oacute;n del joystick entre el Port-A, Port-B y
+ ninguno.
+ </TD></tr>
+
+ <tr><td width=20%>C</td>
+ <td>Calibra el joystick de nuevo.
+ </TD></tr>
+
+ <tr><td width=20%>F1</td>
+ <td>Muestra la pantalla de ayuda.
+ </TD></tr>
+
+</table>
+
+
+<P>
+<HR>
+<P>
+<font size=+1>Multiplayer</font>
+<P>
+Con BrMSX, puedes conectar dos ordenadores para jugar juegos multiplayer,
+usando un cable serie.
+El primer ordenador controla el teclado del MSX (jugador 1), y el teclado
+del segundo ordenador hace de joystick B del MSX (jugador 2).
+<P>
+Las teclas para el segundo jugador son:
+<P>
+<center>
+<table width=50% border=1>
+<tr>
+<td width=30%>Tecla del jugador 2</td>
+<td>Significado</TD>
+</tr>
+<tr>
+<td width=20%>Derecha</td>
+<td>JOY-B Derecha</TD>
+</tr>
+<tr>
+<td width=20%>Izquierda</td>
+<td>JOY-B Izquierda</TD>
+</tr>
+<tr>
+<td width=20%>Arriba</td>
+<td>JOY-B Arriba</TD>
+</tr>
+<tr>
+<td width=20%>Abajo</td>
+<td>JOY-B Abajo</TD>
+</tr>
+<tr>
+<td width=20%>Barra Espaciadora</td>
+<td>JOY-B Bot&oacute;n 1</TD>
+</tr>
+<tr>
+<td width=20%>M</td>
+<td>JOY-B Bot&oacute;n 2</TD>
+</tr>
+</table>
+</center>
+
+<P>
+Para empezar una sesi&oacute;n multiplayer, tienes que escribir esto en el
+ordenador m&aacute;s r&aacute;pido 
+"<TT>brmsx -server -com 2</tt>", cambiando si fuera necesario el "2" por el
+n&uacute;mero de tu puerto COM.
+<P>
+Despu&eacute;s de arrancar BrMSX en el servidor, escribe esto otro en el
+cliente "<tt>brmsx -client -com 1</tt>", de nuevo, aseg&uacute;rate de poner
+el puerto COM correspondiente. Esto empezar&aacute; la emulaci&oacute;n en
+el modo multiplayer. S&oacute;lo el monitor del servidor mostrar&aacute; la
+pantalla del MSX.
+<P>
+Para salir de la sesi&oacute;n multiplayer, sal del emulador en el cliente
+primero!! Si no lo haces as&iacute; se colgar&aacute;n los dos ordenadores.
+<P>
+Algunos juegos con opci&oacute;n para jugar 2 jugadores son: <i>Konami's
+Soccer</i>, <i>Salamander</i>, <i>Konami's Ping Pong</i>,
+<i>Super Laydock</i>, <i>Yie Ar Kung Fu 2</i>, <i>Warroid</i>, y muchos
+m&aacute;s que ahora no recuerdo.
+
+<P>
+<HR>
+<P>
+<font size=+1>Combinaciones de cartuchos</font>
+<P>
+BrMSX soporta dos cartuchos a la vez. Esto es &uacute;til para programadores
+(puedes cargar <i>Mega-Assembler</i> y <i>XBasic</i> al mismo tiempo), pero
+tambi&eacute;n es &uacute;til en algunos juegos.
+<P>
+Muchos cartuchos esconden opciones secretas cuando se insertan al mismo tiempo
+con otros cartuchos. Algunos ejemplos son:
+<P>
+<LI><i>Nemesis</i> en el slot A y <i>Twin Bee</i> en el slot B: la nave se
+transformar&aacute; en un Twin-Bee.
+<P>
+<LI><i>Nemesis 2</i> en el slot A y <i>Penguin Adventure</i> en el slot B: la
+nave se convertir&aacute; en un pinguino azul.
+<P>
+<LI><i>Nemesis 2</i> en el slot A y <i>Q-Bert</i> en el slot B: podr&aacute;s
+pulsar "F1" y escribir los c&oacute;digos secretos LARS18TH y METALION.
+<P>
+<LI><i>Salamander</i> en el slot A y <i>Nemesis 2</i> en el slot B:
+aparecer&aacute; una pantalla secreta despu&eacute;s de los tres planetas, y
+as&iacute; podr&aacute;s derrotar a Venom y ver el final bueno.
+<P>
+<HR>
+<P>
+<font size=+1>MegaROM Mappers</font>
+<P>
+BrMSX soporta casi todos los MegaROM Mappers usados en los juegos MSX 1. Si
+BrMSX encuentra un juego en su base de datos interna, entonces se usar&aacute;
+el autodetector. Sino, se usar&aacute; el MegaROM Mapper #0.
+
+<P>
+Los mapeadores soportados son:
+<P>
+<LI> #0: MegaROM Gen&eacute;rico con SCC
+<P>
+Juegos: <i>Animal Land</i>, <i>Super Laydock</i>, <i>Jagur</i>, <i>Vaxol</i>,
+<i>Mirai</i>, <i>Donkey Kong</i>, <i>Digital Devil Story</i>,
+<i>The Fairy Land Story</i>, <i>Final Zone</i>, <i>3 Kingdoms</i>,
+<i>1942</i>.
+<P>
+<center>
+<table width=50% border=1>
+<tr>
+<td width=50%>Direcci&oacute;n</td>
+<td>Bloque</td>
+</tr>
+<tr>
+<td width=50%>0000h-1FFFh</td>
+<td>0000h-1FFFh</td>
+</tr>
+<tr>
+<td width=50%>2000h-3FFFh</td>
+<td>2000h-3FFFh</td>
+</tr>
+<tr>
+<td width=50%>4000h-5FFFh</td>
+<td>4000h-5FFFh</td>
+</tr>
+<tr>
+<td width=50%>6000h-7FFFh</td>
+<td>6000h-7FFFh</td>
+</tr>
+<tr>
+<td width=50%>8000h-9FFFh</td>
+<td>8000h-9FFFh</td>
+</tr>
+<tr>
+<td width=50%>A000h-BFFFh</td>
+<td>A000h-BFFFh</td>
+</tr>
+<tr>
+<td width=50%>C000h-DFFFh</td>
+<td>C000h-DFFFh</td>
+</tr>
+<tr>
+<td width=50%>E000h-FFFFh</td>
+<td>E000h-FFFFh</td>
+</tr>
+<tr>
+<td width=50%>9800h-9FFFh</td>
+<td>SCC</td>
+</tr>
+</table>
+</center>
+
+<P>
+<LI> #2: Konami con SCC
+<P>
+Juegos: <i>Nemesis 2</i>, <i>Nemesis 3</i>, <i>Salamander</i>,
+<i>King's Valley II</i>, <i>F1 Spirit</i>, <i>Parodius</i>.
+<P>
+<center>
+<table width=50% border=1>
+<tr>
+<td width=50%>Direcci&oacute;n</td>
+<td>Bloque</td>
+</tr>
+<tr>
+<td width=50%>5000h-57FFh</td>
+<td>4000h-5FFFh</td>
+</tr>
+<tr>
+<td width=50%>7000h-77FFh</td>
+<td>6000h-7FFFh</td>
+</tr>
+<tr>
+<td width=50%>9000h-97FFh</td>
+<td>8000h-9FFFh</td>
+</tr>
+<tr>
+<td width=50%>B000h-B7FFh</td>
+<td>A000h-BFFFh</td>
+</tr>
+<tr>
+<td width=50%>9800h-9FFFh</td>
+<td>SCC</td>
+</tr>
+</table>
+</center>
+
+<P>
+<LI> #3: Konami sin SCC
+<P>
+Juegos: <i>Nemesis</i>, <i>The Maze of Galious</i>, <i>Shalom</i>,
+<i>Penguin Adventure</i>.
+<P>
+<center>
+<table width=50% border=1>
+<tr>
+<td width=50%>Direcci&oacute;n</td>
+<td>Bloque</td>
+</tr>
+<tr>
+<td width=50%>&lt;ninguna&gt;</td>
+<td>4000h-5FFFh</td>
+</tr>
+<tr>
+<td width=50%>6000h</td>
+<td>6000h-7FFFh</td>
+</tr>
+<tr>
+<td width=50%>8000h</td>
+<td>8000h-9FFFh</td>
+</tr>
+<tr>
+<td width=50%>A000h</td>
+<td>A000h-BFFFh</td>
+</tr>
+</table>
+</center>
+
+<P>
+<LI> #4: ASCII 8kb
+<P>
+Juegos: <i>Valis - The Fantasm Soldier</i>, <i>Hydlide 3</i>,
+<i>Fantasy Zone</i>, <i>Dragon Slayer 4</i>.
+<P>
+<center>
+<table width=50% border=1>
+<tr>
+<td width=50%>Direcci&oacute;n</td>
+<td>Bloque</td>
+</tr>
+<tr>
+<td width=50%>6000h-67FFh</td>
+<td>4000h-5FFFh</td>
+</tr>
+<tr>
+<td width=50%>6800h-6FFFh</td>
+<td>6000h-7FFFh</td>
+</tr>
+<tr>
+<td width=50%>7000h-77FFh</td>
+<td>8000h-9FFFh</td>
+</tr>
+<tr>
+<td width=50%>7800h-7FFFh</td>
+<td>A000h-BFFFh</td>
+</tr>
+</table>
+</center>
+
+<P>
+<LI> #5: ASCII 16kb
+<P>
+Juegos: <i>Gall Force</i>, <i>Eggerland Mystery 2</i>, <i>Golvellius</i>.
+<P>
+<center>
+<table width=50% border=1>
+<tr>
+<td width=50%>Direcci&oacute;n</td>
+<td>Bloque</td>
+</tr>
+<tr>
+<td width=50%>6000h-6FFFh</td>
+<td>4000h-7FFFh</td>
+</tr>
+<tr>
+<td width=50%>7000h-7FFFh</td>
+<td>8000h-BFFFh</td>
+</tr>
+</table>
+</center>
+
+<P>
+<LI> #6: ASCII 8kb con 8kb SRAM
+<P>
+Juegos: <i>Xanadu</i>.
+<P>
+<center>
+<table width=50% border=1>
+<tr>
+<td width=50%>Direcci&oacute;n</td>
+<td>Bloque</td>
+</tr>
+<tr>
+<td width=50%>6000h-67FFh</td>
+<td>4000h-5FFFh</td>
+</tr>
+<tr>
+<td width=50%>6800h-6FFFh</td>
+<td>6000h-7FFFh</td>
+</tr>
+<tr>
+<td width=50%>7000h-77FFh</td>
+<td>8000h-9FFFh</td>
+</tr>
+<tr>
+<td width=50%>7800h-7FFFh</td>
+<td>A000h-BFFFh</td>
+</tr>
+<tr>
+<td width=50%>Numero de bloque=20h</td>
+<td>SRAM</td>
+</tr>
+</table>
+</center>
+
+<P>
+<LI> #7: ASCII 16kb con 2kb SRAM
+<P>
+Juegos: <i>Hydlide 2</i>.
+<P>
+<center>
+<table width=50% border=1>
+<tr>
+<td width=50%>Direcci&oacute;n</td>
+<td>Bloque</td>
+</tr>
+<tr>
+<td width=50%>6000h-6FFFh</td>
+<td>4000h-7FFFh</td>
+</tr>
+<tr>
+<td width=50%>7000h-7FFFh</td>
+<td>8000h-BFFFh</td>
+</tr>
+<tr>
+<td width=50%>Numero de bloque=10h</td>
+<td>SRAM</td>
+</tr>
+</table>
+</center>
+
+<P>
+<LI> #8: FM-PAC Original de Panasonic con 8kb SRAM
+<P>
+Juegos: <i>FM-PAC original</i>.
+
+<P>
+<center>
+<table width=50% border=1>
+<tr>
+<td width=50%>Direcci&oacute;n</td>
+<td>Bloque</td>
+</tr>
+<tr>
+<td width=50%>7FF7h</td>
+<td>4000h-7FFFh</td>
+</tr>
+</table>
+</center>
+
+
+<P>
+<HR>
+<P>
+<font size=+1>Memory layout</font>
+
+<P>
+<center>
+<tt>brmsx</tt>
+<table width=70% border=1>
+<tr>
+<td width=25% bgcolor=#ff8080>MSX.ROM</td>
+<td width=25% bgcolor=#6060df>MegaRAM</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25%>&nbsp</td>
+</tr>
+<tr>
+<td width=25% bgcolor=#ff8080>MSX.ROM</td>
+<td width=25% bgcolor=#6060df>MegaRAM</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25%>&nbsp</td>
+</tr>
+<tr>
+<td width=25%>&nbsp</td>
+<td width=25% bgcolor=#6060df>MegaRAM</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25%>&nbsp</td>
+</tr>
+<tr>
+<td width=25%>&nbsp</td>
+<td width=25% bgcolor=#6060df>MegaRAM</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25%>&nbsp</td>
+</tr>
+</table>
+</center>
+
+<P>
+<center>
+<tt>brmsx cartA.rom cartB.rom</tt>
+<table width=70% border=1>
+<tr>
+<td width=25% bgcolor=#ff8080>MSX.ROM</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25% bgcolor=#80df80>Cart B</td>
+</tr>
+<tr>
+<td width=25% bgcolor=#ff8080>MSX.ROM</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25% bgcolor=#80df80>Cart B</td>
+</tr>
+<tr>
+<td width=25%>&nbsp</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25% bgcolor=#80df80>Cart B</td>
+</tr>
+<tr>
+<td width=25%>&nbsp</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25% bgcolor=#80df80>Cart B</td>
+</tr>
+</table>
+</center>
+
+<P>
+<center>
+<tt>brmsx -ramslot 3 cartA.rom cartB.rom</tt>
+<table width=70% border=1>
+<tr>
+<td width=25% bgcolor=#ff8080>MSX.ROM</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#80df80>Cart B</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+</tr>
+<tr>
+<td width=25% bgcolor=#ff8080>MSX.ROM</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#80df80>Cart B</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+</tr>
+<tr>
+<td width=25%>&nbsp</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#80df80>Cart B</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+</tr>
+<tr>
+<td width=25%>&nbsp</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#80df80>Cart B</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+</tr>
+</table>
+</center>
+
+<P>
+<center>
+<tt>brmsx -korean cartA.rom cartB.rom</tt>
+<table width=70% border=1>
+<tr>
+<td width=25% bgcolor=#ff8080>MSX.ROM</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25% bgcolor=#80df80>Cart B</td>
+</tr>
+<tr>
+<td width=25% bgcolor=#ff8080>MSX.ROM</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25% bgcolor=#80df80>Cart B</td>
+</tr>
+<tr>
+<td width=25% bgcolor=#ff8080>MSXHAN.ROM</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25% bgcolor=#80df80>Cart B</td>
+</tr>
+<tr>
+<td width=25%>&nbsp</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25% bgcolor=#80df80>Cart B</td>
+</tr>
+</table>
+</center>
+
+<P>
+<center>
+<tt>brmsx -diska msxdos.dsk cartA.rom</tt>
+<table width=70% border=1>
+<tr>
+<td width=25% bgcolor=#ff8080>MSX.ROM</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25%>&nbsp</td>
+</tr>
+<tr>
+<td width=25% bgcolor=#ff8080>MSX.ROM</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25% bgcolor=#ff8080>DISK.ROM</td>
+</tr>
+<tr>
+<td width=25%>&nbsp</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25%>&nbsp</td>
+</tr>
+<tr>
+<td width=25%>&nbsp</td>
+<td width=25% bgcolor=#80df80>Cart A</td>
+<td width=25% bgcolor=#8080ff>RAM</td>
+<td width=25%>&nbsp</td>
+</tr>
+</table>
+</center>
+
+<P>
+<HR>
+<P>
+<font size=+1>Soluci&oacute;n de problemas</font>
+<P>
+Respuestas a preguntas frecuentes:
+
+<P>
+<b>P:</b> <i>&iquest;C&oacute;mo hago funcionar los juegos en formato .ROM?</i>
+<br>
+<b>R:</b> Copia el fichero .ROM al mismo directorio de BrMSX y usa el GUI
+del emulador. Tambi&eacute;n puedes escribir "<tt>brmsx game.rom</tt>" si el
+DOS no te asusta.
+
+<P>
+<b>P:</b> <i>&iquest;C&oacute;mo hago funcionar los juegos en formato .DSK?</i>
+<br>
+<b>R:</b> Simplemente escribe "<tt>brmsx -diska game.dsk</tt>". A partir de
+ese momento, BrMSX actuar&aacute; como un MSX real con unidad de disco.
+
+<P>
+<b>P:</b> <i>&iquest;C&oacute;mo hago funcionar los juegos en formato
+.BAS y .BIN?</i>
+<br>
+<b>R:</b> Puedes usar la opci&oacute;n "-mount". Funciona as&iacute;:
+<BR>(1) Crea un directorio con "<tt>md c:\msxgames</tt>"
+<BR>(2) Copia tus juegos a este directorio con
+"<tt>copy game*.* c:\msxgames</tt>"
+<BR>(3) Arranca BrMSX con "<tt>brmsx -mount c:\msxgames</tt>"
+<br>
+Despu&eacute;s de crear el fichero .DSK, simplemente usa los comandos
+<i>RUN"GAME.BAS"</i> o <i>BLOAD"GAME.BIN",R</i> desde dentro del BASIC.
+
+<P>
+<b>P:</b> <i>Estoy intentando ejecutar el juego "Terramex" y no funciona!</i>
+<br>
+<b>R:</b> Esto no es un fallo de BrMSX, simplemente es que el cargador del
+propio juego no est&aacute; bien programado. Intenta ejecutar el juego de
+nuevo, pero esta vez arranca BrMSX con la opci&oacute;n "-ramslot 3". Algunos
+juegos que necesitan esto son <i>Terramex</i>,<i>Oh Shit</i> y <i>Camelot
+Warriors</i>.
+
+<P>
+<b>P:</b> <i>"Gall Force", ese cartucho tan grande, no funciona! </i>
+<br>
+<b>R:</b> Si el juego ocupa m&aacute;s de 32kb, lo que pasa es que BrMSX no
+puede detectar correctamente el MegaROM Mapper para estos juegos. Intenta
+usar el par&aacute;metro "-roma" con todos los valores disponibles, hasta que
+encuentres uno con el que funcione.
+
+<P>
+<b>P:</b> <i>Quiero jugar a "Zanac" pero la nave parpadea!
+Seguro que es un error, ya que he probado la misma ROM en otro emulador y no
+parpadea.</i>
+<br>
+<b>R:</b> Este parpadeo tambi&eacute;n aparecer&aacute; en un MSX real, ya que
+es una caracter&iacute;stica del VDP llamada "Ocultaci&oacute;n del quinto
+sprite". Algunos juegos la necesitan para mostrar los gr&aacute;ficos
+correctamente, como <i>Parodius</i>, <i>Goonies</i> y <i>Antarctic
+Adventure</i>. Puedes desactivar esta caracter&iacute;stica con el parametro
+"-allspr". Si el parpadeo no aparece en otros emuladores, entonces, o no
+emulan esta caracter&iacute;stica, o la tienen desactivada por defecto.
+
+<P>
+<b>P:</b> <i>No oigo ning&uacute;n sonido!</i>
+<BR>
+<b>R: </b>BrMSX solo soporta tarjetas de sonido Sound Blaster y 100%
+compatibles. Algunos modelos viejos, como la Sound Blaster Pro, no son
+soportados. BrMSX tampoco suena con la ESS audiodrive. Los usuarios de una
+Gravis Ultrasound deben usar el emulador de Sound Blaster <i>MEGAEM</i>.
+Simplemente dame tiempo suficiente y a&ntilde;adir&eacute; los drivers para
+todas estas tarjetas. Mientras tanto, puedes probar el sonido a trav&eacute;s
+del altavoz interno del PC, o la versi&oacute;n de 22222Hz (brmsx22.exe).
+
+<P>
+<b>P:</b> <i>Por qu&eacute; "Bubble Bobble" y "Metal Gear" no funcionan con
+BrMSX? </i>
+<br>
+<b>R:</b> Estos son juegos de MSX-2. BrMSX solo emula el MSX-1 de momento.
+
+<P>
+<b>P:</b> <i>Cu&aacute;ndo BrMSX emular&aacute; un MSX2?</i>
+<br>
+<b>R:</b> Simplemente cuando acabe la emulaci&oacute;n del MSX1. No tiene
+sentido a&ntilde;adir la emulaci&oacute;n del MSX2 si el MSX1 no est&aacute;
+totalmente implementado! Hay muchas caracter&iacute;sticas todav&iacute;a no
+implementadas en nig&uacute;n emulador (principalmente las no documentadas),
+y para conseguir una emulaci&oacute;n perfecta, tengo que a&ntilde;adir todas
+ellas.
+
+<P>
+<b>P:</b> <i>D&oacute;nde puedo encontrar el test ZEX? Hay alguna
+versi&oacute;n para 6502?</i>
+<br>
+<b>R:</b> ZEX (Z80 Exercicer) es un programa para probar la compatibilidad de
+un Z80. Lo puedes encontrar dentro de YAZE. YAZE son las siglas de <i>Yet
+Another Z80 Emulator</i> y se encuentra disponible en sitios que tratan sobre
+CP/M. La versi&oacute;n original de ZEX funciona bajo MSX-DOS, pero yo he
+hecho una versi&oacute;n .ROM antes de a&ntilde;adir soporte para disco. Si te
+interesa esta versi&oacute;n, m&aacute;ndame un mail. ZEX solo ha sido hecho
+para el Z80, y no se encuentra disponible para ning&uacute;n otro procesador.
+
+<P>
+<b>P:</b> <i>Qu&eacute; tengo que hacer para ejecutar "Metal Gear 2" con fMSX?</i>
+<br>
+<b>R:</b> Por favor, no me preguntes cosas sobre fMSX, CJS o sobre cualquier
+otro emulador de MSX. Gasto demasiado tiempo respondiendo e-mails, y este
+tiempo podr&iacute;a ser mejor aprovechado programando BrMSX. Si tienes
+problemas con cualquier otro emulador, contacta con Marcelo Eiras a
+trav&eacute;s de su p&aacute;gina
+<A HREF="http://www.geocities.com/~msxsite">http://www.geocities.com/~msxsite</A>
+(portugu&eacute;s),
+o con TFH a trav&eacute;s de la p&aacute;gina
+<a href="http://www.casema.net/~tfh">http://www.casema.net/~tfh</A>
+(ingl&eacute;s)
+.
+
+
+<P>
+<b>P:</b> <i>Puedo ser un beta-tester?</i>
+<br>
+<b>R:</b> De hecho, ya lo eres, ya que todas las versiones que he sacado son
+betas.
+
+<P>
+<HR>
+<P>
+<font size=+1>Cr&eacute;ditos</font>
+<P>
+
+Hay gente que cree que estoy haciendo BrMSX solo. Pero no es cierto.
+Realmente lo programo solo, pero BrMSX es mucho m&aacute;s que un simple
+programa. Mucha gente me ha ayudado contribuyendo con listados de ejemplo,
+data books, pruebas en MSX reales, informandome sobre errores o simplemente
+animandome.
+<P>
+Primero de todo, quiero agradecer a Arnon Cardoso. Fue su idea empezar un
+emulador de MSX brasile&ntilde;o. Deber&iacute;ais probar su gran emulador
+de MSX hecho en Java. Alg&uacute;n d&iacute;a el PC morir&aacute; como tal, y
+BrMSX no ser&aacute; &uacute;til entonces. Pero un emulador hecho en Java
+tiene el potencial para ser usado siempre.
+<P>
+Muchas gracias a Sean Young. &Eacute;l me dio muchas pistas en las primeras
+versiones de BrMSX (pero por supuesto la m&aacute;s importante de todas fue
+"a veces tienes que PARAR, y solo despues PENSAR" :). Las fuentes de Virtual
+MSX y sus p&aacute;ginas con informaci&oacute;n t&eacute;cnica fueron de
+gran ayuda.
+<P>
+No puedo olvidar a Isaac Santaolalla Sol&oacute;rzano. A veces creo que pasa
+m&aacute;s tiempo probando mi emulador que el suyo propio! Es un t&iacute;o
+que realmente se lo pasa bien con su MSX. Prueba su emulador MSKISS, tiene
+muchas caracter&iacute;sticas que todav&iacute;a no est&aacute;n presentes en
+BrMSX, como soporte nativo para GUS y detector de MegaROM Mapper.
+<P>
+Adriano Cunha ha sido una gran inspiraci&oacute;n. &Eacute;l ODIA los
+emuladores, y he tenido que hacer que BrMSX sea muy perfecto para que
+as&iacute; &eacute;l lo use. Despu&eacute;s de todo, no ha sido imposible.
+<P>
+Muchas gracias a mi hermano, Raul Tabajara. &Eacute;l ha hecho todos los
+gr&aacute;ficos de BrMSX, desde el dise&ntilde;o del GUI hasta el logotipo.
+Actualmente est&aacute; buscando trabajo como dise&ntilde;ador gr&aacute;fico
+para juegos, puedes ver m&aacute;s trabajos suyos aqui:
+<A href="http://www.lsi.usp.br/~ricardo/raul.htm">http://www.lsi.usp.br/~ricardo/raul.htm</a>,
+y para contactar con &eacute;l simplemente m&aacute;ndame un e-mail a mi, a
+<a href="mailto:ricardo@lsi.usp.br">ricardo@lsi.usp.br</A>.
+<P>
+Y por supuesto tengo que dar las gracias a Thomas Pytel. Sin su
+librer&iacute;a PMODE, yo nunca hubiera aprendido ensamblador en modo
+protegido, y BrMSX nunca hubiera sido tan r&aacute;pido.
+<P>
+Si quisiera dar las gracias a todo el mundo que me ha ayudado, este fichero
+ser&iacute;a demasiado grande para bajar. Pero no puedo acabar este manual sin
+mencionar la ayuda de
+Marco Antonio Simon Dal Poz, Enrique Sanchez, Alex Wulms, Hans Guijt,
+Eduardo Toledo Santos, KSH, Edison Pires, Insano Delavy,
+Marcellus Pereira, Marat Fayzullin, Marcel de Kogel, Ademir Carchano,
+Pierluigi Piazzi, Cyberknight, Walter Marujo, Werner & Weber Kai,
+Shawn Hargreaves, Mark Feldman, Giovanni Fudeba, Alex Sato, Zoop, Erik Dias, 
+FRS'9X, Ricardo Juracy, Italo Val&eacute;rio, Daniel Caetano, Vanessa Sabino,
+Daniel Vicentini, Rog&eacute;rio Cobra Bello, Tiago Tresoldi, Miki Watanabe, 
+Luciano Menezes, Marcelo Eiras, Saez Frank, Ulrich Doewich, Mudkicker,
+TFH, Omar Mosqueda, Leonard Silva de Oliveira,
+Jaime Magno Flaviano Galle, Neckfreak de Bandwagon, Peter Latimer, Alwin
+Henseler 
+y toda la gente que me ha mandado e-mails
+inform&aacute;ndome sobre errores y con comentarios. &iexcl;Gracias a todos!
+<P>
+Si quieres traducir este manual al japon&eacute;s, coreano, holand&eacute;s,
+italiano o cualquier otra lengua hablada por los muchos fans del MSX, por
+favor contacta conmigo.<BR>
+
+<P>
+<table width=100%>
+<td align=right>
+<i>
+"&iexcl;No puedo creer ESO!", dijo
+<BR>
+Alicia. "&iquest;No puedes?", dijo la Reina,
+<BR>
+en un tono compasivo. "&iexcl;A veces,
+<BR>
+yo he sido capaz de creer
+<BR>
+hasta SEIS cosas imposibles antes
+<BR>
+de desayunar!"
+</i>
+<P>
+(Lewis Carroll)
+</td>
+</table>
+
+<HR>
+<CENTER>
+Documento traducido al Castellano por Isaac Santaolalla Sol&oacute;rzano<BR>
+<a href="mailto:is05562@salleURL.edu">is05562@salleURL.edu</A>,
+el 29 de Abril de 1999.
+</CENTER>
+<HR>
+
+</body>
+
+</html>
+

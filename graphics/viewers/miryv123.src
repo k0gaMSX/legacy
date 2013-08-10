@@ -1,0 +1,4990 @@
+;
+;
+;
+;
+;***************************************
+;	シンボルの定義
+;***************************************
+;---------------------------------------
+;	ＢＩＯＳ
+;---------------------------------------
+BDOS	EQU	0005h
+RDSLT	EQU	000ch
+WRSLT	EQU	0014h
+CALSLT	EQU	001ch
+ENASLT	EQU	0024h
+CHGCPU	EQU	0180h
+GTPAD	EQU	00dbh
+FONT_ADDRESS	EQU	01bbfh
+EXTBIO	EQU	0ffcah
+PUTPNT	EQU	0f3f8h
+GETPNT	EQU	0f3fah
+;---------------------------------------
+;	システムワーク
+;---------------------------------------
+KANJI_PORT	EQU	0d8h
+MAP_PAGE1	EQU	0fdh
+MAP_PAGE2	EQU	0feh
+MAP_PAGE3	EQU	0ffh
+P1SLOT	EQU	0f342h
+P2SLOT	EQU	0f343h
+BDRCLR	EQU	0f3ebh
+RG1SAV	EQU	0f3e0h
+RG2SAV	EQU	0f3e1h
+RG8SAV	EQU	0ffe7h
+RG9SAV	EQU	0ffe8h
+RG23SA	EQU	0fff7h
+RG25SA	EQU	0fffah
+RG26SA	EQU	0fffbh
+RG27SA	EQU	0fffch
+EXPTBL	EQU	0fcc1h
+JIFFY	EQU	0fc9eh
+DTALIN	EQU	0081h
+DTALEN	EQU	0080h
+CAPST	EQU	0fcabh
+KANAST	EQU	0fcach
+;---------------------------------------
+;	汎用
+;---------------------------------------
+PAGE0		EQU	00000h
+PAGE1		EQU	04000h
+PAGE2		EQU	08000h
+PAGE3		EQU	0c000h
+DISK_READ_TOP	EQU	08000h
+DISK_READ_LEN	EQU	04000h
+ON		EQU	000h
+OFF		EQU	0ffh
+_EOF		EQU	0c7h
+EOS		EQU	'$'
+OPT		EQU	'/'
+CR		EQU	13
+LF		EQU	10
+SEGMENT_MIN	EQU	16
+SEGMENT_MAX	EQU	16
+FLASH_COUNT	EQU	512
+NOW		EQU	02h
+NEXT		EQU	03h
+PREV		EQU	04h
+LINE_BUF1575	EQU	03000h
+LINE_BUF	EQU	03000h
+PALOFFSET	EQU	0
+PALMAX		EQU	01110000b
+PALMASK1	EQU	11111100b
+PALMASK2	EQU	00000011b
+;---------------------------------------
+;	ファンクションコール
+;---------------------------------------
+_TERM0	EQU	00h
+_CONIN	EQU	01h
+_CONOUT	EQU	02h
+_DIRIO	EQU	06h
+_DIRIN	EQU	07h
+_STROUT	EQU	09h
+_FOPEN	EQU	0fh
+_FCLOSE	EQU	010h
+_SFIRST	EQU	011h
+_SNEXT	EQU	012h
+_FMAKE	EQU	016h
+_LOGIN	EQU	018h
+_CURDRV	EQU	019h
+_SETDTA	EQU	01ah
+_WRBLK	EQU	026h
+_RDBLK	EQU	027h
+_GTIME	EQU	02ch
+_RDABS	EQU	02fh
+_FFIRST	EQU	040h
+_FNEXT	EQU	041h
+_OPEN	EQU	043h
+_CREATE	EQU	044h
+_CLOSE	EQU	045h
+_READ	EQU	048h
+_WRITE	EQU	049h
+_SEEK	EQU	04ah
+_DELETE	EQU	04dh
+_GETCD	EQU	059h
+_CHDIR	EQU	05ah
+_PARSE	EQU	05bh
+_TERM	EQU	062h
+_GENV	EQU	06bh
+_DOSVER	EQU	06fh
+;***************************************
+;	汎用関数
+;***************************************
+
+	ASEG
+
+	ORG	0100h
+
+
+	jp	Main
+
+Copyright:
+	DEFB	0dh,0ah
+	DEFB	'MIRY   Memory Mapper PIC Loader   Version 1.23    3-13-95',0dh,0ah
+	DEFB	'Copyright 1994-1995 MASARU-N.  All Right Reserved.',0dh,0ah
+	DEFB	'$'
+
+
+	ORG	0200h
+
+
+Color_now_table:
+	DEFS	128
+
+
+	ORG	0300h
+
+
+Color_next_table:
+	DEFS	128
+
+
+	ORG	0400h
+
+
+Color_prev_table:
+	DEFS	128
+
+
+	ORG	0500h
+
+
+Dither63_table:
+;	GREEN 0	0-0
+;		GGRBGGRB  GGRBGGRB  GGRBGGRB  GGRBGGRB
+	DEFB	00000000b,00010000b,00000001b,00010001b
+	DEFB	00000000b,00010000b,00000001b,00010001b
+	DEFB	00100000b,00110000b,00100001b,00110001b
+	DEFB	00100000b,00110000b,00100001b,00110001b
+	DEFB	00000010b,00010010b,00000011b,00010011b
+	DEFB	00000010b,00010010b,00000011b,00010011b
+	DEFB	00100010b,00110010b,00100011b,00110011b
+	DEFB	00100010b,00110010b,00100011b,00110011b
+;	GREEN 1	1-0
+;		GGRBGGRB  GGRBGGRB  GGRBGGRB  GGRBGGRB
+	DEFB	01000000b,01010000b,01000001b,01010001b
+	DEFB	01000000b,01010000b,01000001b,01010001b
+	DEFB	01100000b,01110000b,01100001b,01110001b
+	DEFB	01100000b,01110000b,01100001b,01110001b
+	DEFB	01000010b,01010010b,01000011b,01010011b
+	DEFB	01000010b,01010010b,01000011b,01010011b
+	DEFB	01100010b,01110010b,01100011b,01110011b
+	DEFB	01100010b,01110010b,01100011b,01110011b
+;	GREEN 2	1-1
+;		GGRBGGRB  GGRBGGRB  GGRBGGRB  GGRBGGRB
+	DEFB	01000100b,01010100b,01000101b,01010101b
+	DEFB	01000100b,01010100b,01000101b,01010101b
+	DEFB	01100100b,01110100b,01100101b,01110101b
+	DEFB	01100100b,01110100b,01100101b,01110101b
+	DEFB	01000110b,01010110b,01000111b,01010111b
+	DEFB	01000110b,01010110b,01000111b,01010111b
+	DEFB	01100110b,01110110b,01100111b,01110111b
+	DEFB	01100110b,01110110b,01100111b,01110111b
+;	GREEN 3	2-1
+;		GGRBGGRB  GGRBGGRB  GGRBGGRB  GGRBGGRB
+	DEFB	10000100b,10010100b,10000101b,10010101b
+	DEFB	10000100b,10010100b,10000101b,10010101b
+	DEFB	10100100b,10110100b,10100101b,10110101b
+	DEFB	10100100b,10110100b,10100101b,10110101b
+	DEFB	10000110b,10010110b,10000111b,10010111b
+	DEFB	10000110b,10010110b,10000111b,10010111b
+	DEFB	10100110b,10110110b,10100111b,10110111b
+	DEFB	10100110b,10110110b,10100111b,10110111b
+;	GREEN 4	2-2
+;		GGRBGGRB  GGRBGGRB  GGRBGGRB  GGRBGGRB
+	DEFB	10001000b,10011000b,10001001b,10011001b
+	DEFB	10001000b,10011000b,10001001b,10011001b
+	DEFB	10101000b,10111000b,10101001b,10111001b
+	DEFB	10101000b,10111000b,10101001b,10111001b
+	DEFB	10001010b,10011010b,10001011b,10011011b
+	DEFB	10001010b,10011010b,10001011b,10011011b
+	DEFB	10101010b,10111010b,10101011b,10111011b
+	DEFB	10101010b,10111010b,10101011b,10111011b
+;	GREEN 5	3-2
+;		GGRBGGRB  GGRBGGRB  GGRBGGRB  GGRBGGRB
+	DEFB	11001000b,11011000b,11001001b,11011001b
+	DEFB	11001000b,11011000b,11001001b,11011001b
+	DEFB	11101000b,11111000b,11101001b,11111001b
+	DEFB	11101000b,11111000b,11101001b,11111001b
+	DEFB	11001010b,11011010b,11001011b,11011011b
+	DEFB	11001010b,11011010b,11001011b,11011011b
+	DEFB	11101010b,11111010b,11101011b,11111011b
+	DEFB	11101010b,11111010b,11101011b,11111011b
+;	GREEN 6	3-3
+;		GGRBGGRB  GGRBGGRB  GGRBGGRB  GGRBGGRB
+	DEFB	11001100b,11011100b,11001101b,11011101b
+	DEFB	11001100b,11011100b,11001101b,11011101b
+	DEFB	11101100b,11111100b,11101101b,11111101b
+	DEFB	11101100b,11111100b,11101101b,11111101b
+	DEFB	11001110b,11011110b,11001111b,11011111b
+	DEFB	11001110b,11011110b,11001111b,11011111b
+	DEFB	11101110b,11111110b,11101111b,11111111b
+	DEFB	11101110b,11111110b,11101111b,11111111b
+;	GREEN 7	3-3
+;		GGRBGGRB  GGRBGGRB  GGRBGGRB  GGRBGGRB
+	DEFB	11001100b,11011100b,11001101b,11011101b
+	DEFB	11001100b,11011100b,11001101b,11011101b
+	DEFB	11101100b,11111100b,11101101b,11111101b
+	DEFB	11101100b,11111100b,11101101b,11111101b
+	DEFB	11001110b,11011110b,11001111b,11011111b
+	DEFB	11001110b,11011110b,11001111b,11011111b
+	DEFB	11101110b,11111110b,11101111b,11111111b
+	DEFB	11101110b,11111110b,11101111b,11111111b
+
+
+	ORG	0600h
+
+
+
+Dither63_green_table:
+	DEFB	000h,000h,000h,000h,000h,000h,000h,000h
+	DEFB	020h,020h,020h,020h,040h,040h,040h,040h
+	DEFB	060h,060h,060h,060h,080h,080h,080h,080h
+	DEFB	0a0h,0a0h,0a0h,0a0h,0c0h,0c0h,0c0h,0c0h
+
+Dither63_red_table:
+	DEFB	000h,000h,000h,000h,000h,000h,000h,000h
+	DEFB	008h,008h,008h,008h,008h,008h,008h,008h
+	DEFB	010h,010h,010h,010h,010h,010h,010h,010h
+	DEFB	018h,018h,018h,018h,018h,018h,018h,018h
+
+Dither63_blue_table:
+	DEFB	000h,000h,000h,000h,000h,000h,000h,000h
+	DEFB	001h,001h,001h,001h,001h,001h,001h,001h
+	DEFB	002h,002h,002h,002h,002h,002h,002h,002h
+	DEFB	003h,003h,003h,003h,003h,003h,003h,003h
+
+
+
+
+	ORG	0700h
+
+Dither1575_table:
+Green_table:
+	DEFB	000h,000h,000h,000h,000h,020h,020h,020h
+	DEFB	020h,040h,040h,040h,040h,060h,060h,060h
+	DEFB	060h,060h,080h,080h,080h,080h,0a0h,0a0h
+	DEFB	0a0h,0a0h,0c0h,0c0h,0c0h,0c0h,0e0h,0e0h
+
+	DEFB	000h,000h,000h,020h,020h,020h,020h,040h
+	DEFB	040h,040h,040h,060h,060h,060h,060h,080h
+	DEFB	080h,080h,080h,080h,0a0h,0a0h,0a0h,0a0h
+	DEFB	0c0h,0c0h,0c0h,0c0h,0e0h,0e0h,0e0h,0e0h
+
+Red_table:
+	DEFB	000h,000h,000h,000h,000h,004h,004h,004h
+	DEFB	004h,008h,008h,008h,008h,00ch,00ch,00ch
+	DEFB	00ch,00ch,010h,010h,010h,010h,014h,014h
+	DEFB	014h,014h,018h,018h,018h,018h,01ch,01ch
+
+	DEFB	000h,000h,000h,004h,004h,004h,004h,008h
+	DEFB	008h,008h,008h,00ch,00ch,00ch,00ch,010h
+	DEFB	010h,010h,010h,010h,014h,014h,014h,014h
+	DEFB	018h,018h,018h,018h,01ch,01ch,01ch,01ch
+
+Blue_table:
+	DEFB	000h,000h,000h,000h,000h,000h,000h,000h
+	DEFB	000h,000h,001h,001h,001h,001h,001h,001h
+	DEFB	001h,001h,001h,002h,002h,002h,002h,002h
+	DEFB	002h,002h,002h,002h,003h,003h,003h,003h
+
+	DEFB	000h,000h,000h,000h,000h,001h,001h,001h
+	DEFB	001h,001h,001h,001h,001h,001h,002h,002h
+	DEFB	002h,002h,002h,002h,002h,002h,002h,003h
+	DEFB	003h,003h,003h,003h,003h,003h,003h,003h
+
+
+	ORG	0800h
+
+SkipSp:
+	ld	a,(hl)
+	or	a
+	ret	z
+	cp	021h
+	jr	nc,SkipSp1
+	inc	hl
+	jr	SkipSp
+SkipSp1:
+	or	a
+	ret
+
+ToUpper:
+	cp	'a'
+	ret	c
+	cp	'z' + 1
+	ret	nc
+	sub	020h
+	ret
+
+IsSpace:
+	or	a
+	scf
+	ret	z
+	cp	021h
+	ret	nc
+	or	a
+	scf
+	ret
+
+Putchar:
+	ld	e,a
+	ld	c,_CONOUT
+	jp	BDOS
+
+Puts:
+	ld	c,_STROUT
+	jp	BDOS
+
+Getch:
+	ld	c,_DIRIN
+	jp	BDOS
+
+
+;***************************************
+;	入出力関数
+;***************************************
+;
+;	DISK_PARAMETER_TABLE:	ディスクパラメーターテーブル
+;	+0	DEFW	?	ファイルネームの先頭番地
+;	+2	DEFW	?	ファイルコントロールブロックの先頭番地
+;	+4	DEFW	?	データバッファの先頭番地
+;	+6	DEFS	2	データの長さ
+;	+8	DEFS	4	シークポインタ位置データ
+;	+12	DEFS	1	ファイルハンドル
+
+File_first:
+	ld	e,(ix+00h)
+	ld	d,(ix+01h)
+	ld	l,(ix+02h)
+	ld	h,(ix+03h)
+	push	hl
+	pop	ix
+	ld	c,_FFIRST
+	call	BDOS
+	or	a
+	ret
+
+File_next:
+	ld	l,(ix+02h)
+	ld	h,(ix+03h)
+	push	hl
+	pop	ix
+	ld	c,_FNEXT
+	call	BDOS
+	or	a
+	ret
+
+File_open:
+	ld	e,(ix+02h)
+	ld	d,(ix+03h)
+	push	ix
+	ld	a,0
+	ld	c,_OPEN
+	call	BDOS
+	pop	ix
+	ld	(ix+0ch),b
+	or	a
+	ret
+
+File_close:
+	ld	b,(ix+0ch)
+	ld	c,_CLOSE
+	call	BDOS
+	or	a
+	ret
+
+File_read:
+	ld	b,(ix+0ch)
+	ld	e,(ix+04h)
+	ld	d,(ix+05h)
+	ld	l,(ix+06h)
+	ld	h,(ix+07h)
+	ld	c,_READ
+	call	BDOS
+	or	a
+	ret
+
+File_seekread:
+	ld	l,(ix+08h)
+	ld	h,(ix+09h)
+	ld	e,(ix+0ah)
+	ld	d,(ix+0bh)
+	ld	b,(ix+0ch)
+	push	bc
+	push	ix
+	xor	a
+	ld	c,_SEEK
+	call	BDOS
+	pop	ix
+	pop	bc
+	ld	e,(ix+04h)
+	ld	d,(ix+05h)
+	ld	l,(ix+06h)
+	ld	h,(ix+07h)
+	ld	c,_READ
+	call	BDOS
+	or	a
+	ret
+
+File_create:
+	ld	e,(ix+02h)
+	ld	d,(ix+03h)
+	xor	a
+	ld	b,a
+	ld	c,_CREATE
+	push	ix
+	call	BDOS
+	pop	ix
+	ld	(ix+0ch),b
+	or	a
+	ret
+
+File_write:
+	ld	b,(ix+0ch)
+	ld	e,(ix+04h)
+	ld	d,(ix+05h)
+	ld	l,(ix+06h)
+	ld	h,(ix+07h)
+	ld	c,_WRITE
+	call	BDOS
+	or	a
+	ret
+
+Exit:
+	ld	b,a
+	ld	c,_TERM
+	jp	BDOS
+
+
+
+;***************************************
+;	ＤＯＳの初期か
+;***************************************
+File_read_table:
+	DEFW	File_read_name
+	DEFW	File_read_fib
+	DEFW	DISK_READ_TOP
+	DEFW	DISK_READ_LEN
+	DEFW	0,0
+	DEFS	1
+File_read_name:
+	DEFS	64
+File_read_fib:
+	DEFS	64
+
+;***************************************
+;	ＶＤＰ関係の関数
+;***************************************
+
+;---------------------------------------
+;	ＶＤＰポートの獲得
+;---------------------------------------
+Vportr:
+	DEFB	098h
+Vportw:
+	DEFB	098h
+
+Gini:
+	ld	a,(EXPTBL)
+	ld	hl,0006h
+	call	RDSLT
+	ld	(Vportr),a
+	ld	a,(EXPTBL)
+	ld	hl,0007h
+	call	RDSLT
+	ld	(Vportw),a
+	ei
+	ret
+
+wrtvdp:
+	ld	ix,0047h
+	ld	iy,(EXPTBL - 1)
+	call	CALSLT
+	ei
+	ret
+
+chgmod:
+	ld	ix,005fh
+	ld	iy,(EXPTBL - 1)
+	call	CALSLT
+	ei
+	ret
+
+snsmat:
+	push	hl
+	push	de
+	ld	ix,0141h
+	ld	iy,(EXPTBL - 1)
+	call	CALSLT
+	pop	de
+	pop	hl
+	ei
+	ret
+
+Gtstck:
+	ld	ix,00d5h
+	ld	iy,(EXPTBL - 1)
+	call	CALSLT
+	ei
+	ret
+
+Gttrig:
+	ld	ix,00d8h
+	ld	iy,(EXPTBL - 1)
+	call	CALSLT
+	ei
+	ret
+
+kilbuf:
+Kilbuf_L1:
+	ld	e,0ffh
+	ld	c,_DIRIO
+	call	BDOS
+	or	a
+	jp	nz,Kilbuf_L1
+	ret
+
+;-----------------------------------------------
+;	キー入力
+;-----------------------------------------------
+
+Shift_key_flag:
+	DEFB	OFF
+
+Inkey:
+	ld	a,OFF
+	ld	(Shift_key_flag),a
+	ld	a,6
+	call	snsmat
+	rrca
+	jp	c,Inkey_skip1
+	ld	a,ON
+	ld	(Shift_key_flag),a
+Inkey_skip1:
+	ld	a,7
+	call	snsmat
+	ld	c,a
+	bit	2,c
+	ld	a,01bh		;esc
+	ret	z
+	bit	7,c
+	ld	a,0dh		;return
+	ret	z
+	ld	a,8
+	call	snsmat
+	ld	c,a
+	bit	0,c
+	ld	a,' '		;spase
+	ret	z
+	bit	7,c
+	ld	a,01ch		;right
+	ret	z
+	bit	6,c
+	ld	a,01fh		;down
+	ret	z
+	bit	5,c
+	ld	a,01eh		;up
+	ret	z
+	bit	4,c
+	ld	a,01dh		;left
+	ret	z
+	ld	a,5
+	call	snsmat
+	ld	c,a
+	bit	6,c
+	ld	a,'Y'
+	ret	z
+	bit	7,c
+	ld	a,'Z'
+	ret	z
+	ld	a,4
+	call	snsmat
+	ld	c,a
+	bit	0,c
+	ld	a,'K'
+	ret	z
+	ld	a,1
+	call	snsmat
+	ld	c,a
+	bit	5,c
+	ld	a,'@'
+	ret	z
+	ld	a,3
+	call	snsmat
+	ld	c,a
+	bit	4,c
+	ld	a,'G'
+	ret	z
+	ld	a,9
+	call	snsmat
+	ld	c,a
+	bit	3,c
+	ld	a,'0'
+	ret	z
+	bit	4,c
+	ld	a,'1'
+	ret	z
+	bit	5,c
+	ld	a,'2'
+	ret	z
+	bit	6,c
+	ld	a,'3'
+	ret	z
+	bit	7,c
+	ld	a,'4'
+	ret	z
+	ld	a,10
+	call	snsmat
+	ld	c,a
+	bit	0,c
+	ld	a,'5'
+	ret	z
+	bit	1,c
+	ld	a,'6'
+	ret	z
+	bit	2,c
+	ld	a,'7'
+	ret	z
+	bit	3,c
+	ld	a,'8'
+	ret	z
+	bit	4,c
+	ld	a,'9'
+	ret	z
+	ld	a,0
+	call	snsmat
+	ld	c,a
+	bit	0,c
+	ld	a,'0'
+	ret	z
+	bit	1,c
+	ld	a,'1'
+	ret	z
+	bit	2,c
+	ld	a,'2'
+	ret	z
+	bit	3,c
+	ld	a,'3'
+	ret	z
+	bit	4,c
+	ld	a,'4'
+	ret	z
+	bit	5,c
+	ld	a,'5'
+	ret	z
+	bit	6,c
+	ld	a,'6'
+	ret	z
+	bit	7,c
+	ld	a,'7'
+	ret	z
+	ld	a,1
+	call	snsmat
+	ld	c,a
+	bit	0,c
+	ld	a,'8'
+	ret	z
+	bit	1,c
+	ld	a,'9'
+	ret	z
+	jp	Get_trigger
+
+;-----------------------------------------------
+;	トリガー入力
+;-----------------------------------------------
+
+Save_trigger:
+	DEFW	0
+
+Get_trigger:
+	ld	hl,(Screen_line_max)
+	ld	de,424 +1
+	or	a
+	sbc	hl,de
+	jp	c,Get_trigger_page
+	ld	a,1
+	call	Gttrig
+	ld	e,a
+	push	de
+	ld	a,3
+	call	Gttrig
+	pop	de
+	ld	d,a
+	ld	bc,(Save_trigger)
+	ld	(Save_trigger),de
+	ld	a,d
+	and	e
+	jp	nz,Get_trigger_page_skip1
+	ld	a,e
+	cp	0ffh
+	ld	a,01eh
+	ret	z
+	ld	a,d
+	cp	0ffh
+	ld	a,01fh
+	ret	z
+	xor	a
+	ret
+
+Get_trigger_page:
+	ld	a,1
+	call	Gttrig
+	ld	c,a
+	push	bc
+	ld	a,3
+	call	Gttrig
+	pop	bc
+	ld	b,a
+	ld	(Save_trigger),bc
+Get_trigger_page_skip1:
+	ld	a,c
+	cp	0ffh
+	ld	a,01bh
+	ret	z
+	ld	a,b
+	cp	0ffh
+	ld	a,' '
+	ret	z
+	xor	a
+	ret
+
+;-----------------------------------------------
+;	インターレスとスクリーンモードのセット
+;-----------------------------------------------
+
+Flag_screen_mode:
+	DEFB	0
+Flag_interlace:
+	DEFS	1
+SaveReg2:
+	DEFS	1
+SaveReg8:
+	DEFS	1
+SaveReg9:
+	DEFS	1
+SaveReg23:
+	DEFS	1
+Save_BDRCLR:
+	DEFS	1
+
+Set_screen_mode:	;Ａ＜－スクリーンモード，Ａ＝＝２５５キャンセル
+	cp	255
+	jp	z,Set_screen_mode_Quit
+	push	af
+	ld	a,(Flag_screen_mode)
+	or	a
+	jp	nz,Set_screen_mode_Skip1
+	ld	a,(RG2SAV)	;各ＶＤＰレジスタの保存。
+	ld	(SaveReg2),a
+	ld	a,(RG8SAV)
+	ld	(SaveReg8),a
+	ld	a,(RG9SAV)
+	ld	(SaveReg9),a
+	ld	a,(RG23SA)
+	ld	(SaveReg23),a
+	ld	a,(BDRCLR)	;周辺色を保存して
+	ld	(Save_BDRCLR),a	;カラーコードを０番にする。
+	ld	a,0
+	ld	(BDRCLR),a
+Set_screen_mode_Skip1:
+	pop	af
+	ld	(Flag_screen_mode),a
+	call	Chgmod
+	ld	a,(RG8SAV)	;スプライトの表示禁止にする。
+	or	00100010b
+	ld	b,a
+	ld	c,8
+	call	Wrtvdp
+	jp	Interlace_ON
+
+Interlace_OFF:
+	ld	b,00011111b	;表示ページを０番にして
+	ld	c,2		;ノンインターレースにする。
+	call	Wrtvdp
+	ld	a,(RG9SAV)
+	and	11110011b
+	or	10000000b
+	ld	b,a
+	ld	c,9
+	call	Wrtvdp
+	ld	a,OFF
+	ld	(Flag_interlace),a
+	ret
+
+Interlace_ON:
+	ld	b,00111111b	
+	ld	c,2		;表示ページを１番にして
+	call	Wrtvdp		;インターレースにする。
+	ld	a,(RG9SAV)
+	or	10001100b
+	ld	b,a
+	ld	c,9
+	call	Wrtvdp
+	ld	a,ON
+	ld	(Flag_interlace),a
+	ret
+
+Set_screen_mode_Quit:
+	ld	a,(Flag_screen_mode)
+	or	a		;もしスクリーンモードが０番なら戻る。
+	ret	z
+	ld	a,(Save_BDRCLR)	;周辺色の復帰。
+	ld	(BDRCLR),a
+	xor	a		;スクリーンモードを０番にする。
+	ld	(Flag_screen_mode),a
+	call	Chgmod
+	ld	bc,(SaveReg2 - 1)
+	ld	c,2		;各ＶＤＰレジスタの復帰。
+	call	Wrtvdp
+	ld	bc,(SaveReg8 - 1)
+	ld	c,8
+	call	Wrtvdp
+	ld	bc,(SaveReg9 - 1)
+	ld	c,9
+	call	Wrtvdp
+	ld	bc,(SaveReg23 - 1)
+	ld	c,23
+	call	Wrtvdp
+	ret
+
+;---------------------------------------
+;	パレットの初期かとセット
+;---------------------------------------
+
+MsxIni_Palette:
+	DEFW	000h,000h,611h,733h,117h,327h,151h,627h
+	DEFW	171h,373h,661h,663h,411h,265h,555h,777h
+Pic_palette0:
+	DEFW	000h,007h,070h,077h,300h,307h,370h,377h
+	DEFW	500h,507h,570h,577h,700h,707h,770h,777h
+Pic_palette1:
+	DEFW	000h,010h,110h,120h,220h,130h,230h,330h
+	DEFW	340h,440h,450h,550h,560h,660h,670h,770h
+Pic_palette2:
+	DEFS	32
+Pic_palette_001:
+	DEFW	000h,000h,001h,002h,003h,004h,005h,006h
+	DEFW	007h,117h,227h,337h,447h,557h,667h,777h
+Pic_palette_010:
+	DEFW	000h,000h,010h,020h,030h,040h,050h,060h
+	DEFW	070h,171h,272h,373h,474h,575h,676h,777h
+Pic_palette_011:
+	DEFW	000h,000h,011h,022h,033h,044h,055h,066h
+	DEFW	077h,177h,277h,377h,477h,577h,677h,777h
+Pic_palette_100:
+	DEFW	000h,000h,100h,200h,300h,400h,500h,600h
+	DEFW	700h,711h,722h,733h,744h,755h,766h,777h
+Pic_palette_101:
+	DEFW	000h,000h,101h,202h,303h,404h,505h,606h
+	DEFW	707h,717h,727h,737h,747h,757h,767h,777h
+Pic_palette_110:
+	DEFW	000h,000h,110h,220h,330h,440h,550h,660h
+	DEFW	770h,771h,772h,773h,774h,775h,776h,777h
+
+
+
+Ini_Palette:
+	ld	hl,MsxIni_Palette
+Set_Palette:
+	ld	a,(Vportw)
+	ld	c,a
+	inc	c
+	xor	a
+	di
+	out	(c),a
+	ld	a,080h + 16
+	out	(c),a
+	inc	c
+	ld	b,32
+	otir
+	ei
+	ret
+
+
+
+;-------------------------------------------------
+;	ＶＤＰコマンドの実行
+;-------------------------------------------------
+
+Vdp_command:
+	ld	de,(Vportr)
+	inc	d
+	inc	e
+	di
+	call	Vdp_wait
+	ld	c,d
+	ld	a,032
+	out	(c),a
+	ld	a,080h +17
+	out	(c),a
+	inc	c
+	inc	c
+	REPT	15
+	outi
+	ENDR
+	ei
+	ret
+
+;-------------------------------------------------
+;	ビデオＲＡＭのクリア
+;-------------------------------------------------
+
+Clear_Screen:
+	ld	de,(Vportr)
+	inc	d
+	inc	e
+	di
+	call	Vdp_wait
+	ld	c,d
+	ld	a,(RG1SAV)	;画面表示の禁止
+	and	10111111b
+	out	(c),a
+	ld	a,080h + 1
+	out	(c),a
+	ld	a,36		;VRAMを０で埋める
+	out	(c),a
+	ld	a,080h + 17
+	out	(c),a
+	inc	c
+	inc	c
+	xor	a
+	ld	hl,512
+	out	(c),a
+	out	(c),a
+	out	(c),a
+	out	(c),a
+	out	(c),l
+	out	(c),h
+	out	(c),l
+	out	(c),h
+	ld	a,(BDRCLR)
+	ld	l,a
+	rrca
+	rrca
+	rrca
+	rrca
+	or	l
+	out	(c),a
+	out	(c),a
+	ld	a,11000000b
+	out	(c),a
+	call	Vdp_wait
+	ld	c,d
+	ld	a,(RG1SAV)	;画面表示の禁止の解除
+	out	(c),a
+	ld	a,080h + 1
+	out	(c),a
+	ei
+	ret
+
+;-------------------------------------------------
+;	ＶＤＰコマンドの終了待ち
+;-------------------------------------------------
+
+Vdp_wait:			;VDPの終了待ち
+	ld	b,080h + 15
+Vdp_wait_L1:
+	ld	c,d
+	ld	a,2
+	out	(c),a
+	out	(c),b
+	ld	c,e
+	in	a,(c)
+	and	1
+	jr	nz,Vdp_wait_L1
+	ld	c,d
+	out	(c),a
+	out	(c),b
+	ret
+
+;-------------------------------------------------
+;	セグメントマッパーの初期か
+;-------------------------------------------------
+
+Segment_table:
+	DEFS	SEGMENT_MAX *2
+	DEFS	2
+Now_segment_table:
+	DEFS	2
+Segment_size:
+	DEFS	1
+
+Segment_jump_table:
+ALL_SEG:
+	DEFS	3
+FRE_SEG:
+	DEFS	3
+RD_SEG:
+	DEFS	3
+WR_SEG:
+	DEFS	3
+CAL_SEG:
+	DEFS	3
+CALLS:
+	DEFS	3
+PUT_PH:
+	DEFS	3
+GET_PH:
+	DEFS	3
+PUT_P0:
+	DEFS	3
+GET_P0:
+	DEFS	3
+PUT_P1:
+	DEFS	3
+GET_P1:
+	DEFS	3
+PUT_P2:
+	DEFS	3
+GET_P2:
+	DEFS	3
+PUT_P3:
+	DEFS	3
+GET_P3:
+	DEFS	3
+
+
+Ini_Segment:
+	xor	a
+	ld	de,0402h
+	call	EXTBIO
+	ld	a,c
+	cp	SEGMENT_MIN
+	call	c,Set_change_page
+	ld	de,Segment_jump_table
+	ld	bc,48
+	ldir
+	ld	hl,Segment_table
+	ld	c,0
+	ld	b,SEGMENT_MAX
+Ini_segment_L1:
+	push	bc
+	push	hl
+	xor	a
+	ld	b,00100000b
+	call	ALL_SEG
+	ld	e,b
+	ld	d,a
+	pop	hl
+	pop	bc
+	jp	c,Ini_segment_skip2
+	ld	a,e
+	cp	0
+	jp	nz,Ini_segment_skip1
+	ld	a,(P1SLOT)
+Ini_segment_skip1:
+	ld	(hl),a
+	inc	hl
+	ld	(hl),d
+	inc	hl
+	inc	c
+	djnz	Ini_segment_L1
+Ini_segment_skip2:
+	ld	(hl),0
+	inc	hl
+	ld	(hl),2
+	ld	a,c
+	ld	(Segment_size),a
+	cp	SEGMENT_MIN
+	ret	c
+	or	a
+	ret
+
+Clear_segment:
+	ld	bc,Segment_table
+Clear_segment_L1:
+	ld	a,(bc)
+	or	a
+	jp	z,Clear_segment_skip1
+	call	Change_page1
+	inc	bc
+	inc	bc
+	push	bc
+	ld	hl,PAGE1
+	ld	de,PAGE1 +1
+	ld	bc,04000h -1
+	DEFB	036h
+Clear_segment_data:
+	DEFB	00000100b
+	ldir
+	pop	bc
+	jp	Clear_segment_L1
+Clear_segment_skip1:
+	ld	bc,Page1_save_table
+	ld	a,(bc)
+	call	Change_page1
+	ret
+
+;-------------------------------------------------
+;	ページ切り替え
+;-------------------------------------------------
+
+Page_save_table:
+Page1_save_table:
+Slot_page1_save:
+	DEFB	0
+Segment_page1_save:
+	DEFB	0
+Page2_save_table:
+Slot_page2_save:
+	DEFB	0
+Segment_page2_save:
+	DEFB	0
+prev_slot_page1:
+	DEFB	0
+prev_slot_page2:
+	DEFB	0
+Old_segment_page1:
+	DEFB	0
+
+
+Get_page_table:
+	ld	a,(P1SLOT)
+	ld	(Slot_page1_save),a
+	ld	(Prev_slot_page1),a
+	call	GET_P1
+	ld	(Segment_page1_save),a
+	ld	a,(P2SLOT)
+	ld	(Slot_page2_save),a
+	ld	(Prev_slot_page2),a
+	call	GET_P2
+	ld	(Segment_page2_save),a
+	ret
+
+Return_page_table:
+	ld	bc,Page_save_table
+	ld	a,(bc)
+	call	Change_page1
+	inc	bc
+	inc	bc
+	ld	a,(bc)
+	call	Change_page2
+	ret
+
+Set_change_page:
+	push	hl
+	ld	hl,Slot_change_page1
+	ld	(Change_page1_func),hl
+	ld	hl,Slot_change_page2
+	ld	(Change_page2_func),hl
+	pop	hl
+	ret
+
+Change_page1:
+	DEFB	0c3h
+Change_page1_func:
+	DEFW	Segment_change_page1
+
+Slot_change_page1:
+	push	hl
+	ld	hl,(Prev_slot_page1)
+	cp	l
+	jp	z,Slot_change_page1_skip1
+	ld	(Prev_slot_page1),a
+	push	de
+	push	bc
+	ld	h,HIGH PAGE1
+	call	ENASLT
+	ei
+	pop	bc
+	pop	de
+Slot_change_page1_skip1:
+	pop	hl
+Segment_change_page1:
+	inc	bc
+	ld	a,(bc)
+	dec	bc
+	call	PUT_P1
+	ret
+
+Change_page2:
+	DEFB	0c3h
+Change_page2_func:
+	DEFW	Segment_change_page2
+
+Slot_change_page2:
+	push	hl
+	ld	hl,(Prev_slot_page2)
+	cp	l
+	jp	z,Slot_change_page2_skip1
+	ld	(Prev_slot_page2),a
+	push	de
+	push	bc
+	ld	h,HIGH PAGE2
+	call	ENASLT
+	ei
+	pop	bc
+	pop	de
+Slot_change_page2_skip1:
+	pop	hl
+Segment_change_page2:
+	inc	bc
+	ld	a,(bc)
+	dec	bc
+	call	PUT_P2
+	ret
+
+Call_slot_segment:
+	push	af
+	call	GET_P1
+	ld	(Old_segment_page1),a
+	ld	a,(Segment_page1_save)
+	call	PUT_P1
+	ld	iy,(Slot_page1_save +1)
+	pop	af
+	call	CALSLT
+	push	af
+	ld	a,(Old_segment_page1)
+	call	PUT_P1
+	pop	af
+	ret
+
+;-------------------------------------------------
+;	ファイルから読み込む
+;-------------------------------------------------
+
+Get_char_count:
+	DEFS	2
+
+Get_char:
+	ex	de,hl
+	ld	hl,(Get_char_count)
+	ld	e,(hl)
+	inc	hl
+	bit	6,h			;[hl] <= 0xC000 ?
+	ld	(Get_char_count),hl
+	ex	de,hl
+	ret	z
+	push	af
+	ex	af,af'
+	push	af
+	push	hl
+	push	de
+	push	bc
+	exx
+	push	hl
+	push	de
+	push	bc
+	exx
+	push	ix
+	push	iy
+	call	Return_page_table
+	ld	ix,File_read_table
+	call	File_read
+	ld	hl,DISK_READ_TOP
+	ld	(Get_char_Count),hl
+	pop	iy
+	pop	ix
+	exx
+	pop	bc
+	pop	de
+	pop	hl
+	ld	a,(bc)
+	call	Change_page1
+	exx
+	pop	bc
+	pop	de
+	pop	hl
+	pop	af
+	ex	af,af'
+	pop	af
+	ret
+
+;-------------------------------------------------
+;	ビットストリームの読み込み
+;-------------------------------------------------
+
+Get_bit_data:
+	DEFS	1
+Get_bit_mask:
+	DEFS	1
+
+Get_bit:
+	ld	hl,(Get_bit_data)
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ld	(Get_bit_data),hl
+	ret
+
+;-------------------------------------------------
+;	色キャッシュの初期か
+;-------------------------------------------------
+
+Color_point:
+	DEFS	1
+Color_idx:
+	DEFS	1
+
+Init_color_table:
+	ld	hl,Color_now_table
+	ld	de,Color_now_table +1
+	ld	bc,256-1
+	ld	(hl),0
+	ldir
+	ld	hl,Color_next_table
+	ld	de,Color_prev_table
+	ld	c,0
+	ld	b,128
+Init_color_table_L1:
+	ld	a,c
+	dec	a
+	ld	(hl),a
+	inc	hl
+	ld	a,c
+	inc	a
+	ld	(de),a
+	inc	de
+	inc	c
+	djnz	Init_color_table_L1
+	ld	a,0
+	ld	(Color_point),a
+	ld	(Color_prev_table +127),a
+	ld	a,127
+	ld	(COlor_next_table +0),a
+	ret
+
+;-------------------------------------
+;	長さの読み込み
+;-------------------------------------
+
+Read_length:
+	ld	a,1
+Read_length_L1:
+	call	Get_bit
+	jp	nc,Read_length_skip1
+	inc	a
+	jp	Read_length_L1
+Read_length_skip1:
+	ld	b,a
+	ld	hl,1
+	xor	a
+Read_length_L2:
+	push	hl
+	call	Get_bit
+	pop	hl
+	rl	l
+	rl	h
+	rla
+	djnz	Read_length_L2
+	ld	de,2
+	or	a
+	sbc	hl,de
+	sbc	a,0
+	ret
+
+;--------------------------------------------
+;	展開するぞ
+;
+;	Expand_segment     = bc'
+;	Expand_count       = de'
+;	Expand_flash_count = hl'
+;
+;--------------------------------------------
+
+Expand_full_color:
+	DEFW	0
+Expand_full_buf:
+	DEFW	0
+
+Expand_full:
+	ld	hl,0
+	ld	(Screen_line),hl
+	ld	(Screen_count),hl
+	ld	a,0
+	ld	(Expand_full_color),a
+	ld	(Screen_full_count),a
+	exx
+	ld	hl,(Center_x)
+	ld	de,PAGE1 -1
+	add	hl,de
+	ld	(Expand_full_buf),hl
+	ld	e,l
+	ld	d,h
+	ld	hl,(X_wide)
+	inc	hl
+	ld	bc,segment_table
+	ld	a,(bc)
+	call	Change_page1
+	exx
+Expand_full_L1:
+	call	Read_length
+	ld	c,a
+Expand_full_L2:
+	ld	de,1
+	or	a
+	sbc	hl,de
+	ld	a,c
+	sbc	a,d
+	ld	c,a
+	jp	c,Expand_full_skip8
+	exx
+	dec	hl
+	ld	a,h
+	or	l
+	exx
+	call	z,Put_screen_full
+	ret	c
+	exx
+	inc	de
+Expand_full_skip1:
+	ld	a,(de)
+	bit	2,a
+	jp	z,Expand_full_skip2
+	and	11111011b
+	ld	(Expand_full_color),a
+Expand_full_skip2:
+	ld	a,(Expand_full_color)
+	ld	(de),a
+	exx
+	jp	Expand_full_L2
+Expand_full_skip8:
+	ld	hl,(Get_bit_data)
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	jp	nc,Expand_full_skip18
+	xor	a
+	REPT	7
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rla
+	ENDR
+	ld	(Get_bit_data),hl
+	ld	b,a
+	ld	a,(Color_point)
+	cp	b
+	jp	z,Expand_full_skip17
+				;Color_idxの切り離し
+
+	ld	c,a
+	ld	l,b
+	ld	h,NEXT
+	ld	e,(hl)		;NEXT
+	inc	h
+	ld	d,(hl)		;PREV
+	ld	l,d
+	dec	h
+	ld	(hl),e		;NEXT
+	ld	l,e
+	inc	h
+	ld	(hl),d		;PREV
+
+	ld	l,c
+	ld	l,(hl)		;PREV
+	dec	h
+	ld	(hl),b		;NEXT
+	
+	ld	l,c
+	inc	h
+	ld	a,(hl)		;PREV
+	ld	l,b
+	ld	(hl),a		;PREV
+
+	ld	l,c
+	ld	(hl),b		;PREV
+
+	ld	l,b
+	dec	h
+	ld	(hl),c		;NEXT
+
+	ld	a,b
+	ld	(Color_point),a
+
+Expand_full_skip17:
+	ld	a,b
+	ld	l,a
+	ld	h,NOW
+	ld	a,(hl)
+	jp	Expand_full_skip19
+Expand_full_skip18:
+	DEFB	0cdh
+Expand_full_func:
+	DEFW	Expand_full_color63
+	ld	(Get_bit_data),hl
+	ld	a,(Color_point)
+	ld	l,a
+	ld	h,PREV
+	ld	a,(hl)
+	ld	(Color_point),a
+	ld	l,a
+	ld	h,NOW
+	ld	(hl),c
+	ld	a,c
+Expand_full_skip19:
+	ld	(Expand_full_color),a
+	exx
+	dec	hl
+	ld	a,l
+	or	h
+	exx
+	call	z,Put_screen_full
+	ret	c
+	exx
+	inc	de
+Expand_full_skip9:
+	ld	a,(Expand_full_color)
+	ld	(de),a
+	exx
+Expand_full_skip13:
+	call	Get_bit
+	jp	nc,Expand_full_L1
+	ld	hl,(Get_bit_data)
+	exx
+	push	bc
+	push	de
+	exx
+	pop	bc
+	ld	a,(Expand_full_color)
+	or	00000100b
+	ld	(Chain_color),a
+Expand_full_L3:
+	xor	a
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rla
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rla
+	inc	b
+	inc	b
+	cp	0
+	jp	z,Expand_full_skip31
+	cp	2			;中
+	jp	z,Expand_full_skip32
+	dec	bc
+	cp	1			;左１
+	jp	z,Expand_full_skip32
+	inc	bc
+	inc	bc
+	cp	3			;右１
+	jp	z,Expand_full_skip32
+	jp	Expand_full_skip32
+Expand_full_skip31:
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	jp	nc,Expand_full_skip35	;連鎖が終わったので戻る
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	inc	bc			;右２
+	inc	bc
+	jp	c,Expand_full_skip32
+	dec	bc			;左２
+	dec	bc
+	dec	bc
+	dec	bc
+Expand_full_skip32:
+	bit	7,b
+	jp	z,Expand_full_skip33
+	set	6,b
+	res	7,b
+	exx
+	ld	a,(bc)
+	cp	0
+	jp	z,Expand_full_skip34
+	inc	bc
+	inc	bc
+	ld	a,(bc)
+	call	Change_page1
+	exx
+Expand_full_skip33:
+	DEFB	03eh
+Chain_color:
+	DEFB	0
+	ld	(bc),a
+	jp	Expand_full_L3
+Expand_full_skip34:
+	ld	bc,Segment_table
+	ld	a,(bc)
+	call	Change_page1
+	exx
+	jp	Expand_full_L3
+Expand_full_skip35
+	exx
+	pop	bc
+	ld	a,(bc)
+	call	Change_page1
+	exx
+	ld	(Get_bit_data),hl
+	jp	Expand_full_L1
+
+Expand_full_colorSepia:
+	ld	c,0
+	ld	b,3
+Expand_full_colorSepia_L1:
+	xor	a
+	REPT	5
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rla
+	ENDR
+	add	a,c
+	ld	c,a
+	djnz	Expand_full_colorSepia_L1
+	ex	de,hl
+	ld	l,c
+	ld	h,0
+	ld	b,8
+Expand_full_colorSepia_L2:
+	add	hl,hl
+	ld	a,h
+	sub	6
+	jp	c,Expand_full_colorSepia_skip1
+	ld	h,a
+	set	0,l
+Expand_full_colorSepia_skip1:
+	djnz	Expand_full_colorSepia_L2
+	ex	de,hl
+	ld	a,e
+	rlca
+	rlca
+	rlca
+	rlca
+	ld	c,a
+	ret
+
+Expand_full_color63:
+	xor	a
+	REPT	5
+	rlc	h
+	call	c,Get_char	;Green 5bits
+	rlc	l
+	rla
+	ENDR
+	ld	e,a
+	ld	d,HIGH Dither63_green_table
+	ld	a,(de)
+	ld	c,a
+	ld	a,00000001b
+	REPT	5
+	rlc	h
+	call	c,Get_char	;Red 5bits
+	rlc	l
+	rla
+	ENDR
+	ld	e,a
+	ld	d,HIGH Dither63_red_table
+	ld	a,(de)
+	or	c
+	ld	c,a
+	ld	a,00000010b
+	REPT	5
+	rlc	h
+	call	c,Get_char	;Blue 5bits
+	rlc	l
+	rla
+	ENDR
+	ld	e,a
+	ld	d,HIGH Dither63_blue_table
+	ld	a,(de)
+	or	c
+	ld	c,a
+	ret
+
+Expand_full_colorSepiaH:
+	call	Expand_full_colorSepia
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ret
+
+Expand_full_color63H:
+	call	Expand_full_color63
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ret
+
+Expand_full_colorSepiaH24:
+	ld	c,0
+	ld	b,3
+Expand_full_colorSepiaH24_L1:
+	xor	a
+	REPT	5
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rla
+	ENDR
+	REPT	3
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ENDR
+	add	a,c
+	ld	c,a
+	djnz	Expand_full_colorSepiaH24_L1
+	ex	de,hl
+	ld	l,c
+	ld	h,0
+	ld	b,8
+Expand_full_colorSepiaH24_L2:
+	add	hl,hl
+	ld	a,h
+	sub	6
+	jp	c,Expand_full_colorSepiaH24_skip1
+	ld	h,a
+	set	0,l
+Expand_full_colorSepiaH24_skip1:
+	djnz	Expand_full_colorSepiaH24_L2
+	ex	de,hl
+	ld	a,e
+	rlca
+	rlca
+	rlca
+	rlca
+	ld	c,a
+	ret
+
+Expand_full_color63H24:
+	xor	a
+	REPT	5
+	rlc	h
+	call	c,Get_char	;Green 5bits
+	rlc	l
+	rla
+	ENDR
+	REPT	3
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ENDR
+	ld	e,a
+	ld	d,HIGH Dither63_green_table
+	ld	a,(de)
+	ld	c,a
+	ld	a,00000001b
+	REPT	5
+	rlc	h
+	call	c,Get_char	;Red 5bits
+	rlc	l
+	rla
+	ENDR
+	REPT	3
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ENDR
+	ld	e,a
+	ld	d,HIGH Dither63_red_table
+	ld	a,(de)
+	or	c
+	ld	c,a
+	ld	a,00000010b
+	REPT	5
+	rlc	h
+	call	c,Get_char	;Blue 5bits
+	rlc	l
+	rla
+	ENDR
+	REPT	3
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ENDR
+	ld	e,a
+	ld	d,HIGH Dither63_blue_table
+	ld	a,(de)
+	or	c
+	ld	c,a
+	ret
+
+
+;--------------------------------------------
+;	ビデオＲＡＭに書き込む
+;--------------------------------------------
+
+Screen_line:
+	DEFW	0
+Screen_line_max:
+	DEFW	424
+Screen_global_line:
+	DEFW	0
+Screen_global_line_carry:
+	DEFB	OFF
+Screen_full_count:
+	DEFB	0
+
+Screen_count:
+	DEFW	0
+Screen_full_Y_big:
+	DEFB	0
+
+Put_screen_full:
+	di
+	in	a,(0aah)
+	and	0f0h
+	add	a,7
+	out	(0aah),a
+	ei
+	in	a,(0a9h)
+	and	4
+	jp	z,Main_break
+	push	hl
+	ld	hl,(Screen_line)
+	ld	de,(Screen_line_max)
+	or	a
+	sbc	hl,de
+	pop	hl
+	ccf
+	ret	c
+	push	hl
+	push	bc
+	ld	a,(Y_big_count)
+	ld	(Screen_full_Y_big),a
+Put_screen_full_L1:
+	DEFB	0cdh
+Put_screen_full_func:
+	DEFW	Put_screen_full_mode0
+	jp	c,Put_screen_full_skip7
+	ld	hl,LINE_BUF
+	ld	de,(Screen_global_line)
+	ld	a,(Vportw)
+	ld	c,a
+	inc	c
+	xor	a
+	srl	d
+	rr	e
+	rla
+	ld	d,e
+	rl	e
+	rla
+	rl	e
+	rla
+	di
+	out	(c),a
+	ld	a,080h +14
+	out	(c),a
+	xor	a
+	out	(c),a
+	ld	a,d
+	and	00111111b
+	or	01000000b
+	out	(c),a
+	dec	c
+	ld	b,0
+	otir
+	ei
+	ld	hl,(Screen_line)
+	ld	de,(Screen_line_max)
+	or	a
+	sbc	hl,de
+	jp	nc,Put_screen_full_skip7
+	ld	hl,(Screen_line)
+	inc	hl
+	ld	(Screen_line),hl
+	ld	hl,(Screen_global_line)
+	inc	hl
+	ld	(Screen_global_line),hl
+	bit	7,h
+	jp	z,Put_screen_full_skip3
+	ld	a,ON
+	ld	(Screen_global_line_carry),a
+Put_screen_full_skip3:
+	ld	a,(Screen_global_line_carry)
+	cp	ON
+	jp	nz,Put_screen_full_skip4
+	ld	de,424
+	or	a
+	sbc	hl,de
+	jp	Put_screen_full_skip5
+Put_screen_full_skip4:
+	ld	de,424
+	or	a
+	sbc	hl,de
+	jp	c,Put_screen_full_skip6
+Put_screen_full_skip5:
+	srl	h
+	rr	l
+	ld	a,(Vportw)
+	ld	c,a
+	inc	c
+	di
+	out	(c),l
+	ld	a,080h +23
+	out	(c),a
+	ei
+Put_screen_full_skip6:
+Put_screen_full_skip7:
+	ld	a,(Screen_full_Y_big)
+	dec	a
+	ld	(Screen_full_Y_big),a
+	jp	nz,Put_screen_full_L1
+	exx
+	ld	de,(Expand_full_buf)
+	inc	d
+	inc	d
+	inc	de
+	bit	7,d
+	jp	z,Put_screen_full_skip8
+	set	6,d
+	res	7,d
+	inc	bc
+	inc	bc
+Put_screen_full_skip8:
+	ld	a,(bc)
+	cp	0
+	jp	nz,Put_screen_full_skip9
+	ld	bc,Segment_table
+	ld	a,(bc)
+Put_screen_full_skip9:
+	call	Change_page1
+	dec	de
+	ld	(Expand_full_buf),de
+	ld	hl,(X_wide)
+	exx
+	ld	bc,Page2_save_table
+	ld	a,(bc)
+	call	Change_page2
+	ld	hl,(Screen_count)
+	inc	hl
+	ld	(Screen_count),hl
+	pop	bc
+	pop	hl
+	or	a
+	ret
+
+Put_screen_full_mode0:
+	ld	hl,(Screen_count)
+	ld	a,(Screen_full_count)
+	inc	a
+	ld	(Screen_full_count),a
+	cp	5
+	scf
+	ret	z
+	cp	6
+	jp	z,Put_screen_full_mode0_skip1
+	jp	Put_screen_full_mode0_skip2
+Put_screen_full_mode0_skip1:
+	dec	hl
+Put_screen_full_mode0_skip2:
+	add	hl,hl			;５１２倍
+	ld	d,l
+	add	hl,hl			;上位２ビットを左シフト
+	add	hl,hl
+	ld	c,h
+	ld	b,0
+	ld	hl,Segment_table
+	add	hl,bc
+	add	hl,bc
+	ld	c,l
+	ld	b,h
+	ld	a,(bc)
+	call	Change_page1
+	inc	bc
+	inc	bc
+	ld	a,(bc)
+	call	Change_page2
+	ld	e,0
+	set	6,d
+	res	7,d
+	ld	hl,LINE_BUF
+	ex	de,hl
+	ld	a,(Screen_full_count)
+	cp	6
+	jp	z,Put_screen_full_mode0_skip3
+	DEFB	0cdh
+Put_screen_full_mode0_func1:
+	DEFW	Put_screen63_sub1
+	or	a
+	ret
+Put_screen_full_mode0_skip3:
+	DEFB	0cdh
+Put_screen_full_mode0_func2:
+	DEFW	Put_screen63_sub2
+	xor	a
+	ld	(Screen_full_count),a
+	ret
+
+Put_screen_full_mode1:
+	ld	hl,(Screen_count)
+	add	hl,hl			;５１２倍
+	ld	d,l
+	add	hl,hl			;上位２ビットを左シフト
+	add	hl,hl
+	ld	c,h
+	ld	b,0
+	ld	hl,Segment_table
+	add	hl,bc
+	add	hl,bc
+	ld	c,l
+	ld	b,h
+	ld	a,(bc)
+	call	Change_page1
+	inc	bc
+	inc	bc
+	ld	a,(bc)
+	call	Change_page2
+	ld	e,0
+	set	6,d
+	res	7,d
+	ld	hl,LINE_BUF
+	ex	de,hl
+	DEFB	0cdh
+Put_screen_full_mode1_func:
+	DEFW	Put_screen63_sub1
+	or	a
+	ret
+
+Put_screenSepia_sub1:
+	ld	b,0
+Put_screenSepia_sub1_L1:
+	ld	a,(hl)
+	inc	hl
+	rlca
+	rlca
+	rlca
+	rlca
+	or	(hl)
+	rlca
+	rlca
+	rlca
+	rlca
+	inc	hl
+	ld	(de),a
+	inc	de
+	djnz	Put_screenSepia_sub1_L1
+	ret
+
+Put_screenSepia_sub2:
+	ld	b,0
+Put_screenSepia_sub2_L1:
+	push	bc
+	ld	a,(hl)
+	inc	h
+	inc	h
+	add	a,(hl)
+	dec	h
+	dec	h
+	inc	hl
+	rra
+	and	11110000b
+	ld	c,a
+	ld	a,(hl)
+	inc	h
+	inc	h
+	add	a,(hl)
+	dec	h
+	dec	h
+	inc	hl
+	rra
+	and	11110000b
+	rrca
+	rrca
+	rrca
+	rrca
+	or	c
+	ld	(de),a
+	inc	de
+	pop	bc
+	djnz	Put_screenSepia_sub2_L1
+	ret
+
+Put_screen63_sub1:
+	ld	b,128
+	ld	a,(Screen_global_line)
+	rrca
+	jp	c,Put_screen63_sub1_skip1
+Put_screen63_sub1_L1:
+	push	bc
+	ld	b,HIGH Dither63_table
+	ld	c,(hl)
+	inc	hl
+	ld	a,(bc)
+	and	11110000b
+	ld	(de),a
+	ld	c,(hl)
+	inc	hl
+	ld	a,(bc)
+	and	00001111b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	ld	(de),a
+	inc	de
+	ld	c,(hl)
+	inc	hl
+	ld	a,(bc)
+	and	00001111b
+	ld	(de),a
+	ld	c,(hl)
+	inc	hl
+	ld	a,(bc)
+	and	11110000b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	(de),a
+	inc	de
+	pop	bc
+	djnz	Put_screen63_sub1_L1
+	ret
+Put_screen63_sub1_skip1:
+Put_screen63_sub1_L2:
+	push	bc
+	ld	b,HIGH Dither63_table
+	ld	c,(hl)
+	inc	hl
+	ld	a,(bc)
+	and	00001111b
+	ld	(de),a
+	ld	c,(hl)
+	inc	hl
+	ld	a,(bc)
+	and	11110000b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	(de),a
+	inc	de
+	ld	c,(hl)
+	inc	hl
+	ld	a,(bc)
+	and	11110000b
+	ld	(de),a
+	ld	c,(hl)
+	inc	hl
+	ld	a,(bc)
+	and	00001111b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	ld	(de),a
+	inc	de
+	pop	bc
+	djnz	Put_screen63_sub1_L2
+	ret
+
+Put_screen63_sub2:
+	ld	b,128
+	ld	a,(Screen_global_line)
+	rrca
+	jp	c,Put_screen63_sub2_skip1
+Put_screen63_sub2_L1:
+	push	bc
+	ld	b,(hl)
+	inc	h
+	inc	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	11110000b
+	ld	(de),a
+	inc	hl
+	ld	b,(hl)
+	dec	h
+	dec	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	00001111b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	ld	(de),a
+	inc	de
+	inc	hl
+	ld	b,(hl)
+	inc	h
+	inc	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	00001111b
+	ld	(de),a
+	inc	hl
+	ld	b,(hl)
+	dec	h
+	dec	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	11110000b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	(de),a
+	inc	de
+	inc	hl
+	pop	bc
+	djnz	Put_screen63_sub2_L1
+	ret
+Put_screen63_sub2_skip1:
+Put_screen63_sub2_L2:
+	push	bc
+	ld	b,(hl)
+	inc	h
+	inc	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	00001111b
+	ld	(de),a
+	inc	hl
+	ld	b,(hl)
+	dec	h
+	dec	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	11110000b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	(de),a
+	inc	de
+	inc	hl
+	ld	b,(hl)
+	inc	h
+	inc	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	11110000b
+	ld	(de),a
+	inc	hl
+	ld	b,(hl)
+	dec	h
+	dec	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	00001111b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	ld	(de),a
+	inc	de
+	inc	hl
+	pop	bc
+	djnz	Put_screen63_sub2_L2
+	ret
+
+Put_screenSepiaX_sub1:
+	ld	bc,(Center_x)
+	add	hl,bc
+	ld	b,0
+Put_screenSepiaX_sub1_L1:
+	ld	a,(hl)
+	rlca
+	rlca
+	rlca
+	rlca
+	or	(hl)
+	rlca
+	rlca
+	rlca
+	rlca
+	inc	hl
+	ld	(de),a
+	inc	de
+	djnz	Put_screenSepiaX_sub1_L1
+	ret
+
+Put_screenSepiaX_sub2:
+	ld	bc,(Center_X)
+	add	hl,bc
+	ld	b,0
+Put_screenSepiaX_sub2_L1:
+	push	bc
+	ld	a,(hl)
+	inc	h
+	inc	h
+	add	a,(hl)
+	dec	h
+	dec	h
+	inc	hl
+	rra
+	and	11110000b
+	ld	c,a
+	rrca
+	rrca
+	rrca
+	rrca
+	or	c
+	ld	(de),a
+	inc	de
+	pop	bc
+	djnz	Put_screenSepiaX_sub2_L1
+	ret
+
+Put_screen63X_sub1:
+	ld	bc,(Center_x)
+	add	hl,bc
+	ld	b,128
+	ld	a,(Screen_global_line)
+	rrca
+	jp	c,Put_screen63X_sub1_skip1
+Put_screen63X_sub1_L1:
+	push	bc
+	ld	b,HIGH Dither63_table
+	ld	c,(hl)
+	ld	a,(bc)
+	and	11110000b
+	ld	(de),a
+	ld	c,(hl)
+	inc	hl
+	ld	a,(bc)
+	and	00001111b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	ld	(de),a
+	inc	de
+	ld	c,(hl)
+	ld	a,(bc)
+	and	00001111b
+	ld	(de),a
+	ld	c,(hl)
+	inc	hl
+	ld	a,(bc)
+	and	11110000b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	(de),a
+	inc	de
+	pop	bc
+	djnz	Put_screen63X_sub1_L1
+	ret
+Put_screen63X_sub1_skip1:
+Put_screen63X_sub1_L2:
+	push	bc
+	ld	b,HIGH Dither63_table
+	ld	c,(hl)
+	ld	a,(bc)
+	and	00001111b
+	ld	(de),a
+	ld	c,(hl)
+	inc	hl
+	ld	a,(bc)
+	and	11110000b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	(de),a
+	inc	de
+	ld	c,(hl)
+	ld	a,(bc)
+	and	11110000b
+	ld	(de),a
+	ld	c,(hl)
+	inc	hl
+	ld	a,(bc)
+	and	00001111b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	ld	(de),a
+	inc	de
+	pop	bc
+	djnz	Put_screen63X_sub1_L2
+	ret
+
+Put_screen63X_sub2:
+	ld	bc,(Center_x)
+	add	hl,bc
+	ld	b,128
+	ld	a,(Screen_global_line)
+	rrca
+	jp	c,Put_screen63X_sub2_skip1
+Put_screen63X_sub2_L1:
+	push	bc
+	ld	b,(hl)
+	inc	h
+	inc	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	11110000b
+	ld	(de),a
+	ld	b,(hl)
+	dec	h
+	dec	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	00001111b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	ld	(de),a
+	inc	de
+	inc	hl
+	ld	b,(hl)
+	inc	h
+	inc	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	00001111b
+	ld	(de),a
+	ld	b,(hl)
+	dec	h
+	dec	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	11110000b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	(de),a
+	inc	de
+	inc	hl
+	pop	bc
+	djnz	Put_screen63X_sub2_L1
+	ret
+Put_screen63X_sub2_skip1:
+Put_screen63X_sub2_L2:
+	push	bc
+	ld	b,(hl)
+	inc	h
+	inc	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	00001111b
+	ld	(de),a
+	ld	b,(hl)
+	dec	h
+	dec	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	11110000b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	(de),a
+	inc	de
+	inc	hl
+	ld	b,(hl)
+	inc	h
+	inc	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	11110000b
+	ld	(de),a
+	ld	b,(hl)
+	dec	h
+	dec	h
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	c,a
+	ld	b,HIGH Dither63_table
+	ld	a,(bc)
+	and	00001111b
+	ld	c,a
+	ld	a,(de)
+	or	c
+	ld	(de),a
+	inc	de
+	inc	hl
+	pop	bc
+	djnz	Put_screen63X_sub2_L2
+	ret
+
+;--------------------------------------------
+;	縦方向のセンタリング
+;--------------------------------------------
+
+Center_line_length:
+	DEFW	0
+Center_x:
+	DEFW	0
+
+Center_up:
+	ld	de,(X_wide)
+	srl	d
+	rr	e
+	ld	hl,512 /2
+	or	a
+	sbc	hl,de
+	ld	(Center_x),hl
+	ld	a,(Select_mode_Z_save)
+	cp	ON
+	ret	z
+	ld	hl,(Screen_line_max)
+	push	hl
+	ld	de,424
+	or	a
+	sbc	hl,de
+	pop	hl
+	ret	nc
+	ex	de,hl
+	or	a
+	sbc	hl,de
+	srl	h
+	rr	l
+	ld	(Center_line_length),hl
+	ld	a,h
+	or	l
+	ret	z
+	call	Center_put
+	ret
+
+Center_down:
+	ld	a,(Select_mode_Z_save)
+	cp	ON
+	ret	z
+	ld	hl,(Center_line_length)
+	ld	a,h
+	or	l
+	ret	z
+Center_put:
+	ld	de,(Screen_global_line)
+Center_put_L1:
+	push	de
+	ld	a,(Vportw)
+	ld	c,a
+	inc	c
+	xor	a
+	srl	d
+	rr	e
+	rla
+	ld	d,e
+	rl	e
+	rla
+	rl	e
+	rla
+	di
+	out	(c),a
+	ld	a,080h +14
+	out	(c),a
+	xor	a
+	out	(c),a
+	ld	a,d
+	and	00111111b
+	or	01000000b
+	out	(c),a
+	dec	c
+	xor	a
+	ld	b,0
+Center_put_L2:
+	out	(c),a
+	djnz	Center_put_L2
+	ei
+	pop	de
+	inc	de
+	dec	hl
+	ld	a,h
+	or	l
+	jp	nz,Center_put_L1
+	ld	(Screen_global_line),de
+	ret
+
+;--------------------------------------------
+;	１５７５色表示バージョン
+;	注）他の処理と根本的に別物です
+;--------------------------------------------
+
+Expand_line_color:
+	DEFW	0
+Expand_line_length:
+	DEFS	3
+Expand_line_x:
+	DEFW	0
+Expand_line_y:
+	DEFW	0
+Expand_line_buf:
+	DEFW	0
+
+Expand_line:
+	ld	hl,Line_buf1575
+	ld	de,Line_buf1575 +1
+	ld	bc,4096-1
+	ld	(hl),0
+	ldir
+	ld	hl,0
+	ld	(Expand_line_color),hl
+	ld	(Screen_line),hl
+	ld	hl,03000h -2
+	ld	de,(Center_x)
+	add	hl,de
+	add	hl,de
+	ld	(Expand_line_x),hl
+	xor	a
+	ld	(screen_line_count),a
+	exx
+	ld	de,PAGE1 -1
+	ld	(Expand_line_buf),de
+	ld	hl,(X_wide)
+	inc	hl
+	ld	bc,Segment_table
+	ld	a,(bc)
+	call	Change_page1
+	exx
+Expand_line_L1:
+	call	Read_length
+	ld	(Expand_line_length),hl
+	ld	(Expand_line_length +2),a
+	ld	bc,(Expand_line_color)
+Expand_line_L2:
+	ld	hl,(Expand_line_length)
+	ld	de,1
+	or	a
+	sbc	hl,de
+	ld	(Expand_line_length),hl
+	ld	a,(Expand_line_length +2)
+	sbc	a,d
+	ld	(Expand_line_length +2),a
+	jp	c,Expand_line_skip10
+	ld	hl,(Expand_line_x)
+	inc	hl
+	inc	hl
+	exx
+	dec	hl
+	ld	a,h
+	or	l
+	exx
+	call	z,Put_screen_line
+	ret	c
+	ld	(Expand_line_x),hl
+	exx
+	inc	de
+	ld	a,(de)
+	exx
+	or	a
+	jp	z,Expand_line_skip3
+	sub	6
+	ld	e,a
+	rlca
+	sbc	a,a
+	ld	d,a
+	add	hl,de
+	ld	a,h
+	xor	00001000b
+	ld	h,a
+	ld	b,(hl)
+	inc	hl
+	ld	c,(hl)
+	ld	hl,(Expand_line_x)
+Expand_line_skip3:
+	ld	(hl),b
+	inc	hl
+	ld	(hl),c
+	jp	Expand_line_L2
+Expand_line_skip10:
+	or	a
+	ld	hl,(Expand_line_x)
+	inc	hl
+	inc	hl
+	exx
+	dec	hl
+	ld	a,h
+	or	l
+	exx
+	call	z,Put_screen_line
+	ret	c
+	ld	(Expand_line_x),hl
+	exx
+	inc	de
+	exx
+	ld	hl,(Get_bit_data)
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	jp	nc,Expand_line_skip18
+	xor	a
+	REPT	7
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rla
+	ENDR
+	ld	(Get_bit_data),hl
+	ld	b,a
+	ld	a,(Color_point)
+	cp	b
+	jp	z,Expand_line_skip17
+				;Color_idxの切り離し
+
+	ld	c,a
+	ld	l,b
+	ld	h,NEXT
+	ld	e,(hl)		;NEXT
+	inc	h
+	ld	d,(hl)		;PREV
+	ld	l,d
+	dec	h
+	ld	(hl),e		;NEXT
+	ld	l,e
+	inc	h
+	ld	(hl),d		;PREV
+
+	ld	l,c
+	ld	l,(hl)		;PREV
+	dec	h
+	ld	(hl),b		;NEXT
+	
+	ld	l,c
+	inc	h
+	ld	a,(hl)		;PREV
+	ld	l,b
+	ld	(hl),a		;PREV
+
+	ld	l,c
+	ld	(hl),b		;PREV
+
+	ld	l,b
+	dec	h
+	ld	(hl),c		;NEXT
+
+	ld	a,b
+	ld	(Color_point),a
+
+Expand_line_skip17:
+	ld	a,b
+	add	a,a
+	ld	l,a
+	ld	h,NOW
+	ld	b,(hl)
+	inc	hl
+	ld	c,(hl)
+	jp	Expand_line_skip19
+Expand_line_skip18:
+	DEFB	0cdh
+Expand_line_func:
+	DEFW	Expand_line_color1575
+	ld	(Get_bit_data),hl
+	ld	a,(Color_point)
+	ld	l,a
+	ld	h,PREV
+	ld	a,(hl)
+	ld	(Color_point),a
+	add	a,a
+	ld	l,a
+	ld	h,NOW
+	ld	(hl),b
+	inc	hl
+	ld	(hl),c
+Expand_line_skip19:
+	ld	(Expand_line_color),bc
+	ld	hl,(Expand_line_x)
+	ld	(hl),b
+	inc	hl
+	ld	(hl),c
+	call	Get_bit
+	jp	nc,Expand_line_L1
+	ld	hl,(Get_bit_data)
+	exx
+	push	bc
+	push	de
+	exx
+	pop	bc
+Expand_line_L3:
+	xor	a
+	REPT	2
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rla
+	ENDR
+	inc	b
+	inc	b
+	cp	0
+	jp	z,Expand_line_skip30
+	ld	d,6
+	cp	2
+	jp	z,Expand_line_skip31
+	dec	bc			;x -= 1
+	ld	d,8
+	cp	1
+	jp	z,Expand_line_skip31
+	inc	bc
+	inc	bc			;x += 1
+	ld	d,4
+	jp	Expand_line_skip31
+Expand_line_skip30:
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	jp	nc,Expand_line_skip39
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	inc	bc
+	inc	bc			;x += 2
+	ld	d,2
+	jp	c,Expand_line_skip31
+	dec	bc
+	dec	bc
+	dec	bc
+	dec	bc			;x -= 2
+	ld	d,10
+Expand_line_skip31:
+	bit	7,b
+	jp	z,Expand_line_skip33
+	set	6,b
+	res	7,b
+	exx
+	inc	bc
+	inc	bc
+	ld	a,(bc)
+	cp	0
+	jp	nz,Expand_line_skip32
+	ld	bc,Segment_table
+	ld	a,(bc)
+Expand_line_skip32:
+	call	Change_page1
+	exx
+Expand_line_skip33:
+	ld	a,d
+	ld	(bc),a
+	jp	Expand_line_L3
+Expand_line_skip39:
+	exx
+	pop	bc
+	ld	a,(bc)
+	call	Change_page1
+	exx
+	ld	(Get_bit_data),hl
+	jp	Expand_line_L1
+
+Expand_line_color256:
+	ld	bc,0
+	REPT	3		;Green 3bits
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rl	b
+	ENDR
+	REPT	2
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ENDR
+	REPT	3		;Red 3bits
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rl	b
+	ENDR
+	REPT	2
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ENDR
+	REPT	2		;Blue 2bits
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rl	b
+	ENDR
+	REPT	3
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ENDR
+	ret
+
+Expand_line_color1575:
+	xor	a
+	REPT	5		;Green 5bits
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rla
+	ENDR
+	ld	e,a
+	ld	d,HIGH Dither1575_table
+	ld	a,(de)
+	ld	b,a
+	set	5,e
+	ld	a,(de)
+	ld	c,a
+	ld	a,00000010b
+	REPT	5		;Red 5bits
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rla
+	ENDR
+	ld	e,a
+	ld	d,HIGH Dither1575_table
+	ld	a,(de)
+	or	b
+	ld	b,a
+	set	5,e
+	ld	a,(de)
+	or	c
+	ld	c,a
+	ld	a,00000100b
+	REPT	5		;Blue 5bits
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rla
+	ENDR
+	ld	e,a
+	ld	d,HIGH Dither1575_table
+	ld	a,(de)
+	or	b
+	ld	b,a
+	set	5,e
+	ld	a,(de)
+	or	c
+	ld	c,a
+	ret
+
+
+Expand_line_color256H:
+	call	Expand_line_color256
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ret
+
+Expand_line_color1575H:
+	call	Expand_line_color1575
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ret
+
+Expand_line_color256H24:
+	ld	bc,0
+	REPT	3		;Green 3bits
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rl	b
+	ENDR
+	REPT	5
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ENDR
+	REPT	3		;Red 3bits
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rl	b
+	ENDR
+	REPT	5
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ENDR
+	REPT	2		;Blue 2bits
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rl	b
+	ENDR
+	REPT	6
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ENDR
+	ret
+
+Expand_line_color1575H24:
+	xor	a
+	REPT	5		;Green 5bits
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rla
+	ENDR
+	REPT	3
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ENDR
+	ld	e,a
+	ld	d,HIGH Dither1575_table
+	ld	a,(de)
+	ld	b,a
+	set	5,e
+	ld	a,(de)
+	ld	c,a
+	ld	a,00000010b
+	REPT	5		;Red 5bits
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rla
+	ENDR
+	REPT	3
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ENDR
+	ld	e,a
+	ld	d,HIGH Dither1575_table
+	ld	a,(de)
+	or	b
+	ld	b,a
+	set	5,e
+	ld	a,(de)
+	or	c
+	ld	c,a
+	ld	a,00000100b
+	REPT	5		;Blue 5bits
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	rla
+	ENDR
+	REPT	3
+	rlc	h
+	call	c,Get_char
+	rlc	l
+	ENDR
+	ld	e,a
+	ld	d,HIGH Dither1575_table
+	ld	a,(de)
+	or	b
+	ld	b,a
+	set	5,e
+	ld	a,(de)
+	or	c
+	ld	c,a
+	ret
+
+
+
+;-------------------------------------------
+;	１５７５色モード用表示処理
+;-------------------------------------------
+
+screen_line_count:
+	DEFB	0
+screen_line_address:
+	DEFW	0
+Screen_line_Y_big:
+	DEFB	1
+
+Put_screen_line:
+	di
+	in	a,(0aah)
+	and	0f0h
+	add	a,7
+	out	(0aah),a
+	ei
+	in	a,(0a9h)
+	and	4
+	jp	z,Main_break
+	push	hl
+	ld	hl,(Screen_line)
+	ld	de,(Screen_line_max)
+	or	a
+	sbc	hl,de
+	pop	hl
+	ccf
+	ret	c
+	ld	(Expand_line_color),bc
+	ld	a,(Y_big_count)
+	ld	(Screen_line_Y_big),a
+Put_screen_line_L1:
+	DEFB	0cdh
+Put_screen_line_func:
+	DEFW	Put_screen_line_mode0
+	jp	c,Put_screen_line_skip7
+Put_screen_line_L2:
+	ld	hl,(Screen_line)
+	ld	de,(Screen_line_max)
+	or	a
+	sbc	hl,de
+	ccf
+	ret	c
+	ld	hl,(Screen_line)
+	inc	hl
+	ld	(Screen_line),hl
+	ld	hl,(Screen_global_line)
+	inc	hl
+	ld	(Screen_global_line),hl
+	bit	7,h
+	jp	z,Put_screen_line_skip3
+	ld	a,ON
+	ld	(Screen_global_line_carry),a
+Put_screen_line_skip3:
+	ld	a,(Screen_global_line_carry)
+	cp	ON
+	jp	nz,Put_screen_line_skip4
+	ld	de,424
+	or	a
+	sbc	hl,de
+	jp	Put_screen_line_skip5
+Put_screen_line_skip4:
+	ld	de,424
+	or	a
+	sbc	hl,de
+	jp	c,Put_screen_line_skip6
+Put_screen_line_skip5:
+	srl	h
+	rr	l
+	ld	a,(Vportw)
+	ld	c,a
+	inc	c
+	di
+	out	(c),l
+	ld	a,080h +23
+	out	(c),a
+	ei
+Put_screen_line_skip6:
+	djnz	Put_screen_line_L2
+Put_screen_line_skip7:
+	ld	a,(Screen_line_Y_big)
+	dec	a
+	ld	(Screen_line_Y_big),a
+	jp	nz,Put_screen_line_L1
+	exx
+	ld	de,(Expand_line_buf)
+	inc	d
+	inc	d
+	inc	de
+	bit	7,d
+	jp	z,Put_screen_line_skip9
+	set	6,d
+	res	7,d
+	inc	bc
+	inc	bc
+	ld	a,(bc)
+	cp	0
+	jp	nz,Put_screen_line_skip8
+	ld	bc,Segment_table
+	ld	a,(bc)
+Put_screen_line_skip8:
+	call	Change_page1
+Put_screen_line_skip9:
+	dec	de
+	ld	(Expand_line_buf),de
+	ld	hl,(X_wide)
+	exx
+	ld	bc,(Expand_line_color)
+	ld	hl,(Expand_line_x)
+	ld	a,h
+	and	11111000b
+	xor	00001000b
+	ld	h,a
+	ld	l,0
+	ld	de,(Center_x)
+	add	hl,de
+	add	hl,de
+	or	a
+	ret
+
+Put_screen_line_mode0:
+	ld	bc,Page1_save_table
+	ld	a,(bc)
+	call	Change_page1
+	ld	de,PAGE1
+	DEFB	0cdh
+Put_screen_line_mode0_func:
+	DEFW	Put_screen1575
+	jp	Put_screen_line_mode1_skip3
+
+Put_screen_line_mode1:
+	ld	bc,Page1_save_table
+	ld	a,(bc)
+	call	Change_page1
+	ld	a,(screen_line_count)
+	inc	a
+	ld	(screen_line_count),a
+	cp	6
+	jp	z,Put_screen_line_mode1_skip2
+	ld	de,PAGE1
+	DEFB	0cdh
+Put_screen_line_mode1_func1:
+	DEFW	Put_screen1575
+	ld	a,(screen_line_count)
+	cp	5
+	jp	nz,Put_screen_line_mode1_skip3
+	exx
+	ld	a,(bc)
+	call	Change_page1
+	exx
+	scf
+	ret
+Put_screen_line_mode1_skip2:
+	ld	de,PAGE1 +256
+	DEFB	0cdh
+Put_screen_line_mode1_func2:
+	DEFW	Put_screen1575
+	ld	hl,PAGE1
+	ld	b,0
+Put_screen_line_mode1_L1:
+	ld	d,(hl)
+	inc	h
+	ld	e,(hl)
+	dec	h
+	ld	a,d
+	xor	e
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,d
+	add	a,e
+	rra
+	sub	c
+	ld	(hl),a
+	inc	hl
+	djnz	Put_screen_line_mode1_L1
+	xor	a
+	ld	(screen_line_count),a
+Put_screen_line_mode1_skip3:
+	ld	hl,PAGE1
+	ld	de,(Screen_global_line)
+	ld	a,(Vportw)
+	ld	c,a
+	inc	c
+	xor	a
+	srl	d
+	rr	e
+	rla
+	ld	d,e
+	rl	e
+	rla
+	rl	e
+	rla
+	di
+	out	(c),a
+	ld	a,080h +14
+	out	(c),a
+	xor	a
+	out	(c),a
+	ld	a,d
+	and	00111111b
+	or	01000000b
+	out	(c),a
+	dec	c
+	ld	b,0
+	otir
+	ei
+	exx
+	ld	a,(bc)
+	call	Change_page1
+	exx
+	ld	b,1
+	or	a
+	ret
+
+	ret
+
+Put_screen256:
+	ld	hl,(Expand_line_x)
+	ld	a,h
+	and	00111000b
+	ld	h,a
+	ld	l,0
+	ld	b,0
+Put_screen256_L1:
+	push	bc
+	ld	b,(hl)
+	inc	hl
+	inc	hl
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	(de),a
+	inc	de
+	inc	hl
+	inc	hl
+	pop	bc
+	djnz	Put_screen256_L1
+	ret
+
+Put_screen1575:
+	ld	hl,(Expand_line_x)
+	ld	a,h
+	and	00111000b
+	ld	h,a
+	ld	l,0
+	ld	b,128
+	ld	a,(Screen_global_line)
+	rrca
+	jp	c,Put_screen1575_skip1
+Put_screen1575_L1:
+	push	bc
+	ld	b,(hl)
+	inc	hl
+	inc	hl
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	(de),a
+	inc	de
+	inc	hl
+	inc	hl
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+	inc	hl
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	(de),a
+	inc	de
+	inc	hl
+	pop	bc
+	djnz	Put_screen1575_L1
+	ret
+Put_screen1575_skip1:
+Put_screen1575_L2:
+	push	bc
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+	inc	hl
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	(de),a
+	inc	de
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+	inc	hl
+	ld	a,(hl)
+	xor	b
+	and	00100100b
+	rra
+	ld	c,a
+	ld	a,(hl)
+	add	a,b
+	rra
+	sub	c
+	ld	(de),a
+	inc	de
+	inc	hl
+	inc	hl
+	pop	bc
+	djnz	Put_screen1575_L2
+	ret
+
+
+Put_screen256X:
+	ld	hl,(Expand_line_x)
+	ld	a,h
+	and	00111000b
+	ld	h,a
+	ld	l,0
+	ld	bc,(Center_X)
+	add	hl,bc
+	add	hl,bc
+	ld	b,0
+Put_screen256X_L1:
+	ld	a,(hl)
+	ld	(de),a
+	inc	de
+	inc	hl
+	inc	hl
+	djnz	Put_screen256X_L1
+	ret
+
+Put_screen1575X:
+	ld	hl,(Expand_line_x)
+	ld	a,h
+	and	00111000b
+	ld	h,a
+	ld	l,0
+	ld	bc,(Center_X)
+	add	hl,bc
+	add	hl,bc
+	ld	b,128
+	ld	a,(Screen_global_line)
+	rrca
+	jp	c,Put_screen1575X_skip1
+Put_screen1575X_L1:
+	ld	a,(hl)
+	inc	hl
+;	ld	a,(hl)
+	inc	hl
+	ld	(de),a
+	inc	de
+;	ld	a,(hl)
+	inc	hl
+	ld	a,(hl)
+	inc	hl
+	ld	(de),a
+	inc	de
+	djnz	Put_screen1575X_L1
+	ret
+Put_screen1575X_skip1:
+Put_screen1575X_L2:
+;	ld	a,(hl)
+	inc	hl
+	ld	a,(hl)
+	inc	hl
+	ld	(de),a
+	inc	de
+	ld	a,(hl)
+	inc	hl
+;	ld	a,(hl)
+	inc	hl
+	ld	(de),a
+	inc	de
+	djnz	Put_screen1575X_L2
+	ret
+
+;--------------------------------------------
+;	展開処理の選択
+;--------------------------------------------
+
+Expand_select:
+	call	Select_screen_mode
+	call	Select_clear_work
+	call	Select_color
+	call	Select_big_x
+	call	Select_screen_func
+	call	Center_up
+	call	Select_exec_mode
+	call	Center_down
+	ret
+
+Select_exec_mode:
+	ld	a,(Save_graphic_mode)
+	cp	0
+	jp	z,Expand_full
+	cp	1
+	jp	z,Expand_full
+	cp	2
+	jp	z,Expand_line
+	cp	3
+	jp	z,Expand_line
+	cp	4
+	jp	z,Expand_full
+	jp	Expand_line
+
+Select_screen_mode:
+	ld	a,(Save_graphic_mode)
+	cp	0
+	jp	z,Select_screen_mode_skip1
+	cp	1
+	jp	z,Select_screen_mode_skip1
+	cp	2
+	jp	z,Select_screen_mode_skip2
+	cp	3
+	jp	z,Select_screen_mode_skip2
+	cp	4
+	jp	z,Select_screen_mode_skip1
+	jp	Select_screen_mode_skip1
+Select_screen_mode_skip1:
+	ld	a,(Flag_screen_mode)
+	cp	7
+	ret	z
+	ld	a,7
+	jp	Select_screen_mode_skip3
+Select_screen_mode_skip2:
+	ld	a,(Flag_screen_mode)
+	cp	8
+	ret	z
+	ld	a,8
+Select_screen_mode_skip3:
+	call	Set_screen_mode
+	call	Clear_screen
+	ret
+
+Select_clear_work:
+	ld	a,(Save_graphic_mode)
+	ld	d,00000000b
+	cp	0
+	jp	z,Select_clear_work_skip1
+	ld	d,00000000b
+	cp	1
+	jp	z,Select_clear_work_skip1
+	ld	d,00000000b
+	cp	2
+	jp	z,Select_clear_work_skip1
+	ld	d,0
+	cp	3
+	jp	z,Select_clear_work_skip1
+	ld	d,0
+	cp	4
+	jp	z,Select_clear_work_skip1
+	ld	d,0
+Select_clear_work_skip1:
+	ld	a,d
+	ld	(Clear_segment_data),a
+	call	Clear_segment
+	ret
+
+Select_color:
+	ld	a,(Save_graphic_mode)
+	cp	0
+	jp	z,Select_color_skip1
+	cp	1
+	jp	z,Select_color_skip2
+	cp	2
+	jp	z,Select_color_skip3
+	cp	3
+	jp	z,Select_color_skip4
+	cp	4
+	jp	z,Select_color_skip5
+Select_color_skip1:
+	ld	hl,Expand_full_color63
+	ld	de,Expand_full_color63H
+	ld	bc,Expand_full_color63H24
+	jp	Select_color_skip6
+Select_color_skip2:
+	ld	hl,Expand_full_colorSepia
+	ld	de,Expand_full_colorSepiaH
+	ld	bc,Expand_full_colorSepiaH24
+	jp	Select_color_skip6
+Select_color_skip3:
+	ld	hl,Expand_line_color256
+	ld	de,Expand_line_color256H
+	ld	bc,Expand_line_color256H24
+	jp	Select_color_skip6
+Select_color_skip4:
+	ld	hl,Expand_line_color1575
+	ld	de,Expand_line_color1575H
+	ld	bc,Expand_line_color1575H24
+	jp	Select_color_skip6
+Select_color_skip5:
+	ld	hl,Expand_full_colorSepia
+	ld	de,Expand_full_colorSepiaH
+	ld	bc,Expand_full_colorSepiaH24
+	jp	Select_color_skip6
+Select_color_skip6:
+	ld	a,(Palette_size)
+	cp	15
+	jp	z,Select_color_skip7
+	cp	16
+	jp	z,Select_color_skip8
+	cp	24
+	jp	z,Select_color_skip9
+	ret
+Select_color_skip7:
+	ld	(Expand_line_func),hl
+	ld	(Expand_full_func),hl
+	ret
+Select_color_skip8:
+	ld	(Expand_line_func),de
+	ld	(Expand_full_func),de
+	ret
+Select_color_skip9:
+	ld	(Expand_line_func),bc
+	ld	(Expand_full_func),bc
+	ret
+
+Select_big_x:
+	ld	a,(Save_graphic_mode)
+	cp	0
+	jp	z,Select_big_x_skip1
+	cp	1
+	jp	z,Select_big_x_skip2
+	cp	2
+	jp	z,Select_big_x_skip3
+	cp	3
+	jp	z,Select_big_x_skip4
+	cp	4
+	jp	z,Select_big_x_skip5
+Select_big_x_skip1:
+	ld	hl,Put_screen63_sub1
+	ld	de,Put_screen63_sub2
+	exx
+	ld	hl,Put_screen63X_sub1
+	ld	de,Put_screen63X_sub2
+	exx
+	jp	Select_big_x_skip6
+Select_big_x_skip2:
+	ld	hl,Put_screenSepia_sub1
+	ld	de,Put_screenSepia_sub2
+	exx
+	ld	hl,Put_screenSepiaX_sub1
+	ld	de,Put_screenSepiaX_sub2
+	exx
+	jp	Select_big_x_skip6
+Select_big_x_skip3:
+	ld	hl,Put_screen256
+	ld	de,Put_screen256X
+	jp	Select_big_x_skip8
+Select_big_x_skip4:
+	ld	hl,Put_screen1575
+	ld	de,Put_screen1575X
+	jp	Select_big_x_skip8
+Select_big_x_skip5:
+	ld	hl,Put_screenSepia_sub1
+	ld	de,Put_screenSepia_sub2
+	exx
+	ld	hl,Put_screenSepiaX_sub1
+	ld	de,Put_screenSepiaX_sub2
+	exx
+	jp	Select_big_x_skip6
+Select_big_x_skip6:
+	ld	a,(X_big_flag)
+	cp	ON
+	jp	nz,Select_big_x_skip7
+	exx
+	ld	(Put_screen_full_mode0_func1),hl
+	ld	(Put_screen_full_mode1_func),hl
+	ld	(Put_screen_full_mode0_func2),de
+	exx
+	ret
+Select_big_x_skip7:
+	ld	(Put_screen_full_mode0_func1),hl
+	ld	(Put_screen_full_mode1_func),hl
+	ld	(Put_screen_full_mode0_func2),de
+	ret
+Select_big_x_skip8:
+	ld	a,(X_big_flag)
+	cp	ON
+	jp	nz,Select_big_x_skip9
+	ld	(Put_screen_line_mode0_func),de
+	ld	(Put_screen_line_mode1_func1),de
+	ld	(Put_screen_line_mode1_func2),de
+	ret
+Select_big_x_skip9:
+	ld	(Put_screen_line_mode0_func),hl
+	ld	(Put_screen_line_mode1_func1),hl
+	ld	(Put_screen_line_mode1_func2),hl
+	ret
+
+Select_screen_func:
+	ld	a,(Save_graphic_mode)
+	cp	0
+	jp	z,Select_screen_func_skip1
+	cp	1
+	jp	z,Select_screen_func_skip2
+	cp	2
+	jp	z,Select_screen_func_skip3
+	cp	3
+	jp	z,Select_screen_func_skip4
+	cp	4
+	jp	z,Select_screen_func_skip5
+Select_screen_func_skip1:
+	ld	hl,Put_screen_full_mode0
+	ld	de,Put_screen_full_mode1
+	ld	bc,Pic_palette0
+	ld	ix,Put_screen_full_func
+	jp	Select_screen_func_skip6
+Select_screen_func_skip2:
+	ld	hl,Put_screen_full_mode0
+	ld	de,Put_screen_full_mode1
+	ld	bc,Pic_palette1
+	ld	ix,Put_screen_full_func
+	jp	Select_screen_func_skip6
+Select_screen_func_skip3:
+	ld	hl,Put_screen_line_mode1
+	ld	de,Put_screen_line_mode0
+	ld	bc,Msxini_palette
+	ld	ix,Put_screen_line_func
+	jp	Select_screen_func_skip6
+Select_screen_func_skip4:
+	ld	hl,Put_screen_line_mode1
+	ld	de,Put_screen_line_mode0
+	ld	bc,Msxini_palette
+	ld	ix,Put_screen_line_func
+	jp	Select_screen_func_skip6
+Select_screen_func_skip5:
+	ld	hl,Put_screen_full_mode0
+	ld	de,Put_screen_full_mode1
+	ld	bc,Pic_palette2
+	ld	ix,Put_screen_full_func
+	jp	Select_screen_func_skip6
+Select_screen_func_skip6:
+	ld	a,(Header_square_flag)
+	cp	ON
+	jp	z,Select_screen_func_skip7
+	ld	a,(Select_mode_Y_save)
+	cp	ON
+	jp	z,Select_screen_func_skip8
+Select_screen_func_skip7:
+	ld	h,d
+	ld	l,e
+	ld	de,(Y_wide1)
+	jp	Select_screen_func_skip9
+Select_screen_func_skip8:
+	ld	de,(Y_wide2)
+Select_screen_func_skip9:
+	ld	(Screen_line_max),de
+	ld	(ix+0),l
+	ld	(ix+1),h
+	ld	h,b
+	ld	l,c
+	call	Set_palette
+	ld	a,1
+	ld	(Y_big_count),a
+	ld	a,(Y_big_flag)
+	cp	OFF
+	jp	z,Select_screen_func_skip10
+	ld	hl,(Screen_line_max)
+	add	hl,hl
+	ld	(Screen_line_max),hl
+	ld	a,2
+	ld	(Y_big_count),a
+Select_screen_func_skip10:
+	ret
+
+;--------------------------------------------
+;	へッダのよみこみ
+;--------------------------------------------
+
+X_wide:
+	DEFW	0
+Y_wide1:
+	DEFW	0
+Y_wide2:
+	DEFW	0
+Palette_size:
+	DEFW	0
+Header_square_flag:
+	DEFB	OFF
+X_big_flag:
+	DEFB	OFF
+Y_big_flag:
+	DEFB	OFF
+Y_big_count:
+	DEFB	0
+Error_head1:
+	DEFB	'Not {P} head.',0dh,0ah,'$'
+Error_head2:
+	DEFB	'Not {I} head.',0dh,0ah,'$'
+Error_head3:
+	DEFB	'Not {C} head.',0dh,0ah,'$'
+Error_head4:
+	DEFB	'Not {0} head.',0dh,0ah,'$'
+
+Header_read:
+	ld	hl,DISK_READ_TOP
+	ld	(Get_char_count),hl
+	ld	hl,08000h
+	ld	(Get_bit_data),hl
+	ld	hl,0
+	ld	(File_read_table +8),hl
+	ld	(File_read_table +10),hl
+	ld	ix,File_read_table
+	call	File_seekread
+	call	Get_char
+	ld	a,l
+	cp	'P'
+	ld	de,Error_head1
+	scf
+	ret	nz
+	call	Get_char
+	ld	a,l
+	cp	'I'
+	ld	de,Error_head2
+	scf
+	ret	nz
+	call	Get_char
+	ld	a,l
+	cp	'C'
+	ld	de,Error_head3
+	scf
+	ret	nz
+	ld	a,OFF
+	ld	(X_big_flag),a
+	ld	(Y_big_flag),a
+	ld	(Header_square_flag),a
+	call	Get_char	;拡張ヘッダのチェック
+	ld	a,l
+	cp	'/'
+	jp	nz,Header_read_skip1
+	call	Get_char
+	ld	a,l
+	cp	'M'
+	jp	nz,Header_read_skip1
+	call	Get_char
+	ld	a,l
+	cp	'M'
+	jp	nz,Header_read_skip1
+	call	Get_char
+	ld	a,l
+	cp	'/'
+	jp	nz,Header_read_skip1
+	call	Etc_header_read
+	jp	Header_read_skip1
+Header_read_L2:			;コメントのスキップ
+	call	Get_char
+	ld	a,l
+Header_read_skip1:
+	cp	26
+	jp	nz,Header_read_L2
+Header_read_L3:
+	call	Get_char	;機種データのスキップ
+	ld	a,l
+	cp	0
+	jp	nz,Header_read_L3
+	call	Get_char	;ここは０のはず
+	ld	a,l
+	cp	0
+	ld	de,Error_head4
+	scf
+	ret	nz
+	call	Get_char	;タイプ／モード共に０にしか対応していない
+	ld	a,l
+	cp	0
+	jp	z,Header_read_skip2
+	ld	a,ON
+	ld	(Header_square_flag),a
+Header_read_skip2:
+	call	Get_char	;１５bit色しか対応していない
+	ld	h,l
+	call	Get_char
+	ld	a,l
+	ld	(Palette_size),a
+	ld	de,15
+	or	a
+	sbc	hl,de
+	ret	c
+	call	Get_char	;横５１２dotしか対応していない
+	ld	h,l
+	call	Get_char
+	ld	(X_wide),hl
+	ld	de,512 + 1
+	or	a
+	sbc	hl,de
+	ccf
+	ret	c
+	call	Get_char
+	ld	h,l
+	call	Get_char
+	ld	(Y_wide1),hl
+	ld	de,512 + 1
+	push	hl
+	or	a
+	sbc	hl,de
+	pop	hl
+	ccf
+	ret	c
+	ld	de,0
+	ld	bc,5
+	ld	a,16
+Header_read_L4:
+	ex	de,hl
+	add	hl,hl
+	ex	de,hl
+	adc	hl,hl
+	jp	nc,Header_read_skip3
+	ex	de,hl
+	add	hl,bc
+	ex	de,hl
+Header_read_skip3:
+	dec	a
+	jp	nz,Header_read_L4
+	ld	hl,0
+	ld	bc,6
+	ld	a,16
+Header_read_L5:
+	ex	de,hl
+	add	hl,hl
+	ex	de,hl
+	adc	hl,hl
+	push	hl
+	or	a
+	sbc	hl,bc
+	pop	hl
+	jp	c,Header_read_skip4
+	sbc	hl,bc
+	set	0,e
+Header_read_skip4:
+	dec	a
+	jp	nz,Header_read_L5
+	ld	(Y_wide2),de
+	ld	a,(Select_mode_Z_save)
+	cp	ON
+	jp	z,Header_read_skip5
+	ld	a,(Vportw)
+	ld	c,a
+	inc	c
+	ld	a,0
+	di
+	out	(c),a
+	ld	a,080h +23
+	out	(c),a
+	ei
+	ld	hl,0
+	ld	(Screen_global_line),hl
+	ld	a,OFF
+	ld	(Screen_global_line_carry),a
+Header_read_skip5:
+	or	a
+	ret
+
+Etc_header_read:
+Etc_header_read_L1:
+	call	Get_char
+	ld	a,l
+	or	a
+	ret	z
+	cp	26
+	ret	z
+	cp	':'
+	ret	z
+	cp	'X'
+	jp	z,Etc_header_read_square
+	cp	'M'
+	jp	z,Etc_header_read_skip2
+Etc_header_read_L2:
+	call	Get_char
+Etc_header_read_skip1:
+	ld	a,l
+	or	a
+	ret	z
+	cp	26
+	ret	z
+	cp	':'
+	ret	z
+	cp	'/'
+	jp	nz,Etc_header_read_L2
+	jp	Etc_header_read_L1
+Etc_header_read_skip2:
+	call	Get_char
+	ld	a,l
+	cp	'S'
+	jp	z,Etc_header_read_skip3
+	cp	'X'
+	jp	z,Etc_header_read_skip4
+	cp	'Y'
+	jp	z,Etc_header_read_skip5
+	cp	'K'
+	jp	z,Etc_header_read_skip6
+	jp	Etc_header_read_skip1
+Etc_header_read_skip3:
+	call	Get_char
+	ld	a,l
+	cp	'5'
+	jp	z,Etc_header_read_ms
+	cp	'6'
+	jp	z,Etc_header_read_ms
+	cp	'7'
+	jp	z,Etc_header_read_ms
+	cp	'8'
+	jp	z,Etc_header_read_ms
+	cp	'A'
+	jp	z,Etc_header_read_ms
+	cp	'B'
+	jp	z,Etc_header_read_ms
+	cp	'C'
+	jp	nz,Etc_header_read_skip1
+Etc_header_read_ms:
+	ld	a,ON
+	ld	(Header_square_flag),a
+	jp	Etc_header_read_L2
+Etc_header_read_skip4:
+	ld	a,ON
+	ld	(X_big_flag),a
+	jp	Etc_header_read_L2
+Etc_header_read_skip5:
+	ld	a,ON
+	ld	(Y_big_flag),a
+	jp	Etc_header_read_L2
+Etc_header_read_skip6:
+	ld	a,ON
+	ld	(X_big_flag),a
+	ld	(Y_big_flag),a
+	jp	Etc_header_read_L2
+Etc_header_read_square:
+	call	Get_char
+	ld	a,l
+	cp	'S'
+	jp	nz,Etc_header_read_skip1
+	call	Get_char
+	ld	a,l
+	cp	'S'
+	jp	nz,Etc_header_read_skip1
+	ld	a,ON
+	ld	(Header_square_flag),a
+	jp	Etc_header_read_L2
+
+;--------------------------------------------
+;	表示モードの切り替え
+;--------------------------------------------
+
+Select_mode_key_save:
+	DEFB	0
+Select_mode_K_save:
+	DEFB	ON
+Select_mode_Y_save:
+	DEFB	ON
+Save_graphic_mode:
+	DEFB	0
+Select_mode_Z_save:
+	DEFB	OFF
+Select_mode_@_save:
+	DEFB	OFF
+Time_flag:
+	DEFB	OFF
+Time_count:
+	DEFW	0
+Time_old_count:
+	DEFW	0
+Mode0_func1:
+	or	00100000b
+Mode0_func2:
+	bit	5,a
+Mode0_func3:
+	and	11011111b
+Mode1_func1:
+	or	00100000b
+Mode1_func2:
+	bit	5,a
+Mode1_func3:
+	and	11011111b
+Mode2_func1:
+	nop
+	nop
+Mode2_func2:
+	cp	00000100b
+Mode2_func3:
+	nop
+	nop
+
+
+Select_mode:
+	ei
+	ld	hl,(JIFFY)
+	ld	(Time_old_count),hl
+Select_mode_L1:
+	call	Inkey
+	cp	01bh
+	scf
+	ret	z
+	cp	' '
+	ret	z
+	cp	0dh
+	ret	z
+	cp	'Y'
+	jp	z,Select_mode_Y
+	cp	'0'
+	jp	z,Select_mode_0
+	cp	'1'
+	jp	z,Select_mode_1
+	cp	'2'
+	jp	z,Select_mode_2
+	cp	'3'
+	jp	z,Select_mode_3
+	cp	'4'
+	jp	z,Select_mode_mono
+	cp	'5'
+	jp	z,Select_mode_mono
+	cp	'6'
+	jp	z,Select_mode_mono
+	cp	'7'
+	jp	z,Select_mode_mono
+	cp	'8'
+	jp	z,Select_mode_mono
+	cp	'9'
+	jp	z,Select_mode_mono
+	cp	'Z'
+	jp	z,Select_mode_Z
+	cp	'@'
+	jp	z,Select_mode_@
+	cp	01eh
+	jp	z,Select_mode_up
+	cp	01fh
+	jp	z,Select_mode_down
+	cp	'K'
+	push	af
+	call	z,Select_mode_K
+	pop	af
+	jp	z,Select_mode_L1
+	xor	a
+	ld	(Select_mode_key_save),a
+	ld	a,(Select_mode_K_save)
+	cp	ON
+	jp	z,Select_mode_L1
+	ld	a,(Time_flag)
+	cp	OFF
+	jp	z,Select_mode_skip1
+	ei
+	ld	de,(Time_old_count)
+	ld	bc,(Time_count)
+	ld	hl,(JIFFY)
+	or	a
+	sbc	hl,de
+	or	a
+	sbc	hl,bc
+	jp	c,Select_mode_L1
+Select_mode_skip1:
+	xor	a
+	ret
+
+Select_mode_K:
+	ld	a,(Select_mode_key_save)
+	cp	'K'
+	jp	z,Select_mode_K_skip3
+	ld	a,(Select_mode_K_save)
+	cp	ON
+	jp	z,Select_mode_K_skip1
+	ld	a,ON
+	jp	Select_mode_K_skip2
+Select_mode_K_skip1:
+	ld	a,OFF
+Select_mode_K_skip2:
+	ld	(Select_mode_K_save),a
+Select_mode_K_skip3:
+	ld	a,'K'
+	ld	(Select_mode_key_save),a
+	ld	a,'L'
+	or	a
+	ret
+
+Select_mode_Y:
+	ld	a,(Select_mode_Y_save)
+	cp	ON
+	jp	z,Select_mode_Y_skip1
+	ld	a,ON
+	jp	Select_mode_Y_skip2
+Select_mode_Y_skip1:
+	ld	a,OFF
+Select_mode_Y_skip2:
+	ld	(Select_mode_Y_save),a
+	ld	a,'Y'
+	ld	(Select_mode_Key_save),a
+	ld	a,'L'
+	or	a
+	ret
+
+Select_mode_0:
+	ld	a,(Save_graphic_mode)
+	cp	0
+	jp	z,Select_mode_L1
+	ld	a,0
+	ld	(Save_graphic_mode),a
+	ld	a,'0'
+	ld	(Select_mode_Key_save),a
+	ld	a,'L'
+	or	a
+	ret
+
+Select_mode_1:
+	ld	a,(Save_graphic_mode)
+	cp	1
+	jp	z,Select_mode_L1
+	ld	c,a
+	ld	a,1
+	ld	(Save_graphic_mode),a
+	ld	a,'1'
+	ld	(Select_mode_Key_save),a
+	ld	a,c
+	cp	4
+	jp	z,Select_mode_1_skip1
+	ld	a,'L'
+	or	a
+	ret
+Select_mode_1_skip1:
+	ld	hl,Pic_palette1
+	call	Set_palette
+	jp	Select_mode_L1
+
+Select_mode_2:
+	ld	a,(Save_graphic_mode)
+	cp	2
+	jp	z,Select_mode_L1
+	ld	a,2
+	ld	(Save_graphic_mode),a
+	ld	a,'2'
+	ld	(Select_mode_Key_save),a
+	ld	a,'L'
+	or	a
+	ret
+
+Select_mode_3:
+	ld	a,(Save_graphic_mode)
+	cp	3
+	jp	z,Select_mode_L1
+	ld	a,3
+	ld	(Save_graphic_mode),a
+	ld	a,'3'
+	ld	(Select_mode_Key_save),a
+	ld	a,'L'
+	or	a
+	ret
+
+Select_mode_4:
+	ld	a,(Save_graphic_mode)
+	cp	4
+	jp	z,Select_mode_L1
+	ld	c,a
+	ld	a,4
+	ld	(Save_graphic_mode),a
+	ld	a,'4'
+	ld	(Select_mode_Key_save),a
+	ld	a,c
+	cp	1
+	jp	z,Select_mode_4_skip1
+	ld	a,'L'
+	or	a
+	ret
+Select_mode_4_skip1:
+	ld	hl,Pic_palette2
+	call	Set_palette
+	jp	Select_mode_L1
+
+Select_mode_mono:
+	ld	(Select_mode_key_save),a
+	ld	hl,Pic_palette_001
+	cp	'4'
+	jp	z,Select_mode_mono_skip1
+	ld	hl,Pic_palette_010
+	cp	'5'
+	jp	z,Select_mode_mono_skip1
+	ld	hl,Pic_palette_011
+	cp	'6'
+	jp	z,Select_mode_mono_skip1
+	ld	hl,Pic_palette_100
+	cp	'7'
+	jp	z,Select_mode_mono_skip1
+	ld	hl,Pic_palette_101
+	cp	'8'
+	jp	z,Select_mode_mono_skip1
+	ld	hl,Pic_palette_110
+	cp	'9'
+	jp	z,Select_mode_mono_skip1
+Select_mode_mono_skip1:
+	ld	de,Pic_palette2
+	ld	bc,32
+	ldir
+	ld	a,(Save_graphic_mode)
+	ld	c,a
+	ld	a,4
+	ld	(Save_graphic_mode),a
+	ld	a,c
+	cp	0
+	jp	z,Select_mode_mono_skip2
+	cp	2
+	jp	z,Select_mode_mono_skip2
+	cp	3
+	jp	z,Select_mode_mono_skip2
+	cp	255
+	jp	z,Select_mode_mono_skip2
+	ld	hl,Pic_palette2
+	call	Set_palette
+	jp	Select_mode_L1
+Select_mode_mono_skip2:
+	ld	a,'L'
+	or	a
+	ret
+
+Select_mode_Z:
+	ld	a,(Select_mode_Z_save)
+	cp	ON
+	jp	z,Select_mode_Z_skip1
+	ld	a,ON
+	jp	Select_mode_Z_skip2
+Select_mode_Z_skip1:
+	ld	a,OFF
+Select_mode_Z_skip2:
+	ld	(Select_mode_Z_save),a
+	ld	a,'Z'
+	ld	(Select_mode_Key_save),a
+	ld	a,'L'
+	or	a
+	ret
+
+Select_mode_@:
+	ld	a,(Select_mode_@_save)
+	cp	ON
+	jp	z,Select_mode_@_skip1
+	ld	a,ON
+	jp	Select_mode_@_skip2
+Select_mode_@_skip1:
+	ld	a,OFF
+Select_mode_@_skip2:
+	ld	(Select_mode_@_save),a
+	ld	a,'@'
+	ld	(Select_mode_Key_save),a
+	or	a
+	ret
+
+
+Select_mode_up:
+	ld	hl,(Screen_line_max)
+	or	a
+	ld	de,424 + 1
+	sbc	hl,de
+	jp	c,Select_mode_L1
+	ld	hl,(Screen_line)
+	ld	de,424
+	push	hl
+	or	a
+	sbc	hl,de
+	pop	hl
+	jp	z,Select_mode_L1
+	dec	hl
+	ld	(Screen_line),hl
+	ld	hl,(Screen_global_line)
+	dec	hl
+	jp	Select_mode_down_skip1
+
+Select_mode_down:
+	ld	hl,(Screen_line_max)
+	or	a
+	ld	de,424 + 1
+	sbc	hl,de
+	jp	c,Select_mode_L1
+	ld	hl,(Screen_line)
+	ld	de,(Screen_line_max)
+	push	hl
+	or	a
+	sbc	hl,de
+	pop	hl
+	jp	z,Select_mode_L1
+	inc	hl
+	ld	(Screen_line),hl
+	ld	hl,(Screen_global_line)
+	inc	hl
+Select_mode_down_skip1:
+	ld	a,(Shift_key_flag)
+	cp	ON
+	jp	z,Select_mode_down_skip2
+	ei
+	ld	a,(JIFFY)
+	ld	c,a
+Select_mode_down_L1:
+	ld	a,(JIFFY)
+	sub	c
+	cp	1
+	jp	c,Select_mode_down_L1
+Select_mode_down_skip2:
+	ld	(Screen_global_line),hl
+	ld	de,424
+	or	a
+	sbc	hl,de
+	srl	h
+	rr	l
+	ld	a,(Vportw)
+	ld	c,a
+	inc	c
+	di
+	out	(c),l
+	ld	a,080h + 23
+	out	(c),a
+	ei
+	jp	Select_mode_L1
+
+;--------------------------------------------
+;	オプションの獲得
+;--------------------------------------------
+
+Env_name:
+	DEFB	'MIRY',0
+Env_buf:
+	DEFS	256
+
+Get_option:
+	call	Init_file_name
+	ld	hl,Env_name
+	ld	de,Env_Buf
+	ld	b,255
+	ld	c,_GENV
+	call	BDOS
+	or	a
+	jp	nz,Get_option_skip1
+	ld	hl,Env_buf
+	call	Get_option_skip2
+Get_option_skip1:
+	ld	hl,File_name_buf
+	ld	(File_count),hl
+	ld	hl,DTALEN
+	ld	a,(hl)
+	inc	hl
+	push	hl
+	add	a,l
+	ld	l,a
+	ld	(hl),0
+	pop	hl
+Get_option_L1:
+	ld	a,(hl)
+	or	a
+	jp	z,Get_option_usage
+	cp	021h
+	jp	nc,Get_option_skip2
+	inc	hl
+	jp	Get_option_L1
+Get_option_skip2:
+Get_option_L2:
+	ld	a,(hl)
+	or	a
+	ret	z
+	cp	021h
+	jp	nc,Get_option_skip3
+	inc	hl
+	jp	Get_option_L2
+Get_option_skip3:
+	cp	'/'
+	jp	nz,Get_option_file
+	inc	hl
+	ld	a,(hl)
+	call	Toupper
+	inc	hl
+	cp	'K'
+	jp	z,Get_option_K
+	cp	'Z'
+	jp	z,Get_option_Z
+	cp	'Y'
+	jp	z,Get_option_Y
+	cp	'@'
+	jp	z,Get_option_@
+	cp	'G'
+	jp	z,Get_option_G
+	cp	'T'
+	jp	z,Get_option_T
+Get_option_usage:
+	ld	de,Usage
+	jp	Main_exit
+
+Get_option_file:
+	ld	de,(File_count)
+Get_option_file_L1:
+	ld	a,(hl)
+	cp	021h
+	jp	c,Get_option_file_skip1
+	ld	(de),a
+	inc	hl
+	inc	de
+	jp	Get_option_file_L1
+Get_option_file_skip1:
+	xor	a
+	ld	(de),a
+	inc	de
+	ld	a,'/'
+	ld	(de),a
+	ld	(File_count),de
+	jp	Get_option_L2
+
+Get_option_K:
+	push	hl
+	ld	a,ON
+	ld	(Select_mode_K_save),a
+	call	Select_mode_K
+	pop	hl
+	jp	Get_option_L2
+
+Get_option_Z:
+	push	hl
+	ld	a,OFF
+	ld	(Select_mode_Z_save),a
+	call	Select_mode_Z
+	pop	hl
+	jp	Get_option_L2
+
+Get_option_Y:
+	push	hl
+	ld	a,ON
+	ld	(Select_mode_Y_save),a
+	call	Select_mode_Y
+	pop	hl
+	jp	Get_option_L2
+
+Get_option_@:
+	push	hl
+	ld	a,OFF
+	ld	(Select_mode_@_save),a
+	call	Select_mode_@
+	pop	hl
+	jp	Get_option_L2
+
+Get_option_G:
+	ld	a,(hl)
+	inc	hl
+	cp	'0'
+	jp	z,Get_option_G_skip1
+	cp	'1'
+	jp	z,Get_option_G_skip2
+	cp	'2'
+	jp	z,Get_option_G_skip3
+	cp	'3'
+	jp	z,Get_option_G_skip4
+	cp	'4'
+	jp	z,Get_option_G_skip5
+	cp	'5'
+	jp	z,Get_option_G_skip5
+	cp	'6'
+	jp	z,Get_option_G_skip5
+	cp	'7'
+	jp	z,Get_option_G_skip5
+	cp	'8'
+	jp	z,Get_option_G_skip5
+	cp	'9'
+	jp	z,Get_option_G_skip5
+	jp	Get_option_usage
+Get_option_G_skip1:
+	ld	a,255
+	ld	(Save_graphic_mode),a
+	push	hl
+	call	Select_mode_0
+	pop	hl
+	jp	Get_option_L2
+Get_option_G_skip2:
+	ld	a,255
+	ld	(Save_graphic_mode),a
+	push	hl
+	call	Select_mode_1
+	pop	hl
+	jp	Get_option_L2
+Get_option_G_skip3:
+	ld	a,255
+	ld	(Save_graphic_mode),a
+	push	hl
+	call	Select_mode_2
+	pop	hl
+	jp	Get_option_L2
+Get_option_G_skip4:
+	ld	a,255
+	ld	(Save_graphic_mode),a
+	push	hl
+	call	Select_mode_3
+	pop	hl
+	jp	Get_option_L2
+Get_option_G_skip5:
+	push	af
+	ld	a,255
+	ld	(Save_graphic_mode),a
+	pop	af
+	push	hl
+	call	Select_mode_mono
+	pop	hl
+	jp	Get_option_L2
+
+Get_option_T:
+	ld	a,(hl)
+	inc	hl
+	ld	c,0
+	cp	'0'
+	jp	c,Get_option_T_skip1
+	cp	'9' +1
+	jp	nc,Get_option_T_skip1
+	sub	'0'
+	ld	c,a
+Get_option_T_skip1:
+	ld	a,ON
+	ld	(Time_flag),a
+	push	hl
+	ld	a,c
+	ld	hl,0
+	ld	de,60
+	ld	b,8
+Get_option_T_L1:
+	add	hl,hl
+	rla
+	jp	nc,Get_option_T_skip2
+	add	hl,de
+Get_option_T_skip2:
+	djnz	Get_option_T_L1
+	ld	(Time_count),hl
+	pop	hl
+	jp	Get_option_L2
+
+;--------------------------------------------
+;	ファイルの検索
+;--------------------------------------------
+
+File_name_buf:
+	DEFS	128
+File_count:
+	DEFW	File_name_buf
+
+
+Init_file_name:
+	ld	hl,File_name_buf
+	ld	de,File_name_buf +1
+	ld	bc,128 -1
+	ld	(hl),0
+	ldir
+	ret
+
+Check_file_name:
+	ld	hl,File_name_buf
+	ld	a,(hl)
+	inc	hl
+	or	a
+	jp	z,Get_option_usage
+Check_file_name_L1:
+	ld	a,(hl)
+	inc	hl
+	or	a
+	jp	nz,Check_file_name_L1
+	ld	c,OFF
+	ld	a,(hl)
+	cp	'/'
+	jp	nz,Check_file_name_skip3
+	ld	c,ON
+	ld	hl,File_name_buf
+Check_file_name_L2:
+	ld	a,(hl)
+	or	a
+	jp	z,Check_file_name_skip3
+	cp	'*'
+	jp	z,Check_file_name_skip1
+	cp	'?'
+	jp	nz,Check_file_name_skip2
+Check_file_name_skip1:
+	ld	c,OFF
+Check_file_name_skip2:
+	inc	hl
+	jp	Check_file_name_L2
+Check_file_name_skip3:
+	ld	a,c
+	ld	(Not_loop_flag),a
+	ret
+
+File_name_first:
+	ld	hl,File_name_buf
+	ld	(File_count),hl
+File_name_first_skip1:
+	ld	hl,(File_count)
+	ld	a,(hl)
+	cp	'/'
+	scf
+	ret	z
+	ld	de,File_read_name
+File_name_first_L1:
+	ld	a,(hl)
+	inc	hl
+	ld	(de),a
+	inc	de
+	or	a
+	jp	nz,File_name_first_L1
+	ld	(File_count),hl
+	ld	hl,File_read_name
+File_name_first_L2:
+	ld	a,(hl)
+	or	a
+	jp	z,File_name_first_skip2
+	cp	'.'
+	jp	z,File_name_first_skip2
+	inc	hl
+	jp	File_name_first_L2
+File_name_first_skip2:
+	ld	(hl),'.'
+	inc	hl
+	ld	(hl),'P'
+	inc	hl
+	ld	(hl),'I'
+	inc	hl
+	ld	(hl),'C'
+	inc	hl
+	ld	(hl),0
+	ld	ix,File_read_table
+	ld	b,0
+	call	File_first
+	or	a
+	ret
+
+File_name_next:
+	ld	ix,File_read_table
+	call	File_next
+	or	a
+	ret	z
+File_name_next_L1:
+	call	File_name_first_skip1
+	jp	c,File_name_next_skip1
+	or	a
+	jp	nz,File_name_next_L1
+	ret
+File_name_next_skip1:
+	ld	a,0ffh
+	or	a
+	ret
+
+;--------------------------------------------
+;	メインプログラム
+;--------------------------------------------
+
+Error_not_open:
+	DEFB	'File not found error !!',0dh,0ah,'$'
+Mesage_complate:
+	DEFB	'Complete !!',0dh,0ah,'$'
+Error_segment:
+	DEFB	'No Segment memory !!. (Use 256Kbytes.)',0dh,0ah,'$'
+Error_out_of_memory:
+	DEFB	'Out of memory !!.',0dh,0ah,'$'
+Not_loop_flag:
+	DEFB	OFF
+
+main:
+	ld	sp,(BDOS +1)
+	ld	hl,0
+	add	hl,sp
+	ld	de,0c800h
+	or	a
+	sbc	hl,de
+	ld	de,Error_out_of_memory
+	jp	c,Main_exit
+	call	Ini_segment
+	ld	de,Error_segment
+	jp	c,Main_exit
+	call	Get_page_table
+	call	Get_option
+	call	Check_file_name
+	call	File_name_first
+	or	a
+	ld	de,Error_not_open
+	jp	nz,Main_exit
+	call	Gini
+Main_skip1:
+Main_L3:
+	ld	ix,File_read_table
+	call	File_open
+	or	a
+	jp	nz,Main_skip4
+Main_L4:
+	call	Init_color_table
+	call	Header_read
+	jp	c,Main_skip3
+	call	Expand_select
+	call	return_page_table
+	call	Select_mode
+	jp	c,Main_break
+	cp	'L'
+	jp	z,Main_L4
+Main_skip3:
+	ld	ix,File_read_table
+	call	File_close
+	or	a
+	jp	nz,Main_break
+Main_skip4:
+	call	File_name_next
+	or	a
+	jp	z,Main_L3
+	call	inkey
+	cp	01bh
+	jp	z,Main_break
+	ld	a,(Not_loop_flag)
+	cp	ON
+	jp	z,Main_break
+	ld	a,(Select_mode_@_save)
+	cp	ON
+	jp	nz,Main_break
+	call	File_name_first
+	or	a
+	jp	z,Main_L3
+Main_break:
+	call	Return_page_table
+	ld	a,-1
+	call	Set_screen_mode
+	call	Ini_palette
+	ld	de,Mesage_complate
+Main_exit:
+	ld	c,9
+	call	BDOS
+	call	Kilbuf
+	jp	Exit
+
+Usage:
+	DEFB	0dh,0ah
+	DEFB	'MSX Memory Mapper Pic loader MIRY.COM Ver.1.21',0dh,0ah
+	DEFB	'Copyright (c) 1994,1995 Program By Masaru-N.',0dh,0ah
+	DEFB	'Original Pic Format By A.Yanagizawa.',0dh,0ah
+	DEFB	'1575colors dither pattern By Seikai.',0dh,0ah
+	DEFB	0dh,0ah
+	DEFB	'Usage:MIRY [/Z][/Y][/@][/K][/Tn][/Gn] Filename[.PIC]',0dh,0ah
+	DEFB	0dh,0ah
+	DEFB	'/Z ..... Up scroll.',0dh,0ah
+	DEFB	'/Y ..... Y no press.',0dh,0ah
+	DEFB	'/@ ..... File loop.',0dh,0ah
+	DEFB	'/K ..... Key wait.',0dh,0ah
+	DEFB	'/Tn .... Timer key wait (n = 0~9) min.',0dh,0ah
+	DEFB	'/G0 .... 512dots x 512lines 63colors.',0dh,0ah
+	DEFB	'/G1 .... 512dots x 512lines sepia.',0dh,0ah
+	DEFB	'/G2 .... 256dots x 512lines 255colors.',0dh,0ah
+	DEFB	'/G3 .... 256dots x 512lines 1575colors.',0dh,0ah
+	DEFB	'$'
+
+
+
+
+	END
+

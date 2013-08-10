@@ -1,0 +1,119 @@
+;
+;                      TrailBlz.SMM
+;
+;         "Trail Blazer" Source Game Music Module
+;
+; Version Amalthea-1-0 (1st Ver., 1st Release, No Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =TrailBlz.SMM
+;   L80 TrailBlz,TrailBlz.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Trail Blazer" game mapping:
+;
+;           8000   9FFF
+;      |?|?|?|?|M|M|?|?|
+;   4000               BFFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '          Trail Blazer          '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   0C000H
+GMPNam:db   'Yawara  C00'
+OpenMN:db   000H
+StrtSE:db   000H
+ChATDD:dw   0E011H
+ChBTDD:dw   0E01CH
+ChCTDD:dw   0E027H
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'TrlBlzr0Sc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'TrlBlzr1Sc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00010010B
+
+SetupR:ret  nz
+       ld   a,0C9H
+       ld   (0916AH),a
+SilnRt:ld   hl,0838BH
+       ld   de,0838CH
+       ld   bc,4
+       ld   (hl),000H
+       ldir
+       ld   a,001H
+       ld   (08292H),a
+       jp   0824EH
+
+StMsRt:or   a
+       jr   z,SilnRt
+       dec  a
+       jr   z,StMsR0
+       ld   de,081F8H
+       dec  a
+       jp   z,0824EH
+       ld   de,08223H
+       jp   0824EH
+
+StMsR0:ld   (08292H),a
+       jp   08393H
+
+PlayRt:call 082B4H
+       jp   09154H
+
+GmBlNm:db   'TrailBlz000'
+GmBlSz:dw   01100H
+LoadAd:dw   08100H
+       dw   0FFFFH
+MusicT:db   001H,' Theme of Trail Blazer '
+       db   0FFH,0FFH
+EffctT:db   000H,'       Silence...      '
+       db   002H,'           02          '
+       db   003H,'           03          '
+       db   0FFH,0FFH
+
+       end

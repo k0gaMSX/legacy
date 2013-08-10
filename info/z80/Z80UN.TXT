@@ -1,0 +1,259 @@
+Zilog Z80 Undocumented Features
+
+For the Virtual MSX MSX emulator, I've done some research to the undocumented features of the
+Z80. There are a number of undocumented instructions and flags. 
+
+I've extracted some information from the comp.sys.sinclair Sinclair ZX Spectrum FAQ v.2.0, which
+is maintained by Marat Fayzullin (fms@freeflight.com). There are a number of additions and
+corrections I've made. 
+
+I also have made an Microsoft Word 6.0 for Windows document, with all the instructions in clear
+tables, just like in the Zilog Z80 Technical Manual. It's stored in a ziped Rich Text Format file, so it
+should be platform independent. 
+
+You can download it from here. 
+
+There is also a list of all the instructions of the Z80 here (plain ascii). 
+
+Opcodes Prefixes
+
+There are four opcode prefixes: CB, DD, ED and FD. 
+
+CB Prefixes
+
+There are 248 different CB opcodes. The block CB 30 to CB 37 is missing from the official list.
+These instructions, usually denoted by the mnemonic SLL, Shift Left Logical, shift left the operand
+and make bit 0 always one. These instructions are quite commonly used. 
+
+DD and FD Prefixes
+
+The DD and FD opcodes precede instructions using the IX and IY registers. If you look at the
+instructions carefully, you see how they work: 
+
+
+
+        2A nn           LD HL,(nn)
+
+        DD 2A nn        LD IX,(nn)
+
+
+
+        7E              LD A,(HL)
+
+        DD 7E d         LD A,(IX+d)
+
+
+If the HL register is used, then if the opcode is preceded by a DD, the instruction uses the IX
+register in stead of the HL register. And, if HL was used as a memory reference (indirectly), a
+displacement d is added. There are two exceptions to this rule, however: the EX DE,HL and EXX
+instructions. Also, in the JP (HL) instruction HL is not used indirectly. If the instruction does not use
+the HL register, it is executed as without the prefix. But, if the instruction uses the H or L registers,
+the lower part or the upper part of the IX register is used. 
+
+
+
+        44              LD B,H
+
+        FD 44           LD B,IYh
+
+
+These types of unofficial instructions are used in very many programs. 
+
+ED Prefix
+
+There are a number of unofficial ED instructions, but none of them are very useful. The ED opcodes
+in the range 00-3F and 80-FF (except for the block instructions of course) do nothing at all but
+taking up 8 T states and incrementing the R register by 2. Most of the unlisted opcodes in the range
+40-7F do have an effect, however. The complete list: (* = not official) 
+
+
+
+        ED40   IN B,(C)                 ED60   IN H,(C)
+
+        ED41   OUT (C),B                ED61   OUT (C),H
+
+        ED42   SBC HL,BC                ED62   SBC HL,HL
+
+        ED43   LD (nn),BC               ED63   LD (nn),HL
+
+        ED44   NEG                      ED64 * NEG
+
+        ED45   RETN                     ED65 * RET
+
+        ED46   IM 0                     ED66 * IM 0
+
+        ED47   LD I,A                   ED67   RRD
+
+        ED48   IN C,(C)                 ED68   IN L,(C)
+
+        ED49   OUT (C),C                ED69   OUT (C),L
+
+        ED4A   ADC HL,BC                ED6A   ADC HL,HL
+
+        ED4B   LD BC,(nn)               ED6B   LD HL,(nn)
+
+        ED4C * NEG                      ED6C * NEG
+
+        ED4D   RETI                     ED6D * RET
+
+        ED4E * IM 0/1                   ED6E * IM 0/1
+
+        ED4F   LD R,A                   ED6F   RLD
+
+
+
+        ED50   IN D,(C)                 ED70 * IN (C) / IN F,(C)
+
+        ED51   OUT (C),D                ED71 * OUT (C),0
+
+        ED52   SBC HL,DE                ED72   SBC HL,SP
+
+        ED53   LD (nn),DE               ED73   LD (nn),SP
+
+        ED54 * NEG                      ED74 * NEG
+
+        ED55 * RET                      ED75 * RET
+
+        ED56   IM 1                     ED76 * IM 1
+
+        ED57   LD A,I                   ED77 * NOP
+
+        ED58   IN E,(C)                 ED78   IN A,(C)
+
+        ED59   OUT (C),E                ED79   OUT (C),A
+
+        ED5A   ADC HL,DE                ED7A   ADC HL,SP
+
+        ED5B   LD DE,(nn)               ED7B   LD SP,(nn)
+
+        ED5C * NEG                      ED7C * NEG
+
+        ED5D * RET                      ED7D * RET
+
+        ED5E   IM 2                     ED7E * IM 2
+
+        ED5F   LD A,R                   ED7F * NOP
+
+
+The ED70 instruction reads from port (C), just like the other instructions, but does not store the
+result. It does change the flags in the same way as the other IN instructions, however. The ED71
+instruction OUTs a byte zero to port (C), interestingly. These instructions "should", by regularity of
+the instruction set, use (HL) as operand, but since from the processor's point of view accessing
+memory or accessing I/O devices is almost the same thing, and since the Z80 cannot access memory
+twice in one instruction (disregarding instruction fetch of course) it can't fetch or store the data byte
+(A hint in this direction is that, even though the NOP-synonyms LD B,B, LD C,C etcetera do exist,
+LD (HL),(HL) is absent and replaced by the HALT instruction.). 
+
+The IM 0/1 instruction puts the processor in either IM 0 or 1. I cannot figure it out on my MSX (IM
+0 operates the same as IM 1, as the only interrupting device always provides value FFh (RST 38h)
+). 
+
+FDCB and DDCB Prefixes
+
+The rotate, shift, SET and RES instructions have some unofficial versions which do not only store the
+result of the operation in (IX+d), but also in an 8 bit register. For instance, for the RLC (IX+d), the
+unofficial instructions are: 
+
+
+
+    FDCB d 00     B = RLC (IY + d)*
+
+    FDCB d 01     C = RLC (IY + d)*
+
+    FDCB d 02     D = RLC (IY + d)*
+
+    FDCB d 03     E = RLC (IY + d)*
+
+    FDCB d 04     H = RLC (IY + d)*
+
+    FDCB d 05     L = RLC (IY + d)*
+
+    FDCB d 06     RLC (IY + d)
+
+    FDCB d 07     A = RLC (IY + d)*
+
+
+The "x = " means that the value after the rotation is not only stored in (IY + d) but also in the x reg.
+For the BIT n,(IX+d) instructions, the 8 instructions are identical. In the Opcode List you can find all
+DDCB and FDCB instructions. 
+
+Combinations of Prefixes
+
+Multiple DD or FD opcodes after each other will effectively be NOPs, doing nothing except
+repeatedly setting the flag "treat HL as IX" (or IY) and taking up 4 T states. A DD or FD before a
+ED opcode has no effect (it will effectively be a NOPs). Also, a DD or FD before a CB opcode has
+no effect. 
+
+About the R register
+
+This is not really an undocumented feature, although I have never seen any thorough description of it
+anywhere. The R register is a counter that is updated every instruction, where DD, FD, ED and CB
+are to be regarded as separate instructions. So shifted instruction will increase R by two. There's an
+interesting exception: doubly-shifted opcodes, the DDCB and FDCB ones, increase R by two too.
+LDI increases R by two, LDIR increases it by 2 times BC, as does LDDR etcetera. The sequence
+LD R,A/LD A,R increases A by two, except for the highest bit: this bit of the R register is never
+changed. This is because in the old days everyone used 16 Kbit chips. Inside the chip the bits where
+grouped in a 128x128 matrix, needing a 7 bit refresh cycle. Therefore Zilog decided to count only
+the lowest 7 bits. 
+
+Undocumented flags
+
+Bits 3 and 5 of the F register are not used. They can contain information, as you can readily figure
+out by PUSHing AF onto the stack and then POPping some it into another pair of registers.
+Furthermore, sometimes their values change. I found the following empirical rule: 
+
+     The values of bits 7, 5 and 3 follow the values of the corresponding bits of the last 8 bit result
+     of an instruction that changed the usual flags. 
+
+For instance, after an ADD A, B those bits will be identical to the bits of the A register (Bit 7 of F is
+the sign flag, and fits the rule exactly). This rule applies to the following instructions: 
+
+
+
+    LD A, R                CPL
+
+    LD A, I                RLCA
+
+    ADD A, x               RLA
+
+    ADC A, x               RLA
+
+    SUB A, x               RRCA
+
+    SBC A, x               RRA
+
+    AND x                  RLC x
+
+    OR x                   RL x
+
+    XOR x                  RRC x
+
+    CP x (see below)       RR x
+
+    INC x (8 bit)          SLA x
+
+    DEC x (8 bit)          SLL x
+
+    DAA                    SRA x
+
+    NEG                    SRL x
+
+    IN x,(C)               RRD x
+
+    IN (C) / IN F,(C)      RLD x
+
+
+An exception is the CP x instruction. In this case the bits are copied from the argument. 
+
+If the instruction is one that operates on a 16 bit word, the 8 bits of the rule are the highest 8 bits of
+the 16 bit result - that was to be expected since the S flag is extracted from bit 15. This applies to all
+16 bits additions and subtractions. 
+
+Interrupt flip-flops IFF1 and IFF2
+
+There seems to be a little confusion about these. These flip flops are simultaneously set or reset by
+the EI and DI instructions. IFF1 determines whether interrupts are allowed, but its value cannot be
+read. The value of IFF2 is copied to the P/V flag by LD A, I and LD A, R. When an NMI occurs,
+IFF1 is reset, thereby disallowing further [maskable] interrupts, but IFF2 is left unchanged. This
+enables the NMI service routine to check whether the interrupted program had enabled or disabled
+maskable interrupts. 

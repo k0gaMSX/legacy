@@ -1,0 +1,264 @@
+*******************************************************************************
+                  MSX2+エミュレータ "fMSX FAN" Ver1.48
+                  制作者名  非公開
+                  fMSX/UNIX オリジナルソースコード Marat Fayzullin
+*******************************************************************************
+
+
+公式ＨＰにアップされているfmsxfan.lzh以外は保証外です。
+
+
+
+紹介：
+＝＝＝
+このプログラムはＭＳＸエミュレータです。
+このソフトは他のＭＳＸエミュレータとは違い、ゲームを遊ぶためではなく
+ＭＳＸソフトを開発できるエミュレータを作る事を目的として開発されています。
+
+現段階ではＭＳＸ２＋までの完全再現を目標としています。
+それが終わった場合、turboRのエミュレーションに移行する予定です。
+
+
+確認した問題点：
+＝＝＝＝＝＝＝＝
+	グラフサウルス２でマウスのクリックができない。
+	雑音が入るときがある。
+
+
+必要環境：
+＝＝＝＝＝
+	PentiumIIIくらいのCPUと、DOS上で640x480x16が表示できるビデオカード
+
+インストール方法：
+＝＝＝＝＝＝＝＝＝
+アーカイブを解凍して、システムROMイメージを同じディレクトリに入れて下さい。
+このプログラムはCWSDPMI.EXEというDPMIサーバを使用するので、CWSDPMI.EXEを
+持っていない場合はそれも一緒にホームページからダウンロードして同じディレクトリ
+に解凍してください。（解凍するだけ。DOS窓で使用する場合は必要ない）
+
+なお、ROMイメージを作成するツールは付属していませんので自力でどうにかして下さい。
+吸い出した機種によっては対応出来ないものがあるかもしれません。
+
+対応しているROMイメージは、
+DISK.ROM
+FMPAC.ROM
+KANJI.ROM
+KNJDRV.ROM(32kのもの)
+MSX.ROM
+MSX2.ROM
+MSX2EXT.ROM
+MSX2P.ROM
+MSX2PEXT.ROM
+MSXDOS2.ROM
+PAINTER.ROM
+RS232.ROM
+です。（コンフィグファイルで名前を変更できます。）
+
+特徴：
+＝＝＝
+GUI対応。
+コンフィグファイル対応。
+ディスクドライブはディスクイメージにのみ対応。物理ドライブは使用できません。
+ディスクの交換はA､Bドライブに３２枚ずつ。
+OPLL,PSG,SCC,1ビットPCM（不完全）サポート。
+スクリーン１０以降、MSX-DOS2、漢字ROM、漢字BASIC対応。
+マウス一部対応。
+インターレース対応（SCREEN5,7のみ）
+ジョイスティックは４ボタン以上の場合、ボタン３と４で連射ができます。
+サウンドのwave録音。
+
+
+キーボードの割り当て：
+＝＝＝＝＝＝＝＝＝＝＝
+F12		・・・エミュレータ終了
+R CTRL+F12	・・・GUIを起動（GUIの終了はESC）
+F1～F5		・・・ファンクションキー
+F6		・・・SPACEキー連打のON/OFF
+F7		・・・状態ロード（まだ動きません）
+R CTRL+F7	・・・状態セーブ（まだ動きません）
+F8		・・・ドライブAに登録したディスクイメージの切り替え
+R CTRL+F8	・・・ドライブBに登録したディスクイメージの切り替え
+Home		・・・Home
+End		・・・SELECT
+Pause		・・・Pause
+R Ctrl		・・・Ctrl、ジョイパッドのボタン２
+L Ctrl		・・・Graph
+L Alt		・・・ジョイパッドのボタン１
+PageUp		・・・STOP
+PageDown	・・・かな(Country)
+テンキーのEnter	・・・テンキーの','
+
+
+オプション：
+＝＝＝＝＝＝
+括弧内はデフォルト。
+
+-rom、-joyについては、スロット２、ポートＢを指定するときは
+fmsxfan xxx.rom zzz.rom -rom 2 -rom 3 -joy 1 -joy 2 のように指定してください。
+
+ディスクイメージについては、
+fmsxfan -diska a.dsk b.dsk -diskb c.dsk d.dsk のように指定します。
+
+  -verbose ?    - Select debugging messages [1]
+                        0 - Silent       1 - Startup messages
+                        2 - V9938 ops    4 - Disk/Tape
+                        8 - Memory      16 - Illegal Z80 ops 
+  -hperiod <period>   - Number of CPU cycles per HBlank [228]
+  -vperiod <period>   - Number of CPU cycles per VBlank [59736]
+  -uperiod ?   - Number of VBlanks per screen update [0（自動調整）]
+  -pal/-ntsc          - Set PAL/NTSC HBlank/VBlank periods [NTSC]
+  -help               - Print this help page
+  -printer filename - Redirect printer output to file [stdout]
+  -serial filename  - Redirect serial I/O to a file [stdin/stdout]
+  -diska <filename>   - Set disk image used for drive A: [DRIVEA.DSK]
+                        (multiple -diska options accepted)
+  -diskb <filename>   - Set disk image used for drive B: [DRIVEB.DSK]
+                        (multiple -diskb options accepted)
+  -tape filename    - Set tape image file [off]
+  -font filename    - Set fixed font for text modes [DEFAULT.FNT]
+  -auto/-noauto     - Use/Don't use autofire on SPACE [off]
+  -ram pages        - Number of 16kB RAM pages [4/8/8]
+  -vram pages       - Number of 16kB VRAM pages [2/8/8]
+  -rom type         - Select MegaROM mapper types [0,0]
+                        (two -rom options can be present)
+                        0 - Konami 8kB(SCC)    1 - MSXDOS2 16kB
+                        2 - Konami5 8kB(SCC)   3 - Konami4 8kB(No SCC)
+                        4 - ASCII 8kB     5 - ASCII 16kB
+                        6 - GameMaster2
+                        >6 - try guessing mapper type
+  -msx1/-msx2/-msx2+  - Select MSX model [-msx2]
+  -joy type         - Select joystick types [0,0]
+                        (two -joy options can be present)
+                        0 - No joystick
+                        1 - Normal joystick
+                        2 - Mouse in joystick mode
+                        3 - Mouse in real mode
+  -trap address     - Trap execution when PC reaches address [FFFFh]
+
+  -sound [<quality>]  - Sound emulation quality [22050]
+                        0 - Off
+                        Values >8191 are treated as wave synthesis
+                        frequencies.
+  -nosound            - Same as '-sound 0'
+
+  -nosprite         スプライトを表示しない
+
+  -joytype  *       ジョイスティックの種類を指定 
+
+      auto - 自動検出
+      none - 使用しない
+      standard - A normal two button stick.
+      dual - Dual joystick mode (two sticks, each with two buttons).
+      4button - 4-button joystick.
+      6button - 6-button joystick.
+      8button - 8-button joystick.
+
+      fspro - CH Flightstick Pro or compatible stick, which provides four buttons, 
+      an analogue throttle control, and a 4-direction coolie hat.
+
+      wingex - A Logitech Wingman Extreme, which should also work with any 
+      Thrustmaster Mk.I compatible joystick. It provides support for four 
+      buttons and a coolie hat. This also works with the Wingman Warrior, if 
+      you plug in the 15 pin plug (remember to unplug the 9-pin plug!) and 
+      set the tiny switch in front to the "H" position (you will not be able 
+      to use the throttle or the spinner though).
+
+      sidewinder - The Microsoft Sidewinder digital pad (supports up to four 
+      controllers, each with ten buttons and a digital direction control).
+
+      sidewinder2 - 別のsidewinderドライバー（通称:Aggressive）
+
+      gamepadpro - The Gravis GamePad Pro (supports up to two controllers, 
+                   each with ten buttons and a digital direction control).
+
+      grip - Gravis GrIP driver, using the grip.gll driver file.
+
+      grip4 - Version of the Gravis GrIP driver that is constrained to 
+              only move along the four main axis.
+
+      sneslpt1,
+      sneslpt2,
+      sneslpt3 - SNES joypads connected to LPT1, LPT2, and LPT3 respectively.
+
+      psxlpt1,
+      psxlpt2,
+      psxlpt3 - PSX joypads connected to LPT1, LPT2, and LPT3 respectively.
+
+      n64lpt1,
+      n64lpt2,
+      n64lpt3 - N64 joypads connected to LPT1, LPT2, and LPT3 respectively.
+
+      db9lpt1,
+      db9lpt2,
+      db9lpt3 - アタリ仕様パッド？
+      A pair of two-button joysticks connected to LPT1, LPT2, and LPT3 
+      respectively. Port 1 is compatible with Linux joy-db9 driver 
+      (multisystem 2-button), and port 2 is compatible with Atari interface 
+      for DirectPad Pro. 
+
+      tg16lpt1,
+      tg16lpt2,
+      tg16lpt3 - PCエンジンパッド
+      These drivers support up to 7 joysticks, each one with up to 5 
+      buttons, connected to LPT1, LPT2, and LPT3 respectively. They use the 
+      TurboGraFX interface by Steffen Schwenke: see 
+      http://www.burg-halle.de/~schwenke/parport.html for details 
+      on how to build this.
+      
+      segaisa - IF-SEGA/ISA
+      segapci - IF-SEGA2/PCI（９ボタン）
+      segapci2 - IF-SEGA2/PCI（４ボタンパッドｘ２）
+      
+      wingwarrior - A Wingman Warrior joystick.
+
+  -logsound	SCC,PSG,FMサウンドをSOUND.WAVに出力する。
+
+  -soundcard	サウンドカードの種類を指定
+
+	auto - let Allegro pick a digital sound driver
+	none - no digital sound
+	sb10 - SB 1.0 (8 bit mono single shot dma)
+	sb15 - SB 1.5 (8 bit mono single shot dma)
+	sb20 - SB 2.0 (8 bit mono auto-initialised dma)
+	sbpro - SB Pro (8 bit stereo)
+	sb16 - SB16 (16 bit stereo)
+	audiodrive - ESS AudioDrive
+	soundscape - Ensoniq Soundscape
+	winsoundsys - Windows Sound System
+
+制作およびコンパイル環境：
+＝＝＝＝＝＝＝＝＝＝＝＝＝
+		WINDOWS98 4.10.2222 A
+		自作マシン(Duron1Ghz, GA7-VTXH, GeForce2MX200, SB Live!等)
+
+		DJGPP v2.03 
+		http://www.delorie.com/djgpp/
+
+		Allegro 4.0
+		http://alleg.sourceforge.net/
+
+		PC Sound Antiques
+		http://www.angel.ne.jp/~okazaki/ym2413/
+
+参考資料：
+＝＝＝＝＝
+	ＭＳＸクリエイターズガイドブック (G-NET クリガイプロジェクト）
+	ＭＳＸ・ＦＡＮの最後の数冊　（徳間書店）
+	fMSX98/AT 1.2kのソースコード
+	似非ＤＳＰシステム技術解説[1]（似非職人工房）
+	MAME v0.36のソースコード
+	MESS v0.37b7のソースコード
+	PowerMSX0.07のソースコード
+	MSKISS,BRMSX,NLMSX等の動作
+
+利用条件：
+＝＝＝＝＝
+fMSX FANはフリーウェアです。著作権は作者に寄与します。
+
+fMSX FANの使用により使用者が受けるあらゆる損害に対して作者は責任を負いません。
+
+fMSX FANを始め、多くのエミュレータは一概に違法とは言い切れませんが、対応ソフト
+のコピーやディスクイメージを作成する際には著作権に十分留意して下さい。
+
+fMSX FAN及びfMSX FANのホームページを無断で他のページや各メディアに転載すること
+は禁止です。作者へ連絡が取れない場合は、転載は不許可と解釈してください。

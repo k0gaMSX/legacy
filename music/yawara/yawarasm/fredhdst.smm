@@ -1,0 +1,196 @@
+;
+;                      FredHdst.SMM
+;
+;        "Freddy Hardest" Source Game Music Module
+;
+; Version Amalthea-1-0 (1st Ver., 1st Release, No Revis.)
+;
+;   This  MSX  Assembly  source file is part of "Yawara:
+;   General Game  Music Player". Please, read the notice
+;   and documentation file "Yawara.html". If you use the
+;   program  in any way  you are  automatically agreeing
+;   with  everything stated in  that  file, even if  you
+;   haven't read it, so  I  recommend you  do  it. Thank
+;   you for your cooperation, good night.
+;
+;    This file was created, edited and programmed from
+;    1994  to 1998 by  "Cyberknight" Masao Kawata  for
+;    "Unicorn Dreams Artwork Programs".  For  contact,
+;    send an E-Mail to:
+;
+;                cyber_unicorn@hotmail.com
+;
+;    Check also the Home Page for new releases:
+;
+;            http://unicorndreams.home.ml.org
+;
+
+;
+;   Compile using M80 and L80:
+;
+;   M80 =FredHdst.SMM
+;   L80 FredHdst,FredHdst.GMM /n/e
+;
+
+;
+;   To execute, run the program loader ("Yawara.Bin" or
+;   "Yawara.Saf"). Please, read the  documentation file
+;   ("Yawara.html").
+;
+
+;
+;   "Freddy Hardest - Part I, Version 2" game mapping:
+;
+;   0000 0C91
+;      |M|?|?|?|?|?|?|?|?|?|?|?|?|?|
+;   0000                           FFFF
+;
+;   M = Game Music Routines and Data.
+;
+
+
+; Program addresses and constants.
+
+HOLD8  equ  0F806H
+LINTTB equ  0FBB2H
+HKEYI  equ  0FD9AH
+HTIMI  equ  0FD9FH
+SysDB  equ  LINTTB
+SavHok equ  SysDB+010H
+EBTb0  equ  HOLD8
+Where  equ  EBTb0+039H
+
+LINTTB equ  0FBB2H
+SysDB  equ  LINTTB
+MSXV0C equ  SysDB+00EH
+GCtrlR equ  SysDB+017H
+
+
+       .Z80
+       aseg
+
+       org  00100H
+       .Phase 00100H
+
+GameDt:db   '         Freddy Hardest         '
+GmBlPt:dw   GmBlNm-GameDt
+StupRP:dw   SetupR-GameDt
+SilnRP:dw   SilnRt-GameDt
+StMsRP:dw   StMsRt-GameDt
+PlayRP:dw   PlayRt-GameDt
+GMPBAd:dw   0C000H
+GMPNam:db   'Yawara  C00'
+OpenMN:db   000H
+StrtSE:db   000H
+ChATDD:dw   0C500H
+ChBTDD:dw   0C501H
+ChCTDD:dw   0C502H
+BGMSPt:dw   MusicT-GameDt
+SFXSPt:dw   EffctT-GameDt
+OpnGFN:db   'FredHdt0Sc2'
+OpnGFS:dw   04000H
+MnuGFN:db   'FredHdt1Sc2'
+MnuGFS:dw   04000H
+OpnStC:dw   21*32+10
+Resorc:db   00001010B
+GCtRSt:db   'Speed  '
+
+SetupR:jr   z,Start
+       ld   de,00001H
+       ld   a,(de)
+       ld   (SavHok),a
+       inc  de
+       ld   a,(de)
+       ld   (HTIMI),a
+       ld   hl,04000H        ; Restore BIOS.
+       ld   de,00000H
+       ld   bc,04000H
+       ldir
+       ret
+
+Start: ld   a,(00000H)
+       or   a
+       jr   z,Reset
+       ld   hl,00000H        ; Save BIOS.
+       ld   de,04000H
+       ld   bc,04000H
+       ldir
+       ld   hl,08000H        ; Move game block.
+       ld   de,00000H
+       ld   bc,00C91H
+       ldir
+       xor  a
+       ld   de,00000H
+       ld   (de),a
+       inc  de
+       ld   a,0C9H
+       ld   hl,SavHok
+       ldi
+       dec  hl
+       ld   (hl),a
+       ld   hl,HTIMI
+       ldi
+       dec  hl
+       ld   (hl),a
+       call Where
+Here:  ld   de,There-Here
+       add  hl,de
+       ld   de,00038H
+       ld   bc,GmBlNm-There
+       ldir
+       xor  a
+       ld   (00000H),a
+Reset: ld   a,(MSXV0C)
+       and  10000000B
+       ld   hl,GCtrlR
+       ld   (hl),0ECH
+       jr   z,SilnRt
+       ld   (hl),0FFH
+       xor  a
+       ld   (00004H),a
+SilnRt:xor  a
+StMsRt:or   a
+       ld   hl,00004H
+       ld   (hl),a
+       jp   z,006D8H
+       dec  hl
+       ld   (hl),000H
+       jp   00675H
+
+PlayRt:ld   hl,00004H
+       ld   a,(hl)
+       or   a
+       ret  z
+       ld   a,(GCtrlR)
+       inc  a
+       jr   z,Play
+       dec  hl
+       add  a,(hl)
+       ld   (hl),a
+       ret  nc
+Play:  jp   00715H
+
+There: push hl
+       push de
+       push bc
+       push af
+       exx
+       ex   af,af'
+       push hl
+       push de
+       push bc
+       push af
+       push iy
+       push ix
+       call HKEYI
+
+GmBlNm:db   'FredHdst000'
+GmBlSz:dw   00C91H
+LoadAd:dw   08000H
+       dw   0FFFFH
+MusicT:db   001H,'Theme of Freddy Hardest'
+       db   0FFH,0FFH
+EffctT:db   000H,'        Silence        '
+       db   0FFH,0FFH
+
+       end

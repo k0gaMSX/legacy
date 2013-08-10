@@ -1,0 +1,130 @@
+√ÕÀ                       ¡ BIOS MSX
+
+0000 CHKRAM    Resetea.                        -             Todos
+0004 1BBF      Direc. zona de patrones.        --             --
+0006  98,98    Entradas del VDP.               --             --
+0008 SYNCHR    Comprueba Syntax error.        HL,pc+1        HL,c
+000C RDSLT     Lee de cartucho. f000EEPP      HL,A           A
+0010 CHRGTR    Siguiente car†cter BASIC.      HL             HL,c,z
+0014 WRTSLT    Escribe en cartucho. (rdslt)   HL,A,E          -
+0018 OUTDO     Escribe A en la unidad actual  A               -
+001C CALSLT    LLamada a cartucho. (rdslt)    IX,IY h(slot)   ?
+0020 DCOMPR    Compara DE y HL.               HL,DE          =:z=1; c=1 HL<
+0024 ENASLT    Selecciona p†gina.             H(pag),A(rdsl)  -
+0028 GETYPR    Tipo coma flotante BASIC.       -             ...
+002B IDbyte    60/50Hz;Y/M/D;Japan,US,URSS.    --             --
+002C IDbyte    Print using; Keyboard.          --             --
+002D BASver    Versi¢n del Basic (00=1 01=2)   --             --
+0030 CALLF     LLama cartucho.  f000EEPP      pc+1, +2,3      ?
+0038 KEYINT    Interrupcion enmascarable(IM1)  -              -
+003B INITIO    Inicializa device               -              -
+003E INIFNK    Inicializa teclas de funci¢n.   -              -
+0041 DISSCR    Desconecta la pantalla.         -              -
+0044 ENASCR    Conecta la pantalla.            -              -
+0047 WRTVDP    VDP(C)=B                       C:reg B:dato    -
+004A RDVRM     A=VPEEK(HL)  (14 Bits)         HL             A
+004D WRTVRM    VPOKE HL,A   (14 Bits)         HL,A            -
+0050 SETRD     Prepara VDP para leer.(14bits) HL              -
+0053 SETWRT    Prepara VDP para escribir.(14) HL              -
+0056 FILVRM    LLena VRAM con un dato.(14bits HL:in BC:lg A:  -
+0059 LDIRMV    LDIR de VRAM.                  HL,DE,BC        -
+005C LDIRVM    LDIR a la VRAM.                HL,DE,BC        -
+005F CHGMOD    SCREEN A  (No inicia paleta)   A:modo          -
+0062 CHGCLR    Pone colores papel,tinta,borde forclr,bak,bdr  -
+0066 NMI       Ejecuta NMI.                    -              -
+0069 CLRSPR    Inicializa los Sprites.        SCRMOD          -
+006C INITXT    SCREEN 0                        ...            -
+006F INIT32    SCREEN 1                        ...            -
+0072 INIGRM    SCREEN 2                        ...            -
+0075 INIMLT    SCREEN 3                        ...            -
+0078 SETTXT    VDP para SCREEN 0               ...            -
+007B SETT32    VDP para SCREEN 1               ...            -
+007E SETGRP    VDP para SCREEN 2               ...            -
+0081 SETMLT    VDP para SCREEN 3               ...            -
+0084 CALPAT    Devuelve direc. de un sprite.  A:plano        HL
+0087 CALATR    Devuelve direc. atrib. sprite. A:plano        HL
+008A GSPSI     N£mero bytes que ocupa sprite.  -             A,c si 16x16
+008D GRPRT     Imprime car†cter en gr†fico.   A               -
+0090 GICINI    Inicializa PSG.                 -              -
+0093 WRTPSG    SOUND A,E                      A:reg E:dato    -
+0096 RDPSG     Lee un registro del PSG.       A:reg          A:dato
+0099 STRTMS    Sigue con la m£sica.            -              -
+009C CHSNS     SHIFT + INKEY$                  -             z: 1 vac°o
+009F CHGET     INPUT$(1)                       -             A
+00A2 CHPUT     PRINT. + c¢digos control.      A, CSRX,Y      CSRX,Y
+00A5 LPTOUT    LPRINT                         A              c: 1 fallo
+00A8 LPTSTT    Si la impresora est† lista.     -             A: 255 si,0 no
+00AB CNVCHR    Transforma A en modelo VDP.    A              ...
+00AE PINLIN    Modo auto.                      -             HL,c(CTRL+STP)
+00B1 INLIN     Introducir l°nea del teclado.   -             HL,c(CTRL+STP)
+00B4 QINLIN    "? " + INPUT A$                 -             HL,c(CTRL+STP)
+00B7 BREAKX    Analiza si CTRL+STOP            -             c: 1 si
+00BA ISCNTC    STOP(para); CTRL+STOP:...       -              -
+00BD CKCNTC    ISCNC, pero m†s despacio.       -              -
+00C0 BEEP      BEEP!                           -              -
+00C3 CLS       CLS                            z=0             -
+00C6 POSIT     LOCATE                         H:x L:y        CSRX,CSRY
+00C9 FNKSB     Visualiza Fs si est†n activas. FNKFLG          -
+00CC ERAFNK    KEY OFF                         -              -
+00CF DSPFNK    KEY ON                          -              -
+00D2 TOTEXT    Repone antiguo modo de texto.  OLDSCR=modo     -
+00D5 GTSTCK    Estado de Stick.               A:stick        A:direccion
+00D8 GTTRIG    Mira Strig                     A:disparo      A:0 no 255 si
+00DB GTPAD     Valor tablero gr†fico.         A              A
+00DE GTPDL     Valor paddles                  A              A
+00E1 TAPION    Lee cabecera de cinta.          -             c:corte
+00E4 TAPIN     Lee 1 byte de cinta.            -             A c:corte
+00E7 TAPIOF    Detiene lectura de cinta.       -              -
+00EA TAPOON    Escribe cabecera en cinta.     A=0corta>larga c:corte
+00ED TAPOUT    Escribe 1 byte en cinta.       A:byte         c:corte
+00F0 TAPOOF    Detiene escritura en cinta.     -             c=corte
+00F3 STMOTR    MOTOR                          A:1on 0of FFal  -
+00F6  -         -                              -              -
+00F9  -         -                              -              -
+00FC RIGHTC    X=X+1, en gr†fico.             ...             -
+00FF LEFTC     X=X-1, en gr†fico.             ...             -
+0102 UPC       Y=Y-1, en g†fico.              ...             -
+0105 TUPC      Y=Y-1, en gr†fico.             ...            c si y<0
+0108 DOWNC     Y=Y+1, en gr†fico.             ...             -
+010B TDOWNC    Y=Y+1, en gr†fico.             ...            c si y>255
+010E  -        DRAW bm x=BC,y=DE              BC,DE          c si se salen.
+0111 MAPXYC    Devuelve posici¢n punto.       BC,DE          ...
+0114 FETCHC    Lee valores de la anterior.     -             HL,A
+0117 STOREC    Anterior, pero escribe.        HL,A            -
+011A READC     POINT, del punto en curso.     ...            A
+011D  -         -                              -              -
+0120 SETC      PSET, del punto en curso.      ...,atrbyt      -
+0123 NSETCX    PAINT derecha.                 ...             -
+0126 GTASPC    Prepara PAINT                  A:borde        ...
+0129  -         -                              -              -
+012C SCANR     PAINT derecha, con l°mite.     DE,...          -
+012F SCANL     PAINT izquierda, con l°mite.   DE,...          -
+0132 CHGCAP    CAPS LOCK                      A=0 off; >0 on  -
+0135 CHGSND    Contrae/relaja la membrana.    A=0 off; >0 on  -
+0138 RSLREG    IN A,(&HA8)                     -             A
+013B WSLREG    OUT (&HA8),A                   A               -
+013E RDVDP     A=VDP(8)                        -             A
+0141 SNSMAT    Analiza teclado.               A=columna      A: 0 si 1 no
+0144  -        Lee/escribe sectores.          HL,DE,B,C,A,c  A>0 error
+0147 FORMAT    _FORMAT                         -              -
+014A ISFLIO    Mira si alguna E/S transmite.   -             A:0 no  >0 si
+014D OUTDLP    LPRINT                         A=caracter      -
+0150  -         -                              -              -
+0153  -         -                              -              -
+0156 KILBUF    Borra el buffer del teclado.    -              -
+0159 CALBAS    LLama extension BASIC          IX:direcc.      ?
+015C SUBROM    LLamada a rutina de la Sub-ROM IX:Direcc.      ?
+015F EXTROM    LLamada a rutina de la Sub-ROM IX              ?
+0162  -         -                              -              -
+0165  -         -                              -              -
+0168 EOL       Borra hasta fin de linea.      HL=X Y          -
+016B BIGFIL    Igual que FILVRM (&h56)        HL,BC,A         -
+016E NSETRD    Prepara VRAM para leer         HL=Direcc.      -
+0171 NSTWRT    Prepara VRAM para escribir.    HL=direcc.      -
+0174 NRDVRM    A=VPEEK(HL)                    HL             A
+0177 NWRVRM    VPOKE HL,A                     HL,A            -
+017A  -         -                              -              -
+017D  -         -                              -              -
+0180 Set R800  80:Z80,81:R800ROM,82:R800DRAM  A               -
+0183 Rd R800   Devuelve procesador activo.     -             A
+

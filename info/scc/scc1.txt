@@ -1,0 +1,141 @@
+Konami SCC Sound Chip
+
+The SCC is a Wavetable sound chip, just like the Gravis Ultra Sound, Sound Blaster AWE32 and
+Moonsound. They all have memory -tables- , in which samples -waves- are stored. The samples are
+played back looped. The speed with which the samples are played, determines the frequency of the
+sound. A modern wavetable sound modules usually contain over a megabyte of memory, while the
+SCC contains just 128 bytes. 
+
+The SCC has five channels. There are four functions for each channel: 
+
+   1.32 bytes waveform. 
+   2.12 bits frequency. 
+   3.4 bits volume. 
+   4.1 bit on/off switch. 
+
+Just like the bank select registers, the SCC is accessed through memory mapped I/O, and not
+through I/O ports. If you write xx111111b (3Fh, bits 7 and 6 are ignored) to bank select register 3
+(memory area 9000h to 97FFh, see Konami megaROMs for more info), the SCC appears at
+memory area from 9800h to 9FFFh. 
+
+The register structure is much like the PSG, although it differs just as much. 
+    Address
+                           Function
+ 9800h - 981Fh
+               Wave channel 1
+ 9820h - 983Fh
+               Wave channel 2
+ 9840h - 985Fh
+               Wave channel 3
+ 9860h - 987Fh
+               Wave channel 4 and 5
+ 9880h - 9881h
+               frequency channel 1
+ 9882h - 9883h
+               frequency channel 2
+ 9884h - 9885h
+               frequency channel 3
+ 9886h - 9887h
+               frequency channel 4
+ 9888h - 9889h
+               frequency channel 5
+ 988Ah
+               volume channel 1
+ 988Bh
+               volume channel 2
+ 988Ch
+               volume channel 3
+ 988Dh
+               volume channel 4
+ 988Eh
+               volume channel 5
+ 988Fh
+               on/off switch channel 1 to 5
+ 9890h - 989Fh
+               no function
+ 98A0h - 98BFh
+               Wave channel 5 (??) - SCC+ only !
+ 98C0h - 98DFh
+               no function
+ 98E0h - 98FFh
+               deformation register
+
+As you may have noticed, channel 4 shares its waveform with channel 5. The SCC+ has five
+waveforms so each channel has it's own waveform. See SCC+ Sound Cartridge for more info. 
+
+The Waveform contains 32, signed (two's complement) bytes. The wave represents the actual form
+of the tone the soundchip produces. It's played back from byte 0 to 31, and then again from 0 to 31,
+etc. A value of 0 means no amplitude. From 1 to 127 results in an increasingly higher amplitude.
+From -1 to -128 (FFh to 80h) results in an increasingly higher negative amplitude. 
+
+The frequency is stored in the same way as in the PSG. The first byte contains bits 0 to 7 from the
+frequency. Bits 0 to 3 of the second byte contain bits 8 to 11 of the frequency. Bits 4 to 7 of the
+second byte are ignored. Remember that the value you enter is a period: a higher value gives a lower
+frequency. 
+
+The formula for calculating the frequency of the tone is the same as from the PSG: 
+
+
+
+            fclock
+
+   ftone = --------
+
+            32 * TP
+
+
+fclock is the clock frequency of the computer. 3,579,545 Hz
+ftone is the frequency of the channel
+TP is the value in the frequency registers
+
+The volume is stored in the same way as in the PSG, though it does not support envelopes. Bits 0 to
+3 contain a volume of 0 to 15, and bits 7 to 4 are ignored. 
+
+The on/off switch register switches the different channels on or off. Set the associated bit high for a
+channel to activate it. The bits with no channel associated with it are ignored. It has the following
+structure: 
+ Bit:
+           7
+                6
+                    5
+                         4
+                             3
+                                  2
+                                      1
+                                           0
+ Channel:
+          none
+              none
+                   none
+                         5
+                             4
+                                  3
+                                      2
+                                           1
+
+
+The deformation register is still undefined. It is, as far as I know, unused by Konami. The memory
+area (98E0h - 98FFh) all refers to the same register. It seems to modify all the channels. By default
+it has the value 0. If you write the value 1, the SCC doesn't produce any sound, and any other value
+severely distorts the sound output. I trying to work out what it does by sampling the SCC on my
+PC. As soon as I have more information, I'll update this page. 
+
+The memory area from 9800h to 987Fh behaves as RAM. The memory area from 9880h to 98FFh
+is write only; a read always result in value FFh. The memory area from 9900h to 99FFh has exactly
+the same function as from 9800h to 98FFh. The same accounts for the area from 9A00h to 9AFFh,
+to the area from 9F00h to 9FFFh. 
+
+Problems about using a SCC
+
+If you insert the SCC cartridge in slot, the game in the cartridge automatically starts up, and can't be
+exited. You can insert the cartridge after the computer has started up, but this can cause damage to
+your computer and cartridge. See How to adapt SCC cartridge for use of SCC for more
+information about how to solve this problem. 
+
+If you have the SCC in your computer without the game starting up, how do you in which slot it is?
+One why is to search the slots for cartridge with the 'AB' code that can be removed by writing a
+value other than 0 to the bank select register. However, in some cartridges the ROM is disabled;
+you won't find the 'AB' code. A better why is to search for a slot that contains ROM, and contains
+RAM at 9800h - 987Fh after writing 3Fh to 9000h. However, not all MSX emulators emulate the
+RAM behaviour; it's not used by any Konami game. To use the SCC on a emulator, assume that it is
+in slot 1 - 0, and write 3Fh to 9000h, and write your data to 9800h to 988Fh. 

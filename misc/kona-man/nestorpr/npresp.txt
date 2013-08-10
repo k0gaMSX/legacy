@@ -1,0 +1,1211 @@
+	NestorPreTer 0.3 - Por Nestor Soriano (Konami Man), 12-1999
+	-----------------------------------------------------------
+
+Este texto contiene los siguientes apartados:
+
+1. INTRODUCCION
+2. ALGUNOS EJEMPLOS SIMPLES
+3. EJECUCION DE NESTORPRETER
+4. GENERACION DE LINEAS BASIC
+5. USO DE ETIQUETAS DE LINEA
+6. DIRECTIVAS
+6.1. HABILITACION E INHABILITACION DE COMENTARIOS
+6.2. HABILITACION E INHABILITACION DE ESPACIOS ENTRE INSTRUCCIONES
+6.3. CAMBIO DE LA NUMERACION DE LINEAS BASIC
+6.4. DETENCION DEL PROCESO
+6.5. USO DE MACROS
+7. LISTAS
+8. ERRORES
+8.1. ERRORES DE INICIALIZACION
+8.2. ERRORES AL BUSCAR MACROS
+8.3. ERRORES AL BUSCAR ETIQUETAS DE LINEA
+8.4. ERRORES AL PROCESAR EL TEXTO
+8.5. ERRORES FATALES
+8.6. ERRORES DENTRO DE MACROS
+9. TRUCOS Y COSAS VARIAS
+10. ESTADO DEL PROGRAMA, CONTACTO CON EL AUTOR
+
+
+1. INTRODUCCION
+
+NestorPreTer es un pre-int‚rprete de MSX BASIC, es decir, un programa que 
+convierte un fichero ASCII conteniendo c¢digo BASIC en un formato especial, 
+en un fichero ejecutable MSX BASIC. Este "formato especial" incluye el 
+formato normal MSX BASIC como un caso particular, por lo que programas ya 
+existentes de MSX BASIC tambi‚n pueden ser usados como ficheros de entrada, 
+siempre que sean grabados en formato ASCII (save"nombre",a).
+
+El formato del fichero de entrada es el mismo que el de MSX BASIC, con las 
+siguientes diferencias:
+
+- Los comentarios pueden ser usados sin l¡mite y sin miedo a la memoria BASIC 
+que consuman, ya que ser n ignorados y no inclu¡dos en el fichero de salida.
+
+- Lo mismo se aplica a los espacios entre instrucciones BASIC. De esta forma 
+puedes usar indentaci¢n sin perder memoria BASIC.
+
+- No es necesario usar n£meros de l¡nea. Simplemente escribe tu programa y 
+deja que NestorPreTer los genere autom ticamente.
+
+- Por supuesto necesitar s identificar algunas l¡neas BASIC para poder 
+efectuar saltos. Para esto puedes usar etiquetas de l¡nea, que pueden 
+contener car cteres alfanum‚ricos (hay algunos car cteres especiales que no 
+pueden ser usados, encontrar s un listado de estos car cteres m s adelante). 
+Los n£meros de l¡nea tambi‚n pueden ser usados como un caso particular de 
+etiquetas de l¡nea, naturalmente.
+
+- Las directivas de NestorPreTer te permitir n tener cierto control sobre el 
+proceso de conversi¢n: en cualquier punto de tu programa puedes habilitar y 
+volver a inhabilitar los comentarios y/o espacios, cambiar la numeraci¢n de 
+las l¡neas BASIC, y detener el proceso ignorando el resto del fichero de 
+entrada.
+
+- Puedes usar macros, es decir, darle un nombre corto a una porci¢n de texto 
+y usar este nombre en el programa en lugar del texto completo. Es posible 
+usar las macros recursivamente, hasta 127 niveles. Actualmente no puedes 
+pasar par metros a las macros, esto ser  implementado en versiones futuras de 
+NestorPreTer.
+
+
+Llegados a este punto, est  claro de que hay principalmente tres formas de 
+usar NestorPreTer:
+
+- Usa NestorPreTer con tus programas antiguos de MSX-BASIC, y obtendr s el 
+mismo programa pero sin comentarios ni espacios, por lo que ahorrar s memoria 
+BASIC.
+
+- Desarrolla tus nuevos programas usando el entorno MSX-BASIC de la forma 
+habitual, pero no te preocupes por el n£mero de comentarios ni su extensi¢n, 
+ya que desaparecer n al procesar el programa con NestorPreTer antes de 
+ejecutarlo.
+
+- Desarrolla tus nuevos programas con un editor de textos y usa las nuevas 
+caracter¡sticas de NestorPreTer: un texto sin n£meros de l¡nea, con etiquetas 
+de l¡nea y macros, con comentarios extensos y con indentaci¢n resulta ser un 
+texto bastante legible. Usa entonces NestorPreTer para convertir el texto en 
+un fichero ejecutable.
+
+
+Recuerda que los programas MSX-BASIC existentes deben ser grabados en formato 
+ASCII (save"nombre",a) si van a ser usados como ficheros de entrada de 
+NestorPreTer. Tambi‚n, recuerda que el fichero de salida tendr  formato 
+ASCII, por lo que es recomendable convertirlo a formato normal MSX-BASIC 
+(basta hacer load"nombre":save"nombre"), que carga m s r pidamente.
+
+
+2. ALGUNOS EJEMPLOS SIMPLES
+
+Antes de la explicaci¢n detallada del uso de NestorPreTer vamos a ver algunos 
+ejemplos de conversi¢n de texto.
+
+
+* Eliminaci¢n de comentarios:
+
+10 Print "Una l¡nea"
+22 REM Esto es s¢lo un molesto comentario
+34 Print "Wow!" 'Mensaje est£pido
+40 goto 34 '­­Esto nunca termina!!
+
+ser  convertido a:
+
+10 PRINT"Una l¡nea"
+20 PRINT"Wow!"
+30 GOTO20
+
+Observa que NestorPreTer efect£a un RENUM autom ticamente. Las l¡neas que 
+s¢lo contienen un comentario son suprimidas.
+
+
+* Eliminaci¢n de espacios:
+
+10 for k = 1 to 10
+20    print "El n£mero es";k
+30    for j = 10 to 1 step -1
+40	 print "El n£mero inverso es";j
+50    next j
+60 next k
+
+ser  convertido a:
+
+10 FORK=1TO10
+20 PRINT"El n£mero es";K
+30 FORJ=10TO1STEP-1
+40 PRINT"El n£mero inverso es";J
+50 NEXTJ
+60 NEXTK
+
+* Uso de etiquetas de l¡nea:
+
+~INIT:	print "Esto es el principio...":
+	print "­Esto a£n es el principio!":
+	print "Al indentar, la l¡nea BASIC previa contin£a."
+~CHECK: if inkey$="" then ~CHECK
+10 print "­­Eeeh, esto NO es la l¡nea 10!!"
+goto ~INIT
+
+ser  convertido a:
+
+10 PRINT"Esto es el principio...":PRINT"­Esto a£n es el principio!":PRINT"Al 
+indentar, la l¡nea BASIC previa contin£a."
+20 IFINKEY$=""THEN20
+30 PRINT"­­Eeeh, esto NO es la l¡nea 10!!"
+40 GOTO10
+
+Observa que los n£meros de l¡nea son s¢lo un caso particular de las etiquetas 
+de l¡nea, no hacen referencia a ning£n n£mero de l¡nea concreto del fichero 
+de salida.
+
+* Cambio de la numeraci¢n de las l¡neas
+
+print "Esta es la primera l¡nea..."
+print "Esta es la segunda l¡nea..."
+@line 1001,2
+print "­Ha cambiado la numeraci¢n!"
+print "Pero la vida contin£a..."
+
+ser  convertido a:
+
+10 PRINT"Esta es la primera l¡nea..."
+20 PRINT"Esta es la segunda l¡nea..."
+1001 PRINT"­Ha cambiado la numeraci¢n!"
+1003 PRINT"Pero la vida contin£a..."
+
+* Uso de macros
+
+@define TRUE -1
+@define FALSE 0
+@define ERROR E%
+@macro	SHOW_ERR print "Error";@ERROR;"!!"
+
+gosub ~PROCESS
+if @ERROR=@TRUE then @SHOW_ERR
+
+ser  convertido a (suponiendo que ~PROCESS es convertido a 10000):
+
+10 GOSUB10000
+20 IFE%=-1THENPRINT"Error";E%;"!!"
+
+Observa que puedes usar l¡neas en blanco libremente, siempre ser n ignoradas.
+
+Las directivas DEFINE y MACRO tienen exactamente el mismo efecto, simplemente 
+usa la que m s te guste. Normalmente, y a fin de obtener legibilidad, DEFINE 
+deber¡a ser usado para nombrar constantes y variables, y MACRO deber¡a ser 
+usado para nombrar porciones de c¢digo ejecutable.
+
+* Habilitaci¢n de comentarios
+
+10 'Esto es s¢lo bla, bla, bla...
+@remon
+20 '­Eh, esto es un comentario importante!
+30 print "­Hola mam !" '­Esto tambi‚n!
+@remoff
+40 print "­Miradme!" 'M s bla, bla...
+50 'Me gusta el bla, bla...
+
+ser  convertido a:
+
+10 '­Eh, esto es un comentario importante!
+20 PRINT"­Hola mam !"'­Esto tambi‚n!
+30 PRINT"­Miradme!"
+
+
+3. EJECUCION DE NESTORPRETER
+
+NestorPreTer funciona en cualquier MSX2 o superior con cualquier versi¢n de 
+DOS. Bajo DOS 1 se necesitan al menos 128K de memoria mapeada. Bajo DOS 2 son 
+necesarios al menos tres segmentos de memoria libres en cualquier slot. 
+NestorPreTer usa la memoria disponible para almacenar las etiquetas de l¡nea 
+y las macros, por tanto cuanta m s memoria est‚ disponible m s etiquetas y 
+macros podr s usar. La m xima cantidad de memoria que NestorPreTer puede usar 
+es aproximadamente 450K.
+
+NestorPreTer debe ser ejecutado de la siguiente forma:
+
+NPR <infile>[.<ext>] [<outfile>[.<ext>]] [/C0|/C1] [/B0|/B1] [/F<n>]
+    [/I<n>] [/LOG[:][<logfile>[.<ext>]]] [/LIN[:][<linfile>[.<ext>]]]
+    [/MAC[:][<macfile>[.<ext>]]]
+
+donde:
+
+* <infile> es el nombre del fichero ASCII de entrada. Es el £nico par metro 
+obligatorio. Si no se especifica extensi¢n, se usar  .ASC.
+
+* <outfile> es el nombre del fichero MSX-BASIC en formato ASCII que 
+NestorPreTer generar . Si no se especifica, se usar  el mismo nombre de 
+<infile> con la extensi¢n .BAS, y el fichero se generar  en el mismo 
+directorio del citado fichero de entrada. Si se especifica nombre de fichero 
+pero no extensi¢n, se usar  .BAS.
+
+* /C1 causar  que NestorPreTer distinga entre may£sculas y min£sculas al 
+comprarar nombres de etiquetas de l¡nea y macros, por lo que ~Linea no ser  
+lo mismo que ~LINEA. /C0 causar  que NestorPreTer no distinga entre 
+may£sculas y min£sculas, esta es la opci¢n por defecto. Notas: NestorPreTer 
+nunca distingue entre may£suculas y min£sculas al tratar sus propias 
+directivas.
+
+* /B1 causar  que NestorPreTer salte al BASIC y ejecute el programa creado 
+tras la finalizaci¢n del proceso de conversi¢n. Esto s¢lo ser  posible si 1) 
+no ha habido errores durante el proceso, y 2) el fichero de salida ha sido 
+generado en el directorio actual (es decir, se ha especificado "out.ext" como 
+fichero de salida en lugar de "X:\ruta\out.ext"). /B0 causar  que esto no 
+ocurra en ning£n caso, es la opci¢n por defecto.
+
+* /Fn establece el primer n£mero de l¡nea BASIC del fichero de salida en n. 
+El valor por defecto es 10. Recuerda que puedes modificar este par metro 
+desde el propio programa a convertir, usando la directiva @LINE (ver secci¢n 
+6.3).
+
+* /In establece el incremento de n£meros de l¡nea BASIC del fichero de salida 
+en n. El valor por defecto es 10. Recuerda que puedes modificar este 
+par metro desde el propio programa a convertir, usando la directiva @LINE 
+(ver secci¢n 6.3).
+
+* /LOG o /LOG:<filename> crear  un fichero de seguimiento, es decir, un 
+fichero en el que aparecer  la siguiente informaci¢n: nombre de todos los 
+ficheros generados; n£mero de l¡neas BASIC, etiquetas de l¡nea y macros 
+encontradas/procesadas; y todos los errores encontrados. Si no se especifica 
+nombre de fichero, se usar  el mismo nombre de <infile> con la extensi¢n 
+.LOG, y el fichero se generar  en el mismo directorio del citado fichero de 
+entrada. Si se especifica nombre de fichero pero no extensi¢n, se usar  .LOG.
+
+* /LIN o /LIN:<filename> crear  una lista de etiquetas de l¡nea, es decir, un 
+fichero en el que constar n todas las etiquetas de l¡nea usadas junto con su 
+correspondiente n£mero de l¡nea BASIC asociado. Si no se especifica nombre de 
+fichero, se usar  el mismo nombre de <infile> con la extensi¢n .LIN, y el 
+fichero se generar  en el mismo directorio del citado fichero de entrada. Si 
+se especifica nombre de fichero pero no extensi¢n, se usar  .LIN. El formato 
+del fichero LIN es como sigue:
+
+<Cabecera con informaci¢n>
+nombre de etiqueta <tabulador> n£mero de l¡nea
+nombre de etiqueta <tabulador> n£mero de l¡nea
+...
+
+Nota: si no especificas ninguna opci¢n /C, o si especificas /C0, todos los 
+nombres de etiquetas aparecer n en may£scula, independientemente de c¢mo 
+consten en el fichero de entrada.
+
+* /MAC o /MAC:<filename> har  que NestorPreTer busque definiciones de macros 
+en el fichero externo especificado, adem s de en el propio fichero fuente. 
+Este fichero externo puede contener s¢lo definiciones de macros; cualquier 
+otro texto situado en este fichero ser  ignorado aunque no sea un comentario. 
+Si no se especifica nombre de fichero, se usar  el mismo nombre de <infile> 
+con la extensi¢n .MAC, y el fichero se buscar  en el mismo directorio del 
+citado fichero de entrada. Si se especifica nombre de fichero pero no 
+extensi¢n, se usar  .MAC.
+
+
+Toda esta informci¢n es mostrada de forma resumida al ejecutar NPR sin 
+par metros.
+
+
+4. GENERACION DE LINEAS BASIC
+
+Normalmente, en el fichero de salida empieza una nueva l¡nea BASIC cuando en 
+el fichero de entrada empieza una nueva l¡nea f¡sica (una l¡nea de texto que 
+acaba con un car cter CR -ASCII 13-). Sin embargo esto no es cierto (es 
+decir, una nueva l¡nea f¡sica es tratada como la continuaci¢n de la l¡nea 
+BASIC en curso) en dos casos:
+
+- Cuando la l¡nea f¡sica anterior acab¢ con ESPACIO+CR en lugar de con 
+(cualquier otro car cter)+CR. Esto permite usar procesadores de texto que 
+usan la marca ESPACIO+CR para indicar la continuaci¢n de l¡neas largas, por 
+ejempo TED.
+
+- Cuando el primer car cter de la l¡nea f¡sica es un espacio o un tabulador. 
+Esto te permite mantener un bonito y legible indentado en tus programas (ver 
+ejemplos en la secci¢n 2).
+
+Hay una manera de forzar que NestorPreTer d‚ comienzo a una nueva l¡nea BASIC 
+sin tener que renunciar a la indentaci¢n y sin tener que especificar una 
+etiqueta de l¡nea: simplemente usa el car cter "~" aislado al principio de la 
+l¡nea; NestorPreTer lo ignorar , pero empezar  una nueva l¡nea BASIC. 
+Ejemplo:
+
+~PROCESO: Print "El proceso empieza...":
+	  Print "El proceso contin£a..."
+~	  Print "­El proceso contin£a pero en una l¡nea BASIC nueva!":
+	  Print "El proceso termina."
+Return
+
+Esto ser  convertido a:
+
+1000 PRINT"El proceso empieza...":PRINT"El proceso contin£a..."
+1010 PRINT"­El proceso contin£a pero en una l¡nea BASIC nueva!":PRINT"El 
+proceso termina."
+1020 RETURN
+
+Notas:
+
+- NestorPreTer trata el espacio (ASCII 32) y el tabulador (ASCII 9) 
+exactamente de la misma forma.
+- No es necesario que las l¡neas f¡sicas terminen con una marca CR+LF (ASCII 
+13+10), un CR solo basta. La marca LF siempre es ignorada. Sin embargo, en el 
+fichero de salida las l¡neas siempre acabar n con CR+LF.
+
+
+5. USO DE ETIQUETAS DE LINEA
+
+Puedes uar etiquetas de l¡nea para identificar l¡neas BASIC, a fin de usar 
+instrucciones BASIC relacionadas con l¡neas (GOTO, RESTORE...) o simplemente 
+para identificar una parte de tu programa.
+
+Las etiquetas que identifican una determinada l¡nea deben ser colocadas al 
+principio de la l¡nea f¡sica que identifican (lo que indica el comienzo de 
+una nueva l¡nea BASIC, ver secci¢n 4), y las etiquetas que hacen referencia a 
+una l¡nea ya definida pueden ser colocadas en cualquier lugar del texto; es 
+decir, exactamente igual que los n£meros de l¡nea cl sicos. Cuando 
+NestorPreTer encuentra una l¡nea f¡sica que comienza con una etiqueta de 
+l¡nea, guarda su nombre junto con su correspondiente n£mero de l¡nea BASIC en 
+una tabla interna; cuando encuentra una etiqueta en cualquier otro sitio, la 
+sustituye en el fichero de salida por su n£mero de l¡nea asociado, mediante 
+la consulta de dicha tabla.
+
+Hay tres tipos de etiquetas de l¡nea:
+
+- Etiquetas normales, empiezan con un car cter "~" y acaban con un espacio o 
+con dos puntos (":"). Pueden contener cualquier car cter que no est‚ en la 
+lista de car cteres prohibidos (ver secci¢n 7).
+
+- Etiquetas num‚ricas. Empiezan con y pueden contener £nicamente n£meros, y 
+terminan con un espacio; son soportadas para pro                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ios" usando la directiva @SPACEON. 
+En este estado, todos los espacios y tabuladores encontrados en el texto son 
+incluidos en el fichero de salida igual que los dem s car cteres. Para volver 
+al estado "ignorar espacios", usa la directiva @SPACEOFF.
+
+Notas:
+
+- Al contrario que todas las dem s directivas, @SPACEON/@SPACEOFF puede ser 
+situado en cualquier punto del texto BASIC; por supuesto, la propia directiva 
+no ser  inclu¡da en el fichero de salida. Por ejemplo, A = 3 :@SPACEON: B = 4 
+ser  convertido a A=3: B = 4
+- En algunas ocasiones es realmente necesario habilitar los espacios. For 
+ejemplo, si tienes un texto tal que B = X OR 3, ser  convertido a B=XOR3, 
+MSX-BASIC interpretar  esto como B = XOR 3 y generar  un syntax error. Para 
+evitar esto, haz @SPACEON: A= X OR3: @SPACEOFF. Ten esto en cuenta cuando 
+encuentres errores extra¤os al ejecutar el programa BASIC.
+- En algunos casos NestorPreTer no eliminar  el ":" duplicado que se origina 
+al saltar la directiva @SPACEON/OFF, por lo que un  A=3 : @SPACEON : B=4 
+puede ser convertido a A=3::B=4. Sin embargo esto no afectar  a la ejecuci¢n 
+del programa.
+- NestorPreTer trata los espacios y los tabuladores exactamente de la misma 
+forma.
+- ­Ten cuidado al usar @SPACEON antes de un texto indentado! En este caso el 
+fichero de salida tendr  un aspecto bastante extra¤o, y adem s desperdiciar s 
+mucha memoria BASIC con espacios.
+
+
+6.3. CAMBIO DE LA NUMERACION DE LINEAS BASIC
+
+La numeraci¢n de las l¡neas BASIC en el fichero de salida comienza con el 
+valor especificado en el par mtero /F, y el incremento es el especificado en 
+el par metro /I. El valor por defecto es 10 para ambos (ver secci¢n 3).
+
+Puedes alterar esta progresi¢n usando la directiva @LINE: te permite 
+establecer un nuevo n£mero de l¡nea, que ser  aplicado a partir de la l¡nea 
+siguiente a la directiva, o un nuevo incremento, o ambos. As¡ pues, hay tres 
+formas de usar la directiva @LINE:
+
+@LINE <num>
+
+El c¢digo situado a continuaci¢n comienza con el n£mero de l¡nea <num>, el 
+incremento no cambia.
+
+@LINE ,<inc>
+
+Establece el nuevo incremento de l¡neas en <inc>, el n£mero de l¡nea en curso 
+no cambia.
+
+@LINE <num>,<inc>
+
+Cambia tanto el n£mero de l¡nea como el incremento. Ver ejemplo en la secci¢n 
+2.
+
+Notas:
+
+- No puedes establecer un n£mero de l¡nea m s peque¤o que el actual. Si lo 
+intentas, se generar  un error y a directiva ser  ignorada.
+- Por supuesto, tambi‚n se generar  un error si especificas un par metro 
+incorrecto, por ejemplo un n£mero de l¡nea superior a 65535.
+- Si el n£mero de l¡nea alcanza o supera el valor 65535 durante el proceso, 
+se generar  un error fatal y el proceso ser  abortado en su totalidad. En la 
+secci¢n 8.5 tienes una lista de los errores fatales.
+- Ver tambi‚n las notas para las directivas @REMON/OFF (secci¢n 6.1).
+
+
+6.4. DETENCION DEL PROCESO
+
+Puedes detener el proceso de conversi¢n en cualquier momento, causando as¡ 
+que el resto del fichero de entrada sea ignorado. Usa para ello la directiva 
+@ENDBASIC.
+
+Esta directiva s¢lo puede ser situada al principio de una l¡nea f¡sica. Ver 
+las notas para las directivas @REMON/OFF (secci¢n 6.1).
+
+
+6.5. USO DE MACROS
+
+Las macros son porciones de texto con un nombre asignado, de forma que cuando 
+se encuentra una referencia a dicho nombre en el fichero de entrada, en 
+realidad es el texto asociado el que es situado en el fichero de salida.
+
+Las macros pueden ser definidas en el propio fichero fuente, pero tambi‚n en 
+un fichero externo si se especifica la opci¢n /MAC al ejecutar NestorPreTer 
+(ver secci¢n 3). Para definir una macro, usa las directivas @DEFINE o @MACRO 
+(ambas son id‚nticas) de la siguiente forma:
+
+@DEFINE nombre_de_macro cuerpo_de_macro
+o bien
+@MACRO nombre_de_macro cuerpo_de_macro
+
+El nombre de la macro puede ser cualquier cadena alfanum‚rica que no contenga 
+car cteres prohibidos (ver lista en la secci¢n 7) y cuya longitud no supere 
+los 255 car cteres. No puedes usar nombres de directivas de NestorPreTer como 
+nombres de macro (ver lista de directivas en la secci¢n 7).
+
+El cuerpo de la macro (el texto referido) comienza tras el nombre de la 
+macro, y termina cuando se encuentras una marca CR; como en el texto normal, 
+las marcas ESPACIO+CR son ignoradas (ver secci¢n 4), pero observa que ahora 
+NO puedes usar la indentaci¢n para indicar la continuaci¢n de la macro.
+
+Por ejemplo, en el siguiente texto:
+
+@DEFINE nombre	 print "­Eh!":gosub 100:?"Fin"
+		 print "­Esto no es parte de la macro!"
+
+el cuerpo de la macro termina en el ?"Fin", a no ser que a continuaci¢n haya 
+una marca ESPACIO+CR en lugar de s¢lo CR.
+
+A efectos de ignorancia de comentarios y espacios, los cuerpos de macro son 
+tratados de la misma forma que el texto normal.
+
+Para hacer referencia a una macro, simplemente escribe su nombre precedido de 
+un car cter "@" en cualquier punto del texto. El cuerpo de la macro ser  
+situado en su lugar en el fichero de salida. Por ejemplo, para usar la macro 
+definida en el ejempo anterior, puedes hacer
+
+print "­Vamos a usar la macro!": @nombre :print "­Hecho!"
+
+Es interesante usar macros fijas para definir constantes usadas con 
+frecuencia, por ejemplo @TRUE para -1 o @FALSE para 0 (ver ejemplos en la 
+secci¢n 2).
+
+La recursividad de macros est  permitida hasta 127 niveles; se generar  un 
+error fatal y el proceso ser  abortado en su totalidad si este l¡mite es 
+superado o si una macro se llama a s¡ misma (ver secci¢n 8.5). Un ejemplo de 
+recursividad de nivel 3:
+
+@define MACRO1	print"1A":@MACRO2:print"1B"
+@define MACRO2	print"2A":@MACRO3:print"2B"
+@define MACRO3	print"3A":print"­El centro!":print"3B"
+print"Vamos all ": @MACRO1 :print"­Hecho!"
+
+El resultado ser :
+
+print"Vamos all ":print"1A":print"2A":print"3A":print"­El centro!":print"3B":
+print"2B":print"1B":print"­Hecho!"
+
+MUY IMPORTANTE: Las definiciones de macros s¢lo pueden estar situadas en las 
+primeras 16K del fichero de entrada. Las definiciones situadas m s all  de 
+este l¡mite ser n simplemente ignoradas sin generar ning£n error. Esto es 
+v lido tanto para el fichero fuente como para el fichero externo, si se usa.
+
+Si el l¡mite de 16K es alcanzado en medio de una definici¢n de macro, se 
+generar  un error y la macro ser  igualmente ignorada. S¢lo en este caso 
+extremo se genera un error.
+
+Recuerda tambi‚n esto: NestorPreTer explotar  si defines demasiadas macros; 
+esto es un fallo de dise¤o y ser  corregido en futuras versiones. El n£mero 
+m ximo de macros definibles depende de la longitud de los nombres de las 
+macros; para una longitud media de 10 car cteres, este n£mero m ximo est  
+alrededor de 1000.
+
+NOTA: No uses comentarios en una definici¢n de macro si usas la directiva 
+@REMON. Observa el siguiente ejemplo para saber por qu‚:
+
+@remon
+@define NOMBRE print 'Vaya macro m s tonta...
+print "­Hola mundo!": @NOMBRE :print "Ush..."
+
+Esto ser  convertido a:
+
+10 PRINT"­Hola mundo!":PRINT'Vaya macro m s tonta...:PRINT"Ush..."
+
+y el PRINT"Ush..." no ser  ejecutado porque es parte del comentario.
+
+
+7. LISTAS
+
+* Car cteres prohibidos
+
+Los car cteres prohibidos no pueden ser usados en una definici¢n de macro o 
+n£mero de l¡nea. Si son encontrados dentro de una definici¢n de 
+macro/etiqueta, se generar  un error y la definici¢n ser  ignorada (excepto 
+en el caso del espacio/tabulador, que marca el final del nombre; las nombres 
+de etiquetas de l¡nea tambi‚n pueden acabar con ":"); si son encontrados en 
+una referencia a una macro/etiqueta (dentro del texto), marcan el final del 
+nombre de la macro/etiqueta, y el punto en el que contin£a el texto normal.
+
+Algunos ejemplos de lo explicado ("+" y ":" son car cteres prohibidos):
+
+@define MACNAME+ exp(1)  --> ERROR
+@define MACNAME: exp(1)  --> ERROR
+@define MACNAME  exp(1)  --> OK
+...print:a=@MACNAME+34:if... --> OK, el nombre de la macro es MACNAME, el 
+"+" is parte del texto, por tanto: a=exp(1)+34
+
+~labname+ print...	--> ERROR
+123ABC	print...	--> ERROR (es una etiqueta num‚rica)
+~labname: print...	--> OK
+~labname  print...	--> OK
+...print:goto ~labname:if... --> OK, el nombre de la etiqueta es "labname", 
+el ":" es parte del texto.
+
+Los car cteres prohibidos son:
+
+! " # $ % & ' ( ) * + , - . / : ; < = > ? @ [ \ ] ^ { }
+
+Tambi‚n el car cter con c¢digo ASCII 127, y todos los car cteres con c¢digo 
+ASCII en el rango 0-32, incluyendo el espacio y el tabulador.
+
+
+* Directivas de NestorPreTer
+
+Los siguientes son los nombres de las directivas de NestorPreTer, y no pueden 
+ser usados como nombres de macro:
+
+DEFINE
+ENDBASIC
+LINE
+MACRO
+REMOFF
+REMON
+SPACEOFF
+SPACEON
+
+Nota: NestorPreTer nunca distingue entre may£sculas y min£sculas cuando trata 
+directivas, por tanto no puedes usar por ejemplo @EndBasic como nombre de 
+macro aunque hayas especificado la opci¢n de distinguir may£sculas y 
+min£sculas en el proceso (opci¢n /C1, ver secci¢n 3).
+
+
+* Instrucciones de n£mero de l¡nea
+
+Las siguientes son las instrucciones BASIC que NestorPreTer reconoce como 
+relacionadas con n£meros de l¡nea. Cuando un n£mero es encontrado en el 
+texto, se comprueba si hay una de estas instrucciones situada inmediatamente 
+antes; si es as¡, el n£mero es interpretado como una etiqueta num‚rica y es 
+sustitu¡do por su n£mero de l¡nea asociado en el fichero de salida.
+
+Si falta alguna instrucci¢n de n£mero de l¡nea en esta lista significa que no 
+est  implementada en NestorPreTer, por tanto el fichero de salida generado 
+puede ser err¢neo. En este caso contacta con el autor (yo) y dime qu‚ 
+instrucci¢n he olvidado, para solucionar el problema.
+
+AUTO
+DELETE
+ELSE
+GOSUB
+GOTO
+LIST
+RENUM
+RESTORE
+RESUME
+RETURN
+RUN
+THEN
+
+
+8. ERRORES
+
+Cuando NestorPreTer encuentra un error mientras procesa el texto de entrada, 
+lo muestra en pantalla, y en el fichero de seguimiento si se especifica la 
+opci¢n /LOG. El formato general de estos errores es:
+
+ERROR in line <lin> [M<niv>] [F]: Mensaje de error.
+
+donde <lin> es la l¡nea f¡sica en la que se ha producido el error. El campo 
+[M<niv>] aparece £nicamente si el error se produce dentro de una macro, esto 
+est  explicado en la secci¢n 8.6. El campo [F] aparece s¢lo cuando el error 
+se produce en una definici¢n de macro situada en el fichero externo de 
+macros.
+
+
+8.1. ERRORES DE INICIALIZACION
+
+Estos errores aparecen antes de que inicie el procesamiento del texto, 
+normalmente son debidos a una especificaci¢n incorrecta de alg£n par metro de 
+entrada. Cuando uno de estos errores aparece, NestorPreTer finaliza su 
+ejecuci¢n; en este caso no son creados el fichero de salida, el fichero LIN 
+ni el fichero LOG, o son creados con longitud cero.
+
+
+* Source file name invalid or not specified
+
+El nombre del fichero de entrada no es un nombre de fichero MSX-DOS v lido, o 
+simplemente no ha sido especificado (por ejemplo, se ha ejecutado NPR /C1).
+
+
+* Invalid input prameter
+
+Un par metro desconocido o inv lido ha sido especificado al ejecutar NPR. En 
+la secci¢n 3 se explica el formato de los par metros de entrada de 
+NestorPreTer.
+
+
+* No mapped memory found
+
+El ordenador no tiene ning£n mapeador de memoria, por tanto NestorPreTer no 
+puede ejecutarse.
+
+
+* No free memory segments found
+
+S¢lo se han encontrado 64K de memoria en el mapeador primario (DOS 1), o tras 
+comprobar todos los slots se han encontrado menos de tres segmentos de RAM 
+libres (DOS 2), por tanto NestorPreTer no puede ejecutarse.
+
+
+* Duplicate filename in input parameters
+
+Dos o m s de los ficheros especificados (entrada, salida, LOG, LIN) tienen el 
+mismo nombre y la misma extensi¢n, por tanto NestorPreTer no puede 
+ejecutarse.
+
+Nota: no puedes especificar nombres duplicados aunque especifiques 
+directorios distintos, por tanto tambi‚n obtendr s este error si haces
+NPR A:FILE.EXT B:\BASIC\FILE.EXT.
+
+Observa que tambi‚n obtendr s este error si haces NPR FILE.BAS, ya que se 
+interpreta que el nombre del fichero de salida es precisamente FILE.BAS (ver 
+secci¢n 3 para una explicaci¢n sobre los valores por defecto de los 
+par metros de entrada). Por la misma raz¢n, tambi‚n producen este error 
+entradas como:
+NPR FILE FILE.ASC
+NPR FILE.LOG /LOG
+etc.
+
+
+* Out/log/lin file already exists and is read-only file
+
+Si el fichero de salida, el de seguimiento o el de etiquetas ya existen, 
+NestorPreTer los borra y crea uno nuevo. Pero si tienen el atributo de s¢lo 
+lectura establecido, no pueden ser borrados y este error es generado.
+
+
+Los errores que MSX-DOS genera al abrir/crear ficheros tambi‚n son 
+considerados errores de inicializaci¢n. Los siguientes son los errores de 
+MSX-DOS que NestorPreTer puede generar:
+
+* Invalid drive/filename, or disk/root directory full
+* Invalid drive/filename, or source file not found
+* Invalid drive
+* Invalid file name
+* Invalid pathname
+* Source file not found
+* Macros file not found
+* Directory not found
+* Root directory full
+* Disk full
+
+Si aparece alg£n error que no est  en esta lista, NestorPreTer mostrar 
+
+* Disk error with DOS code <c¢digo>
+
+
+8.2. ERRORES AL BUSCAR MACROS
+
+Tras una inicializaci¢n sin errores, NestorPreTer busca definiciones de 
+macros en las primeras 16K del fichero de entrada, y construye una tabla 
+interna en la que constan todas las macros junto con la posici¢n inicial de 
+su cuerpo en el fichero de entrada.
+
+Los siguientes errores pueden aparecer durante este proceso, causando 
+entonces que la definici¢n de la macro sea ignorada. Observa que cuando el 
+campo [F] aparece en un mensaje de error de este tipo, el n£mero de l¡nea 
+mostrado hace referencia al fichero externo de macros, y no al fichero 
+fuente. 
+
+
+* Invalid character in macro name
+
+Un car cter prohibido ha sido encontrado formando parte del nombre de la 
+macro. En la secci¢n 7 tienes una lista de los car cteres prohibidos.
+
+
+* Macro name too long (>255 characters)
+
+El nombre de la macro es demasiado largo. La m xima longitud permitida para 
+nombres de macro es 255 car cteres.
+
+
+* Reserved word used as macro name
+
+Una directiva de NestorPreTer ha sido especificada como nombre de macro. En 
+la secci¢n 7 tienes una lista de las directivas de NestorPreTer, que no 
+pueden ser usadas como nombres de macro.
+
+
+* Empty macro name and body
+
+Una l¡nea conteniendo s¢lo "@MACRO" o "@DEFINE" ha sido encontrada. Es 
+obligatorio especificar un nombre de macro y un cuerpo, ver secci¢n 6.5.
+
+
+* Empty macro body
+
+Una l¡nea conteniendo s¢lo "@MACRO nombre" o "@DEFINE nombre" ha sido 
+encontrada. Es obligatorio especificar un nombre de macro y un cuerpo, ver 
+secci¢n 6.5.
+
+
+* Duplicate macro name
+
+El nombre de macro especificado ya ha sido usado en una definici¢n de macro 
+previa. Nota: las macros definidas en el fichero externo de macros no pueden 
+volver a ser definidas en el fichero fuente, y viceversa. Por tanto, si 
+obtienes este error y todo parece correcto en cada fichero por separado, 
+compru‚balos juntos y comp ralos.
+
+
+* 16K limit reached - macro ignored
+
+La posici¢n 16384 del fichero de entrada ha sido encontrada dentro de una 
+definici¢n de macro (es decir, el nombre o el cuerpo de la macro cruzan esta 
+posici¢n), por lo que la macro es ignorada; todas las macros situadas m s 
+all  de este l¡mite son simplemente ignoradas sin generar ning£n error. 
+Recuerda que todas las definiciones de macros deben estar situadas en las 
+primeras 16K del fichero de entrada.
+
+
+8.3. ERRORES AL BUSCAR ETIQUETAS DE LINEA
+
+Tras buscar todas las definiciones de macros, NestorPreTer recorre todo el 
+fichero de entrada buscando l¡neas que empiecen con una etiqueta, y construye 
+una tabla interna en la que constan todas las etiquetas encontradas junto con 
+su correspondiente n£mero de l¡nea.
+
+Los siguientes errores pueden aparecer durante este proceso, causando 
+entonces que la etiqueta sea ignorada:
+
+
+* Invalid character in line label name
+
+Un car cter prohibido ha sido encontrado formando parte del nombre de la 
+etiqueta. En la secci¢n 7 tienes una lista de los car cteres prohibidos.
+
+
+* Non-numeric characters in a numeric label name
+
+Se han encontrado car cteres no num‚ricos formando parte de un nombre de 
+etiqueta num‚rica. Recuerda que en las etiquetas num‚ricas (las que no 
+empiezan con un car cter "~") s¢lo se permiten n£meros, todos los dem s 
+car cteres son car cteres prohibidos.
+
+
+* Line label too long (>255 characters)
+
+El nombre de la etiqueta es demasiado largo. La m xima longitud permitida 
+para nombres de etiqueta es 255 car cteres.
+
+
+* Duplicate line label
+
+El nombre de la etiqueta especificado ya ha sido usado en una definici¢n de 
+etiqueta previa.
+
+
+* Invalid parameter in @LINE command
+
+La directiva @LINE debe usarse con uno de los siguientes formatos (ver 
+secci¢n 6.3 para m s detalles):
+
+@LINE <lin>,<inc>
+@LINE <lin>
+@LINE ,<inc>
+
+donde <lin> e <inc> son n£meros en el rango 0-65536. El uso de @LINE con 
+cualquier otro formato de par metros provocar  este error, causando que la 
+directiva sea ignorada y la numeraci¢n no cambie.
+
+
+* Can't set BASIC line number lower than current one
+
+El nuevo n£mero de l¡nea BASIC especificado en la directiva @LINE es menor 
+que el n£mero en curso, por tanto no puede ser establecido y la directiva es 
+ignorada.
+
+
+8.4. ERRORES AL PROCESAR EL TEXTO
+
+Una vez que todas las macros y etiquetas de l¡nea han sido examinadas, 
+NestorPreTer recorre de nuevo todo el fichero de entrada, generando esta vez 
+el fichero de salida. Durante este proceso pueden aparecer los siguientes 
+errores:
+
+
+* Undefined macro name
+
+Se ha hecho referencia a una macro cuyo nombre no est  en la lista de macros 
+previamente construida. Esto puede deberse a cuatro razones:
+
+- Simplemente has olvidado definir la macro.
+- Has definido "MACRONAME" pero has hecho referencia a "MacroName", con 
+diferencias respecto a las may£sculas y min£sculas; esto puede ocurrir s¢lo 
+si has especificado la opci¢n /C1 al ejecutar NestorPreTer (ver secci¢n 3).
+- Se encontr¢ un car cter prohibido en el nombre de la macro al definirla, 
+por tanto se gener¢ un error "Invalid macro name" y la definici¢n de la macro 
+fue ignorada. En la secci¢n 7 tienes una lista de car cteres prohibidos.
+- La macro est  correctamente definida, pero la definici¢n est  situada m s 
+all  de las primeras 16K del fichero de entrada. Las definiciones de macros 
+deben estar situadas en las primeras 16K del fichero de entrada, recuerda 
+esto cuando encuentres este error y todo parezca correcto.
+
+Cuando aparece este error, la referencia a la macro es ignorada, por tanto es 
+mejor descartar el fichero de salida ya que no funcionar  como estaba 
+previsto.
+
+
+* Undefined line label name
+
+Se ha hecho referencia a una etiqueta de l¡nea cuyo nombre no est  en la 
+lista de etiquetas previamente construida. Esto puede deberse a tres razones:
+
+- Simplemente has olvidado definir la etiqueta.
+- Has definido "LABELNAME" pero has hecho referencia a "LabelName", con 
+diferencias respecto a las may£sculas y min£sculas; esto puede ocurrir s¢lo 
+si has especificado la opci¢n /C1 al ejecutar NestorPreTer (ver secci¢n 3).
+- Se encontr¢ un car cter prohibido en el nombre de la etiqueta al definirla, 
+por tanto se gener¢ un error "Invalid label name" o "Non-numeric characters 
+in a numeric line label" y la definici¢n de la etiqueta fue ignorada. En la 
+secci¢n 7 tienes una lista de car cteres prohibidos.
+
+Cuando aparece este error, la referencia a la etiqueta es ignorada, por tanto 
+es mejor descartar el fichero de salida ya que no funcionar  como estaba 
+previsto.
+
+
+* NestorPreTer command found in a BASIC line
+
+Una directiva de NestorPreTer que no es @SPACEON o @SPACEOFF ha sido 
+encontrada pero no est  al principio de la l¡nea f¡sica, por lo que es 
+ignorada. En la secci¢n 7 tienes una lista de las directivas de NestorPreTer.
+
+
+8.5. ERRORES FATALES
+
+Los errores fatales son aquellos que imposibilitan la continuaci¢n del 
+proceso de conversi¢n, causando que el proceso sea abortado en su totalidad. 
+Al contrario que los errores de inicializaci¢n, los errores fatales s¡ 
+aparecen en el fichero de seguimiento, si se ha especificado /LOG.
+
+
+* Memory for macros and line labels exhausted
+
+NestorPreTer usa la memoria disponible para almacenar tablas internas con 
+todos los nombres de etiquetas y macros que encuentra en el fichero de 
+entrada. Este error es generado si la memoria disponible no es suficiente 
+para almacenar todas las etiquetas y macros encontradas.
+
+
+* BASIC line number overflow
+
+El n£mero de l¡nea BASIC ha alcanzado o superado el valor 65535, por tanto no 
+es posible generar m s l¡neas BASIC.
+
+
+* Macro recursivity overflow
+
+Se ha intentado hacer referencia a una macro desde dentro de otra, cuando 
+esto ya se ha hecho 127 veces. Este error tambi‚n aparecer  si una macro hace 
+referencia a s¡ misma en su cuerpo (por ejemplo @MACRO name @name), entrando 
+as¡ en un bucle infinito.
+
+
+* Source file is not an ASCII format file
+
+El primer car cter del fichero de entrada tiene el c¢digo ASCII 255, por 
+tanto el fichero es probablemente un programa MSX-BASIC que no ha sido 
+grabado en formato ASCII. Los programas MSX-BASIC que hayan de ser usados 
+como ficheros de entrada de NestorPreTer han de ser grabados en formato ASCII 
+(save"name",a).
+
+
+* Errors were found, can't execute target program
+
+Esto no es exactamente un error fatal, aparecer  despu‚s de que todo el texto 
+haya sido procesado si se especific¢ la opci¢n /B1 pero se han encontrado 
+errores durante el proceso. Cuando se encuentran errores, el programa 
+generado probablemente no actuar  como estaba previsto, por tanto es mejor no 
+ejecutarlo; consecuentemente, aparece este error y el programa no es 
+ejecutado.
+
+
+8.6. ERRORES DENTRO DE MACROS
+
+Cuando se encuentra un error dentro del cuerpo de una macro, el n£mero de 
+l¡nea f¡sica que muestra el mensaje de error no es el de la l¡nea que 
+contiene la definici¢n de la macro, sino el de la l¡nea en la que se hizo 
+referencia a la macro en el primer nivel. Por ejemplo, si tenemos:
+
+'Estas son las l¡neas f¡sicas 15,16 y 17:
+@define MACRO1	print"1A":@MACRO2:print"1B"
+@define MACRO2	print"2A":@MACRO3:print"2B"
+@define MACRO3	print"3A":@remoff:print"3B" '--> ­­Aqu¡ hay un error!!
+
+...
+
+'Esta es la l¡nea f¡sica 134:
+print"Vamos all ":@MACRO1:print"­Hecho!"
+
+aqu¡ la l¡nea del error no es la 17 ni la 16 ni la 15, sino la 134.
+
+Esto puede hacer que la b£squeda del error sea dif¡cil, por esta raz¢n los 
+mensajes de error que se refieran a errores generados en el cuerpo de una 
+macro tendr n un campo adicional, con el formato [M<niv>], indicando en <niv> 
+el nivel de recursividad que se hab¡a alcanzado al generarse el error. As¡ 
+pues, en el ejemplo anterior el error generado es:
+
+ERROR in line 134 [M3]: NestorPreTer command found in a BASIC line.
+
+Observa que cuando en un mensaje de error aparecen juntos los campos [M<niv>] 
+y [F], el n£mero de l¡nea mostrado hace referencia al fichero fuente y no al 
+fichero externo de macros.
+
+
+9. TRUCOS Y COSAS VARIAS
+
+- Si quieres que NestorPreTer use par metros por defecto diferentes a los que 
+tiene establecidos internamente, simplemente has de ejecutarlo a trav‚s de un 
+fichero BAT que contendr  lo siguiente:
+
+npr %1 %2 %3 %4 %5 %6 %7 %8 %9 <nuevos par metros por defecto>
+
+o bien, a trav‚s del siguiente alias si tienes el Command 2.40:
+
+npr %& <nuevos par metros por defecto>
+
+Por ejemplo, si quieres que por defecto sea usado un fichero de macros 
+situado en B:\DOS\NPR.MAC, y que el programa generado sea ejecutado al final 
+del proceso, usa:
+
+npr %& /mac:B:\DOS\NPR.MAC /b1
+
+As¡, si no especificas ning£n par metro MAC o B, ser n usados estos nuevos 
+par metros por defecto; y si los especificas, se usar n los que especifiques, 
+y los nuevos par metros por defecto ser n ignorados. Este m‚todo siempre 
+funcionar  correctamente, ya que cuando NestorPreTer encuentra par metros de 
+entrada duplicados simplemente usa el primero e ignora los dem s, sin generar 
+ning£n error.
+
+
+- Ten presente que NestorPreTer simplemente procesa el texto de la forma 
+explicada, sin comprobar que se cumpla ninguna regla BASIC. En otras 
+palabras, un proceso correcto (sin errores) no garantiza que el programa 
+generado act£e como estaba previsto ni garantiza que no genere errores BASIC; 
+simplemente garantiza que el fichero de entrada ha sido correctamente 
+convertido a un fichero que puede ser cargado desde MSX-BASIC.
+
+
+- No olvides que existe una longitud m xima para las l¡neas de los programas 
+MSX-BASIC, es de 255 car cteres; por tanto vigila la longitud de las l¡neas 
+cuando escribas el c¢digo de entrada, sobre todo si usas indentaci¢n (en este 
+caso es m s dif¡cil ver la longitud real de las l¡neas). Si el fichero de 
+salida tiene alguna l¡nea con m s de 255 car cteres (incluyendo el n£mero de 
+l¡nea), MSX-BASIC generar  un error "Direct statement in file" al cargarlo.
+
+
+- Tu programa ser  interpretado por MSX-BASIC, y MSX-BASIC necesita que las 
+instrucciones est‚n separadas con dos puntos (":"). Al usar indentaci¢n es 
+muy f cil escribir lo siguiente sin caer en el error:
+
+~	instrucci¢n1: instrucci¢n2
+	instrucci¢n3
+	instrucci¢n4: instrucci¢n5
+
+El resultado ser 
+
+10 instrucci¢n1:instrucci¢n2instrucci¢n3instrucci¢n4:instrucci¢n5
+
+La forma correcta de hacer esto es:
+
+~	instrucci¢n1: instrucci¢n2:
+	instrucci¢n3:
+	instrucci¢n4: instrucci¢n5
+
+Por supuesto, los dos puntos no son necesarios con instrucciones 
+IF-THEN-ELSE:
+
+~	if a=3 then
+		?"A es 3":
+		end
+	else
+		?"A no es 3":
+		end
+
+
+- Otro error f cil de cometer es olvidar el car cter "@" precediendo los 
+nombres de macro en las referenias. ­Ten cuidado!
+
+
+- Si el programa BASIC generado tiene l¡neas mezcladas (c¢digo que deber¡a 
+aparecer en l¡neas separadas aparece en una £nica l¡nea), o si parte del 
+c¢digo desaparece sin raz¢n aparente, busca marcas ESPACIO+CR inservibles al 
+final de las l¡neas f¡sicas involucradas en el fichero de entrada. Es muy 
+f cil generar estas marcas inintencionadamente al usar un editor de textos.
+
+
+- Una aplicaci¢n bastante interesante de las macros es la de otorgar nombres 
+m s legibles a las variables BASIC de uno o dos car cteres, as¡ como a 
+constantes. Por ejemplo:
+
+@define FALSE 0
+@define TRUE -1
+@define PI 3.1416
+
+@define @FILA x
+@define @COLUMNA y
+@define @Max_FILA x1
+@define @Max_COLUMN y1
+...
+
+
+- O mejor, olvida las variable simples y usa una matriz de datos en la que 
+centralizar s todas las variables:
+
+dim d(50)
+@define @FILA d(0)
+@define @COLUMNA d(1)
+@define @Max_FILA d(2)
+@define @Max_COLUMNA d(3)
+...
+
+Una matriz grande ocupa menos memoria BASIC que muchas variables simples, 
+adem s esto te permite grabar un bloque de variables en la memoria mapeada y 
+recuperarlas despu‚s, usando la funci¢n de NestorBASIC "transferencia de 
+datos entre segmentos RAM":
+
+'Graba fila, columna, max_fila y max_columna en la memoria mapeada
+
+~	p(0)=255:	'Segmento fuente = memoria BASIC
+	p(1)=varptr(d(0)):	'Direcci¢n fuente = matriz D, dato 0
+	p(2)=any segment:	'Segmento de destino
+	p(3)=any address:	'Dir. se destino en el segmento de destino
+	p(4)=8: 	'4 enteros = 8 bytes
+	e=usr(10)	'Funci¢n de transferencia de un bloque de datos
+
+Para una descripci¢n detallada de las funciones de NestorBASIC y de c¢mo usa 
+‚ste la memoria, ‚chale una ojeada al manual del NestorBASIC.
+
+
+- Muchas veces he o¡do "NestorBASIC est  bien, pero es muy inc¢modo el hecho 
+de que las funciones se identifiquen con n£meros y no con nombres". 
+NestorPreTer proporciona una soluci¢n a este problema: s¢lo tienes que 
+definir como macros las funciones que quieres usar. Por ejemplo:
+
+@define RDVRAM 13	'Lee un byte de VRAM
+@define RDVRAMI 14	'Lee un byte de VRAM con incremento de la direcci¢n
+@define RDVRAM2 15	'Lee un entero de VRAM
+@define RDVRAMI2 16	'Lee un entero de VRAM con incremento de la direcci¢n
+
+p(0)=0 : p(1)=&h34 : e=usr(@RDVRAM)
+
+O mejor:
+
+@define RDVRAM e=usr(13)       'Lee un byte de VRAM
+@define RDVRAMI e=usr(14)      'Lee un byte de VRAM con inc. de la direcci¢n
+@define RDVRAM2 e=usr(15)      'Lee un entero de VRAM
+@define RDVRAMI2 e=usr(16)     'Lee un entero de VRAM con inc. de la dir.
+
+p(0)=0 : p(1)=&h34 : @RDVRAM
+
+La mejor forma de hacer esto es usar un fichero externo de macros en el que 
+est‚n definidas todas las funciones de NestorBASIC como macros. Y por 
+supuesto tambi‚n puedes usar macros para dar nombre a los par metros de 
+entrada y salida p(n).
+
+
+- Echale un vistazo al fichero NBAS.ASC, es un ejempo interesante del uso 
+conjunto de NestorPreTer y NestorBASIC.
+
+
+- Ahora que puedes permit¡rtelo: ­no ahorres comentarios! Hay una gran 
+diferencia entre
+
+'*
+'* Subrutina de salida de datos. Entra: DS,DN,DT; Sale: E,DR
+'*
+
+y
+
+'********************************
+'*                              *
+'* SUBRUTINA DE SALIDA DE DATOS *
+'*                              *
+'********************************
+'
+' Entrada:  @DATA_START = Puntero al primer dato
+'           @DATA_NUM   = N£mero de datos a visualizar
+'           @DATA_LPT   = Salida a impresora si es @TRUE
+'
+' Salida: @ERROR = C¢digo de error (no hay error si es @FALSE):
+'                  @INV_START: Puntero al primer dato inv lido
+'                  @EMPTY: No hay datos para visualizar
+'                  @PRN_NOTREADY: Impresora no preparada
+'         @DATA_REM: Datos que quedan
+
+Si programas en ensamblador sabr s perfectamente de qu‚ estoy hablando.
+
+
+- Te recomiendo que uses siempre indentaci¢n, ya que as¡ tendr  un aspecto 
+claro y agradable de leer, algo como esto:
+
+~LABEL1: c¢digo: c¢digo: c¢digo: c¢digo: 'Comentario
+	 c¢digo: c¢digo: c¢digo
+
+~	 c¢digo: c¢digo: c¢digo: c¢digo: 'Nueva l¡nea
+	 c¢digo: c¢digo
+
+~LABEL2  c¢digo: c¢digo: c¢digo: c¢digo:
+	 c¢digo: c¢digo
+
+~	 gosub ~SUBNAME
+
+'Subrutina
+
+~SUBNAME: c¢digno: c¢digo: c¢digo:
+	  c¢digo: c¢digo
+Return
+
+
+10. ESTADO DEL PROGRAMA, CONTACTO CON EL AUTOR
+
+Esta es la tercera versi¢n de NestorPreTer, la 0.3. Tienes informaci¢n sobre 
+los cambios realizados sobre cada versi¢n en el fichero NPRESP.REV.
+
+Esta versi¢n contin£a siendo una alfa. Esto significa que puede tener (y 
+probablemente tiene) fallos que no he podido detectar a£n, ya no no he podido 
+hacer pruebas exhaustivas (no puedo imaginarme todas las posibles condiciones 
+de entrada, y no tengo tiempo de ponerme a generar c¢digo de prueba como un 
+poseso). Particularmente, el funcionamiento bajo DOS 1 y con ficheros de 
+entrada grandes (m s de 16K) no ha sido muy probado. Por favor, usa 
+NestorPreTer tanto como puedas/quieras, y si encuentras alg£n error, 
+escr¡beme indicando:
+
+- Descripci¢n lo m s detallada posible del error.
+- Tu versi¢n del DOS, y cu nta memoria tienes.
+- Una copia de los ficheros de entrada, salida y seguimiento.
+- Cualquier sugerencia que tengas.
+
+Puedes encontrarme en konamiman@geocities.com. Siempre puedes encontrar la 
+£ltima versi¢n de NestorPreTer, as¡ como otros programas bastante majos (todo 
+gratis) en mi p gina web:
+
+http://konamiman.msx.tni.nl
+
+Y, bueno, no es imprescindible, pero si quieres escribirme s¢lo para decir 
+"tu programa es realmente bueno", pues me har s muy feliz. 8-)
+
+Gracias por usar NestorPreTer. ­Que lo disfrutes con salud!
+
+

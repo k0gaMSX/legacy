@@ -1,0 +1,2 @@
+10 POKE-1,((PEEK(-1)XOR255)AND&HF0) * (256/240)
+20 BLOAD"soccer.bin",R

@@ -1,0 +1,3203 @@
+NestorBASIC versi¢n 0.06 (­beta!)
+Por N‚stor Soriano (Konami Man), Junio 1.998
+
+
+1. ¨QUE ES NESTORBASIC?
+
+NestorBASIC es un paquete de rutinas en c¢digo m quina, integrado en un £nico 
+fichero, destinado a los programadores en BASIC, gracias a las cuales se 
+dispone, sin perder la compatibilidad con el Turbo-BASIC, de:
+
+- Acceso a toda la memoria mapeada del ordenador (a toda la memoria libre en 
+caso de tener DOS 2), hasta 4 Mb.
+- Acceso a toda la VRAM, con intercambio de bloques de datos entre ‚sta y 
+RAM. 
+- Almacenamiento de diversos programas BASIC en la memoria mapeada, con 
+posibilidad de pasar de uno a otro sin perder las variables.
+- Acceso a ficheros de disco y acceso directo a sectores, con 
+lectura/escritura directamente a/de la memoria mapeada y VRAM. B£squeda de 
+ficheros, gesti¢n de directorios.
+- Compresi¢n/descompresi¢n de gr ficos.
+- Reproducci¢n de m£sica MoonBlaster. Carga de samplekits.
+- Reproducci¢n de efectos de sonido PSG.
+- Ejecuci¢n de rutinas en c¢digo m quina, de la BIOS o contenidas en un 
+segmento.
+
+Todas estas funciones son accesibles a trav‚s de un £nico USR y una matriz 
+entera de par metros, por lo que pueden usarse sin problemas desde dentro de 
+turbo bloques. De hecho, el propio XBASIC est  incluido en el fichero de las 
+rutinas, y se carga autom ticamente al cargar ‚stas.
+
+Las rutinas se cargan en un segmento de RAM oculto al BASIC, y s¢lo se 
+requiere un espacio de unos 500 bytes en la memoria principal del BASIC para 
+una rutina de salto. El resto queda libre para el programador.
+
+* Notas a la versi¢n 0.01 (mayo del 97). Esta es la primera beta, y s¢lo 
+dispone de las funciones de acceso a RAM y VRAM.
+
+Como todas las betas, puede que tenga alg£n fallo; en particular, no la he 
+podido probar en un Turbo-R, y ya sabes lo raros que pueden llegar a ser 
+estos bichos en cuestiones de compatibilidad... ­toquemos silicio! Tampoco he 
+podido echar mano de un MSX con 64K de VRAM, ni a ninguno con m s de 4M de 
+RAM.
+
+Por supuesto, el programador (yo) se reserva el derecho de modificar sobre la 
+marcha todo lo que le venga en gana de NestorBASIC, mientras vaya sacando 
+betas. En particular, la funci¢n 1 (obtenci¢n de informaci¢n) tiene todos los 
+n£meros para cambiar en el futuro. Avisado est s...
+
+Las betas est n para fallar, y yo estoy aqu¡ para capturar fallos y 
+arreglarlos. Si te interesa NestorBASIC, te agradecer¡a que probaras las 
+betas que vayas recibiendo y me notificaras los fallos que detectes (mi 
+direcci¢n est  al final del fichero). Tambi‚n, ya puestos, se admiten 
+sugerencias.
+
+* Notas a la versi¢n 0.02 (junio del 97). ­Yeah! Segunda beta, con las 
+funciones de acceso a ficheros y directorios. Otros cambios:
+
+- Ahora las funciones de acceso a VRAM devuelven -1 si se intenta acceder a 
+las 64K superiores y el ordenador s¢lo dispone de 64K de VRAM.
+- Arreglado un fallo que imped¡a el uso de segmentos VRAM en las funciones 21 
+y 22.
+- La zona residente aumenta en 200 bytes, para poder albergar un FCB y las 
+dos variables de cadena F$(0) y F$(1).
+- Ahora es posible liberar la memoria ocupada por la parte residente, 
+mediante una opci¢n de la funci¢n 0 (desinstalaci¢n).
+- Que nadie diga que no avis‚: la funci¢n 1 ha sufrido cambios.
+- Este texto tambi‚n ha sido tocado; adem s de la explicaci¢n sobre las 
+funciones de ficheros, he a¤adido una lista de errores y una explicaci¢n 
+sobre el l¡mite en el uso de CLEAR, y he corregido el ejemplo de la funci¢n 
+23 que no era muy correcto que digamos.
+
+* Notas a la versi¢n 0.03 (octubre del 97). Bueeeno, tras esta larga pausa 
+(parece mentira, cuando tengo vacaciones es cuando menos programo) aqu¡ est  
+la tercera beta, que incorpora las siguientes funciones nuevas (n£mero 52 en 
+adelante):
+
+- Dentro del bloque de funciones de disco, la funci¢n de tratamiento de una 
+ruta de acceso.
+- Funciondes para compresi¢n y descompresi¢n de gr ficos.
+- Funciones para cargar, grabar o ejecutar un programa BASIC almacenado en un 
+segmento de RAM.
+- Funciones varias: ejecuci¢n de rutinas en c¢digo m quina, almacenamiento de 
+cadenas en RAM e impresi¢n de una cadena en modo gr fico.
+
+Esta vez no he corregido ninguna funci¢n ya existente, porque no he 
+encontrado ning£n fallo y tampoco he recibido ninguna notificaci¢n al 
+respecto (­Eh, "betatesters"! ¨D¢nde estais?). Cambios en la documentaci¢n (o 
+sea, este texto) y cambios de planes:
+
+- Olvidaos de la ejecuci¢n de comandos del VDP. Demasiada complicaci¢n para 
+una mejora de velocidad que ser¡a m¡nima en comparaci¢n con el comando COPY 
+usado adecuadamente desde el Turbo-BASIC.
+- Corregido un fallo en la explicaci¢n de las funciones 24 y 25: el tama¤o 
+m ximo de la zona es 16K (no 64K), y hay que usar el truco de la funci¢n 23 
+par zonas mayores de 16K (no de 32K).
+- Cambio en los planes iniciales en lo que se refiere a la ejecuci¢n de 
+programas BASIC almacenados en la RAM mapeada. Sin entrar en detalles, la 
+consecuencia de este cambio es que el segmento conectado en la p gina 2 ser  
+siempre el 4, sin que pueda ser cambiado; por tanto el par metro P(8) de la 
+funci¢n 1 siempre valdr  4. He cambiado todas las referencias a la movilidad 
+del segmento de la p gina 2 en este texto.
+- No he encontrado la raz¢n, pero el caso es que NestorBASIC no funciona en 
+Turbo-R con ampliaci¢n de memoria externa en modo DOS 1... no es un fallo muy 
+grave, ya que los TR tienen el DOS 2 interno; lo m s gracioso es que si se da 
+el caso, la rutina de instalaci¢n devuelve el error 4, que es precisamente el 
+£nico c¢digo que me quedaba libre. As¡ pues, aunque sea de forma 
+involuntaria, la "futura aplicaci¢n" del error 4 queda cubierta, se siente.
+- No me pegu‚is, ya eh cambiado el nombre de la funci¢n 32, de "cerradura" a 
+"cierre".
+- He a¤adido un consejillo a la explicaci¢n de la funci¢n 33, referente a 
+lecturas hasta el final del fichero.
+- Corregido un error en la explicaci¢n de la funci¢n 42. Evidentemente, una 
+llmada a la misma con P(1)=2, P(2)=0 y P(3)=0 no dejar  el puntero del 
+fichero inalterado.
+- Esto se sale un poco del tema, pero en fin: he cambiado mi direcci¢n de 
+correo electr¢nico a konamiman@geocities.com.
+
+Correcciones de fallos aparte, y a no ser que nadie me sugiera nada, 
+NestorBASIC ya est  completo, a falta "s¢lo" de las funciones de reproducci¢n 
+musical (presiento que esta parte me va a costar...) Bueno, a ver si me dices 
+qu‚ te parece c¢mo va quedando la cosa, ­que no me como a nadie! Recuerda: mi 
+direcci¢n al final de este texto.
+
+* Notas a la versi¢n 0.04 (noviembre del 97). No, todav¡a no he implementado 
+las funciones de reproducci¢n de m£sicas. Lo que esta versi¢n tiene de nuevo 
+es:
+
+- Funciones de control del modo de parpadeo ("blink") en SCREEN 0
+- Posibilidad de definir una rutina CM que ser  llamada en cada interrupci¢n 
+del reloj
+- Funciones para reproducir efectos de sonido PSG creados con el SEE 3.xx de 
+Fuzzy Logic
+- Posibilidad de usar algunas de las rutinas internas de NestorBASIC desde 
+las rutinas ejecutadas con la funci¢n 59. Se incluye una descripci¢n de las 
+mismas en uno de los ap‚ndices (­Qu‚ mayor que se est  volviendo este texto, 
+ya con ap‚ndices y todo!)
+
+En cuanto a los cambios, son tales que estos:
+
+- Correci¢n en la explicaci¢n de la funci¢n 61: la cadena a almacenar SI 
+puede contener el car cter 34, pero NO el 0.
+- El programa BASIC a ejecutar o activar con la funci¢n 55 o 56 ahora puede 
+comenzar en cualquier direcci¢n del segmento en el que se haya, y no 
+necesariamente en la 0.
+- El n£mero m ximo de segmentos que NestorBASIC reservar  pasa de 240 a 247.
+- Esta version de NestorBASIC ya carga en Turbo-R con DOS 1, pero puede haber 
+problemas si se usan procesos controlados por interrupciones (interrupciones 
+de usuario, efectos de sonido o, en pr¢ximas versiones, reproducci¢n de 
+m£sica)
+
+Es mi intenci¢n a¤adir, adem s de la reproducci¢n de m£sicas, funciones para 
+reproducci¢n y grabaci¢n de PCMs... ¨lo conseguir‚?
+
+* Notas a la versi¢n 0.05 (diciembre del 97). ­S¡! ­­Aqu¡ est  la primera 
+beta con reproductor musical!! De momento, s¢lo Moonblaster 1.4 (paciencia). 
+Las funciones 71 en adelante son nuevas; tambi‚n he a¤adido una nueva funci¢n 
+ejecutable desde las rutinas de usuario, que devuelve informaci¢n sobre la 
+m£sca en curso. He a¤adido una nueva secci¢n, la 8, con una explicaci¢n 
+general sobre el reproductor.
+
+De nuevo me ha tocado descubrir fallos por mi cuenta. He aqu¡ los cambios en 
+la quinta beta de NestorBASIC:
+
+- Arreglado un fallo en las funciones de lectura de disco, que imposibilitaba 
+la lectura correcta cuando el segmento de destino correspond¡a a VRAM.
+- La funci¢n de ejecuci¢n de programas BASIC ahora tambi‚n admite segmentos 
+VRAM como fuente del programa a ejecutar.
+- Arreglado un fallo en la funci¢n de transferencia entre segmentos l¢gicos, 
+que daba problemas a la hora de transferir datos entre el segmento 255 y los 
+segmentos correspondientes a VRAM.
+
+Los cambios en la documentaci¢n, aparte de las adiciones relativas al 
+reproductor musical, son:
+
+- Corregido uno de los par metros de salida en la explicaci¢n de las 
+funciones de lectura y escritura de sectores: "P(3) = P(3)*512 si P(6)<>0" ha 
+sido corregido a "P(3) = P(3)+P(4)*512 si P(6)<>0".
+- Al pasar de la beta 0.03 a la 0.04 modifiqu‚ la funci¢n de ejecuci¢n de un 
+programa BASIC, de forma que hab¡a que especificar la direcci¢n inicial del 
+programa en P(1); pero no modifiqu‚ el ejemplo, en el que dicha 
+especificaci¢n no se hac¡a. Ya est  corregido.
+- He a¤adido, como un ap‚ndice, una tabla de referencia r pida con la 
+especificaci¢n de todas las funciones y su n£mero asociado.
+- En la explicaci¢n sobre los segmentos VRAM he a¤adido una lista de lo que 
+NO se puede hacer con ellos.
+
+La pr¢xima beta incorporar  los reproductores de Moonblaster para OPL4.
+
+* Notas a la versi¢n 0.06 (junio del 98). Mas vale tarde que muy tarde: aqu¡ 
+est  la sexta beta, con el reproductor de Moonblaster para Moonsound como 
+hab¡a prometido... pero s¢lo la versi¢n wave (la 1.05). Otras correcciones y 
+cambios:
+
+- Cambios en la funci¢n 71 (inicializaci¢n del reproductor):
+  * A¤adido el par metro de entrada P(0), para seleccionar el reproductor a 
+cargar.
+  * Ahora NestorBASIC no comprueba si el reproductor ya est  cargado, sino 
+que lo carga incondicionalmente.
+  * Ahora NestorBASIC recuerda la ruta (unidad+directorio) del fichero 
+NBASIC.BIN, por tanto no es necesario que este fichero se encuentre en el 
+directorio actual para ejecutar la funci¢n.
+- Cambios en la funci¢n 77 (desvanecimiento de una m£sica):
+  * Ahora devuelve los resultados correctos aunque no haya ninguna m£sica 
+sonando.
+  * Cuando el desvanecimiento est  congelado, el valor devuelto en P(0) es 
+ahora -1, y no 255.
+- A¤adido el par metro de salida P(13) en la funci¢n 72 (informaci¢n sobre 
+la m£sica en reproducci¢n).
+- En la funci¢n 73 (activaci¢n/desactivaci¢n de los chips musicales), el 
+par mtero de entrada para invertir el estado de un chip es ahora -1, y no 3.
+- Suprimidos los par metros de salida, P(2) a P(4), en la funci¢n 74 (inicio 
+de la reproducci¢n de una m£sica).
+- A¤adida la funci¢n 79: Carga de un wavekit de Moonsound.
+- A¤adido el par metro de salida F$(0) en la funci¢n 1 (obtenci¢n de 
+informaci¢n general sobre NestorBASIC).
+- Corregidas algunas funciones de cambio de segmento: ahora las funciones 
+normales de NestorBASIC funcionan correctamente en los Turbo-R con ampliaci¢n 
+externa bajo DOS 1, pero a£n puede dar problemas con las interrupciones.
+- Arreglado un fallo en las rutinas de tratamiento de las cadenas F$(), que 
+hac¡a que las funciones llamadas desde dentro de un turbobloque usaran las 
+cadenas definidas fuera de ‚l.
+
+En cuanto a la documentaci¢n en s¡, tenemos los siguientes cambios:
+
+- Tambi‚n a prop¢sito de F$ he ampliado la secci¢n 4.1, cuya lectura 
+recomiendo.
+- En la descripci¢n de la funci¢n 26 (b£squeda de ficheros), se da una 
+descripci¢n m s detallada del funcionamiento de P(11).
+- En la descripci¢n de la funci¢n 66 (ejecuci¢n de una interrupci¢n de 
+usuario), se menciona que la interrupci¢n ha de estar ensamblada en la p gina 
+2, cosa que antes se ten¡a que deducir.
+- La secci¢n 8 (explicaci¢n general sobre los reproductores musicales) ha 
+sido ampliada con informaci¢n sobre el nuevo reproductor.
+- Las descripciones sobre las funciones 71 a 77 han sido modificadas de 
+acuerdo con los cambios explicados antes. Se ha a¤adido la descripci¢n de la 
+funci¢n 79.
+
+Estoy pensando si incluir la versi¢n FM del reproductor de Moonblaster para 
+Moonsound, porque la verdad... ¨lo usa alguien hoy en d¡a? Admito opiniones y 
+sugerencias (como siempre, vamos). En fin, que en todo caso la pr¢xima beta 
+incluir  una versi¢n m s moderna del reproductor Wave (la versi¢n 1.08, si no 
+sale otra por el camino), y pretendo a¤adirle funcionalidades extra al 
+reproductor. Y salvo imprevistos, ser  la £ltima beta antes de la versi¢n 
+definitiva.
+
+* Notas a la versi¢n 0.07 (julio del 98). Esta versi¢n no incluye 
+caracter¡sticas nuevas, pero s¡ unas cuantas correcciones de fallos que, de 
+nuevo, me ha tocado encontrar a m¡ solito:
+
+- De nuevo, las rutinas de transferencia de datos entre segmentos han sido 
+corregidas. Se acabaron los problemas con el segmento 255, y se acabaron los 
+"Type mismatch" al usar la funci¢n 62 fuera de turbo bloques (espero).
+- Ahora la funci¢n 26 (b£squeda de ficheros) devuelve P(11)=0, y no 1, cuando 
+no encuentra ning£n fichero en la primera b£squeda.
+- Ahora NestorBASIC usa la zona de VRAM que comienza en #0A00, y no la zona 
+estandar en #0800, para el modo de parpadeo en SCREEN 0. De esta forma, es 
+posible usar el modo de parpadeo en el modo de 26.5 l¡neas de SCREEN 0, sin 
+que aparezca ro¤a en la £ltima l¡nea.
+- Por la misma raz¢n, el n£mero m ximo de l¡nea especificable en la funci¢n 
+64 (construcci¢n de un bloque parpadeante) es ahora 27, y no 23.
+- La funci¢n 75 (detenci¢n de la m£sica) ya no cuelga el ordenador cuando no 
+hay ning£n reproductor cargado.
+- Los par metros de salida P(12) y P(13) de la funci¢n 72 (obtenci¢n de 
+informaci¢n sobre una m£sica en reproducci¢n) son ahora correctos.
+- Ahora la funci¢n 1 devuelve, en P(8), el n£mero de la £ltima funci¢n 
+llamada. Util para tratamiento de errores.
+- A¤adida la variable REPTYPE en la direcci¢n #4164 del segmento de 
+NestorBASIC, que indica el tipo de reproductor cargado. Ver ap‚ndice 2.
+
+Los cambios en el fichero de documentaci¢n son:
+
+- Los par metros de entrada fuente y destino en la descripci¢n de la funci¢n 
+21 estaban intercambiados. Ahora son correctos.
+- La rutina GINFOMUS comienza en #4161, y no en #4162 como se indicaba en el 
+ap‚ndice 2. Esto se ha corregido.
+- El bit 3 de INT_DATA inidica si hay una m£sica Wave en reproducci¢n. Esto 
+se indica ahora en la descripci¢n del ap‚ndice 2.
+- Evidentemente, la rutina WRITE_SL escribe un dato en un segmento, no lo 
+lee. La descripci¢n en el ap‚ndice 2 ha sido corregida.
+
+La pr¢xima beta tendr  la versi¢n 1.1 del reproductor MoonBlaster Wave 
+(espero). A£n no me he decidido con respecto al reproductor FM...
+
+
+2. REQUERIMIENTOS Y CARGA
+
+NestorBASIC funciona en cualquier MSX2/2+/TR con al menos 128K de RAM 
+mapeada. En el caso del DOS 2 ha de haber al menos un segmento libre en el 
+mapeador primario (dos si se van a usar los reproductores musicales. Ver 
+seccion 8 para m s detalles).
+
+Cargar NestorBASIC es tan f cil como hacer BLOAD"NBASIC.BIN",R, sin necesidad 
+de ning£n CLEAR ni ning£n DEFUSR ni antes ni despu‚s de la carga. Si no ha 
+habido ning£n error ha ocurrido lo siguiente:
+
+- NestorBASIC y el Turbo-BASIC se han instalado en sendos segmentos de RAM, 
+quedando ambos listos para su uso.
+- La memoria disponible para el BASIC se ha reducido en unos 500 bytes, que 
+han sido ocupados por una rutina de salto al segmento del NestorBASIC.
+- El primer USR [USR0(parametro) o simplemente USR(parametro)] apunta a la 
+rutina de salto. Ser  el gancho de llamada a las funciones de NestorBASIC.
+- Se ha creado la matriz entera P, de 15 elementos. Esta matriz se usar  para 
+pasar par metros a y devolver los resultados de las funciones de NestorBASIC, 
+excepto los c¢digos de error, que ser n devueltos a trav‚s del comando USR 
+(las funciones de acceso a ficheros y las de tratamiento de cadenas tambi‚n 
+usan una matriz de cadenas, que hay que definir por separado; m s detalles en 
+la secci¢n 4). Los cinco primeros elementos de P han sido inicializados como 
+sigue:
+
+P(0) = N£mero de segmentos de RAM disponibles, o c¢digo de error
+P(1) = Versi¢n principal de NestorBASIC
+P(2) = Versi¢n secundaria de NestorBASIC, en formato BCD (visualizar en 
+formato hexadecimal)
+P(3) = Versi¢n principal de MSX-DOS
+P(4) = Versi¢n secundaria de MSX-DOS, en formato BCD (visualizar en 
+formato hexadecimal)
+
+El n£mero de segmentos de RAM disponibles siempre ser  5 como m¡nimo. Un
+n£mero inferior indica un error que ha impedido la instalaci¢n:
+
+0: El ordenador no tiene memoria mapeada, o s¢lo tiene 64K de memoria 
+mapeada.
+1: Error de disco al intentar leer NestorBASIC o el Turbo-BASIC del fichero.
+2: No hay ning£n segmento libre en el mapeador primario. Este error s¢lo 
+puede aparecer bajo DOS 2.
+3: NestorBASIC ya estaba instalado. Las variables han sido inicializadas.
+4: Futuras aplicaciones (dedicado a mis fans)
+
+Tras la instalaci¢n de NestorBASIC es posible reservar memoria para otras 
+rutinas residentes mediante el procedimiento habitual, es decir, el uso de la 
+instrucci¢n CLEAR para especificar el inicio de la zona reservada. Sin 
+embargo, debido a que NestorBASIC realiza cambios de slot/segmento en la 
+p gina 2 y el int‚rprete BASIC sit£a la pila en una zona anterior a la zona 
+de cadenas y a la zona reservada por el usuario, existe un l¡mite inferior 
+para la direcci¢n a especificar en el comando CLEAR. Es decir, no se puede 
+reservar memoria por debajo de la direcci¢n indicada por la siguiente 
+f¢rmula:
+
+&HC000 + (MAXFILES+1)*267 + FRE("") + 100
+
+Tambi‚n hay que tener tener en cuenta que la instrucci¢n CLEAR, as¡ como la 
+carga de otro programa BASIC, borran las variables. En ese caso habr  que 
+volver a definir la matriz de par metros (DEFINT P:DIM P(15), esto ha de 
+hacerse fuera de turbo-bloques) y, si es necesario, la matriz F (justo 
+despu‚s del inicio del turbo-bloque en caso de usar turbo-BASIC) para poder 
+seguir usando las funciones de NestorBASIC:
+
+10 'save"autoexec.bas"
+20 BLOAD"nbasic.bin",R:IF P(0)<5 THEN PRINT "Error!":END
+30 CLEAR 100:DEFINT P:DIM P(15)
+40 _TURBO ON(P())
+50 DIM F$(1) 'Para las funciones de acceso a ficheros. Ver secci¢n 4.
+...
+65000 _TURBO OFF
+65010 RUN"next.bas"
+
+10 'save"next.bas"
+20 DEFINT P:DIM P(15)
+30 _TURBO ON(P())
+...
+65000 _TURBO OFF
+
+Tambi‚n hay que tener en cuenta que NestorBASIC siempre utiliza el primer USR 
+como gancho de llamada, por lo que no debe modificarse. USR1 a USR9 quedan 
+libres.
+
+
+3. SEGMENTOS LOGICOS
+
+3.1. ¨QUE ES UN SEGMENTO LOGICO?
+
+La memoria RAM mapeada de los MSX se estructura en segmentos de 16K. Cada 
+slot de RAM contiene un n£mero S de segmentos (0 a S-1), accesibles mediante 
+su conexi¢n al espacio de direcci¢namiento por medio de los puertos #FC a 
+#FF, previo establecimiento del slot correspondiente.
+
+Al instalarse, NestorBASIC busca toda la RAM mapeada utilizable (toda la 
+existente en el caso del DOS 1, s¢lo la libre en el caso del DOS 2) y 
+construye una tabla en la que constan todos los segmentos encontrados y el 
+slot en el que se encuentran. Cada pareja slot-segmento se identifica con su 
+n£mero de orden en la tabla. Este n£mero se denomina n£mero de segmento 
+l¢gico, y permite al usuario manejar toda la RAM disponible de forma ordenada 
+y sin preocuparse del slot o slots en que se encuentra.
+
+Por ejemplo, supongamos un MSX con 128K de memoria interna (8 segmentos), y 
+1024K (64 segmentos) en un slot externo. Una vez instalado NestorBASIC en 
+este ordenador, y suponiendo DOS 1, el usuario dispone de 72 segmentos 
+l¢gicos numerados de 0 a 71, y no tiene m s que indicar este n£mero en las 
+funciones correspondientes de NestorBASIC cuando quiera usarlos. En ning£n 
+momento se manejan n£meros de slot o segmento "f¡sico".
+
+El rango de direcciones de un segmento l¢gico (simplemente "segmento" a 
+partir de ahora) es #0000 a #3FFF. Si se especifican direcciones superiores 
+ser n transformadas al rango adecuado al ejecutarse la funci¢n, es decir, las 
+direcciones #4000-#7FFF, #8000-#BFFF y #C000-#FFFF equivalen a #0000-#3FFF.
+
+Todos los segmentos pueden ser le¡dos y escritos, pero existen importantes 
+restricciones con respecto a los seis primeros:
+
+- El segmento 0 contiene el propio NestorBASIC, y s¢lo queda libre para el 
+usuario una peque¤a zona al final del mismo. La direcci¢n inicial de dicha 
+zona puede averiguarse con la funci¢n 1 (ver listado de funciones).
+- El segmento 1 contiene el Turbo-BASIC. S¢lo puede ser modificado si no se 
+va a usar el compilador.
+- El segmento 2 es usado como b£fer por algunas funciones de NestorBASIC. 
+Puede ser escrito sin peligro, pero los datos aqu¡ guardados no est n 
+seguros.
+- El segmento 3 est  permanentemente conectado a la p gina 3 (direcciones 
+#C000 a #FFFF), y contiene la zona de trabajo del sistema y algunas de las 
+variables del programa BASIC. Peligros¡simo escribir aqu¡ sin estar seguro de 
+lo que se hace.
+- El segmento 4 est  conectado a la p gina 2 (direcciones #8000 a #BFFF), 
+siendo por tanto el que alberga el programa BASIC en ejecuci¢n y parte de las 
+variables del mismo.
+- Si existe, el segmento 5 est  inicialmente libre, y no es usado por 
+NestorBASIC. Pero si se inicializan los los reproductores musicales, ‚stos 
+quedan cargados en este segmento. Ver secci¢n 8 para m s detalles.
+
+El resto de segmentos quedan totalmente a disposici¢n del programador.
+
+Al usar las funciones de intercambio de bloques hay que tener cuidado de no 
+sobrepasar la direcci¢n #3FFF al sumar la direcci¢n de destino y al longitud 
+del bloque a transferir (por ejemplo, no hacer una transferencia de longitud 
+#2000 usando como direcci¢n de destino #3000), ya que en estos casos se 
+invade el segmento 0 o el 3 y los resultados son impredecibles.
+
+
+3.2. USO DE LA VRAM COMO SEGMENTOS LOGICOS
+
+Para facilitar el uso de la VRAM como almac‚n de datos, ‚sta tambi‚n es 
+accesible mediante el uso de segmentos l¢gicos: si NestorBASIC indica que hay 
+S segmentos disponibles, los segmentos 0 a S-1 son RAM mapeada, y los 
+numerados como S a S+7 o S a S+3 se refieren a la VRAM (seg£n la capacidad 
+del ordenador, 128K o 64K).
+
+Volviendo al ordenador del ejemplo anterior, tras instalar NestorBASIC o tras 
+usar la funci¢n 1 (ver listado de funciones) se obtiene P(0)=72. Entonces, 
+suponiendo 128K de VRAM, los segmentos 72 a 79 se refieren a la VRAM.
+
+La correspondencia entre segmentos y direcciones VRAM es tal que los 
+segmentos con n£mero m s alto se refieren a las direcciones VRAM m s bajas, 
+de forma que los £ltimos segmentos corresponden a la zona de visualizaci¢n en 
+pantalla cuando se trabaja en modo texto o con s¢lo una p gina en modo 
+gr fico. Esto evita al programador tener que estar atento para saltarse el 
+segmento correspondiente a la zona de visualizaci¢n.
+
+Siguiendo con el ejemplo anterior, si el programa funciona en SCREEN 0 (s¢lo 
+se usan las primeras 16K de VRAM), los segmentos disponibles para guardar 
+datos son del 4 al 78. En cambio, usando SCREEN 7 y s¢lo la p gina 0 (las 
+primeras 64K de VRAM usadas), el rango de segmentos utilizables es 4 a 75.
+
+Por supuesto, tambi‚n hay funciones espec¡ficas para acceder a la VRAM e 
+intercambiar datos entre ‚sta y cualquier segmento, o un fichero.
+
+ATENCION: Los segmentos VRAM pueden usarse igual que los segmentos normales 
+para almacenar datos y programas BASIC, y para realizar transferencias entre 
+segmentos o entre un segmento y un fichero/sectores, pero NO para los 
+siguentes prop¢sitos:
+
+- Compresi¢n/descompresi¢n de gr ficos
+- Ejecuci¢n de una rutina de usuario
+- Ejecuci¢n de una interrupci¢n de usuario
+- Reproducci¢n de una efecto de sonido PSG
+- Reproducci¢n de una m£sica
+
+Cualquier intento de usar los segmentos VRAM para estos fines har  que las 
+funciones correspondientes devuelvan un error de segmento inexistente.
+
+
+3.3. EL SEGMENTO 255
+
+El n£mero de segmento l¢gico 255 tiene una funci¢n especial. No se refiere a 
+ning£n segmento de RAM o VRAM en particular, sino a la memoria normal del 
+BASIC, es decir, las direcciones #8000 a #FFFF (sin que se aplique aqu¡ la 
+restricci¢n ni la conversi¢n de direcciones de los segmentos normales), que 
+contienen el programa BASIC, las variables y la zona de trabajo del sistema. 
+Esto es especialmente £til para intercambiar datos entre un segmento y una 
+matriz:
+
+ 1 'Traspaso de 10 bytes del segmento 7, direcci¢n inicial #1000,
+ 2 'a la matriz de enteros D.
+ 3 '(Ver descripci¢n de las funciones)
+ 4 '
+10 DEFINT D:DIM D(4) '5 datos enteros = 10 bytes
+20 P(0)=7	     'Segmento de origen
+30 P(1)=&H1000	     'Direcci¢n inicial de origen
+40 P(2)=255	     'Segmento de destino=memoria principal
+50 P(3)=VARPTR(D(0)) 'Direcci¢n inicial de destino=matriz D
+60 P(4)=10	     'Longitud
+70 J=USR(10)	     'Llamada a la funci¢n 10 (transferencia entre segmentos)
+
+
+3.4. MAPA DE SEGMENTOS
+
+Como resumen, he aqu¡ la lista de segmentos disponibles y su descripci¢n. S 
+es el n£mero de segmentos devuelto en P(0) al instalar NestorBASIC o al usar 
+la funci¢n 1.
+
+0: Segmento de NestorBASIC
+1: Segmento del Turbo-BASIC
+2: Segmento b£fer
+3: Memoria del BASIC, p gina 3 (#C000-#FFFF)
+4: Memoria del BASIC, p gina 2 (#8000-#BFFF)
+5 a S-1: RAM Disponible para el programador (si S>5)
+   Si se inicializan los reproductores musicales,
+   ‚stos quedan cargados en el segmento 5
+S:   VRAM, direcciones #1C000-#1FFFF (64K VRAM: #C000-#FFFF)
+S+1: VRAM, direcciones #18000-#1BFFF (64K VRAM: #8000-#BFFF)
+S+2: VRAM, direcciones #14000-#17FFF (64K VRAM: #4000-#7FFF)
+S+3: VRAM, direcciones #10000-#13FFF (64K VRAM: #0000-#3FFF)
+S+4: VRAM, direcciones #0C000-#0FFFF (no disponible con 64K VRAM)
+S+5: VRAM, direcciones #08000-#0BFFF (no disponible con 64K VRAM)
+S+6: VRAM, direcciones #04000-#07FFF (no disponible con 64K VRAM)
+S+7: VRAM, direcciones #00000-#03FFF (no disponible con 64K VRAM)
+
+S+8 a 254: No disponibles (si S+8<255)
+255: Memoria del BASIC (#8000-#FFFF)
+
+
+3.5. ERRORES
+
+Todas las funciones de acceso a segmentos y/o VRAM devuelven el error -1 si 
+se especifica un segmento inexistente, o si se intenta acceder a una 
+direcci¢n VRAM superior a #FFFF en un ordenador con £nicamente 64K de VRAM.
+
+
+4. ACCESO A FICHEROS
+
+NestorBASIC incorpora funciones para el manejo de ficheros y el acceso a 
+otras funciones del MSX-DOS, concretamente:
+
+* Creaci¢n/borrado/renombrado/b£squeda de ficheros.
+* Lectura/escritura de ficheros a/desde cualquier segmento o zona de VRAM.
+* Bajo DOS 2, movimiento y obtenci¢n/establecimiento de atributos para un 
+fichero.
+* Lectura/escritura de sectores a/desde cualquier segmento o zona de VRAM.
+* Obtenci¢n/establecimiento de la unidad/directorio (bajo DOS 2) por defecto.
+* Obtenci¢n de la capacidad y espacio libre de un disco.
+* Bajo DOS 2, obtenci¢n de la capacidad/establecimiento del RAM disk.
+
+
+4.1. LA MATRIZ F$
+
+Para el paso de nombres de fichero y de directorio, estas funciones emplean 
+una matriz de cadenas, F$. Cuatro de ellas (b£squeda, renombrado y movimiento 
+de ficheros, y tratamiento de una ruta de acceso) emplean dos cadenas, por lo 
+que necesitan que F$ se haya definido con dos elementos [DIM F$(1)]. Las 
+dem s funciones s¢lo necesitan una cadena, por lo que si no se va a usar 
+niguna de esas cuatro se puede definir F$ con un solo elemento [DIM F$(0)]. 
+Esto es especialmente recomendable en caso de usar Turbo-BASIC, pues dentro 
+de los turbo-bloques cada cadena emplea 256 bytes de memoria, sea cual sea su 
+longitud. 
+
+Tambi‚n hay que tener en cuenta que la matriz F$ se ha de definir 
+inmediatamente despu‚s del comienzo del turbo bloque:
+
+1000 _TURBO ON(P())
+1010 DIM F$(1) o DIM F$(0)
+...
+65000 _TURBO OFF
+
+IMPORTANTE: Las variables de cadena definidas fuera de un turbobloque, al 
+igual que el resto de variables, no son traspasadas al mismo, y se recuperan 
+a su finalizaci¢n. Por ejemplo:
+
+10 A$="Fuera"
+20 _TURBO ON
+30 A$="Dentro":PRINT A$
+40 _TURBO OFF
+50 PRINT A$
+run
+Dentro
+Fuera
+
+NestorBASIC mantiene esta propiedad, pero las cadenas F$() requieren una 
+precauci¢n adicional. Si se ha usado la matriz F$ fuera del turbobloque y va 
+a definirse dentro del mismo, hay que insertar la siguiente l¡nea antes del 
+CALL TURBO ON:
+
+F$(0)=F$(0)+"":F$(1)=F$(1)+""
+
+Esta precauci¢n no es necesaria si no se tiene inter‚s en conservar el 
+contenido de F$ anterior al turbobloque, o si no se va a definir F$ dentro 
+del mismo.
+
+Otra limitaci¢n de F$(0) y F$(1) es que su longitud m xima es de 80 
+car cteres; los car cteres sobrantes ser n ignorados por las funciones de 
+NestorBASIC que tengan estas cadenas como par metros de entrada. Todas estas 
+limitaciones no se presentan para ¡ndices superiores a 1 si se define F$ con 
+m s elementos (es decir, es posible definir F$ con m s de dos elementos y 
+usar F$(2), F$(3)... normalmente).
+
+
+4.3. ERRORES
+
+Adem s del error -1, explicado en 3.5, las funciones de acceso a ficheros 
+tienen tambi‚n sus propios c¢digos de error.
+
+Los siguientes errores s¢lo aparecen bajo DOS 1:
+
+1: Error general del MSX-DOS 1. Puede deberse a varias causas:
+   - Fichero no encontrado.
+   - Nombre de fichero incorrecto.
+   - El fichero ya existe (al intentar renombrar).
+   - Unidad inexistente (formando parte de un nombre de fichero).
+   - Final de fichero encontrado al hacer una lectura del mismo.
+   - Disco lleno.
+   - Directorio ra¡z completo.
+   - Funci¢n no disponible bajo DOS 1.
+Hay que tener en cuenta que bajo DOS 2 cada uno de estos errores tiene un 
+c¢digo de error espec¡fico, que en ning£n caso es el 1.
+
+2: N£mero de fichero incorrecto (no se ha asignado ese n£mero a ning£n 
+fichero abierto).
+3: Hay demasiados ficheros abiertos. El n£mero m ximo de ficheros que pueden 
+abrirse simult neamente bajo DOS 1 puede consultarse mediante la funci¢n 1.
+
+Los siguientes errores son comunes al DOS 1 y al DOS 2, y tienen el mismo 
+c¢digo que sus equivalentes BASIC:
+
+60: FAT incorrecta.
+62: Unidad inexistente (al intentar cambiar la unidad por defecto).
+68: Disco protegido contra escritura.
+69: Error f¡sico en el disco.
+70: No hay disco.
+
+Los errores propios del DOS 2 son:
+
+222: No hay memoria libre para crear el RAM disk o para abrir el fichero.
+219: Unidad inexistente (formando parte de una ruta/nombre de fichero)
+218: Nombre de fichero incorrecto.
+217: Ruta incorrecta.
+215: Fichero no encontrado.
+214: Directorio no encontrado.
+213: Directorio ra¡z lleno.
+212: Disco lleno.
+211: El fichero ya existe (al intentar renombrar o mover).
+210: Movimiento de directorio incorrecto (se ha intentado mover un directorio 
+a uno de sus descendientes).
+209: Fichero de s¢lo lectura (al intentar escribir).
+208: El directorio no est  vac¡o (al intentar borrarlo).
+207: Atributos inv lidos (al intentar cambiarlos).
+206: Operaci¢n incorrecta sobre las entradas "." o ".."
+205: Existe un fichero de sistema con ese nombre (al crear un fichero o 
+directorio se borra el preexistente, excepto si es de sistema).
+204: Existe un directorio con ese nombre (lo mismo que con los ficheros de 
+sistema).
+203: Existe un fichero con ese nombre (al intentar crear un directorio).
+202: El fichero est  abierto (al intentar borrarlo, renombrarlo, moverlo, o 
+cambiar sus atributos especificando directamente el nombre del fichero).
+199: Se ha llegado al final del fichero (al leer del mismo).
+196: Demasiados ficheros abiertos (al intentar abrir uno).
+195: N£mero de fichero incorrecto (mayor de 63).
+194: N£mero de fichero incorrecto (no se ha asignado ese n£mero a ning£n 
+fichero abierto).
+188: El RAM disk ya existe (al intentar crearlo).
+187: El RAM disk no existe (al intentar borrarlo).
+
+
+5. COMPRESION Y DESCOMPRESION DE GRAFICOS
+
+NestorBASIC incorpora funciones paraa la compresi¢n de gr ficos de VRAM a 
+RAM, y su descompresi¢n de RAM a VRAM. El formato de compresi¢n es el que 
+utiliza Sunrise (o al menos utilizaba) en la rutina de aparici¢n de su 
+logotipo, trabaja por bytes y es el siguiente:
+
+- Bytes sin repetir (hasta 63):
+
+  &B00nnnnnn &Hdd .. &Hdd
+
+  &Bnnnnnn es el n£mero de bytes, &Hdd son los bytes
+
+- Byte repetido hasta 63 veces:
+
+  &B01nnnnnn &Hdd
+
+  &Bnnnnnn es el n£mero de repeticiones, &Hdd es el byte
+
+- Byte repetido hasta 16383 veces:
+
+  &B10nnnnnn &Bnnnnnnnn &Hdd
+
+  &Bnnnnnnnnnnnnnn es el n£mero de repeticiones, &Hdd es el byte
+
+- Marca de final de los datos:
+
+  &B11000000 = &HC0
+
+La (des)compresi¢n se realiza a trav‚s de segmentos consecutivos; es 
+decir, tras (des)comprimir de/a la posici¢n #3FFF del segmento S, se contin£a 
+con la posici¢n #0000 del segmento S+1.
+
+
+5.1 ERRORES
+
+Los errores que pueden devolver las rutinas de compresi¢n y descompresi¢n de 
+gr ficos son:
+
+-1: Error al comprimir o descomprimir. No existe el segmento o la direcci¢n
+    VRAM especificadas en los par metros de entrada, o bien el segmento
+    especificado corresponde a VRAM o es el 255 (segmentos no utilizables
+    por estas funciones).
+ 5: Error al comprimir. No hay segmentos suficientes para comprimir toda
+    la imagen.
+ 6: Error al descomprimir. Se ha encontrado un dato incorrecto, o se han
+    acabado los segmentos.
+
+
+6. ALMACENAMIENTO DE PROGRAMAS BASIC EN RAM
+
+NestorBASIC incorpora funciones que permiten el almacenamiento de programas 
+BASIC en cualquier segmento de RAM o VRAM, y la activaci¢n o la ejecuci¢n de 
+los mismos manteniendo intactas las variables del programa original (el que 
+realiza el salto al nuevo).
+
+MUY IMPORTANTE: Para poder usar estas funciones hay que cambiar la direcci¢n 
+de comienzo de los programas BASIC, originalmente #8000, a #8003; esto ha de 
+hacerse s¢lo una vez, ANTES de cargar NestorBASIC. Hay dos formas de realizar 
+este cambio:
+
+- En modo directo, teclear lo siguiente:
+
+POKE &HF676,4
+POKE &H8003,0
+NEW
+
+- Desde un programa BASIC. Esta es la mejor opci¢n, ya que puede ser el mismo 
+programa que cargue NestorBASIC. La primera l¡nea del programa ha de ser como 
+sigue:
+
+1 'programa.bas
+10 IF PEEK(&HF676)<>4 THEN POKE &HF676,4:POKE &H8003,0:RUN"programa.bas"
+20 'A partir de aqu¡ ya se puede cargar NestorBASIC
+
+Cuando un programa almacenado en un segmento va a ser activado o ejecutado, 
+NestorBASIC guarda las variables y las matrices en el segmento 2; 
+posteriormente copia el programa del segmento deseado a la memoria normal del 
+BASIC, y coloca las variables antes guardadas al final del mismo, tras lo 
+cual actualiza los punteros apropiados de la zona de trabajo. El £ltimo paso 
+es la ejecuci¢n del programa desde la primera l¡nea o bien el salto al modo 
+directo, seg£n la funci¢n usada (ejecuci¢n o activaci¢n).
+
+Para que un programa BASIC pueda ser almacenado en un segmento y 
+posteriormente activado o ejecutado, debe ser almacenado con una cabecera 
+especial con informaci¢n sobre su longitud, imprescindible para poder 
+concatenarle las variables ya existentes. Existe una funci¢n que permite 
+grabar el programa BASIC activo en un fichero con esa cabecera; 
+posteriormente, basta cargar dicho archivo en cualquier segmento con las
+funciones de acceso a disco, y el programa ya estar  listo para ser activado 
+o ejecutado en cualquier momento.
+
+
+6.1 ERRORES
+
+Evidentemente, si se ejecuta la instrucci¢n o l¡nea siguiente al USR que 
+ordena la activaci¢n o ejecuci¢n de otro programa BASIC, nos encontramos ante 
+una situaci¢n de error. Hay dos posibles errores:
+
+- Error -1, si no se existe el segmento especificado. Estas funciones no 
+soportan el segmento 255.
+- Error -2, si la memoria del BASIC es insuficiente para albergar el nuevo 
+programa y las variables. Puede ocurrir si el programa activado o ejecutado 
+es m s largo que el original.
+
+
+7. FUNCIONES VARIAS
+
+En este grupo se engloban funciones que permiten:
+
+- Ejecuci¢n de rutinas en c¢digo m quina de la BIOS.
+- Ejecuci¢n de rutinas de usuario (rutinas en c¢digo m quina almacenadas en 
+segmentos).
+- Almacenamiento y posterior recuperaci¢n de cadenas en segmentos.
+- Impresi¢n de una cadena en modo gr fico.
+- Tratamiento de bloques parpadantes (modo "blink") en SCREEN 0.
+- Definici¢n de una interrupci¢n de usuario (una rutina en c¢digo m quina 
+contenida en un segmento, que ser  ejecutada en cada interrupci¢n del reloj).
+- Ejecuci¢n de efectos de sonido PSG creados con SEE versi¢n 3.xx
+
+Algunas de estas funciones usan una matriz de cadenas, F$, para el paso de 
+par metros, adem s de la matriz P. Ver secci¢n 4 para m s detalles acerca de 
+F$. 
+
+Algunas de las rutinas internas de NestorBASIC pueden ser usadas por las 
+rutinas de usuario y por la interrupci¢n de usuario. En el ap‚ndice 2 se 
+detalla la ubicaci¢n y el funcionamiento de dichas rutinas.
+
+El editor de efectos de sonido SEE ha sido creado por Fuzzy Logic y el uso de 
+los efectos as¡ creados en programas comerciales implica el pago de una 
+peque¤a cantidad de dinero a los autores. M s detalles en el ap‚ndice 4.
+
+
+8. REPRODUCCION DE MUSICAS
+
+8.1. INICIALIZACION DEL REPRODUCTOR
+
+NestorBASIC incorpora un reproductor de m£sicas Moonblaster 1.4 y uno de 
+Moonblaster para MoonSound, versi¢n Wave 1.05.
+
+Dichos reproductores no son cargados autom ticamente cuando NestorBASIC es 
+cargado, dado que por su gran longitud no caben en el segmento de NestorBASIC 
+y ha residir en un segmento aparte. Por tanto, para poder usar un reproductor 
+hay que cargarlo expl¡citamente. S¢lo se puede tener cargado uno a la vez.
+
+La funci¢n 71 se encarga de cargar e inicializar el reproductor deseado, 
+dej ndolo listo para su uso. Dicha funci¢n comprueba si el segmento 5 existe 
+y pertenece al mapeador primario, en cuyo caso carga el reproductor en dicho 
+segmento, que deja de estar disponible para el usuario. Si el segmento 5 no 
+existe, o si existe pero no pertenece al mapeador primario, el reproductor no 
+ser  cargado y la funci¢n devolver  un error.
+
+El fichero NBASIC.BIN contiene dos versiones del reproductor de Moonblaster 
+Wave: una es para ordenadores MSX2/2+ y para el Turbo-R en modo Z80, y la 
+otra es para el Turbo-R en modo R800. En el caso del Turbo-R, NestorBASIC 
+decide qu‚ versi¢n cargar en funci¢n del procesador conectado en el momento 
+de ejecutar la funci¢n 71. Hay que tener en cuenta que si se realiza un 
+cambio de procesador es necesario volver a ejecutar esta funci¢n, ya que la 
+versi¢n Z80 no funciona en modo R800 y la versi¢n R800 introduce en modo Z80 
+un ralentizamiento innecesario del sistema.
+
+Cuando el reproductor es cargado tambi‚n se realiza una b£squeda de chips 
+musicales, y todos los encontrados quedan activos. Ver descripci¢n de la 
+funci¢n 73 para m s detalles sobre la activaci¢n y desactivaci¢n de chips 
+musicales.
+
+
+8.2. FUNCIONALIDADES DEL REPRODUCTOR
+
+Una vez que el reproductor est  cargado, pueden usarse las funciones que 
+NestorBASIC incorpora para:
+
+- Comenzar la reproducci¢n de una m£sica previamente cargada en un segmento 
+(que NO puede ser un segmento VRAM).
+- Detener la reproducci¢n de la m£sica que esta sonando.
+- Pausar/continuar la m£sica que est  sonando.
+- Desvanecer la m£sica que est  sonando, con elecci¢n de la velocidad de 
+desvanecimiento.
+- Obtener informaci¢n sobre la m£sica que est  sonando (segmento y direcci¢n 
+inicial, t¡tulo y samplekit o wavekit, posici¢n y paso actuales).
+- Obtener informaci¢n sobre los chips musicales detectados.
+- Desactivar los chips musicales, de forma que no sean usados aunque hayan 
+sido detectados, y volver a activarlos.
+- Cargar un samplekit de Music Module o un wavekit de MoonSound desde un 
+fichero.
+
+Mientras una m£sica est  sonando pueden usarse todas las funciones de 
+NestorBASIC, incluyendo la reproducci¢n de efectos de sonido y el uso de 
+interrupciones de usuario. Si se desinstala NestorBASIC, la m£sica que est‚ 
+sonando quedar  autom ticamente interrumpida.
+
+El reproductor de Moonblaster 1.4 ocupa s¢lo 4.5K, por lo que el espacio 
+entre las direcciones #1200 y #3FFF del segmento 5 queda libre y puede 
+usarse, por ejemplo, para almacenar la m£sica que va a ser reproducida. Esto 
+no ocurre con el reproductor de Moonblaster Wave, que ocupa la totalidad del 
+segmento 5.
+
+En el caso de m£sicas Moonblaster 1.4, la m£sica ha de estar almacenada en un 
+£nico segmento, por lo que no puede ser mayor de 16K. Las m£sicas Moonblaster 
+Wave pueden estar almacenadas a trav‚s de segmentos consecutivos, como m ximo 
+tres: si al leer datos de una m£sica para su reproducci¢n NestorBASIC llega a 
+la direcci¢n #3FFF de un segmento, continuar  en la direcci¢n 0 del segmento 
+siguiente.
+
+Para cargar una m£sica a trav‚s de segmentos consecutivos se puede usar por 
+ejemplo un listado como este:
+
+1000 'Carga de una musica a traves de segmentos consecutivos,
+1010 'empezando en el segmento S, direccion D
+1020 F$(0)="musica.mwm":P(2)=S:P(3)=D
+1030 E=USR(31):IF E<>0 THEN 10000
+1040 P(4)=&H4000:E=USR(33)
+1050 IF (E<>0 AND E<>1 AND E<>199) THEN 10000
+1060 IF E=0 THEN P(2)=P(2)+1:P(3)=0:GOTO 1040
+1070 E=USR(32):IF E<>0 THEN 10000
+...
+10000 'Rutina de tratamiento del error de disco E
+...
+
+ATENCION: Una m£sica Moonblaster Wave puede comenzar en cualquier direcci¢n 
+de un segmento, siempre que contin£e en el principio del segmento siguiente. 
+Sin embargo al menos los primeros 800 bytes de la m£sica, que contienen la 
+tabla de patrones y diversos punteros, han de estar ¡ntegros en el primer 
+segmento.
+
+
+8.3 ERRORES
+
+Los errores devueltos por las funciones de reproducci¢n musical son:
+
+- Error 7, devuelto por las funciones de establecimiento de chips, de pausa y 
+de desvanecimiento de la m£sica si uno de los par metros de entrada es 
+incorrecto.
+- Error 12, devuelto por las funciones de inicio de una m£sica y 
+activaci¢n/desactivaci¢n de chips si el reproductor no ha sido cargado. El 
+resto de funciones no devueven error en este caso, simplemente no hacen nada.
+
+Los siguientes errores son devueltos por la funci¢n de inicio de una m£sica:
+
+-1: Segmento l¢gico inexistente, correspone a VRAM o es el 255.
+12: Los reproductores no han sido cargados.
+13: La m£sica ha sido grabada en modo EDIT y no puede ser reproducida
+    (reproductor Moonblaster 1.4).
+    En la direcci¢n especificada no hay una m£sica Moonblaster Wave en modo 
+    USER (reproductor Moonblaster Wave).
+14: Ya hay una m£sica en reproducci¢n.
+
+La funci¢n de carga de un wavekit de Moonsound puede devolver el siguiente 
+error, adem s de los errores de las funciones de acceso a disco:
+
+15: En la posic¢n actual del fichero especificado no hay un wavekit
+    Moonblaster, o bien hay un wavekit que no ha sido grabado en modo USER.
+
+NOTA: El reproductor de Moonblaster 1.4 no puede detectar si en la direcci¢n 
+especificada hay realmente una m£sica Moonblaster, y se f¡a £nicamente del 
+byte inicial para decidir si en dicha direcci¢n comienza una m£sica en modo 
+EDIT. El reproductor de Moonblaster Wave no tiene estas limitaciones.
+
+La funci¢n de carga del reproductor devuelve los mismos errores que las 
+funciones de acceso a disco, y el error -1 si el segmento 5 no existe o no 
+pertenece al mapeador primario.
+
+
+9. LAS FUNCIONES DE NESTORBASIC
+
+9.1. DESCRIPCION GENERAL
+
+Las rutinas que componen NestorBASIC, llamadas funciones, se identifican con 
+un n£mero que se pasa como par metro a trav‚s de la instrucci¢n USR. As¡, 
+para usar la funci¢n F basta hacer USR(F), teniendo en cuenta que en caso de 
+usar una variable para especificar la funci¢n ha de ser del tipo entero. Los 
+par metros para las funciones han de ser establecidos en la matriz P (y, dado 
+el caso, en la matriz F) antes de la llamada a la funci¢n. An logamente, los 
+resultados devueltos por la funci¢n se encontrar n en P y/o en F.
+
+Los elementos de P y F que no se mencionan expl¡citamente en la lista de 
+resultados de cada funci¢n no resultan modificados, excepto las direcciones 
+de segmento, que son convertidas al rango #0000-#3FFF si lo sobrepasaban (las 
+direcciones del segmento 255 nunca son convertidas). Salvo que se especifique 
+lo contrario, los par metros de salida no son v lidos en condiciones de error 
+(P y F no resultan modificadas).
+
+El "bloque VRAM" se refiere a las 64K inferiores (bloque 0) o a las 
+64K superiores (bloque 1). Las direcciones VRAM van de #0000 a #FFFF; si la 
+direcci¢n VRAM pasa de #FFFF a #0000 tras un autoincremento, el bloque VRAM 
+tambi‚n se actualiza (si era 0 pasa a 1, si era 1 pasa a 0).
+
+La funci¢n USR devolver  un c¢digo de error, o 0 si no hay error. Los errores 
+espec¡ficos para cada grupo de funciones est n explicados en las secciones 
+correspondientes.
+
+El ap‚ndice 1 contiene una lista de todas las funciones, que puede ser £til 
+como referencia r pida.
+
+
+9.2. FUNCIONES GENERALES
+
+* Funci¢n 0: Desinstalaci¢n de NestorBASIC
+
+Entrada: P(0) = 0 -> No liberar la zona residente
+	 P(0) <>0 -> Liberar la zona residente
+Salida:  -
+
+Inutiliza el USR y, en el caso del DOS 2, libera todos los segmentos que 
+hab¡an sido reservados. Tambi‚n detiene las interrupciones en curso, 
+incluidos efectos de sonido y m£sicas. Es importante llamar a esta funci¢n 
+antes de volver al DOS, ya que en caso contrario la memoria queda retenida y 
+no puede volver a usarse hasta que se reinicia el ordenador.
+
+Antes de desinstalar NestorBASIC hay que asegurarse de no dejar ning£n 
+fichero abierto, pues pueden quedar en los buferes internos del DOS datos 
+perdidos de los ficheros que hayan sido escritos.
+
+Si P(0)=0 a la entrada, la memoria ocupada por la rutina de salto en la zona 
+del BASIC no es liberada, lo que preserva las reservas de memoria hechas por 
+instrucciones CLEAR con posterioridad a la instalaci¢n de NestorBASIC. Si 
+P(0)<>0, la zona reservada (y, por tanto, la cantidad de memoria libre) pasa 
+a ser la misma que hab¡a antes de la instalaci¢n de NestorBASIC, y las 
+variables son inicializadas.
+
+Esta funci¢n nunca devuelve error.
+
+
+* Funci¢n 1: Obtenci¢n de informaci¢n general sobre NestorBASIC y sobre un 
+	     segmento l¢gico
+
+Entrada: P(10)= Segmento l¢gico a investigar
+Salida:  P(0) = N£mero de segmentos de RAM disponibles
+	 P(1) = Versi¢n principal de NestorBASIC
+	 P(2) = Versi¢n secundaria de NestorBASIC, en formato BCD (visualizar
+		en formato hexadecimal)
+	 P(3) = Versi¢n principal de MSX-DOS
+	 P(4) = Versi¢n secundaria de MSX-DOS, en formato BCD (visualizar en
+		formato hexadecimal)
+	 P(5) = Cantidad de memoria ocupada por la rutina de salto
+	 P(6) = Tama¤o de la VRAM en K
+	 P(7) = Direcci¢n inicial de la zona libre en el segmento 0
+	 P(8) = N£mero de la £ltima funci¢n llamada
+	 P(9) = N£mero de ficheros abiertos
+	 P(10)= N£mero m ximo de ficheros abiertos simultaneamente
+		(aplicable s¢lo bajo DOS 1)
+	 P(11)= Slot en el que se encuentra el segmento P(0)
+		(255 si ese segmento no existe o corresponde a VRAM)
+	 P(12)= Segmento f¡sico correspondiente al segmento l¢gico P(0)
+	 F$(0)= Ruta completa del fichero NBASIC.BIN
+
+El n£mero m ximo de ficheros abiertos bajo DOS 2 depende del estado de la 
+memoria interna del DOS, pero nunca ser  mayor de 63.
+
+Esta funci¢n devuelve el error -1 si el segmento especificado en P(0) no 
+existe, corresponde a VRAM o es el 255. Los par metros devueltos en P(0) a 
+P(10) ser n v lidos a£n en caso de error.
+
+Bajo DOS 1, F$(0) contendr  simplemente una unidad y dos puntos, por ejemplo 
+"A:". Bajo DOS 2 contendr  una unidad y un directorio, acabado en "\"; por 
+ejemplo "C:\UTILS\GENIALES\".
+
+P(8) devuelve el n£mero de la £ltima funci¢n llamada, pero la propia funci¢n 
+1 no cuenta. As¡, si se llaman en secuencia, por ejemplo, las funciones 64, 
+3, 10, 1, 1, 1, lo que se obtendr  al final es P(8)=10. Un valor de cero 
+indica que no se ha ejecutado ninguna funci¢n aparte de la 1 desde que se ha 
+instalado NestorBASIC.
+
+
+9.3. FUNCIONES DE ACCESO A SEGMENTOS LOGICOS
+
+* Funci¢n 2: Lectura de un byte de un segmento
+
+Entrada: P(0) = Segmento
+	 P(1) = Direcci¢n
+Salida:  P(2) = Byte le¡do
+
+
+* Funci¢n 3: Lectura de un byte de un segmento
+	     con autoincremento de la direcci¢n
+
+Entrada: P(0) = Segmento
+	 P(1) = Direcci¢n
+Salida:  P(2) = Byte le¡do
+	 P(1) = P(1) + 1
+
+
+* Funci¢n 4: Lectura de un entero (2 bytes) de un segmento
+
+Entrada: P(0) = Segmento
+	 P(1) = Direcci¢n
+Salida:  P(2) = Entero le¡do
+
+El byte bajo del entero es le¡do de P(1), y el byte alto de P(1)+1.
+
+
+* Funci¢n 5: Lectura de un entero (2 bytes) de un segmento
+	     con autoincremento de la direcci¢n
+
+Entrada: P(0) = Segmento
+	 P(1) = Direcci¢n
+Salida:  P(2) = Entero le¡do
+	 P(1) = P(1) + 2
+
+El byte bajo del entero es le¡do de P(1), y el byte alto de P(1)+1.
+
+
+* Funci¢n 6: Escritura de un byte en un segmento
+
+Entrada: P(0) = Segmento
+	 P(1) = Direcci¢n
+	 P(2) = Byte a escribir
+Salida:  -
+
+
+* Funci¢n 7: Escritura de un byte en un segmento
+	     con autoincremento de la direcci¢n
+
+Entrada: P(0) = Segmento
+	 P(1) = Direcci¢n
+	 P(2) = Byte a escribir
+Salida:  P(1) = P(1) + 1
+
+
+* Funci¢n 8: Escritura de un entero (2 bytes) en un segmento
+
+Entrada: P(0) = Segmento
+	 P(1) = Direcci¢n
+	 P(2) = Entero a escribir
+Salida:  -
+
+El byte bajo del entero es escrito en P(1), y el byte alto en P(1)+1.
+
+
+* Funci¢n 9: Escritura de un entero (2 bytes) en un segmento
+	     con autoincremento de la direcci¢n
+
+Entrada: P(0) = Segmento
+	 P(1) = Direcci¢n
+	 P(2) = Entero a escribir
+Salida:  P(1) = P(1) + 2
+
+El byte bajo del entero es escrito en P(1), y el byte alto en P(1)+1.
+
+
+* Funci¢n 10: Transferencia de un bloque de bytes
+	      de un segmento a otro
+
+Entrada: P(0) = Segmento de origen
+	 P(1) = Direcci¢n inicial de origen
+	 P(2) = Segmento de destino
+	 P(3) = Direcci¢n inicial de destino
+	 P(4) = Longitud del bloque
+	 P(5)<> 0 -> Autoincremento de P(1)
+	 P(6)<> 0 -> Autoincremento de P(3)
+Salida:  P(1) = P(1) + P(4) si P(5)<>0
+	 P(3) = P(3) + P(4) si P(6)<>0
+
+P(3)+P(4) debe ser menor de #4000, de lo contrario el resultado es 
+impredecible.
+
+
+* Funci¢n 11: Llenado de una zona de memoria con un byte
+
+Entrada: P(0) = Segmento l¢gico
+	 P(1) = Direcci¢n inicial
+	 P(2) = Byte
+	 P(3) = Longitud de la zona
+Salida:  -
+
+P(1)+P(3) debe ser menor de #4000, de lo contrario el resultado es 
+impredecible.
+
+
+* Funci¢n 12: Llenado de una zona de memoria con un byte
+	      con autoincremento de la direcci¢n
+
+Entrada: P(0) = Segmento l¢gico
+	 P(1) = Direcci¢n inicial
+	 P(2) = Byte
+	 P(3) = Longitud de la zona
+Salida:  P(1) = P(1) + P(3)
+
+P(1)+P(3) debe ser menor de #4000, de lo contrario el resultado es 
+impredecible.
+
+
+9.4. FUNCIONES DE ACCESO A LA VRAM
+
+* Funci¢n 13: Lectura de un byte de la VRAM
+
+Entrada: P(0) = Bloque VRAM
+	 P(1) = Direcci¢n
+Salida:  P(2) = Byte le¡do
+
+
+* Funci¢n 14: Lectura de un byte de la VRAM
+	      con autoincremento de la direcci¢n
+
+Entrada: P(0) = Bloque VRAM
+	 P(1) = Direcci¢n
+Salida:  P(2) = Byte le¡do
+	 P(0):P(1) = P(0):P(1) + 1
+
+
+* Funci¢n 15: Lectura de un entero (2 bytes) de la VRAM
+
+Entrada: P(0) = Bloque VRAM
+	 P(1) = Direcci¢n
+Salida:  P(2) = Entero le¡do
+
+El byte bajo del entero es le¡do de P(1), y el byte alto de P(1)+1.
+
+
+* Funci¢n 16: Lectura de un entero (2 bytes) de la VRAM
+	      con autoincremento de la direcci¢n
+
+Entrada: P(0) = Bloque VRAM
+	 P(1) = Direcci¢n
+Salida:  P(2) = Entero le¡do
+	 P(0):P(1) = P(0):P(1) + 2
+
+El byte bajo del entero es le¡do de P(1), y el byte alto de P(1)+1.
+
+
+* Funci¢n 17: Escritura de un byte en la VRAM
+
+Entrada: P(0) = Bloque VRAM
+	 P(1) = Direcci¢n
+	 P(2) = Byte a escribir
+Salida:  -
+
+
+* Funci¢n 18: Escritura de un byte en la VRAM
+	      con autoincremento de la direcci¢n
+
+Entrada: P(0) = Bloque VRAM
+	 P(1) = Direcci¢n
+	 P(2) = Byte a escribir
+Salida:  P(0):P(1) = P(0):P(1) + 1
+
+
+* Funci¢n 19: Escritura de un entero (2 bytes) en la VRAM
+
+Entrada: P(0) = Bloque VRAM
+	 P(1) = Direcci¢n
+	 P(2) = Entero a escribir
+Salida:  -
+
+El byte bajo del entero es escrito en P(1), y el byte alto en P(1)+1.
+
+
+* Funci¢n 20: Escritura de un entero (2 bytes) en la VRAM
+	      con autoincremento de la direcci¢n
+
+Entrada: P(0) = Bloque VRAM
+	 P(1) = Direcci¢n
+	 P(2) = Entero a escribir
+Salida:  P(0):P(1) = P(0):P(1) + 2
+
+El byte bajo del entero es escrito en P(1), y el byte alto en P(1)+1.
+
+
+* Funci¢n 21: Transferencia de un bloque de bytes
+	      de VRAM a RAM
+
+Entrada: P(0) = Bloque VRAM de origen
+	 P(1) = Direcci¢n inicial de origen (VRAM)
+	 P(2) = Segmento de destino
+	 P(3) = Direcci¢n inicial de destino (RAM)
+	 P(4) = Longitud del bloque
+	 P(5)<> 0 -> Autoincremento de P(1)
+	 P(6)<> 0 -> Autoincremento de P(3)
+Salida:  P(1) = P(1) + P(4) si P(5)<>0
+	 P(2):P(3) = P(2):P(3) + P(4) si P(6)<>0
+
+P(1)+P(4) debe ser menor de #4000, de lo contrario el resultado es 
+impredecible.
+
+
+* Funci¢n 22: Transferencia de un bloque de bytes
+	      de RAM a VRAM
+
+Entrada: P(0) = Segmento de origen
+	 P(1) = Direcci¢n inicial de origen (RAM)
+	 P(2) = Bloque VRAM de destino
+	 P(3) = Direcci¢n inicial de destino (VRAM)
+	 P(4) = Longitud del bloque
+	 P(5)<> 0 -> Autoincremento de P(1)
+	 P(6)<> 0 -> Autoincremento de P(3)
+Salida:  P(1) = P(1) + P(4) si P(5)<>0
+	 P(2):P(3) = P(2):P(3) + P(4) si P(6)<>0
+
+
+* Funci¢n 23: Transferencia de un bloque de bytes
+	      de VRAM a VRAM
+
+Entrada: P(0) = Bloque VRAM de origen
+	 P(1) = Direcci¢n inicial de origen
+	 P(2) = Bloque VRAM de destino
+	 P(3) = Direcci¢n inicial de destino (VRAM)
+	 P(4) = Longitud del bloque (m ximo #4000)
+	 P(5)<> 0 -> Autoincremento de P(1)
+	 P(6)<> 0 -> Autoincremento de P(3)
+Salida:  P(0):P(1) = P(0):P(1) + P(4) si P(5)<>0
+	 P(2):P(3) = P(2):P(3) + P(4) si P(6)<>0
+
+Si P(4) es mayor de #4000 s¢lo se transferir n #4000 bytes, y el incremento 
+de las direcciones se limitar  tambi‚n a #4000, pero P(4) no se modificar . 
+Por tanto, para transferir bloques mayores (hasta 64K) de forma f cil se 
+puede hacer algo como esto:
+
+10 'P(0) a P(3) ya establecidos. Longitud de la transferencia en L.
+20 P(5)=1:P(6)=1
+30 P(4)=VAL("&H"+HEX$(L)):J=USR(23):L=L-&H4000:IF L>0 THEN 30
+
+El paso a hexadecimal y posterior retorno a decimal de L es necesario debido 
+a que el BASIC considera las variables enteras en el rango -32768 a 32767, y 
+una asignaci¢n directa de un n£mero mayor a P(4) dar¡a un error de 
+desbordamiento.
+
+Dado que el Turbo-BASIC trata las variables de coma flotante de forma 
+especial, si se usa este m‚todo dentro de un turbo-bloque es necesario que L 
+sea un m£ltiplo entero de 256.
+
+
+* Funci¢n 24: Llenado de una zona de la VRAM con un byte
+
+Entrada: P(0) = Bloque VRAM
+	 P(1) = Direcci¢n inicial
+	 P(2) = Byte
+	 P(3) = Longitud de la zona (m ximo 16K)
+Salida:  -
+
+Para establecer una longitud mayor de 16K se ha de emplear el truco explicado 
+en la funci¢n 23.
+
+
+* Funci¢n 25: Llenado de una zona de la VRAM con un byte
+	      con autoincremento de la direcci¢n
+
+Entrada: P(0) = Bloque VRAM
+	 P(1) = Direcci¢n inicial
+	 P(2) = Byte
+	 P(3) = Longitud de la zona (m ximo 16K)
+Salida:  P(0):P(1) = P(0):P(1) + P(3)
+
+Para establecer una longitud mayor de 16K se ha de emplear el truco explicado 
+en la funci¢n 23.
+
+
+9.5. FUNCIONES DE ACCESO A FICHEROS
+
+* Funci¢n 26: B£squeda de ficheros
+
+Entrada: F$(1) = M scara de b£squeda (cadena vac¡a="*.*")
+	 P(0)  = 0 -> Buscar primer fichero coincidente con la m scara
+	 P(0)  = 1 -> Buscar los siguientes ficheros
+	 P(1)  = Atributos de b£squeda: 2*H + 4*S + 8*V + 16*D
+		 H = 1 -> Incluir en la b£squeda los ficheros ocultos
+		 S = 1 -> Incluir en la b£squeda los ficheros de sistema
+		 V = 1 -> Buscar s¢lo la etiqueta de volumen del disco
+		 D = 1 -> Incluir en la b£squeda los subdirectorios
+Salida:  F$(0) = Nombre del fichero encontrado
+	 P(0)  = 1
+	 P(1)  = Atributos del fichero encontrado (siempre 0 bajo DOS 1):
+		 R + 2*H + 4*S + 8*V + 16*D + 32*A
+		 R = 1 -> S¢lo lectura
+		 H = 1 -> Oculto
+		 S = 1 -> Sistema
+		 V = 1 -> Etiqueta de volumen
+		 D = 1 -> Subdirectorio
+		 A = 1 -> Archivo
+	 P(2)  = Hora de creaci¢n/modificaci¢n (0 a 23)
+	 P(3)  = Minuto de creaci¢n/modificaci¢n (0 a 59)
+	 P(4)  = D¡a de creaci¢n (1 a 31)
+	 P(5)  = Mes de creaci¢n (1 a 12)
+	 P(6)  = A¤o de creaci¢n (1980 a 2079)
+	 P(7)  = Cluster inicial (2 a 4095)
+	 P(8)  = Unidad l¢gica (0=A:,...,7=H:)
+	 P(9)  = Longitud (parte baja)
+	 P(10) = Longitud (parte alta)
+	 P(11) = 0, si buscando el primero no se ha encontrado ninguno
+		 1, si buscando el primero se ha encontrado alguno
+		 P(11), si buscando siguientes no se ha encontrado ninguno
+		 P(11)+1, si buscando siguientes se ha encontrado alguno
+
+F$(1) puede incluir una unidad y, en el caso del DOS 2, una ruta de acceso; 
+F$(0) contendr  £nicamente el nombre del fichero hallado.
+
+P(0) se debe poner a 0 para buscar la primera entrada coincidente con la 
+m scara especificada, y se debe dejar a 1 para ir buscando las siguientes. 
+Esto lo hace autom ticamente la funci¢n (pone siempre P(0) a 1). Adem s, 
+P(11) se pone a 1 al buscar el primer fichero (a 0 si no se encuentra 
+ninguno) y se incrementa autom ticamente al ir buscando los siguientes; por 
+tanto se puede confeccionar un bucle como este:
+
+10 'B£squeda de todos los ficheros de la unidad B: (directorio por defecto)
+20 F$(1)="B:":P(0)=0:P(1)=2+16 'Busca tambi‚n directorios y f. ocultos
+30 IF USR(26)<>0 THEN PRINT:PRINT"Total hallados:"P(11):END
+40 PRINT F$(0),CHR$(-ASC("h")*((P(1)AND2)<>0));
+	       CHR$(-ASC("d")*((P(1)AND16)<>0));
+	       CHR$(-ASC("a")*((P(1)AND32)<>0)):GOTO 30
+
+Cuando ya no haya m s ficheros/directorios coincidentes la funci¢n devolver  
+el error "Fichero no encontrado". Bajo DOS 1, un error al buscar el primer 
+fichero puede significar tambi‚n que la unidad no existe o el nombre del 
+fichero es incorrecto (bajo DOS 2 estos errores tienen un c¢digo espec¡fico).
+
+Para obtener la longitud del fichero se puede usar la f¢rmula 
+P(9)+65536*P(10). A la hora de mostrar longitudes en pantalla hay que tener 
+en cuenta que el formato de representaci¢n de las variables num‚ricas var¡a 
+de BASIC a Turbo-BASIC para n£meros grandes; lo mejor es representar 
+directamente la longitud en K: INT(P(9)/1024)+64*P(10).
+
+
+* Funci¢n 27: Renombrado de un fichero
+
+Entrada: F$(0) = Fichero
+	 F$(1) = Nuevo nombre del fichero
+Salida:  -
+
+F$(0) puede incluir una unidad y, en el caso del DOS 2, una ruta de acceso; 
+F$(1) £nicamente el nuevo nombre del fichero. Bajo DOS 1 se puede renombrar 
+m s de un fichero a la vez usando comodines, bajo DOS 2 s¢lo uno cada vez.
+
+
+* Funci¢n 28: Borrado de un fichero
+
+Entrada: F$(0) = Fichero
+Salida:  -
+
+F$(0) puede incluir una unidad y, en el caso del DOS 2, una ruta de acceso. 
+Bajo DOS 2 la funci¢n devolver  error si se intenta borrar un fichero 
+abierto. Bajo DOS 1 no habr  error, pero en cualquier caso no es recomendable 
+borrar un fichero abierto, porque un posterior acceso al mismo puede dar 
+resultados impredecibles.
+
+Bajo DOS 1 es posible borrar m s de un fichero a la vez usando comodines, bajo 
+DOS 2 s¢lo uno cada vez.
+
+
+* Funci¢n 29: Desplazamiento de un fichero (DOS 2)
+
+Entrada: F$(0) = Fichero
+	 F$(1) = Nueva localizaci¢n del fichero
+Salida:  -
+
+Esta funci¢n s¢lo est  disponible bajo DOS 2. Bajo DOS 1 siempre devolver  el 
+error 1.
+
+F$(0) puede incluir una unidad y una ruta de acceso. F$(1) no debe incluir el 
+nombre del fichero (que siempre es desplazado con el mismo nombre) ni 
+especificaci¢n de unidad (no es posible desplazar un fichero a otra unidad, 
+s¢lo a otro directorio de la misma unidad). Si se especifica un directorio en 
+lugar de un fichero, tambi‚n ser n desplazados todos sus ficheros y 
+subdirectorios.
+
+
+* Funci¢n 30: Creaci¢n de un fichero o subdirectorio
+
+Entrada: F$(0) = Nombre del fichero o subdirectorio
+	 P(0)  = Atributos de creaci¢n (ignorado bajo DOS 1):
+		 R + 2*H + 4*S para crear un fichero;
+		 2*H + 16 para crear un subdirectorio.
+		 R = 1 -> S¢lo lectura
+		 H = 1 -> Oculto
+		 S = 1 -> Sistema
+
+F$(0) puede incluir una unidad y una ruta de acceso. El fichero ser  creado 
+con una longitud de 0 bytes, y no quedar  abierto: para acceder a ‚l hay que 
+abrirlo expl¡citamente (funci¢n 31).
+
+Bajo DOS 1 s¢lo es posible crear ficheros, y P(0) es ignorado. Bajo DOS 2 los 
+ficheros siempre son creados con el atributo de "Archivo", adem s de los 
+especificados en P(0).
+
+
+* Funci¢n 31: Apertura de un fichero
+
+Entrada: F$(0) = Fichero
+Salida:  P(0)  = N£mero asociado al fichero
+
+F$(0) puede incluir una unidad y, en el caso del DOS 2, una ruta de acceso. 
+El n£mero devuelto en P(0) identifica al fichero y hay que especificarlo 
+posteriormente en las funciones empleadas para acceder al mismo. El valor 
+concreto de este n£mero depende de la versi¢n del DOS y del n£mero de 
+ficheros que ya han sido abiertos y cerrados: nunca debe tomarse como 
+referencia del n£mero de ficheros abiertos (para ello hay que usar la funci¢n 
+1).
+
+Bajo DOS 1 se generar  un error 3 si ya hay demasiados ficheros abiertos. El 
+n£mero m ximo de ficheros que pueden ser abiertos bajo DOS 1 puede 
+consultarse mediante la funci¢n 1.
+
+
+* Funci¢n 32: Cierre de un fichero
+
+Entrada: P(0) = N£mero de fichero
+Salida:  -
+
+Es importante cerrar un fichero que ya no va a ser usado, puesto que de lo 
+contrario, si el fichero ha sido escrito pueden quedar datos perdidos en los 
+buferes internos del DOS, adem s de la entrada de directorio del fichero sin 
+actualizar.
+
+
+* Funci¢n 33: Lectura de un fichero
+
+Entrada: P(0) = N£mero de fichero
+	 P(2) = Segmento de destino
+	 P(3) = Direcci¢n de destino
+	 P(4) = N£mero de bytes a leer
+	 P(6) = Incrementar P(3) si <>0
+Salida:  P(7) = N£mero de bytes le¡dos
+	 P(3) = P(3)+P(4) si P(6)<>0
+
+P(3)+P(4) debe ser menor de #4000, de lo contrario el resultado es 
+impredecible.
+
+El fichero es le¡do a partir de la posici¢n que indique su puntero en ese 
+momento; dicho puntero es incrementado autom ticamente tras la lectura. Para 
+consultar o modificar el puntero de un fichero hay que usar la funci¢n 42.
+
+Para leer hasta el final del fichero, o para leer el fichero entero si es 
+menor de 16K, lo mejor es intentar leer 16K (establecer P(4)=&H4000) e 
+ignorar el error devuelto si ‚ste es el 1 o el #C7: para esta funci¢n, estos 
+errores simplemente indican que se ha leido hasta llegar al final del 
+fichero.
+
+Si se llega al final del fichero antes de haber le¡do P(4) bytes se producir  
+un error; para averiguar cu ntos bytes han podido ser le¡dos basta consultar 
+P(7). Si no hay error, P(7) ser  igual a P(4); si hay un error f¡sico (FAT 
+incorrecta, error f¡sico general o ausencia de disco) P(7) siempre ser  0.
+
+
+* Funci¢n 34: Lectura de un fichero a VRAM
+
+Entrada: P(0) = N£mero de fichero
+	 P(2) = Bloque VRAM de destino
+	 P(3) = Direcci¢n de destino
+	 P(4) = N£mero de bytes a leer (m ximo #4000)
+	 P(6) = Incrementar P(3) si <>0
+Salida:  P(7) = N£mero de bytes le¡dos
+	 P(2):P(3) = P(2):P(3)+P(4) si P(6)<>0
+
+Si P(4) es mayor de #4000 s¢lo se leer n #4000 bytes, y el incremento de la 
+direcci¢n se limitar  tambi‚n a #4000, pero P(4) no se modificar . Por tanto, 
+para leer bloques mayores (hasta 64K) se puede emplear el truco explicado en 
+la funci¢n 23.
+
+Para esta funci¢n tambi‚n son v lidas las consideraciones sobre el puntero 
+del fichero y el valor de P(7) hechas en la explicaci¢n sobre la funci¢n 33.
+
+
+* Funci¢n 35: Lectura de sectores
+
+Entrada: P(0) = Unidad (0=A:,...,7=H:)
+	 P(1) = Sector inicial
+	 P(2) = Segmento de destino
+	 P(3) = Direcci¢n de destino
+	 P(4) = N£mero de sectores a leer (m ximo 32)
+	 P(6) = Incrementar P(3) si <>0
+Salida:  P(7) = P(4)*512 (0 en condiciones de error)
+	 P(3) = P(3)+P(4)*512 si P(6)<>0
+
+P(3)+P(4)*512 debe ser menor de #4000, de lo contrario el resultado es 
+impredecible.
+
+Esta funci¢n no soporta lecturas parciales: si no hay error entonces P(7) 
+contiene el n£mero de bytes le¡dos, es decir, P(4)*512; en caso de error es 
+0. Si P(6)<>0, a P(3) se le sumar  el n£mero de bytes le¡dos (P(7) o 0).
+
+
+* Funci¢n 36: Lectura de sectores a VRAM
+
+Entrada: P(0) = Unidad (0=A:,...,7=H:)
+	 P(1) = Sector inicial
+	 P(2) = Bloque VRAM de destino
+	 P(3) = Direcci¢n de destino
+	 P(4) = N£mero de sectores a leer (m ximo 32)
+	 P(6) = Incrementar P(3) si <>0
+Salida:  P(7) = P(4)*512 (0 en condiciones de error)
+	 P(3) = P(3)+P(4)*512 si P(6)<>0
+
+Si P(4) es mayor de 32 s¢lo se leer n 32 sectores (#4000 bytes), y el 
+incremento de la direcci¢n se limitar  tambi‚n a #4000, pero P(4) no se 
+modificar . Por tanto, para leer bloques mayores (hasta 64K) se puede emplear 
+el truco explicado en la funci¢n 23.
+
+Para esta funci¢n tambi‚n son v lidas las consideraciones sobre P(7) hechas 
+en la explicaci¢n sobre la funci¢n 35.
+
+
+* Funci¢n 37: Escritura en un fichero
+
+Entrada: P(0) = N£mero de fichero
+	 P(2) = Segmento de origen
+	 P(3) = Direcci¢n de origen
+	 P(4) = N£mero de bytes a leer
+	 P(6) = Incrementar P(3) si <>0
+Salida:  P(7) = N£mero de bytes escritos
+	 P(3) = P(3)+P(4) si P(6)<>0
+
+P(3)+P(4) debe ser menor de #4000, de lo contrario el los datos escritos en 
+el fichero son impredecibles.
+
+El fichero es escrito a partir de la posici¢n que indique su puntero en ese 
+momento; dicho puntero es incrementado autom ticamente tras la escritura. 
+Para consultar o modificar el puntero de un fichero hay que usar la funci¢n 
+42. En caso de error f¡sico (FAT incorrecta, error f¡sico general, ausencia 
+de disco o disco protegido contra escritura), P(7) ser  0.
+
+
+* Funci¢n 38: Escritura en un fichero desde VRAM
+
+Entrada: P(0) = N£mero de fichero
+	 P(2) = Bloque VRAM de origen
+	 P(3) = Direcci¢n de origeno
+	 P(4) = N£mero de bytes a escribir (m ximo #4000)
+	 P(6) = Incrementar P(3) si <>0
+Salida:  P(7) = N£mero de bytes escritos
+	 P(2):P(3) = P(2):P(3)+P(4) si P(6)<>0
+
+Si P(4) es mayor de #4000 s¢lo se escribir n #4000 bytes, y el incremento de 
+la direcci¢n se limitar  tambi‚n a #4000, pero P(4) no se modificar . Por 
+tanto, para escribir bloques mayores (hasta 64K) se puede emplear el truco 
+explicado en la funci¢n 23.
+
+Para esta funci¢n tambi‚n son v lidas las consideraciones sobre el puntero 
+del fichero hechas en la explicaci¢n sobre la funci¢n 37.
+
+
+* Funci¢n 39: Escritura de sectores
+
+Entrada: P(0) = Unidad (0=A:,...,7=H:)
+	 P(1) = Sector inicial
+	 P(2) = Segmento de origen
+	 P(3) = Direcci¢n de origen
+	 P(4) = N£mero de sectores a escribir (m ximo 32)
+	 P(6) = Incrementar P(3) si <>0
+Salida:  P(7) = P(4)*512 (0 en condiciones de error)
+	 P(3) = P(3)+P(4)*512 si P(6)<>0
+
+P(3)+P(4)*512 debe ser menor de #4000, de lo contrario los datos escritos son 
+impredecibles.
+
+Esta funci¢n no soporta escrituras parciales: si no hay error entonces P(7) 
+contiene el n£mero de bytes escritos, es decir, P(4)*512; en caso de error es 
+0. Si P(6)<>0, a P(3) se le sumar  el n£mero de bytes escritos (P(7) o 0).
+
+
+* Funci¢n 40: Escritura de sectores desde VRAM
+
+Entrada: P(0) = Unidad (0=A:,...,7=H:)
+	 P(1) = Sector inicial
+	 P(2) = Bloque VRAM de origen
+	 P(3) = Direcci¢n de origen
+	 P(4) = N£mero de sectores a escribir (m ximo 32)
+	 P(6) = Incrementar P(3) si <>0
+Salida:  P(7) = P(4)*512 (0 en condiciones de error)
+	 P(3) = P(3)+P(4)*512 si P(6)<>0
+
+Si P(4) es mayor de 32 s¢lo se escribir n 32 sectores (#4000 bytes), y el 
+incremento de la direcci¢n se limitar  tambi‚n a #4000, pero P(4) no se 
+modificar . Por tanto, para escribir bloques mayores (hasta 64K) se puede 
+emplear el truco explicado en la funci¢n 23.
+
+Para esta funci¢n tambi‚n son v lidas las consideraciones sobre P(7) hechas 
+en la explicaci¢n sobre la funci¢n 39.
+
+
+* Funci¢n 41: Relleno de un fichero con un dato
+
+Entrada: P(0) = N£mero de fichero
+	 P(1) = Dato (un byte)
+	 P(4) = Longitud (m ximo #4000)
+Salida:  P(7) = N£mero de bytes escritos
+
+Esta funci¢n simplemente escribe P(4) bytes iguales a P(1) a partir de la 
+direcci¢n 0 en el segmento 2, y hace una llamada a la funci¢n 37 con P(2)=2 y 
+P(3)=0. Por tanto, son v lidas todas las consideraciones hechas en la 
+explicaci¢n de la funci¢n 37.
+
+
+* Funci¢n 42: Movimiento del puntero de un fichero
+
+Entrada: P(0) = N£mero de fichero
+	 P(1) = Base del desplazamiento del puntero:
+		0 -> Desplazamiento relativo al principio del fichero
+		1 -> Desplazamiento relativo a la posici¢n actual
+		2 -> Desplazamiento relativo al final del fichero
+	 P(2) = Desplazamiento (parte baja)
+	 P(3) = Desplazamiento (parte alta)
+Salida:  P(4) = Nueva posici¢n del puntero (parte baja)
+	 P(5) = Nueva posici¢n del puntero (parte alta)
+
+Para establecer P(2) y P(3) con un desplazamiento D mayor que 32768 o menor 
+que 0 hay que emplear la f¢rmula siguiente:
+
+P(3)=INT(D/65536):P(2)=VAL("&H"+HEX$(D-(P2*65536)))
+
+y para recomponer el nuevo puntero en P hay que hacer
+
+P=P(2)-(65536*(P(2)<0))+65536!*P(3)
+
+Dado que el Turbo-BASIC trata las variables de coma flotante de forma 
+especial, si se usan estas f¢rmulas dentro de un turbo-bloque es necesario 
+que D sea un m£ltiplo entero de 256.
+
+Para consultar la posici¢n actual del puntero basta usar esta funci¢n con 
+P(1)=1, P(2)=0 y P(3)=0; y para consultar la longitud del fichero, usarla con 
+P(1)=2, P(2)=0 y P(3)=0. En el primer caso el puntero queda inalterado.
+
+Hay que tener en cuenta que el desplazamiento se interpreta con signo, por 
+tanto hay que tener en cuenta a la hora de usar esta funci¢n:
+
+- Si se usa con P(1)=0, el desplazamiento deber  ser positivo. En caso 
+contrario el resultado de posteriores accesos al fichero es impredecible.
+- Si se usa con P(1)=1, un desplazamiento positivo har  que el puntero 
+avance, y uno negativo, que retroceda.
+- Si se usa con P(1)=2, el desplazamiento deber  ser negativo. En caso 
+contrario el puntero se situar  m s all  de la longitud del fichero; en estas 
+condiciones una lectura dar  un error de fin de fichero (con 0 bytes le¡dos), 
+y una escritua har  que el espacio entre el final del fichero y el puntero 
+sea rellenado con ceros.
+
+
+* Funci¢n 43: Obtenci¢n de la unidad establecida por defecto
+	      y el vector de unidades disponibles
+
+Entrada: -
+Salida:  P(0) = Unidad establecida por defecto (0=A:,...,7=H:)
+	 P(1) = Vector de unidades disponibles
+
+El vector de unidades disponibles es un byte que contiene, en cada bit, 
+informaci¢n sobre si una unidad existe (bit=1) o no (bit=0); el bit m s bajo 
+corresponde a la unidad A:, y el m s alto a la H:. Por ejemplo, si la funci¢n 
+devuelve P(1)=&B01000011 significa que est n disponibles las unidades A:, B: 
+y G:.
+
+
+* Funci¢n 44: Establecimiento de la unidad por defecto
+
+Entrada: P(0) = Unidad a establecer (0=A:,...,7=H:)
+Salida:  -
+
+Esta funci¢n devuelve el error 62 si se intenta establecer una unidad 
+inexistente (no disponible o superior a 7).
+
+
+* Funci¢n 45: Obtenci¢n de informaci¢n sobre el espacio de un disco
+
+Entrada: P(0) = Unidad (0=Unidad por defecto, 1=A:,...,8=H:)
+Salida:  P(1) = Sectores por cluster
+	 P(2) = N£mero total de clusters (hasta 4096)
+	 P(3) = N£mero de clusters libres
+
+El espacio libre en bytes se puede averiguar mediante la f¢rmula 
+P(1)*P(3)*512, o en K con P(1)*P(3)/2; y lo mismo con el espacio total, 
+usando P(2) en lugar de P(3).
+
+Esta funci¢n devuelve el error 62 si se especifica una unidad inexistente (no 
+disponible o superior a 8).
+
+
+* Funci¢n 46: Obtenci¢n del directorio actual (DOS 2)
+
+Entrada: P(0) = Unidad (0=Unidad por defecto, 1=A:,...,8=H:)
+Salida:  F$(0)= Directorio actual
+
+Esta funci¢n s¢lo est  disponible bajo DOS 2. Bajo DOS 1 siempre devolver  el 
+error 1.
+
+La cadena devuelta no incluir  unidad ni "\" inicial ni final; por tanto, el 
+directorio ra¡z se representa mediante una cadena vac¡a.
+
+
+* Funci¢n 47: Establecimiento del directorio actual (DOS 2)
+
+Entrada: F$(0) = Unidad (opcional) + directorio
+Salida:  -
+
+Esta funci¢n s¢lo est  disponible bajo DOS 2. Bajo DOS 1 siempre devolver  el 
+error 1.
+
+Esta funci¢n no cambia la unidad establecida por defecto, para ello hay que 
+usar la funci¢n 44.
+
+
+* Funci¢n 48: Obtenci¢n del tama¤o del RAM disk (DOS 2)
+
+Entrada: -
+Salida:  P(0) = Tama¤o del RAM disk en segmentos de 16K
+
+Esta funci¢n s¢lo est  disponible bajo DOS 2. Bajo DOS 1 siempre devolver  el 
+error 1.
+
+Para obtener el tama¤o del RAM disk en K basta hacer P(0)*16. Un tama¤o igual 
+a 0 indica que no existe el RAM disk.
+
+
+* Funci¢n 49: Establecimiento del RAM disk (DOS 2)
+
+Entrada: P(0) = Tama¤o en segmentos de 16K
+Salida:  P(0) = Tama¤o del RAM disk creado
+
+Esta funci¢n s¢lo est  disponible bajo DOS 2. Bajo DOS 1 siempre devolver  el 
+error 1.
+
+Dado que NestorBASIC reserva toda la memoria disponible al instalarse, con 
+esta funci¢n no es posible crear un RAM disk mayor que el que ya exist¡a 
+cuando se instal¢ NestorBASIC, a no ser que el ordenador tenga m s de 4M de 
+RAM. Lo mejor es establecer el RAM disk antes de instalar NestorBASIC; si 
+no queda suficiente memoria libre siempre se puede desinstalar NestorBASIC, 
+reducir el RAM disk y repetir la instalaci¢n.
+
+Si no hay P(0) segmentos libres pero es posible crear un RAM disk menor, la 
+funci¢n no devolver  error, y en P(0) se indicar  el tama¤o del RAM disk que 
+ha podido crearse. En cambio, si no hay ni un segmento libre y no puede 
+crearse el RAM disk, s¡ devolver  error.
+
+
+* Funci¢n 50: Obtenci¢n del byte de atributos de un fichero (DOS 2)
+
+Entrada: P(0) = N£mero de fichero, o bien
+	 P(0) = #FF y F$(0) = Nombre del fichero
+Salida:  P(1) = Byte de atributos:
+		R + 2*H + 4*S + 8*V + 16*D + 32*A
+		R = 1 -> S¢lo lectura
+		H = 1 -> Oculto
+		S = 1 -> Sistema
+		V = 1 -> Etiqueta de volumen
+		D = 1 -> Subdirectorio
+		A = 1 -> Archivo
+
+Esta funci¢n s¢lo est  disponible bajo DOS 2. Bajo DOS 1 siempre devolver  el 
+error 1.
+
+Si P(0)=#FF se obtendr  el byte de atributos del fichero establecido en F$(0) 
+(puede especificarse una unidad y una ruta de acceso), en caso contrario se 
+obtendr  dicho byte para el fichero abierto con el n£mero P(0).
+
+
+* Funci¢n 51: Establecimiento del byte de atributos de un fichero
+
+Entrada: P(0) = N£mero de fichero, o bien
+	 P(0) = #FF y F$(0) = Nombre del fichero
+	 P(1) = Nuevo byte de atributos:
+		R + 2*H + 4*S + 8*V + 16*D + 32*A
+		R = 1 -> S¢lo lectura
+		H = 1 -> Oculto
+		S = 1 -> Sistema
+		V = 1 -> Etiqueta de volumen
+		D = 1 -> Subdirectorio
+		A = 1 -> Archivo
+Salida:  P(1) = Byte de atributos establecido
+
+Esta funci¢n s¢lo est  disponible bajo DOS 2. Bajo DOS 1 siempre devolver  el 
+error 1.
+
+Si P(0)=#FF se establecer  el byte de atributos del fichero establecido en 
+F$(0) (puede especificarse una unidad y una ruta de acceso), en caso 
+contrario se establecer  dicho byte para el fichero abierto con el n£mero 
+P(0).
+
+No es posible establecer los atributos de un fichero abierto especificando su 
+nombre en F$(0); si se intenta, la funci¢n generar  un error. Para ello hay 
+que establecer su n£mero de fichero en P(0).
+
+Un fichero s¢lo puede ver modificados sus atributos de sistema, oculto, s¢lo 
+lectura y archivo; un subdirectorio, s¢lo el de oculto. Si se intenta cambiar 
+cualquier otro, la funci¢n devolver  un error. No es posible alterar los 
+atributos de las entradas "." y ".."
+
+
+* Funci¢n 52: Tratamiento de una cadena de ruta de acceso (DOS 2)
+
+Entrada: F$(0) = Cadena a tratar
+	 P(10)<>0 si la ruta hace referencia a una etiqueta de volumen
+Salida:  F$(1) = Ultimo elemento de la ruta
+	 P(8)  = Unidad l¢gica (1 = A:, ...)
+	 P(9)  = Posici¢n en la cadena del £ltimo elemento
+		 (0 si no hay £ltimo elemento)
+	 Los siguientes par metros a -1 si se cumple la condici¢n, si no a 0:
+	 P(0)	 La ruta contiene car cteres que no se refieren a la unidad
+	 P(1)	 En la ruta se especifica un directorio
+	 P(2)	 En la ruta se especifica una unidad
+	 P(3)	 En la ruta se especifica el nombre de un fichero
+	 P(4)	 En la ruta se especifica la extensi¢n de un fichero
+	 P(5)	 El £ltimo elemento es ambiguo
+	 P(6)	 El £ltimo elemento es "." o ".."
+	 P(7)	 El £ltimo elemento es ".."
+
+Esta funci¢n s¢lo est  disponible bajo DOS 2. Bajo DOS 1 siempre devolver  el 
+error 1.
+
+Esta funci¢n simplemente trata la cadena de entrada devolviendo los 
+par metros especificados. No accede a disco ni modifica la unidad o el 
+directorio por defecto.
+
+Si s¢lo se especifica una unidad, o el £ltimo car cter de la ruta es el 
+separador de directorios "\", no existe el "£ltimo elemento" de la cadena. En 
+ese caso P(9) valdr  0 y F$(1) ser  una cadena vac¡a. Ejemplo: para F$(0) = 
+"A:\DIR\FILES\FICHE.RO", el £ltimo elemento, devuelto en F$(1), es 
+"FICHER.RO", y P(9) valdr  14.
+
+Si la ruta no contiene especificaci¢n de unidad, la unidad establecida por 
+defecto en el sistema ser  devuelta en P(2). Por tanto P(2) nunca ser  cero.
+
+Si P(10)<>0 a la entrada, los par metros P(1) y P(4) a P(7) siempre valdr n 
+0.
+
+
+9.6. FUNCIONES DE COMPRESION Y DESCOMPRESION DE GRAFICOS
+
+* Funci¢n 53: Compresi¢n de un gr fico
+
+Entrada: P(0) = Bloque VRAM de origen inicial
+	 P(1) = Direcci¢n VRAM de origen inicial
+	 P(2) = Segmento de destino inicial
+	 P(3) = Direcci¢n RAM de destino inicial
+	 P(4) = Tama¤o de la imagen a comprimir
+	 P(5) = Incrementar P(1) si <>0
+	 P(6) = Incrementar P(3) si <>0
+Salida:  P(7) = Tama¤o en RAM de la imagen comprimida
+	 P(8) = N£mero de segmentos utilizados
+	 P(0):P(1) = P(0):P(1) + P(4) si P(5)<>0
+	 P(2):P(3) = Direcci¢n RAM siguiente a la £ltima utilizada,
+		     si P(6)<>0
+
+La compresi¢n se realiza a trav‚s de segmentos consecutivos: tras comprimir a 
+la posici¢n #3FFF del segmento S, se contin£a con la posici¢n #0000 del 
+segmento S+1. Si se sobrepasa la direcci¢n #3FFF del £ltimo segmento, la 
+funci¢n devolver  el error 5. Esta funci¢n no soporta segmentos VRAM, ni el 
+segmento 255.
+
+Si la £ltima direcci¢n RAM utilizada es la #3FFF del segmento S y P(6)<>0 a 
+la entrada, a la salida P(2) valdr  S+1 y P(3) valdr  0. Si S era el £ltimo 
+segmento, P(2) valdr  0.
+
+
+* Funci¢n 54: Descompresi¢n de un gr fico
+
+Entrada: P(0) = Bloque VRAM de destino inicial
+	 P(1) = Direcci¢n VRAM de destino inicial
+	 P(2) = Segmento de origen inicial
+	 P(3) = Direcci¢n RAM de origen inicial
+	 P(5) = Incrementar P(1) si <>0
+	 P(6) = Incrementar P(3) si <>0
+Salida:  P(7) = Tama¤o en VRAM de la imagen descomprimida
+	 P(8) = N£mero de segmentos utilizados
+	 P(0):P(1) = P(0):P(1) + P(7) si P(5)<>0
+	 P(2):P(3) = Direcci¢n RAM siguiente a la £ltima utilizada,
+		     si P(6)<>0
+
+La descompresi¢n se realiza a trav‚s de segmentos consecutivos: tras 
+descomprimir de la posici¢n #3FFF del segmento S, se contin£a con la posici¢n 
+#0000 del segmento S+1. Si se sobrepasa la direcci¢n #3FFF del £ltimo 
+segmento, o si se encuentra un dato incorrecto, la funci¢n devolver  el error 
+6. Esta funci¢n no soporta segmentos VRAM, ni el segmento 255.
+
+Si la £ltima direcci¢n RAM utilizada es la #3FFF del segmento S y P(6)<>0 a 
+la entrada, a la salida P(2) valdr  S+1 y P(3) valdr  0. Si S era el £ltimo 
+segmento, P(2) valdr  0.
+
+
+9.6. FUNCIONES PARA LA EJECUCION DE PROGRAMAS BASIC
+
+* Funci¢n 55: Ejecuci¢n de un programa BASIC almacenado en un segmento
+
+Entrada: P(0) = Segmento
+	 P(1) = Direcci¢n inicial
+Salida:  -
+
+MUY IMPORTANTE: Para poder usar esta funci¢n hay que cambiar la direcci¢n 
+de comienzo de los programas BASIC. Ver secci¢n 6 para m s detalles.
+
+Esta funci¢n ejecuta el programa BASIC almacenado en el segmento indicado. El 
+programa ha de estar almacenado a partir de la direcci¢n indicada en P(1) del 
+segmento especificado en P(0), con el siguiente formato:
+
++#0000: No usado por NestorBASIC. Puede ser £til, por ejemplo, para insertar 
+un byte identificador.
++#0001: Direcci¢n final del programa +1, en el rango #8000-#BFFF; byte bajo.
++#0002: Idem, byte alto.
++#0003: Inicio del programa
+
+Todas las variables num‚ricas del programa original ser n traspasadas al 
+programa ejecutado. Es posible ejecutar esta funci¢n desde dentro de un 
+turbo-bloque; en este caso s¢lo se transferir n las variables enteras creadas 
+fuera del mismo que hayan sido especificadas al principio con CALL TURBO ON 
+(variable, ..., matriz(), ...).
+
+Las variables de cadena que hayan sido guardadas en la zona de cadenas 
+tambi‚n ser n transferidas; no as¡ aquellas que hayan sido asignadas 
+directamente desde el programa BASIC: ‚stas residen dentro del mismo, y se 
+perder n. Para asegurarse de que una cadena es almacenada en la zona de 
+cadenas hay que realizar la siguiente operaci¢n: C$=C$+"". Evidentemente, la 
+opci¢n m s pr ctica es centralizar todas las cadenas en una matriz (por 
+ejemplo F$), y realizar esta operaci¢n con un simple bucle.
+
+Esta funci¢n devolver  el error -1 si se especifica un segmento inexistente 
+(el segmento 255 no es soportado), y el -2 si la memoria del BASIC es 
+insuficiente para albergar el nuevo programa y las variables. Esto puede 
+ocurrir si el programa ejecutado es m s largo que el original, pero no es 
+probable si la diferencia de longitudes entre ambos programas no es exagerada 
+y el n£mero de variables es razonablemente bajo.
+
+
+* Funci¢n 56: Activaci¢n de un programa BASIC almacenado en un segmento
+
+Entrada: P(0) = Segmento
+	 P(1) = Direcci¢n inicial
+Salida:  -
+
+MUY IMPORTANTE: Para poder usar esta funci¢n hay que cambiar la direcci¢n 
+de comienzo de los programas BASIC. Ver secci¢n 6 para m s detalles.
+
+Esta funci¢n act£a como la funci¢n 55, con la siguiente diferencia: una vez 
+que el nuevo programa y las variables est n en la memoria del BASIC, el 
+programa no es ejecutado y el BASIC vuelve al modo directo. Por lo dem s, el 
+funcionamiento es id‚ntico, as¡ como los posibles errores.
+
+
+* Funci¢n 57: Grabaci¢n de un programa BASIC con cabecera en un fichero
+
+Entrada: P(0)  = Byte a grabar en la primera posici¢n
+		 (no usado por NestorBASIC)
+	 F$(0) = Ruta + nombre del fichero
+Salida:  P(1)  = -1 -> No hay error
+	      <> -1 -> Ha habido un error de disco, y el fichero ha quedado
+		       abierto con ese n£mero; el c¢digo de error es
+		       devuelto entonces por el USR, como siempre.
+
+MUY IMPORTANTE: Para poder usar esta funci¢n hay que cambiar la direcci¢n 
+de comienzo de los programas BASIC. Ver secci¢n 6 para m s detalles.
+
+Esta funci¢n graba el programa BASIC activo en el fichero especificado, con 
+la cabecera adecuada para ser ejecutado o activado con las funciones 55 o 56 
+(ver descripci¢n de la funci¢n 55 para detalles sobre el formato).
+
+El uso de esta funci¢n simplifica la conversi¢n de programas BASIC normales a 
+programas ejecutables con la funci¢n 55, proceso que se reduce a:
+
+load"prog.bas"                  'Carga del programa BASIC
+f$(0)="prog.nba":?USR(57)       'Grabaci¢n con cabecera (P(0) opcional)
+
+Una vez grabado de esta forma, la carga y ejecuci¢n del programa es sencilla:
+
+1000 'Apertura de prog.nba, lectura al segmento S y cierre del fichero
+1001 F$(0)="prog.nba":?USR(31):P(2)=S:P(3)=0:P(4)=&H4000:?USR(33):?USR(32)
+...
+10000 'Ejecuci¢n del programa (tratamiento del error opcional)
+10001 P(0)=S:P(1)=0:IF USR(55)=-1 THEN PRINT "ERROR: Segmento inexistente!"
+      ELSE PRINT "ERROR: Memoria insuficiente!"
+10002 END
+
+Usando la funci¢n 56 en lugar de la 55 es posible cargar programas grabados 
+con cabecera de los cuales no se tenga copia en formato normal (LOADable).
+
+Por supuesto, tambi‚n pueden usarse las funciones normales de acceso a disco 
+para grabar el programa, pero entonces habr  que crear la cabecera a mano:
+
+POKE &H8000,P(0) 'Dato no usado por NestorBASIC
+POKE &H8001,PEEK(&HF676)
+POKE &H8002,PEEK(&HF677)
+'Grabar de &H8000 a PEEK(&H8001)+256*PEEK(&H8002)
+
+Los posibles errores devueltos por esta funci¢n son los mismos que los de las 
+funciones de acceso a disco (ver secci¢n 4.2). En el caso de que una 
+finalizac¢n con error provoque que el fichero quede abierto, P(1) contendr  
+el n£mero asociado al fichero; en caso contrario valdr  -1.
+
+
+9.7. FUNCIONES VARIAS
+
+* Funci¢n 58: Ejecuci¢n de una rutina de la BIOS o SUB-BIOS
+
+Entrada: P(0) = 0 para ejecutar una rutina de la BIOS
+	     <> 0 para ejecutar una rutina de la SUB-BIOS
+	 P(1) = Direcci¢n de inicio de la rutina
+	 P(2) a P(11) = Registros de entrada a la rutina:
+			P(2) = AF	P(8) = AF'
+			P(3) = BC	P(9) = BC'
+			P(4) = DE	P(10)= DE'
+			P(5) = HL	P(11)= HL'
+			P(6) = IX
+			P(7) = IY
+Salida:  P(2) a P(11) = Registros de salida de la rutina,
+			con la misma asignaci¢n que a la entrada
+
+Esta funci¢n permite ejecutar rutinas en c¢digo m quina de la BIOS o 
+SUB-BIOS, con posibilidad de establecer los registros del Z80 antes de la 
+llamada usando la matriz de par metros; el estado de los registros tras la 
+llamada tambi‚n puede ser consultado de la misma forma.
+
+Esta funci¢n devolver  el error -1 si se intenta hacer una llamada a una 
+direcci¢n superior a #3FFF. En el caso de las llamadas a la SUB-BIOS, esta 
+funci¢n usa la rutina EXTROM, por lo que el contenido del registro IX 
+[variable P(6)] se perder .
+
+
+* Funci¢n 59: Ejecuci¢n de una rutina de usuario
+	      (rutina en c¢digo m quina contenida en un segmento)
+
+Entrada: P(0) = Segmento en el que reside la rutina
+	 P(1) = Direcci¢n de inicio de la rutina
+	 P(2) a P(11) = Registros de entrada a la rutina:
+			P(2) = AF	P(8) = AF'
+			P(3) = BC	P(9) = BC'
+			P(4) = DE	P(10)= DE'
+			P(5) = HL	P(11)= HL'
+			P(6) = IX
+			P(7) = IY
+Salida:  P(2) a P(11) = Registros de salida de la rutina,
+			con la misma asignaci¢n que a la entrada
+
+Esta funci¢n permite ejecutar rutinas en c¢digo m quina residente en un 
+segmento, con posibilidad de establecer los registros del Z80 antes de la 
+llamada usando la matriz de par metros; el estado de los registros tras la 
+llamada tambi‚n puede ser consultado de la misma forma.
+
+El segmento indicado ser  conectado en la p gina 2 para la ejecuci¢n de la 
+rutina, por lo que ‚sta debe estar ensamblada entre las direcciones #8000 y 
+#BFFF. La BIOS estar  conectada y disponible en la p gina 0, y el segmento de 
+NestorBASIC en la p gina 1 antes de la llamda a la rutina. Al final de la 
+misma este estado ha de ser reestablecido si se realizan cambios de slot o 
+segmento.
+
+Algunas de las rutinas internas de NestorBASIC (rutinas para la manipulaci¢n 
+de RAM y VRAM, y para obtener informaci¢n sobre las interrupciones) pueden 
+ser usadas por las rutinas de usuario. En el ap‚ndice 2 se detalla la 
+ubicaci¢n y el funcionamiento de dichas rutinas.
+
+Esta funci¢n no soporta segmentos VRAM ni el segmento 255, y devolver  el 
+error -1 si se indica un segmento inexistente en P(0).
+
+
+* Funci¢n 60: Impresi¢n de una cadena en modo gr fico
+
+Entrada: F$(0) = Cadena
+Salida:  -
+
+Esta funci¢n s¢lo funciona en los modos gr fico SCREEN 5 a 11, y es 
+equivalente a la instrucci¢n PRINT#1,F$(0) previa ejecuci¢n de 
+OPEN"GRP:"AS#1. La diferencia es que esta funci¢n es compatible con 
+Turbo-BASIC. Ejecutada en otros modos no har  nada; nunca devuelve error.
+
+La longitud m xima de la cadena es de 80 car cteres; si es m s larga, s¢lo se 
+imprimir n los primeros 80. La cadena no puede contener el car cter 0, que es 
+tomado como car cter de terminaci¢n de la misma.
+
+
+* Funci¢n 61: Almacenamiento de una cadena en un segmento
+
+Entrada: F$(0) = Cadena
+	 P(0)  = Segmento
+	 P(1)  = Direcci¢n
+	 P(2)  = Incrementar P(1) si <>0
+Salida:  P(1)  = P(1) + LEN(F$(0)) + 1 si P(2)<>0
+
+Esta funci¢n almacena la cadena F$(0) a partir de la direcci¢n especificada 
+del segmento especificado. La cadena se almacena con un car cter 0 al final, 
+por lo que ocupar  LEN(F$(0))+1 bytes.
+
+La longitud m xima de la cadena es de 80 car cteres; si es m s larga, s¢lo se 
+almacenar n los primeros 80. La cadena no puede contener el car cter 0, ya 
+que de ser encontrado uno ser  interpretado como el final de la misma.
+Esta funci¢n devuelve el error -1 si se especifica un segmento inexistente en 
+P(0).
+
+
+* Funci¢n 62: Recuperaci¢n de una cadena almacenada en un segmento
+
+Entrada: P(0)  = Segmento
+	 P(1)  = Direcci¢n
+	 P(2)  = Incrementar P(1) si <>0
+Salida:  F$(1) = Cadena
+	 P(1)  = P(1) + LEN(F$(1)) + 1 si P(2)<>0
+
+Esta funci¢n copia en F$(1) la cadena almacenada a partir de la direcci¢n 
+especificada del segmento especificado. La cadena se da por terminada cuando 
+se encuentra un car cter 0, o cuando ya se han copiado 80 car cteres.
+
+Si la funci¢n se ejecuta desde el BASIC normal, la cadena no puede contener 
+car cteres 255, ya que de ser encontrados ser n sustituidos por el car cter 
+34 (comillas); esto es debido al m‚todo de asignaci¢n de cadenas en BASIC, 
+que requiere un tratamiento especial para las comillas. Esta limitaci¢n no se 
+presenta si se ejecuta la funci¢n desde un turbo-bloque.
+
+Esta funci¢n devuelve el error -1 si se especifica un segmento inexistente en 
+P(0).
+
+
+* Funci¢n 63: Inicializaci¢n del modo de parpadeo en SCREEN 0
+
+Entrada: P(0) = Color del texto parpadeante
+	 P(1) = Color del fondo parpadeante
+	 P(2) = Tiempo de parpadeo activo (0 a 15)
+	 P(3) = Tiempo de parpadeo inactivo (0 a 15)
+		Si P(2) y P(3) son 0, s¢lo se borra la zona
+		de parpadeo en VRAM
+Salida:  -
+
+Esta funci¢n inicializa los colores y los tiempos del modo de parpadeo 
+("blink mode") en SCREEN 0, y borra la zona de la VRAM dedicada a guardar las 
+coordenadas de los car cteres que parpadean. Si P(2) y P(3) son cero, s¢lo se 
+borra la VRAM y no se modifican los colores ni los tiempos.
+
+Esta funci¢n s¢lo puede ejecutarse en modo SCREEN 0 con al menos 41 columnas; 
+en caso contrario no har  nada salvo devolver el error -1.
+
+Las acciones que realiza esta funci¢n se pueden conseguir por separado desde 
+el BASIC de la siguiente manera:
+
+- Establecimiento de los colores:
+
+VDP(13) = Color texto + 16*Color fondo
+
+- Establecimiento de los tiempos:
+
+VDP(14) = Tiempo activo + 16*Tiempo inactivo
+
+- Borrado de la VRAM:
+
+Llenar con ceros la zona de 256 bytes de VRAM que comienza en &H0800
+
+Las variables del sistema FORCLR (&HF3E9) y BAKCLR (&HF3EA) contienen 
+respectivamente el color de texto y el color de fondo establecidos con el 
+comando COLOR. Por tanto, para conseguir un efecto de v¡deo inverso basta 
+hacer:
+
+P(0)=PEEK(&HF3EA):P(1)=PEEK(&HF3E9):P(2)=15:P(3)=0:?USR(63)
+
+o bien
+
+VDP(13)=PEEK(&HF3EA)+16*PEEK(&HF3E9):VDP(14)=&HF0
+
+
+* Funci¢n 64: Construcci¢n o borrado de un bloque de car cteres parpadeantes
+	      en SCREEN 0
+
+Entrada: P(0) = 0 para borrar bloque
+	     <> 0 para crear bloque
+	 P(1) = Coordenada X (columna) inicial (0 a 79)
+	 P(2) = Coordenada Y (fila) inicial (0 a 23)
+	 P(3) = Longitud en X (columnas)
+	 P(4) = Longitud en Y (filas)
+	 P(5) = Actualizar P(1) si <>0
+	 P(6) = Actualizar P(2) si <>0
+Salida:  P(1) = P(1) + P(3) si P(5)<>0
+	 P(2) = P(2) + P(4) si P(6)<>0
+
+Esta funci¢n crea o borra el bloque de car cteres parpadeantes de las 
+dimensiones especificadas, en las coordenadas especificadas. Es conveniente 
+haber ejecutado la funci¢n 63 antes de usar esta.
+
+Esta funci¢n s¢lo puede ejecutarse en modo SCREEN 0 con al menos 41 columnas; 
+en caso contrario no har  nada, y no devolver  error. Si P(1)>79 y/o P(2)>23 
+a la entrada, devolver  el error -1.
+
+La funci¢n no comprueba si el bloque sobrepasa los l¡mites de la pantalla. Si 
+un bloque sobrepasa la columna 79, continuar  en la columna 0 de la l¡nea 
+siguiente. Por el contrario, aquella parte del bloque que sobrepase la l¡nea 
+23 no se visualizar .
+
+
+* Funci¢n 65: Obtenci¢n de informaci¢n sobre las interrupciones
+
+Entrada: -
+Salida:  P(0) = -1 si hay alguna interrupci¢n en marcha
+		   (interrupci¢n de usario o efecto de sonido)
+	 P(1) = -1 si hay una interrupci¢n de usuario en marcha
+	 P(2) = Segmento de la interrupci¢n de usuario
+	 P(3) = Direcci¢n de la interrupci¢n de usuario
+	 P(4) = -1 si hay un efecto de sonido en marcha
+	 P(5) = -1 si hay una m£sica en reproducci¢n
+
+P(2) y P(3) devuelven la definici¢n de la interrupci¢n de usuario, aunque 
+est‚ suspendida. Si no se ha definido ninguna, ambos ser n cero.
+
+Para obtener m s informaci¢n sobre el efecto de sonido en marcha hay que usar 
+la funci¢n 67. En cuanto a la m£sica, la funci¢n a utilizar para obtener m s 
+informaci¢n es la 72. 
+
+
+* Funci¢n 66: Definici¢n o suspensi¢n de una interrupci¢n de usuario
+
+Entrada: P(0) =  0 para suspender la interrupci¢n en curso
+		 1 para definir y establecer una interrupci¢n
+		-1 para invertir el estado de la interrupci¢n
+		   (establecida <--> suspendida)
+	 P(1) = Segmento de la interrupci¢n (ignorado si P(0)<>1)
+	 P(2) = Direcci¢n de la interrupci¢n (ignorado si P(0)<>1)
+Salida:  -
+
+Esta funci¢n define o suspende una interrupci¢n de usuario, es decir, una 
+rutina en c¢digo m quina que ser  ejecutada en cada interrupci¢n del reloj, 
+50 o 60 veces por segundo.
+
+Si P(0)=1, la interrupci¢n queda definida mediante P(1) y P(2), y establecida 
+(se ejecuta a 50 o 60 Hz). Si P(0)=0, la interrupci¢n queda suspendida (no se 
+ejecuta), pero su definici¢n no cambia. Si P(0)=-1 se invierte el estado de 
+la interrupci¢n (de establecimiento a suspensi¢n y viceversa), pero tampoco 
+cambia la definici¢n de la misma.
+
+El segmento de la interrupci¢n ser  conectado en la p gina 2 para la 
+ejecuci¢n de la misma, por lo que ‚sta debe estar ensamblada entre las 
+direcciones #8000 y #BFFF. La BIOS estar  conectada en la p gina 0 y el 
+segmento de NestorBASIC en la p gina 1; este estado ha de ser reestablecido 
+al final de la interrupci¢n en caso de que ‚sta realice cambios de slot o 
+segmento. Las interrupciones estar n inhibidas y as¡ han de permanecer 
+durante la ejecuci¢n de la interrupci¢n. No es necesario preservar ning£n 
+registro, NestorBASIC ya se encarga de ello.
+
+Algunas de las rutinas internas de NestorBASIC (rutinas para la manipulaci¢n 
+de RAM y VRAM, y para obtener informaci¢n sobre las interrupciones) pueden 
+ser usadas por la interrupci¢n de usuario. En el ap‚ndice 2 se detalla la 
+ubicaci¢n y el funcionamiento de dichas rutinas.
+
+No es posible definir una interrupci¢n en un segmento VRAM, ni en el 255. 
+Esta funci¢n devolver  el error -1 si se indica un segmento inexistente en 
+P(1). Si se especifica un valor distinto de 0, 1 o -1 en P(0), la funci¢n 
+devolver  el error 7.
+
+
+9.8. EFECTOS DE SONIDO PSG
+
+* Funci¢n 67: Obtenci¢n de informaci¢n sobre los efectos de sonido PSG
+
+Entrada: P(0) = Nuevo volumen m ximo (0 a 15, -1 para no cambiarlo)
+Salida:  P(1) = -1 si hay un efecto sonando
+	 P(2) = N£mero de efecto que suena, o del £ltimo que ha sonado
+	 P(3) = Prioridad del efecto que suena, o del £ltimo que ha sonado
+	 P(4) = Segmento del juego de efectos
+	 P(5) = Direcci¢n del juego de efectos
+	 P(6) = N£mero m s alto de efecto definido
+	 P(7) = Volumen m ximo
+
+La informaci¢n devuelta por esta funci¢n s¢lo ser  v lida si el juego de 
+efectos ha sido inicializado con la funci¢n 68. El juego de efectos ha de 
+haber sido creado con el editor SEE versi¢n 3.xx, de Fuzzy Logic.
+
+Esta funci¢n nunca devuelve error. Si se especifica un valor mayor que 15 en 
+P(0), ser  interpretado como 15.
+
+
+* Funci¢n 68: Inicializaci¢n de un juego de efectos de sonido PSG
+
+Entrada: P(0) = Segmento
+	 P(1) = Direcci¢n
+Salida:  -
+
+Esta funci¢n inicializa el juego de efectos de sonido almacenado en el 
+segmento y direcci¢n especificados, dej ndolo listo para su uso mediante la 
+funci¢n 69.
+
+El juego de efectos ha de haber sido creado con el editor SEE versi¢n 3.xx, 
+de Fuzzy Logic; si el formato del juego es incorrecto la funci¢n devolver  el 
+error 8.
+
+No es posible usar un juego de efectos almacenado en segmentos VRAM ni en el 
+segmento 255. Esta funci¢n devolver  el error -1 si se indica un segmento 
+inexistente en P(0).
+
+
+* Funci¢n 69: Reproducci¢n de un efecto de sonido PSG
+
+Entrada: P(0) = N£mero de efecto
+	 P(1) = Prioridad (0: baja, <>0: alta)
+Salida:  -
+
+Esta funci¢n reproduce el efecto de sonido especificado del juego de efectos 
+inicializado con la funci¢n 68. El juego de efectos ha de haber sido creado 
+con el editor SEE versi¢n 3.xx, de Fuzzy Logic. No se ha de ejecutar esta 
+funci¢n si no se ha inicializado antes el juego de efectos: el resultado en 
+este caso es impredecible.
+
+P(1) regula la prioridad en caso de intentar reproducir un efecto cuando ya 
+est  sonando otro. Funciona de la siguiente manera:
+
+- Si el efecto que est  sonando y el nuevo tienen la misma prioridad, el 
+efecto en curso se interrumpe y comienza la reproducci¢n del nuevo.
+- Si el efecto que est  sonando tiene prioridad baja y el nuevo tiene 
+prioridad alta, lo mismo.
+- Si el efecto que est  sonando tiene prioridad alta y el nuevo tiene 
+prioridad baja, el efecto en curso sigue sonando y la funci¢n devuelve el 
+error 11.
+
+Si el efecto especificado en P(0) no est  definido (la pista inicial se ha 
+dejado en "OFF" en el editor), la funci¢n devolver  el error 9. Si el efecto 
+no existe (el n£mero de efecto es mayor que el n£mero de efecto m s alto), 
+devolver  el error 10.
+
+
+* Funci¢n 70: Interrupci¢n del efecto de sonido PSG en curso
+
+Entrada: -
+Salida:  -
+
+Esta funci¢n interrumpe la reproducci¢n del efecto de sonido en curso si lo 
+hay, y silencia el PSG. Nunca devuelve error.
+
+
+9.9. FUNCIONES PARA LA REPRODUCCION DE MUSICA MOONBLASTER
+
+* Funci¢n 71: Carga e inicializaci¢n del reproductor Moonblaster
+
+Entrada: P(0)  = Reproductor a cargar:
+		 0: Moonblaster 1.4
+		 1: Moonblaster para Moonsound, versi¢n Wave 1.05
+		 2: Moonblaster para Moonsound, versi¢n FM (*)
+		 3: Detecci¢n autom tica:
+		    Cargar reproductor Moonblaster Wave si hay MoonSound;
+		    si no, cargar reproductor Moonblaster 1.4.
+		 4: Detecci¢n autom tica:
+		    Cargar reproductor Moonblaster FM si hay MoonSound;
+		    si no, cargar reproductor Moonblaster 1.4. (*)
+Salida:  P(0)  = Reproductor cargado (0, 1 o 2, igual que a la entrada)
+	 P(1)  = -1 -> No hay error
+	      <> -1 -> Ha habido un error de disco, y NBASIC.BIN ha quedado
+		       abierto con ese n£mero; el c¢digo de error es
+		       devuelto entonces por el USR, como siempre.
+
+(*) El reproductor de Moonblaster para Moonsound versi¢n FM no est 
+    implementado en esta versi¢n.
+
+Esta funci¢n carga el reproductor de m£sicas seleccionado por P(0) en el 
+segmento 5, dej ndolo listo para su uso. Tambi‚n realiza una b£squeda de 
+todos los chips musicales existentes, y los deja todos activos (ver funci¢n 
+73 para m s detalles sobre la activaci¢n y desactivaci¢n de chips).
+
+Para que el reproductor pueda ser cargado, el segmento 5 ha de pertenecer al 
+mapeador primario; en caso contrario la funci¢n devolver  el error -1. En 
+caso de error de disco al leer el fichero, la funci¢n devolver  el c¢digo de 
+error correspondiente (ver secci¢n 4.2). Si a causa de un error de disco 
+NBASIC.BIN queda abierto, su n£mero de fichero asociado ser  devuelto en 
+P(1); en caso contrario P(1) valdr  -1.
+
+El fichero NBASIC.BIN contiene dos versiones del reproductor de Moonblaster 
+Wave: una es para ordenadores MSX2/2+ y para el Turbo-R en modo Z80, y la 
+otra es para el Turbo-R en modo R800. En el caso del Turbo-R, NestorBASIC 
+decide qu‚ versi¢n cargar en funci¢n del procesador conectado en el momento 
+de ejecutar la funci¢n 71. Hay que tener en cuenta que si se realiza un 
+cambio de procesador es necesario volver a ejecutar esta funci¢n, ya que la 
+versi¢n Z80 no funciona en modo R800 y la versi¢n R800 introduce en modo Z80 
+un ralentizamiento innecesario del sistema.
+
+Para desinstalar el reproductor basta detener la m£sica y borrar la cadena 
+"NestorPlayer" situada al principio del segmento 5; a partir de entonces este 
+segmento vuelve a estar disponible.
+
+* Funci¢n 72: Obtenci¢n de informaci¢n sobre la m£sica en reproducci¢n
+
+Entrada: -
+Salida:  P(0) = -1 si hay una m£sica sonando o pausada
+	 P(1) = -1 si hay una m£sica Moonblaster 1.4 sonando o pausada
+	 P(2) = -1 si hay una m£sica Moonblaster Wave sonando o pausada
+	 P(3) = -1 si hay una musica Moonblaster FM sonando o pausada (*)
+	 P(4) = -1 si hay una m£sica pausada
+	 P(5) = Segmento de la m£sica que suena,
+		o de la £ltima que ha sonado
+	 P(6) = Direcci¢n inicial de la m£sica que suena,
+		o de la £ltima que ha sonado
+	 P(7) = Posici¢n actual
+	 P(8) = Paso actual en la posici¢n (0 a 15)
+	 P(9) = -1 si hay un MSX-MUSIC detectado
+	 P(10)= -1 si hay un MSX-AUDIO detectado
+	 P(11)= -1 si hay un OPL4 detectado
+	 P(12)= -1 si el reproductor est  cargado
+	 P(13)= Reproductor cargado (v lido s¢lo si P(12)=-1):
+		0: Moonblaster 1.4
+		1: Moonblaster Wave 1.05
+		2: Moonblaster FM (*)
+	 F$(0)= T¡tulo de la musica (cadena vac¡a si no suena ninguna)
+	 F$(1)= Samplekit o wavekit (cadena vac¡a si no suena ninguna m£sica)
+
+(*) El reproductor de Moonblaster para Moonsound versi¢n FM no est 
+    implementado en esta versi¢n.
+
+Si no hay ning£n reproductor cargado, P(12) valdr  0, y el resto de 
+par metros de salida no ser n establecidos, pero la funci¢n no devolver  
+ning£n error. Para cargar el reproductor hay que usar la funci¢n 71.
+
+Si no hay ninguna m£sica sonando, P(5) y P(6) devolver n la posici¢n y el 
+paso en que se detuvo la £ltima m£sica reproducida, y F$(0) y F$(1) estar n 
+vac¡as. Si no, F$(0) devolver  el t¡tulo de la m£sica (siempre 40 car cteres 
+en el caso de una m£sica Moonblaster 1.4, 50 para una m£sica Moonblaster 
+Wave) y F$(1) el samplekit o wavekit que hab¡a sido cargado en el Moonblaster 
+cuando la m£sica se grab¢, en may£sculas y sin extensi¢n ("NONE" si no hab¡a 
+ninguno).
+
+P(9) a P(11) devuelven informaci¢n sobre los chips detectados. Para obtener 
+informaci¢n sobre los chips activos hay que usar la funci¢n 73.
+
+
+* Funci¢n 73: Activaci¢n y desactivaci¢n de los chips musicales
+
+Entrada: P(0) = 0 -> S¢lo consultar chips activos
+		1 -> Activar o desactivar chips seg£n P(1) a P(3)
+		2 -> Activar todos los chips presentes
+	 P(1) = 0 -> No modificar estado del MSX-MUSIC
+		1 -> Desactivar MSX-MUSIC
+		2 -> Activar MSX-MUSIC
+	       -1 -> Invertir estado del MSX-MUSIC
+	 P(2) = 0 -> No modificar estado del MSX-AUDIO
+		1 -> Desactivar MSX-AUDIO
+		2 -> Activar MSX-AUDIO
+	       -1 -> Invertir estado del MSX-AUDIO
+	 P(3) = 0 -> No modificar estado del OPL4
+		1 -> Desactivar OPL4
+		2 -> Activar OPL4
+	       -1 -> Invertir estado del OPL4
+Salida:  P(4) = 0 -> MSX-MUSIC no presente
+		1 -> MSX-MUSIC presente pero inactivo
+		2 -> MSX-MUSIC presente y activo
+	 P(5) = 0 -> MSX-AUDIO no presente
+		1 -> MSX-AUDIO presente pero inactivo
+		2 -> MSX-AUDIO activo
+	 P(6) = 0 -> OPL4 no presente
+		1 -> OPL4 presente pero inactivo
+		2 -> OPL4 presente y activo
+
+Esta funci¢n permite desactivar el MSX-MUSIC, el MSX-AUDIO y el OPL4, de 
+forma que no sonar n aunque est‚n presentes, y volverlos a activar. Puede ser 
+£til, por ejeplo, para oir s¢lo la parte MSX-AUDIO de una m£sica en un 
+ordenador con el MSX-MUSIC interno.
+
+Si P(0)=0 a la entrada, la funci¢n s¢lo devolver  informaci¢n sobre los chips 
+activos en P(4) a P(5), y no cambiar  el estado de ning£n chip. Si P(0)=2, 
+todos los chips presentes ser n activados (este es el estado establecido por 
+defecto al cargar el reproductor). Para obtener informaci¢n sobre los chips 
+presentes hay que usar la funci¢n 72.
+
+Si P(0)=1, los chips ser n activados o desactivados seg£n P(1) a P(3); 
+cualquier intento de activar un chip no presente ser  ignorado. Si tanto el 
+MSX-MUSIC como el MSX-AUDIO (reproductor Moonblaster 1.4) o el OPL4 
+(reproductor Moonblaster Wave) son desactivados, la funci¢n 74 (inicio de la 
+reproducci¢n de una m£sica) no har  nada pero no devolver  error.
+
+Para que los cambios en el estado de los chips surtan efecto, la m£sica que 
+est‚ sonando debe ser detenida (funci¢n 75 o 77) y recomenzada (funci¢n 74). 
+Si no hab¡a ninguna m£sica sonando basta iniciarla normalmente (funci¢n 74).
+
+Esta funci¢n devolver  el error 7 si alguno de los par metros de entrada es 
+incorrecto (aunque si P(0)<>1 no es necesario establecer P(1) a P(3)), y el 
+error 12 si el reproductor no ha sido cargado.
+
+
+* Funci¢n 74: Inicio de la reproducci¢n de una m£sica Moonblaster
+
+Entrada: P(0) = Segmento de la m£sica
+	 P(1) = Direcci¢n inicial de la m£sica
+Salida:  -
+
+Esta funci¢n comienza la reproducci¢n de la m£sica Moonblaster
+especificada. Si el segmento especificado no existe, corresponde a VRAM o es 
+el 255, la funci¢n devolver  el error -1. Si el reproductor adecuado a la
+m£sica no est  cargado, devolver  el error 12 (para cargar el reproductor hay 
+que usar la funci¢n 71). Si la m£sica es Moonblaster Wave puede estar 
+alamcenada a trav‚s de segmentos consecutivos; ver secci¢n 8.2 para m s 
+detalles.
+
+En el caso del reproductor Moonblaster 1.4, la funci¢n examina el primer byte 
+de la m£sica en la direcci¢n indicada; si es #FF significa que el fichero de 
+la m£sica ha sido grabado en formato EDIT y no puede ser reproducida, en cuyo 
+caso devuelve el error 13. En caso contrario asume que en la direcci¢n 
+indicada comienza una m£sica en formato USER y comienza la reproducci¢n sin 
+m s comprobaciones. Si se especifica una direcci¢n en la que no hay una 
+m£sica Moonblaster 1.4 almacenada los resultados son impredecibles.
+
+El reproductor de Moonblaster Wave no tiene esta limitaci¢n: es capaz de 
+detectar si en la direcci¢n especificada realmente hay una m£sica Moonblaster 
+Wave, y si est  grabada en modo USER; en caso contrario devuelve el error 13.
+
+Si tanto el MSX-MUSIC como el MSX-AUDIO (reproductor Moonblaster 1.4) o el 
+OPL4 (reproductor Moonblaster Wave) han sido desactivados con la funci¢n 73, 
+esta funci¢n no har  nada, y no devolver  error. Si ya hay una m£sica sonando 
+o pausada, devolver  el error 14.
+
+
+* Funci¢n 75: Detenci¢n de la reproducci¢n de una m£sica
+
+Entrada: -
+Salida:  -
+
+Esta funci¢n detiene la reproducci¢n de la m£sica que est  sonando y silencia 
+los chips musicales. Si no hay ninguna m£sica sonando o no hay un reproductor 
+Moonblaster cargado, no hace nada. Nunca devuelve error.
+
+
+* Funci¢n 76: Pausa y continuaci¢n de una m£sica
+
+Entrada: P(0) = 0 -> Pausar la m£sica
+		1 -> Continuar la m£sica pausada
+	       -1 -> Invertir estado de la m£sica (reproducci¢n <--> pausa)
+Salida:  -
+
+Esta funci¢n pausa o contin£a la reproducci¢n de una m£sica Moonblaster. Si 
+no hay ninguna m£sica sonando o pausada o si el reproductor no ha sido 
+cargado, no har  nada, pero no devolver  error. Si el par metro indicado en 
+P(0) es incorrecto, devolver  el error 7.
+
+
+* Funci¢n 77: Desvanecimiento de una m£sica
+
+Entrada: P(0) = 0      -> S¢lo consultar si hay un desvanecimiento en marcha
+		-1     -> Congelar desvanecimiento
+		1..254 -> Iniciar/descongelar desvanecimiento con el
+			  retardo indicado
+Salida:  P(1) = -1 si hay un desvanecimiento en marcha
+	 P(2) = Retardo del desvanecimiento en curso (-1 si est  congelado)
+
+Esta funci¢n inicia el desvanecimiento de la m£sica Moonblaster en curso. El 
+retardo indica los ciclos de reloj (de 1/50 o 1/60 segundos) que pasar n 
+entre cada paso del desvanecimiento, por lo que un retardo m s bajo implicar  
+un desvanecimiento m s r pido. Una vez que el desvanecimiento se haya 
+completado (el volumen de la m£sica alcance cero), la m£sica ser  detenida 
+autom ticamente: no es necesario detenerla manualmente con la funci¢n 75.
+
+Si P(0)=-1 el desvanecimiento queda congelado, es decir, la m£sica queda 
+sonando normalmente con el nivel de vol£men alcanzado. Para continuar con el 
+desvanecimiento hay que volver a ejecutar esta funci¢n especificando un nuevo 
+retardo en P(0).
+
+Si P(0)=0 lo £nico que har  la funci¢n ser  establecer P(1) y P(2) a la 
+salida. Si no hay ninguna m£sica sonando o pausada, o si el reproductor no ha 
+sido cargado, la funci¢n no har  nada. Nunca devuelve error.
+
+
+* Funci¢n 78: Carga de un samplekit de Music Module
+
+Entrada: P(0) = N£mero de fichero
+Salida:  P(7) = N£mero de bytes leidos
+
+Esta funci¢n carga del fichero indicado un samplekit de Music Module en 
+formato Moonblaster: 56 bytes de cabecera, que son copiados en una zona 
+adecuada del segmento del reproductor, y 32K de samples, que son cargados en 
+la sample-RAM del Music Module.
+
+El hecho de que la carga se realice desde un fichero ya abierto posibilita la 
+concatenaci¢n del samplekit con otros datos en un £nico fichero: en ese caso, 
+basta mover el puntero del fichero al punto adecuado y entonces ejecutar la 
+funci¢n. Sin embargo, el caso m s frecuente es la carga de un fichero MBK 
+generado directamente por el Moonblaster. En tal caso bastan las siguientes 
+intrucciones para cargar el samplekit:
+
+F$(0)="sampkit.mbk":?USR(31):?USR(78):?USR(32)
+
+En caso de producirse un error de disco, la funci¢n devolver  el c¢digo de 
+error correspondiente, y P(7) contendr  el n£mero de bytes que han podido ser 
+leidos del fichero. Si este n£mero es mayor de 16K, s¢lo las primeras 16K de 
+la sample-RAM habr n sido cargadas. Si es menor, la sample-RAM no se habr  
+visto modificada.
+
+Si el reproductor Moonblaster 1.4 no han sido cargado o no hay un Music 
+Module presente, la funci¢n no har  nada, pero no devolver  error. Si la 
+totalidad del samplekit es cargado, P(7) no valdr  32824 sino -32712, debido 
+a que las variables enteras en BASIC tienen un rango de -32768 a 32767.
+
+
+* Funci¢n 79: Carga de un wavekit de MoonSound
+
+Entrada: P(0) = N£mero de fichero
+Salida:  P(6):P(7) = N£mero de bytes leidos
+
+Esta funci¢n carga del fichero indicado un wavekit de MoonSound, que ha de 
+haber sido grabado en formato USER. En caso contrario devuelve el error 15.
+
+El hecho de que la carga se realice desde un fichero ya abierto posibilita la 
+concatenaci¢n del wavekit con otros datos en un £nico fichero: en ese caso, 
+basta mover el puntero del fichero al punto adecuado y entonces ejecutar la 
+funci¢n. Sin embargo, el caso m s frecuente es la carga de un fichero MWK 
+generado directamente por el Moonblaster. En tal caso bastan las siguientes 
+intrucciones para cargar el wavekit:
+
+F$(0)="wavkit.mwk":?USR(31):?USR(79):?USR(32)
+
+En caso de producirse un error de disco, la funci¢n devolver  el c¢digo de 
+error correspondiente, y P(6):P(7) contendr  el n£mero de bytes que han 
+podido ser leidos del fichero. En este caso la sample-RAM del MoonSound puede 
+haberse visto alterada, pero la zona de trabajo del reproductor no habr  sido 
+actualizada, por lo que no se puede considerar que el wavekit ha sido 
+parcialmente cargado.
+
+Si el reproductor Moonblaster Wave no ha sido cargado o no hay un MoonSound
+presente, la funci¢n no har  nada, pero no devolver  error. Si la totalidad 
+del samplekit es cargado, P(6):P(7) contendr  el tama¤o total del wavekit 
+(igual al tama¤o del fichero si simplemente se carga un fichero .MWK).
+
+
+APENDICE 1 - LISTADO DE FUNCIONES DE NESTORBASIC
+
+--- Funciones generales
+
+* Funci¢n  0: Desinstalaci¢n de NestorBASIC
+* Funci¢n  1: Obtenci¢n de informaci¢n general sobre NestorBASIC y sobre un 
+	      segmento l¢gico
+
+--- Acceso a RAM
+
+* Funci¢n  2: Lectura de un byte de un segmento
+* Funci¢n  3: Lectura de un byte de un segmento
+	      con autoincremento de la direcci¢n
+* Funci¢n  4: Lectura de un entero (2 bytes) de un segmento
+* Funci¢n  5: Lectura de un entero (2 bytes) de un segmento
+	      con autoincremento de la direcci¢n
+* Funci¢n  6: Escritura de un byte en un segmento
+* Funci¢n  7: Escritura de un byte en un segmento
+	      con autoincremento de la direcci¢n
+* Funci¢n  8: Escritura de un entero (2 bytes) en un segmento
+* Funci¢n  9: Escritura de un entero (2 bytes) en un segmento
+	      con autoincremento de la direcci¢n
+* Funci¢n 10: Transferencia de un bloque de bytes
+	      de un segmento a otro
+* Funci¢n 11: Llenado de una zona de memoria con un byte
+* Funci¢n 12: Llenado de una zona de memoria con un byte
+	      con autoincremento de la direcci¢n
+
+--- Acceso a VRAM
+
+* Funci¢n 13: Lectura de un byte de la VRAM
+* Funci¢n 14: Lectura de un byte de la VRAM
+	      con autoincremento de la direcci¢n
+* Funci¢n 15: Lectura de un entero (2 bytes) de la VRAM
+* Funci¢n 16: Lectura de un entero (2 bytes) de la VRAM
+	      con autoincremento de la direcci¢n
+* Funci¢n 17: Escritura de un byte en la VRAM
+* Funci¢n 18: Escritura de un byte en la VRAM
+	      con autoincremento de la direcci¢n
+* Funci¢n 19: Escritura de un entero (2 bytes) en la VRAM
+* Funci¢n 20: Escritura de un entero (2 bytes) en la VRAM
+	      con autoincremento de la direcci¢n
+* Funci¢n 21: Transferencia de un bloque de bytes
+	      de VRAM a RAM
+* Funci¢n 22: Transferencia de un bloque de bytes
+	      de RAM a VRAM
+* Funci¢n 23: Transferencia de un bloque de bytes
+	      de VRAM a VRAM
+* Funci¢n 24: Llenado de una zona de la VRAM con un byte
+* Funci¢n 25: Llenado de una zona de la VRAM con un byte
+	      con autoincremento de la direcci¢n
+
+--- Acceso a disco
+
+* Funci¢n 26: B£squeda de ficheros
+* Funci¢n 27: Renombrado de un fichero
+* Funci¢n 28: Borrado de un fichero
+* Funci¢n 29: Desplazamiento de un fichero (DOS 2)
+* Funci¢n 30: Creaci¢n de un fichero o subdirectorio
+* Funci¢n 32: Cierre de un fichero
+* Funci¢n 33: Lectura de un fichero
+* Funci¢n 34: Lectura de un fichero a VRAM
+* Funci¢n 35: Lectura de sectores
+* Funci¢n 36: Lectura de sectores a VRAM
+* Funci¢n 37: Escritura en un fichero
+* Funci¢n 38: Escritura en un fichero desde VRAM
+* Funci¢n 39: Escritura de sectores
+* Funci¢n 40: Escritura de sectores desde VRAM
+* Funci¢n 41: Relleno de un fichero con un dato
+* Funci¢n 42: Movimiento del puntero de un fichero
+* Funci¢n 43: Obtenci¢n de la unidad establecida por defecto
+	      y el vector de unidades disponibles
+* Funci¢n 44: Establecimiento de la unidad por defecto
+* Funci¢n 45: Obtenci¢n de informaci¢n sobre el espacio de un disco
+* Funci¢n 46: Obtenci¢n del directorio actual (DOS 2)
+* Funci¢n 47: Establecimiento del directorio actual (DOS 2)
+* Funci¢n 48: Obtenci¢n del tama¤o del RAM disk (DOS 2)
+* Funci¢n 49: Establecimiento del RAM disk (DOS 2)
+* Funci¢n 50: Obtenci¢n del byte de atributos de un fichero (DOS 2)
+* Funci¢n 51: Establecimiento del byte de atributos de un fichero
+* Funci¢n 52: Tratamiento de una cadena de ruta de acceso (DOS 2)
+
+--- Compresi¢n de gr ficos
+
+* Funci¢n 53: Compresi¢n de un gr fico
+* Funci¢n 54: Descompresi¢n de un gr fico
+
+--- Ejecuci¢n de programas BASIC
+
+* Funci¢n 55: Ejecuci¢n de un programa BASIC almacenado en un segmento
+* Funci¢n 56: Activaci¢n de un programa BASIC almacenado en un segmento
+* Funci¢n 57: Grabaci¢n de un programa BASIC con cabecera en un fichero
+
+--- Funciones varias
+
+* Funci¢n 58: Ejecuci¢n de una rutina de la BIOS o SUB-BIOS
+* Funci¢n 59: Ejecuci¢n de una rutina de usuario
+	      (rutina en c¢digo m quina contenida en un segmento)
+* Funci¢n 60: Impresi¢n de una cadena en modo gr fico
+* Funci¢n 61: Almacenamiento de una cadena en un segmento
+* Funci¢n 62: Recuperaci¢n de una cadena almacenada en un segmento
+* Funci¢n 63: Inicializaci¢n del modo de parpadeo en SCREEN 0
+* Funci¢n 64: Construcci¢n o borrado de un bloque de car cteres parpadeantes
+	      en SCREEN 0
+* Funci¢n 65: Obtenci¢n de informaci¢n sobre las interrupciones
+* Funci¢n 66: Definici¢n o suspensi¢n de una interrupci¢n de usuario
+
+--- Efectos de sonido PSG
+
+* Funci¢n 67: Obtenci¢n de informaci¢n sobre los efectos de sonido PSG
+* Funci¢n 68: Inicializaci¢n de un juego de efectos de sonido PSG
+* Funci¢n 69: Reproducci¢n de un efecto de sonido PSG
+* Funci¢n 70: Interrupci¢n del efecto de sonido PSG en curso
+
+--- Reproducci¢n de m£sica Moonblaster
+
+* Funci¢n 71: Carga e inicializaci¢n del reproductor Moonblaster
+* Funci¢n 72: Obtenci¢n de informaci¢n sobre la m£sica en reproducci¢n
+* Funci¢n 73: Activaci¢n y desactivaci¢n de los chips musicales
+* Funci¢n 74: Inicio de la reproducci¢n de una m£sica Moonblaster 1.4
+* Funci¢n 75: Detenci¢n de la reproducci¢n de una m£sica
+* Funci¢n 76: Pausa y continuaci¢n de una m£sica
+* Funci¢n 77: Desvanecimiento de una m£sica
+* Funci¢n 78: Carga de un samplekit de Music Module
+* Funci¢n 79: Carga de un wavekit de MoonSound
+
+
+APENDICE 2 - RUTINAS DE NESTORBASIC ACCESIBLES AL USUARIO
+
+Cuando se ejecuta una rutina de usuario o una interrupci¢n de usuario, el 
+segmento de NestorBASIC queda conectado en le p gina 1. Al principio del 
+mismo hay una tabla de salto a unas rutinas para el control de la RAM y la 
+VRAM accesibles por medio de un simple CALL. En esta secci¢n se detalla la 
+ubicaci¢n y el funcionamiento de dichas rutinas.
+
+Todas estas rutinas mantienen el estado de las interrupciones, excepto 
+PUTSLOT0 que vuelve con las interrupciones inhibidas. Los tres primeros bytes 
+de la tabla no contienen un salto, son bytes de informaci¢n (TABSEGS y 
+INT_DATA).
+
+ATENCION: El segmento l¢gico #FF se refiere siempre a la memoria conectada en 
+las p ginas 2 y 3 en el momento en que se hace referncia a dicho segmento. 
+Mientras se est  ejecutando una rutina o una interrupci¢n de usuario la 
+p gina 2 NO contiene el segmento del BASIC, sino el de la rutina o la 
+interrupci¢n. Para convertir realmente el segmento #FF a una 
+direcci¢n+segmento del BASIC hay que hacer lo siguiente:
+
+	ld	hl,direcci¢n
+	call	CHKSLFF
+	cp	3
+	jr	z,OKFF
+	ld	a,4
+OKFF:	;
+
+
+El contenido de la tabla de salto es el siguiente:
+
+
+#4100: Cadena identificadora "NestorBASIC x.xx"
+
+
+#4110: TABSEGS
+
+Puntero a la tabla de segmentos. El formato de dicha tabla es el siguiente:
+
+-1: N£mero de segmentos disponibles (como P(0) devuelto por la funci¢n 1)
++0: Slot del segmento l¢gico 0
++1: Segmento fisico del segmento l¢gico 0
++2: Slot del segmento l¢gico 1
++3: Segmento fisico del segmento l¢gico 1
+...
++492: Slot del segmento l¢gico 246
++493: Segmento fisico del segmento l¢gico 246
+
+
+#4112: INT_DATA
+
+Contiene informaci¢n sobre las interrupciones de NestorBASIC:
+
+bit 0 = 1: Interrupci¢n de usuario en marcha
+bit 1 = 1: Efecto de sonido en marcha
+bit 2 = 1: M£sica Moonblaster 1.4 en reproducci¢n
+bit 3 = 1: M£sica Moonblaster Wave en reproducci¢n
+
+
+#4113: PUTSLOT0
+
+Conecta un slot en la pagina 0 sin usar ENASLT. Vuelve con las interrupciones 
+inhibidas.
+
+Entrada:   A = Slot a conectar
+Salida:    -
+Registros: AF
+
+
+#4116: CHKSLE
+
+Comprueba si un segmento l¢gico existe. NO reconoce como validos los 
+segmentos correspondientes a VRAM ni el 255.
+
+Entrada:   A = Segmento l¢gico
+Salida:    Cy= 1 -> El segmento l¢gico existe
+	   Cy= 0 -> El segmento l¢gico no existe
+Registros: F
+
+
+#4119: CHKSLFF
+
+Comprueba si un segmento l¢gico es el #FF, en ese caso lo convierte al 
+segmento adecuado (segmento de la pagina 2 si HL<#C000, segmento 3 si 
+HL>=#C000)
+
+Entrada:   A  = Segmento l¢gico
+	   HL = Direcci¢n
+Salida:    A  = Segmento convertido si era el #FF, si no, inalterado
+Registros: F
+
+
+#411C: CHKSLV
+
+Comprueba si un segmento l¢gico corresponde a VRAM, en ese caso lo convierte 
+a la direcci¢n VRAM adecuada.
+
+Entrada:   A  = Segmento l¢gico
+	   HL = Direcci¢n
+Salida:    Si es VRAM:
+	      A  = Bloque VRAM
+	      HL = direcci¢n VRAM
+	      Cy = 1
+	   Si no es VRAM:
+	      A, HL inalterados
+	      Cy = 0
+Registros: -
+
+
+#411F: VTOSL
+
+Convierte una direcci¢n VRAM en su segmento l¢gico equivalente.
+
+Entrada:   A  = Bloque VRAM
+	   HL = Direcci¢n VRAM
+Salida:    A  = Segmento l¢gico equivalente
+	   HL = Direcci¢n RAM equivalente
+	   Cy = 1 -> A=1 pero solo hay 64K VRAM
+Registros: F
+
+
+#4122: GET_SF
+
+Obtiene el segmento f¡sico y el slot correspondientes a un segmento l¢gico.
+
+Entrada:   A = Segmento l¢gico
+Salida:    A = Segmento f¡sico
+	   B = Slot (#FF -> Segmento l¢gico inexistente)
+Registros: -
+
+
+#4125: GET_SLT
+
+Obtiene el slot conectado a la pagina 1 o 2.
+
+Entrada:   A  = Pagina (1 o 2)
+Salida:    B  = Slot
+Registros: F, C
+
+
+#4128: READ_SL
+
+Lee un byte de un segmento l¢gico.
+
+Entrada:   A  = Segmento l¢gico
+	   HL = Direcci¢n (0-#3FFF)
+Salida:    A  = Dato
+Registros: F, AF'
+
+
+#412B: WRITE_SL
+
+Escribe un dato en un segmento l¢gico.
+Entrada:   A  = Segmento l¢gico
+	   E  = Dato
+	   HL = Direcci¢n (0-#3FFF)
+Salida:    -
+Registros: F, AF'
+
+
+#412E: LDIRSS
+
+Realiza una transferencia de un segmento l¢gico a otro.
+Reconoce el segmento l¢gico #FF y los segmentos VRAM.
+Vuelve con la BIOS conectada en la pagina 0.
+NO comprueba si BC > #4000.
+
+Entrada:    IXh = Segmento l¢gico fuente
+	    IXl = Segmento l¢gico destino
+	    HL	= Direcci¢n origen (0..#3FFF)
+	    DE	= Direcci¢n destino (0..#3FFF)
+	    BC	= Longitud (0..#3FFF)
+Salida:     A	= 0 -> Transferencia realizada
+	    A  <> 0 -> Uno de los segmentos l¢gicos no existe
+Registros:  Todos
+
+
+#4131: CHKBV
+
+Comprueba si una direcci¢n VRAM existe.
+
+Entrada:   A  = Bloque VRAM (0 o 1, 64K inferiores o superiores)
+Salida:    Cy = 1 -> No existe esa direcci¢n
+		     (A = 1 pero el ordenador s¢lo tiene 64K VRAM)
+Registros: -
+
+
+#4134: SET_RD
+
+Prepara el VDP para lectura de VRAM.
+
+Entrada:   HL = Direcci¢n VRAM, 16 bits bajos
+	   CY = Direcci¢n VRAM, bit 17
+Salida:    -
+Registros: AF, HL
+
+
+#4137: SET_WR
+
+Prepara el VDP para escritura en VRAM.
+
+Entrada:   HL = Direcci¢n VRAM, 16 bits bajos
+	   CY = Direcci¢n VRAM, bit 17
+Salida:    -
+Registros: AF, HL
+
+
+#413A: LDIRVR
+
+Copia de un bloque de bytes de VRAM a RAM.
+
+Entrada:   Direcci¢n VRAM establecida con SET_RD
+	   DE = Destino RAM
+	   BC = Longitud
+Salida:    DE = direcci¢n siguiente al final del bloque
+Registros: AF
+
+
+#413D: LDIRRV
+
+Copia de un bloque de datos de RAM a VRAM.
+
+Entrada:   Direcci¢n VRAM establecida con SET_WR
+	   HL = Origen RAM
+	   BC = Longitud
+Salida:    HL = direcci¢n siguiente al final del bloque
+Registros: AF
+
+
+#4140: LDIRVV
+
+Copia de un bloque de datos de VRAM a VRAM a traves de un buffer en RAM.
+
+Entrada:   HL = Origen, 16 bits bajos
+	   DE = Destino, 16 bits bajos
+	   BC = Longitud
+	   A  = %000000 D O, bit 17 de Origen y Destino
+	   IX = Buffer RAM de BC bytes
+Salida:    -
+Registros: AF, HL, DE
+
+
+#4143: FILLVR
+
+Llena una zona de VRAM con un byte.
+
+Entrada:   Direcci¢n inicial establecida con SET_WR
+	   BC = Longitud
+	   A  = Dato
+Salida:    -
+Registros: -
+
+
+#4146: BLK_CLS
+
+Borra la zona de VRAM destinada al modo de parpadeo
+(modo "blink" de SCREEN 0).
+
+Entrada:   -
+Salida:    -
+Registros: AF
+
+
+#4149: BLK_COL
+
+Establecimiento del color del modo de parpadeo.
+
+Entrada:   A = Color texto + 16* color fondo
+Salida:    -
+Registros: A
+
+
+#414C: BLK_TIM
+
+Establecimiento de los tiempos del modo de parpadeo.
+
+Entrada:   A = Tiempo ON + 16* tiempo OFF
+Salida:    -
+Registros: A
+
+
+#414F: BLK_ON
+
+Construcci¢n de un bloque parpadeante.
+
+Entrada:   HL = XXYY
+	   B  = Longitud X
+	   C  = Longitud Y
+Salida:    L  = YY siguiente a la £ltima l¡nea
+	   H  = XX original
+
+Registros: AF
+
+
+#4152: BLK_OF
+
+Borrado de un bloque parpadeante.
+
+Entrada:   HL = XXYY
+	   B  = Longitud X
+	   C  = Longitud Y
+Salida:    L  = YY siguiente a la £ltima l¡nea
+	   H  = XX original
+Registros: AF
+
+
+#4155: C_BLKAD
+
+C lculo de la direcci¢n VRAM correspondiente a una coordenada concreta
+para el modo de parpadeo.
+
+Entrada:   HL = XXYY
+Salida:    HL = Direcci¢n VRAM
+Registros: AF
+
+
+#4158: C_STBT
+
+C lculo del bit correspondiente a una coordenada concreta
+del modo de parpadeo.
+
+Entrada:   A = Coordenada X
+Salida:    A = Bit puesto a 1
+Registros: F
+
+
+#415B: GINFOUS
+
+Devuelve informaci¢n sobre la interrupci¢n de usuario.
+
+Entrada: -
+Salida:  A  = Segmento
+	 HL = Direcci¢n
+
+
+#415E: GINFOSFX
+
+Devuelve informaci¢n sobre los efectos de sonido PSG
+
+Entrada: A  = Nuevo volumen m ximo (-1 para no cambiarlo)
+Salida:  A  = Segmento del juego de efectos
+	 HL = Direcci¢n del juego de efectos
+	 B  = N£mero del efecto que suena, o del £ltimo que ha sonado
+	 C  = Prioridad del efecto que suena, o del £ltimo que ha sonado
+	 D  = N£mero de efecto m s alto existente
+	 E  = Volumen m ximo
+
+
+#4161: GINFOMUS
+
+Devuelve informaci¢n sobre la m£sica que est  sonando y la presencia del 
+reproductor Moonblaster.
+
+Entrada: -
+Salida:  Cy = 1 -> No hay ning£n reproductor cargado,
+		   el resto de resultados no son v lidos.
+	 Cy = 0 -> Hay un reproductor cargado.
+		   El resto de resultados son v lidos
+		   si hay una m£sica sonando (consultar INT_DATA).
+	 A  = Segmento l¢gico de la m£sica que suena
+	 HL = Direcci¢n inicial de la m£sica que suena
+	 B  = Chips presentes:
+	      bit 0 = 1 -> MSX-MUSIC presente
+	      bit 1 = 1 -> MSX-AUDIO presente
+	      bit 2 = 2 -> OPL4 presente
+	 C  = Chips activos:
+	      bit 0 = 1 -> MSX-MUSIC activo
+	      bit 1 = 1 -> MSX-AUDIO activo
+	      bit 2 = 2 -> OPL4 activo
+	 D  = Posici¢n
+	 E  = Paso actual en la posici¢n (0 a 15)
+	 IXl= #FF si la m£sica est  pausada
+
+
+#4164: REPTYPE
+
+Esto no es una rutina, sino un byte de informaci¢n. Contiene el tipo de 
+reproductor cargado:
+
+0: Reproductor MoonBlaster 1.4
+0: Reproductor MoonBlaster Wave
+
+Atenci¢n: antes de consultar esta informaci¢n hay que comprobar que 
+efectivamente hay alg£n reproductor cargado. Esto se puede hacer con la 
+funci¢n GINFOMUS (#4161).
+
+
+APENDICE 3 - INTERRUPCIONES BAJO MSX TURBO-R
+
+NestorBASIC funciona perfectamente en cualquier MSX 2/2+/Turbo-R, pero puede 
+dar problemas con las interrupciones si se ejecuta en un Turbo-R en modo DOS 
+1, sobre todo si se usa una ampliaci¢n de memoria externa. Esto es debido a 
+que antes de ejecutar una interrupci¢n, NestorBASIC ha de averiguar qu‚ 
+segmento hay conectado en la p gina 1, y en modo DOS 1 esto s¢lo se puede 
+hacer con la instrucci¢n IN A,(#FD), que en los Turbo-R no funciona 
+exactamente igual que en los MSX2/2+.
+
+Por tanto, si se van a usar interrupciones de usuario o efectos de sonido en 
+un programa que use NestorBASIC, lo mejor es detectar si el ordenador es un 
+Turbo-R (si PEEK(&H2D)=3) y se trabaja en modo DOS 1 (se puede averiguar 
+con la funci¢n 1), y en ese caso avisar de que se ha de arrancar en modo DOS 
+2.
+
+
+APENDICE 4 - CONDICIONES DE USO
+
+NestorBASIC es software gratuito, o como dicen los expertos, freeware. Sin 
+embargo hay un par de condiciones para usarlo en tus progamas:
+
+- En alg£n lugar del programa (al cargar, en una opci¢n "about", en el 
+"staff", etc) ha de aparecer una menci¢n al uso de NestorBASIC, as¡ como la 
+versi¢n del mismo (para averiguar la versi¢n de NestorBASIC que usas, utiliza 
+la funci¢n 1).
+
+- Si el programa no es para uso personal del autor (es decir, si va a ser 
+distribuido, de forma gratuita o no) has de enviarme una copia del mismo.
+
+Para cualquier sugerencia, consulta o comentario acerca de NestorBASIC, me 
+encontrar s en <konamiman@geocities.com>.
+
+El uso de los efectos de sonido creados con el editor SEE tiene sus propias 
+condiciones de uso. Si vas a vender tu programa por m s de 15 NLG has de 
+pagar una peque¤a cantidad a los autores, como m ximo 25 NLG. Para m s 
+detalles o para comentarios acerca de SEE contacta con Fuzzy Logic:
+
+       R. v/d Meulen		A. v/d Wal
+       Lijsterstraat 25 	Tormentil 15
+       8917 CX Leeuwarden	8445 RR Heerenveen
+       Holland. 		Holland.
+
+

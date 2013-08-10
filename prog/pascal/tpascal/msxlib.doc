@@ -1,0 +1,290 @@
+                  M S X L I B  . D O C
+
+                     - 1. INTRODUCTION -
+
+ Proposal for an include file, which adds MSX-2 features to
+ Turbo Pascal, based on previous experiments by
+ J. Jongejan
+ Jan van Halfwassenaerstraat 5
+ 3243 AS Stad aan 't Haringvliet (The Netherlands)
+ Telephone 01871-2313
+
+ and
+
+ A. v. Gerven
+ Telephone 040-420256 (New address and phone number unknown yet)
+
+ Our previous library files were donated to the public domain and
+ are located at FIDO MSX-gg (020-982502) and FIDO Venlo (077-822522)
+ as DEMO.PAS and MSX-EXT.INC/MSX-EXT.COM respectively.
+
+ This package, version 1.0, was created by A.v.Gerven, january 1988.
+ It consists of 3 files: MSXLIB-A.INC, MSXLIB-B.INC and MSXLIB.DOC.
+
+ Part 1, MSXLIB-A.INC, containts routines for devices that are not
+ implemented in MSX-DOS. Part 2, MSXLIB-B.INC contains routines that
+ enable you to use most of MSX's screen features from Turbo Pascal.
+ None of these files can be considered complete, although all standard
+ functions are implemented. Possible extensions for the future could be
+ cassette I/O (!!), VDP hardware routines or sprite routines.
+
+ Some routines have built in checks for all of their input parameters,
+ some do a partial test, and some don't test at all. It is the users
+ responsibility to take this into consideration. If you intend to write
+ a program that should run on MSX-1 as well as MSX-2 systems, and that
+ gets the most out of each system, you should test the MSX-version number
+ in your Pascal program. This can be easily done with the universal <peek>
+ function in MSXLIB-A.INC.
+
+ Of course you are free to delete routines from these file's if you don't
+ use them in your main program.
+
+ Using routines from these files in your programs is entirely your res-
+ ponsibility!! I will and cannot supply service on this public domain
+ package. I do welcome any suggestions, extensions or remarks however, and
+ these will be taken into serious consideration before updates are released.
+
+
+                       - 2. MSXLIB-A.INC -
+
+{     C o m m o n   B I O S   c a l l s   f r o m   P a s c a l        }
+PROCEDURE BIOS_CALL(version: byte;
+                    VAR a,b,c,d,e,h,l: byte;
+                    entry_address: integer);
+{ This procedure does a CALSLT to the BIOS specified in <version> }
+{ version : 0 = MSX-1 ROM BIOS (primary_slot=0, secundary_slot=0) }
+{ version : 1 = MSX-2 BIOS extension, slotcode is stored in the   }
+{               system variable EXBRSA at address FAF8            }
+{ values for the registers are passed to and from this routine in }
+{ the variables a,b,c, etc.                                       }
+{ When calling this procedure, <entry_address> should hold the    }
+{ address of the routine that has to be called.                   }
+{ If you are not familiar with MSX's slot structure DON'T use     }
+{ this routine !                                                  }
+
+
+FUNCTION peek(primary_slot,secundary_slot: byte;
+              address: integer): byte;
+{ Returns data, located at specified <address>. }
+{ primary_slot [0..3] and secundary_slot [0..3] }
+{ must be specified. This enables access to any }
+{ address within the standard 1 Mbyte address   }
+{ space. Memory mappers for MSX-2 are not imple-}
+{ mented in version 1 of this package.          }
+
+
+PROCEDURE poke(primary_slot,secundary_slot: byte;
+               address: integer; data: byte);
+{ Writes data to specified <address>. For additional }
+{ remarks please see <peek>.                         }
+
+Function ram(Primary_slot,Secundary_slot: byte;
+             Address: integer): boolean;
+{ Tests whether location specified by <address>, }
+{ <primary_slot> and <secundary_slot> contains   }
+{ RAM or not. Memory test is NON-destructive!    }
+{ returns TRUE if it is ram.                     }
+
+{-------------------------------------------------------------------}
+{              M S X   I N P U T   D E V I C E S                    }
+
+PROCEDURE kill_kbd;
+{ clears keyboard buffer }
+
+FUNCTION get_stick(nr: byte): byte;
+{ scans standard cursor input device, identified by nr. }
+{ valid entries are: nr = 0 : cursor keys               }
+{                    nr = 1 : joystick 1                }
+{                    nr = 2 : joystick 2                }
+{ returns same values as MSX-basic, eg.                 }
+{                  8  1  2                              }
+{                   \ | /                               }
+{                  7--0--3                              }
+{                   / | \                               }
+{                  6  5  4                              }
+
+FUNCTION get_trigger(nr: byte): boolean;
+{ scans standard trigger input device, identified by nr.}
+{ valid entries are: nr = 0 : space bar                 }
+{                    nr = 1 : firebutton 1              }
+{                    nr = 2 : firebutton 2              }
+{ returns value TRUE if button was pressed              }
+
+FUNCTION get_pad(nr: byte): byte;
+{returns value of MSX1 touch pad, connected to a joystick port }
+{valid entries are [0,1]. IF nr is outside this range, value 0 }
+{is returned.                                                  }
+
+FUNCTION get_paddle(nr: byte): byte;
+{returns value of MSX1 paddle, connected to a joystick port }
+{valid entries are [0,1]. IF nr is outside this range, value 0 }
+{is returned.                                                  }
+
+FUNCTION get_newpad(code: byte): integer; { M S X 2    O N L Y !!! <---}
+{returns status/value for different MSX2 devices, connected }
+{to a joystick port.                                        }
+{valid codes are:                                           }
+{ 8  : returns 255 if lightpen is connected                 }
+{ 9  : returns X-value for lightpen                         }
+{10  : returns Y-value for lightpen                         }
+{11  : returns 255 if lightpen button was pushed            }
+{12  : returns 255 if mouse is connected to port 1          }
+{13  : returns X-offset of mouse on port 1                  }
+{14  : returns Y-offset of mouse on port 1                  }
+{16  : returns 255 if mouse is connected to port 2          }
+{17  : returns X-offset of mouse on port 2                  }
+{18  : returns Y-offset of mouse on port 2                  }
+
+FUNCTION scan_fkey: byte;
+{ scans MSX-keyboard once for function keys }
+{ returns 00 if no key pressed, otherwise   }
+{ returns nr. of function key [1..10]       }
+
+{--------------------------------------------------------------------}
+{             m s x   o u t p u t   d e v i c e s                    }
+PROCEDURE init_sound;
+{ initializes PSG sound generator }
+
+PROCEDURE put_sound(val,reg: byte);
+{ writes <val> to register <reg> of sound generator }
+{ valid register, value combinations are:           }
+{  reg: 0  frequency channel A [0..255]             }
+{       1  frequency channel A [0..15]              }
+{       2  frequency channel B [0..255]             }
+{       3  frequency channel B [0..15]              }
+{       4  frequency channel C [0..255]             }
+{       5  frequency channel C [0..15]              }
+{       6  noise frequency [0..31]                  }
+{       7  output mode [0..63]                      }
+{       8  volume channel A [0..15]                 }
+{       9  volume channel B [0..15]                 }
+{      10  volume channel C [0..15]                 }
+{      11  envelope timing 1 [0..255]               }
+{      12  envelope timing 2 [0..255]               }
+{      13  envelope mode [0..14]                    }
+{ please note that this routine does NOT check for  }
+{ illegal registers or data values!                 }
+{ For more details please refer to your MSX BASIC   }
+{ manual.                                           }
+
+FUNCTION get_sound(reg: byte): byte;
+{ returns contents of specified PSG register <reg> }
+{ No test for illegal register values.             }
+
+               - 3 . MSXLIB-B.INC -
+
+{--------------------------------------------------------------------}
+{            s c r e e n   o u t p u t   r o u t i n e s             }
+
+FUNCTION get_screen: byte;
+{ returns value of current display mode [0..8] }
+
+PROCEDURE set_screen(nr: byte);
+{ changes display mode to value specified in nr.        }
+{ The valid range for nr. depends on the system used:   }
+{ MSX-1 : nr IN [0..2]                                  }
+{ MSX-2 & 64 k VideoRAM: nr IN [0..6]                   }
+{ MSX-2 & 128k VideoRAM: nr IN [0..8]                   }
+{ Please note that this procedure does not check whether}
+{ nr is in a valid range!                               }
+
+PROCEDURE get_colours(VAR fore,bak,bdr: byte);
+{ returns current values for screencolours; }
+{ fore:= foreground colour                  }
+{ bak:= background colour                   }
+{ bdr:= border colour                       }
+
+PROCEDURE set_colours(fore,bak,bdr: byte);
+{ sets system variables for screencolours to specified }
+{ value's. The range of valid values depends on the    }
+{ current screenmode. Please note that this procedure  }
+{ does not check if a value is valid!                  }
+{ Changes in the systems colour variables are not al-  }
+{ ways immediatly updated on the screen. Please refer  }
+{ to your systems manual for details.                  }
+
+PROCEDURE get_colortable(tabnr: byte;
+                         VAR red,blue,green: byte); {M S X 2   O N L Y !!}
+{ returns composition of colour (or colour table), specified }
+{ in tabnr. Valid values for tabnr are [0..15]               }
+
+PROCEDURE set_colortable(tabnr,red,blue,green: byte); {M S X 2   O N L Y !!}
+{ sets composition of colour (or colourtable) specified in }
+{ tabnr. to specified values.                              }
+
+FUNCTION get_textwidth: byte;
+{ returns width for text screens [0..1], otherwise value 00 is }
+{ returned.                                                    }
+
+PROCEDURE set_textwidth(width: byte);
+{ changes width for text screens to specified value, and clears }
+{ screen, if screenmode:=0 or 1.                                }
+{ Note that this procedure does not check for illegal values.   }
+
+PROCEDURE text_cursor(x,y: integer);
+{ positions cursor for text output at given position on ANY screen }
+{ This procedure does not check for invalid coordinate values !!   }
+
+PROCEDURE pixel_cursor(x,y: integer);
+{ positions cursor for graphics output at given position on screen }
+{ [2..8]; This procedure does not check for invalid coordinate     }
+{ values !!                                                        }
+
+FUNCTION WhereX: byte;
+{ returns X-value for text_cursor in screens [0..1], otherwise }
+{ returns value 00. Now you can use some of the IBM goodies!!  }
+
+FUNCTION WhereY: byte;
+{ See WhereX }
+
+FUNCTION get_pixelclr(x,y: byte): byte;
+{ returns colour of pixel at specified location, for screens [2..8] }
+{ otherwise returns value 00.                                       }
+{ Note that this function does not check for valid coordinate ranges}
+
+PROCEDURE set_pixelclr(x,y,clr: byte);
+{ sets pixel at specified location to specified colour }
+{ no action done if current screen is 0 or 1.          }
+{ no parameter range test done.                        }
+
+FUNCTION get_workclr: byte;
+{ returns value of system variable ATRBYT }
+
+PROCEDURE set_workclr(clr: byte);
+{ sets value of working colour }
+
+PROCEDURE print_char(ch: char);
+{ prints AMY msx-character to ANY screen at current position of }
+{ the text_cursor. This position is updated automatically.      }
+{ For details on printing graphic characters, please refer to   }
+{ your systems manual.                                          }
+
+PROCEDURE get_page(VAR work,displ: byte); { M S X 2   O N L Y !!}
+{ returns values for working page and display page.   }
+{ These values only have a meaning for screens [5..8] }
+
+PROCEDURE set_page(work,displ: byte); { M S X 2   O N L Y !!}
+{ changes values for working page and/or displayed page. }
+{ Valid combinations for screen-mode page number are:    }
+{ screen: 5 (64 kVideoRAM: [0..1])/(128 kVideoRAM: [0..3]}
+{         6 (64 kVideoRAM: [0..1])/(128 kVideoRAM: [0..3]}
+{         7 (128 kVideoRAM: [0..1] else illegal          }
+{         8 (128 kVideoRAM: [0..1] else illegal          }
+{ Note that this procedure does not check for legal com- }
+{ binations!                                             }
+
+PROCEDURE draw_line(x1,y1,x2,y2: integer; clr: byte); { M S X 2   O N L Y !!}
+{ draws a line from (x1,y1) to (x2,y2), with colour as  }
+{ specified in clr. Valid screenmodes [5..8]            }
+{ screenmode is NOT tested, in order to achieve maximum }
+{ speed.                                                }
+
+PROCEDURE draw_box(x1,y1,x2,y2: integer; clr,mode: byte);
+{ M S X 2   O N L Y}
+{ draws a rectangle from (x1,y1) to (x2,y2) with colour as }
+{ specified in clr. Box is filled with clr when mode<>0    }
+{ Valid screenmodes are [5..8]. They are NOT tested in or- }
+{ der to achieve maximum speed.                            }
+
+
+{ Valid screenmodes are [5..8]. T
