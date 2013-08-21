@@ -1,0 +1,338 @@
+The language L/1 is defined by the following syntax.  These productions and
+the corresponding comments are based on the preliminary Ada specifications in
+ACM/SIGPLAN Notices, Vol. 14, No.  6, June, 1979, Part A, pp.  E1-E5.  The
+language defined by these productions is a subset of the full Ada language;
+that is, programs written in this restricted syntax are also full Ada programs
+(with the exception that the reserved words of Ada are not all reserved in
+L/1).
+
+This syntax description uses a simple variant of Backus-Naur form.
+     <     >   Enclose names denoting syntactic  categories;
+               the non-terminal symbols of the language.
+     [     ]   Enclose an optional item.
+     {     }   Enclose a repeated item.  The item may appear
+               zero or more times.
+
+Comments relative to the syntax definitions are done in the same way as
+comments in the language being defined.
+
+Throughout a program comments may appear which are not a formal part of the
+language:
+
+<comment> ::= -- <rest_of_line>
+-- The special character pair which introduced this line introduces a
+-- comment.  Comments always end the line they are on.  Embedded in the
+-- line comments are not allowed.  Comments can be embedded in compound
+-- statements by being placed at the end of separate lines.  Comments
+-- are terminated by the end-of-line marker.
+
+<program> ::= <unit_body> 
+-- This is a new production to define what is meant by a simple program.
+
+<unit_body> ::= <subprog_body>
+
+<subprog_body> ::= PROCEDURE <designator> IS <unpre_block> ;
+-- The only type of subprogram allowed is 'PROCEDURE'.  Parameters and
+-- 'RETURN' are not included.  <designator> is the name of the procedure.
+
+<designator> ::= <identifier>
+-- Use of special character names to overload operators is not allowed.
+
+<unpre_block> ::= <declar_part> BEGIN <seq_states> END
+-- An unprefixed block occurs in the original syntax, but was not given
+-- a separate name.  The 'exception' section is not allowed.  Neither is
+-- the placing of the designator on the 'END'.
+
+<declar_part> ::= { <declaration> }  { <subprog_body> } 
+-- With, use, visibility, and representation clauses are not allowed.
+
+<declaration> ::= <object_declar> |  <type_declar>
+
+<object_declar> ::= <ident_list> : [ CONSTANT ] <type_name> [ := <number> ] ;
+
+<ident_list> ::= <identifier> { , <identifier> } 
+
+<type_declar> ::= TYPE <ident> IS <array_type_def> ;
+
+<array_type_def> ::= ARRAY ( <number> ..  <number> ) OF <type_name>
+-- In this compiler the type_name 'INTEGER' is predefined.  The syntax
+-- is defined similarly to the full Ada syntax so that 'integer' does
+-- not have the appearance of a reserved key word.
+
+<seq_states> ::= { <simple_state> |  <compound_state> } 
+-- Labeled statements are not allowed as they are in Ada.
+
+<simple_state> ::= <assign_state> | <subprogram_call_state>
+                   | <exit_state> | NULL;
+-- goto, assert, return, code, parallel execution, and exception related
+-- statements are excluded.
+
+<compound_state> ::= <if_state>  |  <loop_state>
+-- case, accept, select, and block are excluded for simplicity.
+
+<assign_state> ::= <variable> := <expression> ;
+-- The assignment operator is valid only for underlying predefined types
+-- (eg.  integer).
+
+<subprog_call_state> ::= <subprog_name> ;
+-- A subprogram name is an identifier which was previously declared as the
+-- name of a procedure.  Parameters are not allowed for simplicity in the
+-- call/return mechanism.
+
+<exit_state> ::= EXIT [ WHEN <condition> ] ;
+-- Since statement labels are not allowed, only single level loop exits
+-- are allowed.
+
+<loop_state> ::= <basic_loop>
+-- Only basic loops are allowed for simplicity.  Loop exits are via the
+-- exit statement.
+
+<basic_loop> ::= LOOP <seq_states> END LOOP;
+-- Since labels are not allowed on statements, lables are not permitted
+-- on the 'END LOOP'.
+
+<if_state> ::= IF <condition> THEN <seq_states>
+               { ELSIF <condition> THEN <seq_states> } 
+               [ ELSE <seq_states> ]
+               END IF;
+
+<condition> ::= <relation>
+-- This is considerably simplified.  Ada's short circuit evaluations
+-- are not allowed;  neither are the usual logical connectives.  This
+-- also eliminates the possibility of complicated logical expressions.
+
+<relation> ::= <simple_exp> <relational_op> <simple_exp>
+-- A relational operator is required.
+
+<expression> ::= <simple_exp>
+-- This production shows the simplicity of this language compared to
+-- full Ada.  It also allows other productions to remain similar to
+-- the corresponding ones in full Ada.
+
+<simple_exp> ::= [ <add_op> ] <term> { <add_op> <term> } 
+
+<term> ::= <factor> { <mult_op> <factor> } 
+
+<factor> ::= <primary>
+-- The exponent operator excluded.
+
+<primary> ::= <literal> |  <variable> |  ( <expression> )
+-- Aggregates, allocators, function calls, and qualified expressions
+-- are excluded.
+
+<relational_op> ::=  =  |  /=  |  <  |  <=  |  >  |  >=
+
+<add_op> ::=  +  |  -
+
+<mult_op> ::=  *  |  /  |  MOD
+
+<variable> ::= <identifier> { ( <expression> ) } 
+-- The expressions in parentheses are the array subscripts and are
+-- valid only if the type of the <identifier> is array based.
+
+<identifier> ::= <letter> { [ _ ] <let_or_digit> } 
+-- Underscore ( _ ) is signifcant in an identifier.
+
+<let_or_digit> ::= <letter> | <digit>
+
+<literal> ::= <number>
+
+<number> ::= <digit> { [ _ ] <digit> } 
+-- Underscore is not significant in a number.  This is simplified to
+-- allow only integers as numbers.
+
+<letter> ::=   A | B | C | D | E | F | G | H | I | J
+             | K | L | M | N | O | P | Q | R | S | T
+             | U | V | W | X | Y | Z
+
+<digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+
+
+RESERVED WORDS IN ADA
+
+Reserved words of L/1:
+     ARRAY, BEGIN, CONSTANT, ELSE, ELSIF, END, EXIT, IF, IS,
+     LOOP, MOD, NULL, OF, PRAGMA, PROCEDURE, THEN, TYPE, WHEN
+
+Restrictions and other notes relative to L/1 version 0.8:
+     1) all upper case must be used in programs;
+     2) identifiers must be unique in the first ten characters;
+     3) constants may only be initialized with positive values;
+     4) integers must be in the range -32_767..32_767;
+     5) validity checking of array assignments not done;
+     6) subscripting non-array variables may bomb compiler;
+     7) PRAGMAs are not consistently ignored; and
+     8) whatever else is wrong I meant to say here, but tell me!
+
+ADA L-MACHCHINE BASIC INSTRUCTIONS
+
+L-machine basic instructions (this does not explain specific format)
+     general format: INST L,A
+     S is user store, array of integers managed as a stack
+     T is 'pointer' to top of store/stack 
+          (then S[T] is element on top of stack)
+     P is instruction/program counter
+          (address of next instruction)
+     B is 'pointer' to bottom of current block mark
+
+(opr  ): operate with stack: (sub-op-code in A part of instruction)
+         (halt ): halt
+         (add  ): add: S[T-1] := S[T] + S[T-1]; T := T-1
+         (sub  ): subtract: S[T-1] := S[T] - S[T-1]; T := T-1
+         (mul  ): multiply: S[T-1] := S[T] * S[T-1]; T := T-1
+         (div  ): divide: S[T-1] := S[T] / S[T-1]; T := T-1  (quotient)
+         (mod  ): mod: S[T-1] := S[T] mod S[T-1]; T := T-1  (remainder)
+         (neg  ): negate: S[T] := -S[T]
+         (not  ): not: S[T] := not S[T]     (false = 0)
+         (sete ): equal: S[T-1] := S[T] = S[T-1]; T := T-1
+         (setlt): lessthan: S[T-1] := S[T] < S[T-1]; T := T-1
+         (setgt): greaterthan: S[T-1] := S[T] > S[T-1]; T := T-1
+         (swap ): swap: interchange top two stack elements
+         (ret  ): return: T := B-1; P := S[T+3]; B := S[T+2]
+         (rav  ): replace address with value: S[T] := S[S[T]]
+         (sto  ): store: S[S[T-1]] := S[T]; T := T-2
+         (inc  ): increment stack: T := T + S[T] - 1
+
+(lic  ): load immediate constant:
+         T := T+1; S[T] := A  (A is assumed positive)
+
+(lad  ): load address:
+         T := T+1; S[T] := BASE(L) + A
+         the function BASE computes the appropriate static link
+
+(call ): call procedure:
+         S[T+1] := BASE(L);       static link 
+         S[T+2] := B; B := T+1;   dynamic link
+         S[T+3] := P; P := A;     return address
+         T := T + 3;
+
+(bnz  ): branch not zero (jump if true):
+         if S[T] <> 0 then P := A; T := T-1
+
+(br   ): branch always:
+         P := A
+
+L-machine input/output:
+
+(inb  ): inbyte: the next character on the input file is read and
+         converted to an integer according to the following table and
+         that integer is placed at the bottom of the stack (location 0).
+
+(outb ): outbyte: the integer at the bottom of the stack is converted to
+         a character according to the following table and that character
+         is output to the output file.
+
+Conversion table (based on 7-bit ASCII, implied in Ada specifications)
+         (cr)   13           -  45         <  60
+                             .  46         =  61
+         space  32           /  47         >  62
+                             0  48 
+           (    40          ...            a  65
+           )    41           9  57        ... 
+           *    42           :  58         z  90
+           +    43           ;  59
+           ,    44                         _  95
+end-of-line <CR-LF> goes in as 13 and 13 goes out as end-of-line.
+
+The symbol table, the stack, and the code array are initialized in the
+L/1 language to provide access to these operations:
+     LOW_IN_CH: low level input operation
+     LOW_OUT_CH: low level output operation
+     LOW_CHAR: name of stack bottom where character/integer comes and goes.
+
+SYNTAX DIAGRAMS FOR ADA L/1
+
+Syntax diagrams for the L/1 language
+
+  <program>
+  |
+  |_____ PROCEDURE ___ <ident> ___ IS ___ <unpre_block> ;
+  
+  <unpre_block>
+  |______________________________________________________  ;  __________ 
+  |                                                                     ^
+  |_____ TYPE __ <ident> __ IS __ array ____                            ^
+  |                                        |                            ^
+  |  ______________________________________|                            ^
+  |  |                                                                  ^
+  |  |__ ( __ <number> __ .. __ <number> __ ) __ OF __ <type_name> _____^
+  |                                                                     ^
+  |                                                                     ^
+  |____ <ident> ___ : ___ CONSTANT ___ <type> ___ := __ <number> _______^
+  |  ^           |     |            ^          |                     ^ 
+  |  ^____ , ____|     |____________^          |_____________________^ 
+  |
+  |______________________________________________________  ;  __________ 
+  |                                                                     ^
+  |_____ PROCEDURE ___ <ident> ___ IS ___ <unpre_block> ________________^
+  |
+  |_____ BEGIN ___ <seq_states> ___ END _____
+  
+  <seq_states>
+  |_____________________________________________________________________^
+  |                                                                     ^
+  |               ___________________________                           ;
+  |              ^                           |                           
+  |___ <ident> ____ ( __ <simple_exp> __ ) ____ := ___ <simple_exp> ____^
+  |             ^                           |                           ^
+  |             ^___________________________|                           ^
+  |                                                                     ^
+  |___ <subprog_name> __________________________________________________^
+  |                                                                     ^
+  |___ LOOP ___ <seq_states> ___ END __ LOOP ___________________________^
+  |                                                                     ^
+  |           __________________________________________________________^
+  |          ^                                                          ^
+  |___ EXIT ___ WHEN ___ <condition> ___________________________________^
+  |                                                                     ^
+  |___ IF __________ <condition> ___ THEN ___ <seq_states> _______      ^
+  |                                                              |      ^
+  |       ___ ELSIF ___ <condition> ___ THEN ___ <seq_states> ___|      ^
+  |      ^                                                       |      ^
+  |      ^_______________________________________________________|      ^
+  |                                     _________________________|      ^
+  |       _____________________________|                                ^
+  |      |                             |                                ^
+  |      |___ ELSE ___ <seq_states> ___|                                ^
+  |                                    |_____ END ___ IF _______________^
+  |                                                                     ^
+  |__________ NULL _____________________________________________________^
+  
+  <condition> _ <relation>
+  |
+  |___ <simple_exp> _______________________
+                      |   |   |   |   |   |
+                      =   /=  <   <=  >   >=
+                      |   |   |   |   |   |
+                      ________________________ <simple_exp> ___
+  
+  <simple_exp>
+  |
+  |     __________ 
+  |    ^          |
+  |__________ + ______ <term > ______
+        ^  |     ^                |
+        ^  |_ _ _^                |
+        ^                         |
+        ^_________________________|
+  
+  <term>
+  |
+  |____ <factor> ________________
+     ^              |   |   |
+     ^              *   /  MOD
+     ^              |   |   |
+     ________________________
+  
+  <factor>
+  |                       ___________________________ 
+  |                      ^                           |
+  |      _____ <ident> ____ ( __ <simple_exp> __ ) _______|
+  |     ^               ^                           |     |
+  |     ^               ^___________________________|     |
+  |     ^                                                 |
+  |_________ <number> __________________________________________
+  |                                                 ^
+  |________ ( __ <simple_exp> __ ) _________________^
+  
+

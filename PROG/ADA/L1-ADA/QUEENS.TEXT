@@ -1,0 +1,94 @@
+PROCEDURE EIGHT_QUEENS IS
+   -- SEE WIRTH: ALGS + DATA STRS = PROGS, PP. 146-147
+   TRUE: CONSTANT INTEGER := 1;
+   FALSE: CONSTANT INTEGER := 0;
+   INDEX, PARM_I: INTEGER;
+   TYPE QUEEN_POS IS ARRAY (1..8) OF INTEGER;
+   X: QUEEN_POS;
+   TYPE CLEAR_ROW IS ARRAY (1..8) OF INTEGER;
+   A: CLEAR_ROW;
+   -- SAME SUM OF COORDINATES
+   TYPE RIGHT_DIAG IS ARRAY (2..16) OF INTEGER;
+   B: RIGHT_DIAG;
+   -- SAME DIFFERENCE OF COORDINATES
+   TYPE LEFT_DIAG IS ARRAY (0..14) OF INTEGER;
+   C: LEFT_DIAG; -- RESTRICTION TO POSITIVE INTEGERS PREVENTS
+                 -- MORE PROPERLY USING -7..7
+   
+   PROCEDURE PRINT IS
+      END_OF_LINE: CONSTANT INTEGER := 13;
+      BLANK: CONSTANT INTEGER := 32;
+      CH_0: CONSTANT INTEGER := 48;
+      K: INTEGER := 1;
+      BEGIN -- PRINT
+         LOOP
+            LOW_CHAR := X(K) + CH_0; LOW_OUT_CH;
+            LOW_CHAR := BLANK; LOW_OUT_CH;
+            K := K+1;
+            EXIT WHEN K > 8;
+         END LOOP;
+         LOW_CHAR := END_OF_LINE; LOW_OUT_CH;
+      END; -- PRINT
+
+    PROCEDURE TRY IS
+       I: INTEGER;
+       J: INTEGER := 0;
+       BEGIN -- TRY
+          I := PARM_I;
+          LOOP -- PSEUDO FOR LOOP
+             J := J + 1;
+             EXIT WHEN J > 8;
+             
+             IF A(J)           = TRUE THEN
+                IF B(I + J) = TRUE THEN
+                   IF C(7 + I - J) = TRUE THEN
+                      
+                      X(I) := J;
+                      A        (J) := FALSE;
+                      B    (I + J) := FALSE;
+                      C(7 + I - J) := FALSE;
+                      
+                      IF I < 8 THEN
+                         PARM_I := I + 1;
+                         TRY;
+                      ELSE
+                         PRINT;
+                      END IF;
+                      
+                      A        (J) := TRUE;
+                      B    (I + J) := TRUE;
+                      C(7 + I - J) := TRUE;
+                   
+                   END IF;
+                END IF;
+             END IF;
+                   
+          END LOOP;
+       END; -- TRY
+
+BEGIN -- EIGHT_QUEENS
+   INDEX := 1;
+   LOOP
+      A(INDEX) := TRUE;
+      INDEX := INDEX + 1;
+      EXIT WHEN INDEX > 8;
+   END LOOP;
+   
+   INDEX := 2;
+   LOOP
+      B(INDEX) := TRUE;
+      INDEX := INDEX + 1;
+      EXIT WHEN INDEX > 16;
+   END LOOP;
+
+   INDEX := 0;
+   LOOP
+      C(INDEX) := TRUE;
+      INDEX := INDEX + 1;
+      EXIT WHEN INDEX > 14;
+      END LOOP;
+
+   PARM_I := 1;
+   TRY;
+END;
+   

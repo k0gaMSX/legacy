@@ -1,0 +1,74 @@
+L-machine basic instructions (this does not explain specific format)
+     general format: INST L,A
+     S is user store, array of integers managed as a stack
+     T is 'pointer' to top of store/stack 
+          (then S[T] is element on top of stack)
+     P is instruction/program counter
+          (address of next instruction)
+     B is 'pointer' to bottom of current block mark
+
+(opr  ): operate with stack: (sub-op-code in A part of instruction)
+         (halt ): halt
+         (add  ): add: S[T-1] := S[T] + S[T-1]; T := T-1
+         (sub  ): subtract: S[T-1] := S[T] - S[T-1]; T := T-1
+         (mul  ): multiply: S[T-1] := S[T] * S[T-1]; T := T-1
+         (div  ): divide: S[T-1] := S[T] / S[T-1]; T := T-1  (quotient)
+         (mod  ): mod: S[T-1] := S[T] mod S[T-1]; T := T-1  (remainder)
+         (neg  ): negate: S[T] := -S[T]
+         (not  ): not: S[T] := not S[T]     (false = 0)
+         (sete ): equal: S[T-1] := S[T] = S[T-1]; T := T-1
+         (setlt): lessthan: S[T-1] := S[T] < S[T-1]; T := T-1
+         (setgt): greaterthan: S[T-1] := S[T] > S[T-1]; T := T-1
+         (swap ): swap: interchange top two stack elements
+         (ret  ): return: T := B-1; P := S[T+3]; B := S[T+2]
+         (rav  ): replace address with value: S[T] := S[S[T]]
+         (sto  ): store: S[S[T-1]] := S[T]; T := T-2
+         (inc  ): increment stack: T := T + S[T] - 1
+
+(lic  ): load immediate constant:
+         T := T+1; S[T] := A  (A is assumed positive)
+
+(lad  ): load address:
+         T := T+1; S[T] := BASE(L) + A
+         the function BASE computes the appropriate static link
+
+(call ): call procedure:
+         S[T+1] := BASE(L);       static link 
+         S[T+2] := B; B := T+1;   dynamic link
+         S[T+3] := P; P := A;     return address
+         T := T + 3;
+
+(bnz  ): branch not zero (jump if true):
+         if S[T] <> 0 then P := A; T := T-1
+
+(br   ): branch always:
+         P := A
+
+L-machine input/output:
+
+(inb  ): inbyte: the next character on the input file is read and
+         converted to an integer according to the following table and
+         that integer is placed at the bottom of the stack (location 0).
+
+(outb ): outbyte: the integer at the bottom of the stack is converted to
+         a character according to the following table and that character
+         is output to the output file.
+
+Conversion table (based on 7-bit ASCII, implied in Ada specifications)
+         (cr)   13           -  45         <  60
+                             .  46         =  61
+         space  32           /  47         >  62
+                             0  48 
+           (    40          ...            a  65
+           )    41           9  57        ... 
+           *    42           :  58         z  90
+           +    43           ;  59
+           ,    44                         _  95
+end-of-line <CR-LF> goes in as 13 and 13 goes out as end-of-line.
+
+The symbol table, the stack, and the code array are initialized in the
+L/1 language to provide access to these operations:
+     LOW_IN_CH: low level input operation
+     LOW_OUT_CH: low level output operation
+     LOW_CHAR: name of stack bottom where character/integer comes and goes.
+

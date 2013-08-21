@@ -1,0 +1,1151 @@
+MANUAL DE OPERAÄéO - MEGA ASSEMBLER
+Cibertron Software - 1987 - 1¶ EdiáÑo
+
+Manual digitado por
+ Adriano C. R. da Cunha
+ A&L Software 1998/1999
+
+IntroduáÑo
+
+        O MegaAssembler consiste  de  um 
+cartucho de 16K de mem¢ria ROM,  com  um
+programa editor  assembler/desassembler/
+monitor e algumas ferramentas para  pro-
+gramaáÑo em BASIC chamadas  pela  funáÑo
+CALL. Com este programa vocà tem  acesso
+a todos os slots do micro, incluindo car
+tuchos e interfaces ligadas ao sistema.
+
+InstalaáÑo e execuáÑo
+
+        O cartucho do  MA  (Mega  Assem-
+bler) deve ser conectado com o micro des
+ligado ao slot 1 de seu micro (slot A do
+Expert e slot superior do  HotBit)  para
+que entre em execuáÑo antes de  qualquer
+cartucho ou interface ligada  ao  micro.
+Se esse slot nÑo estiver  dispon°vel,  o
+MA pode ser instalado em qualquer  outro
+slot.
+        Ao ligar o micro  com  o  MA  no
+slot 1, este entrar† em execuáÑo automa-
+ticamente. Se houver um cartucho no slot
+2, este poder† ser examinado atravÇs  do
+MA. Para que o controle  do  micro  seja
+transferido para o BASIC ou para o  DOS,
+basta entrar com o comando BA. Para  que
+o MA nÑo entre  em  execuáÑo  autom†tica
+basta manter a tecla CONTROL pressionada
+ao ligar o micro.
+        Para entrarmos no MA estando  no
+BASIC contamos com dois comandos: _START
+(CALL START) e _ASM (CALL ASM).
+        _START inicializa todas as vari†
+veis do MA e deve ser utilizado nas  se-
+guintes condiáîes:
+1. Quando entramos pela primeira vez  no
+   MA atravÇs do BASIC.
+2. Quando retornamos ao BASIC ap¢s sair-
+   mos do DOS.
+3. Quanto utilizarmos algum  comando  de
+   disco via BASIC.
+        _ASM s¢ deve ser utilizado quan-
+do sairmos do MA para o BASIC e nÑo uti-
+lizarmos os comandos de disco, pois nes-
+te caso os registradores  sÑo  modifica-
+dos.
+        A versÑo 1.0a do MA, modificaáÑo
+feita pela A&L Software, nÑo possui o in
+conveniente de perder  o  programa-fonte
+ao se utilizar  algum  comando de disco.
+Com isso, o °tem 3 nao se aplica a  esta
+versÑo.
+
+Estrutura do Mega Assembler
+
+        Para efeito de utilizaáÑo  pode-
+mos dividir o Mega Assembler em duas par
+tes:
+- a primeira Ç constitu°da pelo  monitor
+  e pelo assembler, e  ser†  chamada  de
+  EMA.
+- a segunda Ç o pr¢prio BASIC, que chama
+  r† os comandos do MA atravÇs da instru
+  áÑo CALL.
+
+O Editor do Mega Assembler
+
+        O EMA trata os n£meros  de  duas
+maneiras: Os comandos do monitor vÑo in-
+terpretar todos os dados numÇricos  como
+se estivessem na base hexadecimal; j† os
+comandos do assembler vÑo interpretar os
+n£meros como se estivessem na base deci-
+mal. Segue uma descriáÑo de todos os co-
+mandos do MA, conforme a estrutura abai-
+xo:
+
+Sinal    Significado
+ end     - Toda menáÑo a endereáos de me
+           m¢ria Ç feita em hexa
+[...]    - Argumento opcional
+<...>    - ExplicaáÑo sobre argumento
+xx/yy    - Ou xx ou yy, escolhido pelo u
+           su†rio
+Qualquer
+outro    - Constante no argumento do co-
+caracter   mando
+
+O Monitor
+
+        A maioria dos comandos Ç afetada
+pelo comando PAGE.  Caso  algum  comando
+nÑo seja afetado entÑo ser† indicado por
+um astericso  (*).  A  configuraáÑo  dos
+slots para estes comandos Ç: P†gina 0 (0
+a 3FFF) - slot 0 (ROM) P†gina 1 (4000  a
+7FFF) - o slot no qual esteja o MA, P†gi
+nas 2 e 3 (8000 a FFFF) - slots que con-
+tenham a mem¢ria RAM do micro (slot 2 pa
+ra Expert e slot 3 para HotBit).
+
+Os comandos do Monitor
+
+-PAGE
+ PAGE
+ PAGE?
+ PAGE [[<slot>][,[<slot>][,[<slot>][,<sl
+ ot>]]]]]
+
+ Seleciona a disposiáÑo das p†ginas 0  a
+2 nos slots 0 a 3.
+ Se nenhum argumento for colocasdo, o mi
+cro ir† colocar todas as p†ginas no slot
+que contenha a RAM.
+ Se o argumento for um '?', o micro mos-
+tra a disposiáÑo atual das p†ginas.
+ Se o argumento contiver de um a  quatro
+n£meros entre 0 e 3 separados por v°rgu-
+las, ser† adotada a disposiáÑo determina
+da para as p†ginas. O primeiro argumento
+Ç o slot da p†gina 0, o segundo o da p†-
+gina 1, etc. A p†gina 3, apesar de acei-
+tar um argumento, nunca  ser†  alterada,
+permanecendo sempre no slot que contÇm a
+RAM.
+
+ Exemplo: PAGE 0,0 seleciona as  p†ginas
+          0 e 1 de mem¢ria de 0  a  7FFF
+          para o slot 0.
+
+-DM
+ DM <end>[,<dsloc>]
+
+ Display & Memory edit. Este comando  d† 
+um display de 128 bytes em ASCII e em he
+xa da mem¢ria.
+ O primeiro argumento Ç o endereáo inici
+al de ediáÑo. O segundo, o  deslocamento
+usado. Se nÑo for  determinado  assumir†
+zero. O deslocamento serve para  cripto-
+grafar ou descriptografar  um  programa.
+Deve estar entre -7F e 80.
+ Ao ser dado o comando, o  display  ser†
+mostrado e estarÑo dispon°veis as seguin
+tes teclas:
+
+ Cursores   -Move o cursor pela mem¢ria.
+ <select>   -Seleciona ediáÑo  em  ASCII
+             ou Hexa.
+ <RETURN>   -Sai do comando.
+ <ESC>      -Retrocede 128 bytes.
+ <TAB>      -Avanáa 128 bytes.
+ 0-F        -Entram com um dado em hexa
+             (no modo hexadecimal).
+ Qualquer
+ caracter   -Entram com um dado em ASCII
+             (no modo ASCII).
+
+ Exemplo: DM 4000,2 ir† mostrar o conte£
+          do da mem¢ria a partir do ende
+          reáo 4000  acrescentando  dois
+          ao valor de cada byte.
+
+-ZAP
+ ZAP <setor inic>[,<dslc>]
+ 
+ Este comando Ç um editor de setores  de
+disco. Sua estrutura Ç idàntica Ö do co-
+mando DM, exceto que aqu° nÑo se tàm en-
+dereáos, mas sim setores (o setor inici-
+Ç indicado pelo  primeiro  argumento)  e
+offset, que Ç a posiáÑo do cursor no se-
+tor(essa posiáÑo vai de 0 a 1FF.AlÇm dis
+so, quando o micro vai mudar de setor, e
+le pergunta se Ç para grav†-la, <RETURN>
+responder† sim. Se vocà deseja gravar  o
+setor sem ter que mudar para outro, Ç s¢
+apertar <CTRL>+W. <RETURN> faz voltar  Ö
+ediáÑo.
+
+ Exemplo: ZAP 5 mostrar† o setor onde se
+          encontra o diret¢rio dos  dis-
+          cos de 180k e 360k.ZAP 10 mos-
+          tra o setor 10.
+
+-SCR
+ SCR <endinic>,<dx>,<dy>[,<modo>]
+ 
+ Este comando mostra um display  gr†fico
+da mem¢ria. A mem¢ria Ç apresentadaa par
+tir de <endinic> em blocos de  8  bytes,
+dispostos verticalmente, que por sua vez
+sÑo apresentados em blocos com  dimensÑo
+determinada por <dx> e <dy>. Esses  blo-
+cos podem ser dispostos  horizontalmente
+(quando  <modo> = 0),  ou  verticalmente
+(quando <modo> = 1). Se <modo>  nÑo  for
+especificado, assumir† 0. Ao  entrar  no
+comando, estarÑo Ö disposiáÑo as seguin-
+tes teclas:
+
+ Cursores:
+ esq. e dir. -Avanáa ou retrocede 1 byte
+              na mem¢ria.
+ cima e baixo-Avanáa ou retrocede 1 blo-
+              co <dx>,<dy> na mem¢ria.
+ <RETURN>    -Entra no modo de ediáÑo.
+ <TAB>       -Mostra o endereáo atual.
+ <ESC>       -Liga ou desliga a  moldura
+              2x2.
+ <CTRL+STOP> -Sai do comando.
+
+ Ao entrar no modo de ediáÑo, um quadra-
+do ampliando o bloco  em  destaque  ser†
+mostrado junto com um cursor. Nesse modo
+as seguintes teclas estÑo dispon°veis:
+
+ Cursores    -Movem o cursor.
+ <ESPAÄO>    -Inverte o ponto sob o cur-
+              sor.
+ <RETURN>    -Sai do modo de ediáÑo.
+ <CTRL+STOP> -Cancela modificaá?es  fei-
+              tas.
+ <I>         -Inverte bloco 2x2.
+ <SHIFT+HOME>-Apaga bloco 2x2.
+
+ Exemplo: SCR 1BBF,1,1 mostra um display
+          da mem¢ria, de um por um carac
+          tere a partir do endereáo 1BBF
+          SCR 4000,2,3,1 mostra um  dis-
+          play gr†fico da mem¢ria de  um
+          bloco de dois por tràs caracte
+          res a partir do endereáo  4000
+          no formato sprite.
+
+-SH
+ SH [<end>],<bt>[,[<bt>] ... [,[<bt>]]]
+ SH [<end>],'<string>
+ 
+ Este comando serve para a busca  de  um
+texto ou conjunto de bytes pela mem¢ria.
+ O primeiro argumento, <end>,  indica  o
+endereáo inicial  da  procura.  Caso  se
+queira continuar uma procura, retirar es
+se argumento. Nesse caso  ser†  usado  o 
+primeiro endereáo ap¢s o £ltimo encontra
+do.
+ Caso o argumento seja uma seqÅància  de
+n£meros, esta seqÅància ser†  procurada.
+Quando duas v°rgulas sÑo encontradas sem
+nenhum n£mero entre elas,  o  computador
+entender† que  aquele  n£mero  pode  ser
+qualquer um. Caso a seqÅància seja encon
+trada, seu endereáo ser† mostrado.
+ Se o segundo argumento for um ap¢strofe
+seguido de uma seqÅància com, no m°nimo,
+duas letras, esta seqÅància ser† procura
+da na mem¢ria. Caso a seqÅància seja en-
+contrada, ser† mostrado seu endereáo jun
+to com o deslocamento  que  essa  string
+possa ter.
+
+ Exemplo: SH 4000,2A,40,0C pesquisa a o-
+          corrància da seqÅància  2A,40,
+          0C na mem¢ria a partir do ende
+          reáo 4000.
+          SH 4000,2A,,0C pesquisa na me-
+          m¢ria a  ocorrància de uma se-
+          quància de tràs bytes, sendo o
+          primeiro 2A e o terceiro, 0C.
+          SH 3F41,'teste' pesquisa a  o-
+          corrància do string  teste  a
+          partir do endereáo 3F41.
+          
+-MS
+ MS <end>,[<dslc>],'<string>
+ 
+ Grava a partir do endereáo  de  mem¢ria
+indicado por <end>, a  string  <string>,
+com o deslocamento <dslc>.
+ Se <dslc> nÑo for indicado, assumir† ze
+ro.
+
+ Exemplo: MS  9A15,20,'nome   coloca   a
+          string nome na mem¢ria a  par-
+          tir do endereáo  9A15  com  um
+          deslocamento de 20.
+          
+-LOAD,B
+ LOAD <filename>,B
+ 
+ Carrega na mem¢ria um bloco em  bin†rio
+do perifÇrico especificado. O <filename>
+pode ter os seguintes formatos:
+
+NOME       -Usa o perifÇrico corrente.
+CAS:NOME   -Usa o cassete.
+DRIVE:NOME -Usa o disco. Caso  nÑo  haja
+            disco o micro usar† o casse-
+            te.
+ Caso o programa nÑo exista ou nÑo  seja
+bin†rio, uma mensagem de erro ser† emiti
+da.
+
+ Exemplo: LOAD BLOCO.BIN,B carrega o ar-
+          quivo BLOCO.BIN para a mem¢ria
+
+-SAVE
+ SAVE <filename>,<endi>,<endf>,[<ende>]
+
+ Grava um bloco de mem¢ria em formato bi
+n†rio no perifÇrico especificado. O parÉ
+metro <filename> pode ter os mesmos for-
+matos do comando LOAD. <endi>  e  <endf>
+especificam o in°cio e o fim do bloco  a
+ser gravados. <ende>, endereáo de entra-
+da, se nÑo especificado,  ser†  igual  a
+<endi>. O programa gravado por esse for-
+mato tambÇm poder† ser lido pelo BASIC.
+
+ Exemplo: SAVE ROM.BIN,0,7FFF,4000 grava
+          um bloco de mem¢ria do endere-
+          áo 0 atÇ 7FFF com  o  endereáo
+          de execuáÑo 4000 no perifÇrico
+          corrente com o nome ROM.BIN.
+
+-M (*)
+ M [<end>]
+
+ EdiáÑo de mem¢ria. Este  comando  edita
+mem¢ria a partir do endereáo  <end>.  Se
+<end> nÑo for especificado, ser† usado o
+£ltimo endereáo editado. O comando  mos-
+trar† o endereáo atual, seu conte£do e o
+cursor. Teclas de ediáÑo:
+
+ <ESPAÄO> -Avanáa um endereáo.
+ <BS>     -Retrocede.
+ <RETURN> -Sai do comando.
+ 0-F      -Entram com um valor em hexa-
+           decimal.
+
+ Exemplo: M A000 entra com valores em he
+          xadecimal a partir do endereáo
+          A000.
+
+-S (*)
+ S [<end>]
+
+ Igual ao comando M, porÇm um teclado nu
+mÇrico reduzido foi simulado no teclado,
+de acordo com o esquema:
+
+ Teclado:               Equivale a:
+ 7 8 9 0                7 8 9 A
+ U I O P                4 5 6 B
+ J K L Ä                1 2 3 C
+ M , . /                0 F E D
+ 
+ Exemplo: S A000 entra com valores em he
+          xadecimal a partir do endereáo
+          A000.
+ 
+-C
+ C <modo>
+
+ Especifica modo de display para os  co-
+mandos D, P e V. O modo de display Ç se-
+lecionado por <modo>, que pode estar en-
+tre 0 e 3, segundo a seguinte tabela:
+
+<modo>                  Formato
+
+  0     -ApresentaáÑo em  hexadecimal  e
+         ASCII, em linhas com 4 bytes ca
+         da.
+  1     -Idem, porÇm em  linhas  com  16
+         bytes (para 80 colunas  ou  im-
+         pressora)
+  2     -ApresentaáÑo em hexadecimal, em
+         linhas com 8 bytes, apresentan-
+         do no final de cada linha a so-
+         mat¢ria dos bytes da linha, so-
+         mada a parte menos significati-
+         va do endereáo da linha.
+  3     -Idem, porÇm sem somar  a  parte
+         menos significativa do primeiro
+         endereáo da linha.
+
+ Exemplo: C1
+
+-D
+-P
+-V
+ D <endinic>[,<endfim>]
+ P <endinic>[,<endfim>]
+ V <endinic>[,<endfim>]
+
+ Estes tràs comandos dÑo um  display  de 
+mem¢ria num perifÇrico, segundo o forma-
+to especificado pelo comando C. As dife-
+renáas entre um comando e outro sÑo  da-
+das a seguir:
+
+Comando:                DescriáÑo:
+   D     -D† um display da mem¢ria no v°
+          deo.
+   P     -D† um display da mem¢ria na im
+          pressora.
+   V     -D† um display da mem¢ria  VRAM
+          na impressora.
+
+ Para todos os tràs comandos acima  des-
+critos, <endinic> indica o endereáo onde
+deve-se iniciar a listagem e <endfim> in
+dica o endereáo final. Caso <endfim> nÑo
+seja especificado, serÑo mostrados  ape-
+nas 16 bytes.
+
+ Exemplo: D 5000,6000 - mostra o conte£-
+          do da mem¢ria,do endereáo 5000
+          atÇ 6000, no v°deo.
+          P 5000,6000 - mostra o conte£-
+          do da mem¢ria,do endereáo 5000
+          atÇ 6000, na impressora.
+          V 3800,3FFF - mostra o conte£-
+          do da VRAM, do endereáo 3800 a
+          tÇ 3FFF, na impressora.
+ 
+-T
+ T <endinic>,<endfim>,<enddest>
+
+ Transfere um bloco de  mem¢ria  contido
+entre os endereáos <endinic> e <endfim>,
+inclusive, para o bloco de mem¢ria inici
+ado por <enddest>.
+
+ Exemplo: T 4000,7FFF,8FFF copia um blo-
+          co de mem¢ria do endereáo 4000
+          ao endereáo 7FFF para o endere
+          áo 8000.
+
+-F
+ F <endinic>,<endfim>,<byte>
+
+ Preenche um bloco de mem¢ria desde o en
+dereáo <endinic> atÇ <endfim> com o con-
+te£do <byte>.
+
+ Exemplo: F 8000,C000,FF preenche o blo-
+          co de mem¢ria compreendido en-
+          tre os endereáos 8000  e  C000
+          com FF.
+
+-G (*)
+ G <endinic>[,<brkpnt1>[,<brkpnt2>]]
+
+ Comeáa o processamento de  um  programa
+na   mem¢ria   iniciando   no   endereáo
+<endinic> e  carregando os registradores
+com o valor  guardado  pelo  comando  X.
+<brkpnt1> e <brkpnt2> sÑo  os  endereáos
+de "breakpoint", ou seja, quando um des-
+ses endereáos for executado  o  programa
+p†ra a execuáÑo e retorna ao EMA mostran
+do a disposiáÑo dos registradores no mo-
+mento do "breakpoint". Para retornar  ao
+EMA os slots devem estar  na  disposiáÑo
+ROM - EMA - RAM - RAM, e deve-se dar  um
+salto para o endereáo 4010 (JP 4010).
+
+ Exemplo: G 8000,80E0 executa uma rotina
+          a partir do endereáo 8000, re-
+          tornando ao EMA ao  atingir  o
+          endereáo 80E0.
+
+-X
+ X [<reg>]
+ 
+ Se nÑo houver argumento,  mostra  todos
+os registradores, caso  contr†rio  entra
+no modo de ediáÑo de registradores a par
+tir do registrador <reg>, que  pode  ser
+A, F, B, C, D, E, H e L para os registra
+dores com esses mesmos nomes, e X, Y e S
+para os registradores IX, IY e SP,  res-
+pectivamente. Ao ser mostrado o registra
+dor, digite o novo conte£do que ele  de-
+ve assumir (dois d°gitos hexadecimais ou
+quatro d°gitos hexadecimais, respectiva-
+mente, para registradores de um ou  dois
+bytes. O pr¢ximo registrador ser† mostra
+do. Se quiser parar, tecle  <RETURN>  no
+lugar de um n£mero.
+
+ Exemplo: X mostra todos os  registrado-
+          res.
+          X A altera os registradores  a
+          partir do A.
+
+-R
+ R [<offset>]
+ 
+ Là de fita um programa gravado pela op-
+áÑo 'I' do comando A e o coloca no ende-
+reáo de in°cio do header mais  o  offset
+<offset>. Caso <offset> nÑo seja especi-
+ficado, ser† feita a gravaáÑo pelos ende
+reáos originais.
+
+ Exemplo: R
+
+-L
+ L[P] [<endinic>[,<endfim>]]
+ 
+ Disassembla o conte£do da mem¢ria do en
+dereáo  <endinic>  atÇ  <endfim>.   Caso
+<endfim> nÑo seja especificado, serÑo de
+sassembladas dez  linhas.  Se  <endinic>
+nÑo for definido ser† desassemblada a me
+m¢ria a partir do £ltimo endereáo lista-
+do pelo comando L. A opáÑo P envia a lis
+tagem dos mneménicos para a  impressora.
+<CTRL+STOP> interrompe a disassemblagem.
+
+ Exemplo: L 7421 - disassembla a mem¢ria
+          a partir do endereáo 7421.
+          L 417F,5000 - disassembla a me
+          m¢ria  a  partir  do  endereáo
+          417F atÇ 5000.
+
+Programas em Assembly
+
+ Com o Mega Assembler Ç  poss°vel  gerar
+programas em fonte Z80 como se fosse  em 
+BASIC, ou seja, digitando diretamente as
+instruáîes. Isto  permite  que  possamos
+corrigir o programa antes de  compil†-lo
+para c¢digo de m†quina. As linhas  podem
+ser editadas como se fossem em BASIC, ou
+seja, podemos mover o cursor por toda  a
+tela e tambÇm utilizar as teclas INSERT,
+DELETE, BS, GRAPH (ou  LGRA),  CODE  (ou
+RGRA) e CONTROL. Cada linha  Ç  dividida
+em 5 setores, que a compîem da  seguinte
+forma:
+
+NN Label: instruáÑo operando ;coment†rio
+
+Onde
+NN:        'E o n£mero da linha (Ç  obri-
+           gat¢ria).
+Label:     Indica determinada  instruáÑo
+           ou posiáÑo de mem¢ria.
+InstruáÑo: Qualquer instruáÑo v†lida  do
+           Z80 ou pseudo-instruáÑo.
+Operando:  Valor ou c¢digo que Ç necess†
+           rio para a instruáÑo.
+Coment†rio:Qualquer observaáÑo  sobre  o
+           programa. Pode estar em qual-
+           quer posiáÑo da linha.
+
+ As pseudo-instruáîes que estÑo dispon°-
+veis sÑo:
+
+ORG  Indica em que posiáÑo de mem¢ria de
+     ve ser gerado o programa objeto.
+     Sintaxe: ORG endereáo (*)
+DEFB Coloca o  byte(*)  especificado  na
+     m¢ria.
+     Sintaxe: DEFB byte(*)
+DEFW Coloca a palavra(*) de  dois  bytes
+     especificada na me¢ria.
+     Sintaxe: DEFW palavra(*)
+DEFM Coloca texto na mem¢ria.
+     Sintaxe: DEFM 'texto'
+DEFS Reserva espaáo na mem¢ria com o n£-
+     mero de bytes indicado.
+     Sintaxe: DEFS n£mero de bytes
+EQU  Indica que o label desta linha cor-
+     responder† ao valor indicado.
+     Sintaxe: Label: EQU endereáo (*)
+
+ (*) Podemos definir os parÉmetros  para
+     os comandos e pseudo instruáîes  de
+     v†rias maneiras:
+ byte: pode ser um n£mero, um  caractere
+       entre ap¢strofos (') ou um  label
+       onde esse byte se encontra.
+ palavra: pode ser  um  n£mero  de  dois
+          bytes ou um label.
+ 
+ Todos os n£meros podem ser expressos em
+uma das tr^es bases:
+
+1 Decimal:      Basta digitar o n£mero.
+2 Hexadecimal:  Um n£mero em hexa segui-
+                do de "H".
+                OBS: Se o primeiro d°gi-
+                to for uma letra,  entÑo
+                deve ser precedido de  0
+                (zero).
+3 Bin†rio:      N£mero seguido da  letra
+                "B".
+
+O Assembler
+
+ Nesse modo, os comandos servem para cri
+ar, editar e  compilar  um  programa  em
+assembly. Como j† mencionado anteriormen
+te, os n£meros serÑo tratados como sendo
+na base decimal, salvo especificaáÑo  em
+contr†rio. Todos os comandos que  tenham
+alguma sa°da pelo v°deo ou impressora po
+dem ser abortados por <CTRL+STOP> ou in-
+terrompidos temporariamente por <ESPAÄO>
+
+Os comandos do Assembler
+
+-NEW
+ NEW
+  
+ O comando NEW simplesmente apaga o pro-
+grama-fonte existente na mem¢ria do EMA.
+
+-AUTO
+ AUTO [<lininic>[,<incr>]]
+
+ O comando AUTO gera numeraáÑo autom†ti-
+ca das lionhas. A primeira linha  a  ser
+gerada ter† o n£mero <lininic>.  As  li-
+nhas seguintes  serÑo  incrementadas  de
+<incr>.Para interromper a numeraáÑo pres
+sione <CTRL+STOP>.Se <lininic> ou <incr>
+nÑo forem indicados assumirÑo valor  dez
+(10).
+
+-LIST
+-LLIST
+ LIST [<lininic>[-<linfin>]]
+ LIST [<lininic>[-<linfin>]]
+ 
+ Os comandos LIST e LLIST listam o  pro-
+grama-fonte existente na mem¢ria no v°de
+o ou na impressora,  respectivamente.  A
+seguir descrevemos a sintaxe do  comando
+LIST, que se aplica tambÇm para LLIST.
+
+ LIST           Lista todo o programa.
+ LIST <li>      Lista a linha <li>.
+ LIST <li>-     Lista da linha <li>  atÇ
+                o fim do programa.
+ LIST <li>-<lf> Lista da linha <li>  atÇ
+                a linha <lf>.
+                
+-DELETE
+ DELETE <lininic>[-<linfin>]
+ 
+ Apaga linhas  do  programa-fonte.  Caso
+<linfin> nÑo seja  especificada  somente
+<lininic> ser† apagada,  caso  contr†rio
+serÑo apagadas as linhas entre <lininic>
+e <linfin>, inclusive.
+
+-RENUM
+ RENUM [<novali>[,<antigali>[,<incr>]]]
+ 
+ Renumera as linhas  do  programa-fonte.
+<novali> indica qual deve ser o novo n£-
+mero da primeira linha do trecho  a  ser
+renumerado. <antigali> indica  o  n£mero
+da linha do programa a partir da qual de
+ve-se iniciar a renumeraáÑo. <incr> indi
+ca o incremente entre as linhas. Se  ne-
+nhum parÉmetro for fornecido todo o pro-
+grama ser† renumerado com nova linha ini
+cial 10 e incremento de 10.
+
+-FILES
+ FILES
+ 
+ Mostra o diret¢rio do  disco  corrente.
+Se nÑo houver drive conectado simplesmen
+te pula duas linhas.
+
+-LOAD
+ LOAD <filename>
+ 
+ Carrega um programa-fonte do perifÇrico
+especificado. Os formatos de  <filename>
+sÑo os mesmos descritos para LOAD,B.
+
+ Exemplo: LOAD CACO carrega de  fita  um
+          programa-fonte em pseudo-ASCII
+          previamente gravado pelo coman
+          do SAVE CACO.
+
+-SAVE
+ SAVE <filename>
+            
+ Grava um programa-fonte  no  perifÇrico
+especificado.Os formatos para <filename>
+sÑo os mesmos descritos no comando SAVE
+anteriormente. O formato do programa-fon
+te Ç pr¢prio do Mega Assembler, nÑo sen-
+do compat°vel com  outros  assembladores
+nem com o BASIC.
+ O programa ConvASM,da A&L Software,dis-
+tribu°do gratuitamente, permite a conver
+sÑo de programas-fonte do Mega Assembler
+para o formato ASCII e vice-versa.
+
+ Exemplo: SAVE CACO grava o programa-fon
+          te em fita no formato  pseudo-
+          ASCII.
+
+-MERGE
+ MERGE <filename>
+ 
+ Intercala dois (2) programas, um na me-
+m¢ria e outro na fita, gravado em forma-
+to pseudo-ASCII. No caso de existir coin
+cidància do n£mero das linhas, a existen
+te na mem¢ria ser† apagada, prevalecendo
+a linha lida da fita. ê  equivalente  ao
+comando MERGE do BASIC.
+
+-SEARCH
+ SEARCH <string>
+ 
+ Procura por todo o  programa  a  string
+<string> e lista as linhas do  programa-
+fonte que a contÇm. Note que os  espaáos
+entre o comando e o texto da string  se-
+rÑo contados.
+
+ Exemplo: SEARCH LO   procura  a  string
+          " LO".
+ 
+-LSEARCH
+ LSEARCH <string>
+ 
+ Idàntico ao comando SEARCH, porÇm as li
+nhas onde for encontrada a string  serÑo
+listadas na impressora.
+
+ Exemplo: LSEARCH@LO  procura  a  string
+          "@LO".
+
+-FIND
+ FIND <string>
+ 
+ Similar  ao  SEARCH,  porÇm  procura  a
+string no in°cio de cada linha.Tem a van
+tagem de ser mais r†pido.
+
+ Exemplo: FIND MENS   procura  a  string
+          " MENS". 
+
+-CHANGE
+ CHANGE '<string1>'[<string2>]
+ 
+ Troca as ocorràcias de <string1> no pro
+grama-fonte por <string2> e lista as li-
+nhas ap¢s a troca.Se <string2> for nula,
+apaga as ocorrància de <string1>.
+
+ Exemplo: CHANGE 'LO'@@CA
+
+-MAP
+ MAP
+ 
+ Mostra os endereáos inicial e final  do
+programa-fonte contido na mem¢ria.
+
+-A
+ A [NUPOIRSDH/<offset>]
+
+ Assembla (monta) o programa-fonte conti
+do na mem¢ria usando as opáîes do  usu†-
+rio, que podem ser:
+
+N     -NÑo lista o n£mero das linhas.
+U     -NÑo lista o programa.
+P     -A listagem sair† na impressora.
+O     -Gera o c¢digo-objeto.
+I     -O c¢digo-objeto  ser†  armazenado
+       em fita para ser lido pelo coman-
+       do R.
+R     -Mostra uma listagem em referància
+       cruzada dos labels ap¢s assemblar
+       o programa.
+S     -Gera uma listagem em ordem alfabÇ
+       tica dos labels ap¢s assemblar  o
+       programa.
+D     -Gera uma listagem dos labels ap¢s
+       assemblar o programa.
+H     -Lista na impressora os labels.
+/<off -Assembla o programa para o endere
+ set>  áo indicado pela pseudo-instruáÑo
+       ORG gerando o c¢digo-objeto no en
+       dereáo   dado   pelo   ORG   mais
+       <offset>.
+
+ Durante o processo de montagem podem o-
+correr erros. Caso haja erro,  a(s)  le-
+tra(s) correspondente(s)  ao(s)  erro(s)
+na linha ser†(Ño) listada(s)  no  in°cio
+desta. Essa(s) letra(s), e seu(s) signi-
+ficado(s), est†(Ño) na tabela a seguir:
+
+D N£mero  relativo  menor  que  -128  ou
+  maior que 128.  Ocorre  em  instruáîes
+  'JR' e em instruáîes que usam IX e  IY
+  de modo indexado.
+F Erro de sintaxe. Linha muito grande,um
+  erro na escrita ou estrutura errada.
+M Label nÑo £nica.Quando vocà j† usou um
+  label com o mesmo nome.
+U Label desconhecido.Vocà tentou usar um
+  label nÑo definido.
+Q Uma instruáÑo nÑo existente foi utili-
+  zada.
+O Operando inadequado Ö instruáÑo.
+
+ Caso nÑo seja especificado o ORG e vocà
+tente montar o programa usando  a  opáÑo
+'O', a mensagem 'Falta mem¢ria' ser† ge-
+rada. Esse mesmo erro ocorre caso o ende
+reáo do programa seja menor que 4000  ou
+ultrapasse EBFF.
+
+ Exemplo: se em um programa a pseudo-ins
+          truáÑo ORG indicar 0C000h e  o
+          programa for  assemblado  pelo
+          comando AO/1000, o c¢digo-obje
+          to ser†  alocado  no  endereáo
+          D000.
+
+-BASIC
+-BA
+ BASIC
+ BA
+ 
+ Sai do EMA (retorna ao BASIC desde  que
+vocà nÑo altere vari†veis do sistema  u-
+tilizadas pelo interpretador).
+
+O BASIC
+ 
+ O Mega Assembler,alÇm do assembler e do
+monitor, fornece ao usu†rio algumas fer-
+ramentas para o BASIC. Essas ferramentas
+foram concebidas para proporcionar ao u-
+su†rio uma facilidade maior para  operar
+seu computador MSX.  Todos  os  comandos
+desse m¢dulo devem ser precedidos da ins
+truáÑo CALL do BASIC. Todos os  argumen-
+tos desse  m¢dulo  serÑo  tratados  como
+qualquer expressÑo do BASIC, podendo ter
+qualquer um de seus formatos.  Note  que
+nenhum comando deste m¢dulo ser† afetado
+pela disposiáÑo do comando PAGE.
+
+Os novos comandos do BASIC
+
+-EDITOR
+ CALL EDITOR [(<end>)]
+ 
+ Chama a rotina do editor de caracteres.
+Caso <end> seja especificado, os caracte
+res editados ficarÑo a partir do endere-
+áo <end>. Se <end> nÑo for fornecido, se
+r† assumido o endereáo C000.  Ao  entrar
+no comando vocà ver† umatela com os  se-
+guintes elementos: o desenho dos caracte
+res contidos no endereáo (se for a  pri-
+meira vez que o comando  Ç  usado  desde
+que o micro foi ligado, provavelmente es
+te desenho ser† "lixo"); um cursor  evi-
+denciado pelo caracter que estiver inver
+so e a ampliaáÑo do caractere sob o qual
+se encontra o cursor. Nesse momento vocà
+estar† no modo de seleáÑo, e estarÑo dis
+pon°veis as seguintes teclas:
+
+<TAB>       -Volta ao BASIC.
+<CTRL+STOP> -Volta ao BASIC, com a mensa
+             gem  no  HotBit  'PAREI'  e
+             'Break' no Expert e em  ou-
+             tros MSX.
+<SHIFT+HOME>-Transfere a tabela de carac
+             caracteres do micro para  o
+             endereáo de ediáÑo.
+Cursores    -Movem o cursor sobre os ca-
+             racteres.
+<RETURN>    -Vai para o modo de ediáÑo.
+
+ No modo de ediáÑo o cursor usado ser† o
+que est† na ampliaáÑo do caractere sele-
+cionado.EstarÑo dispon°veis as seguintes
+teclas:
+
+<ESPAÄO>    -Inverte o estado  do  ponto
+             sob o cursor.
+Cursores    -Movem o cursor sobre o  ca-
+             ractere.
+<ESPAÄO+I>  -Inverte o caractere em edi-
+             áÑo (deve ser o I  mai£scu-
+             lo, ou seja, em BASIC deve-
+             se estar em modo  "mai£scu-
+             las").
+<ESPAÄO+S>  -Espera uma tecla. Se for u-
+             ma tecla do cursor, move  o
+             caractere em ediáÑo para  a
+             direáÑo indicada pela tecla
+             (note que deve ser um S mai
+             £sculo).
+<SHIFT+HOME>-Apaga o caractere em ediáÑo
+             e faz o  cursor  voltar  ao
+             canto  superior   esquerdo,
+             voltando-se ao modo de sele
+             áÑo.
+<CTRL+STOP> -Volta diretamente ao BASIC.
+<RETURN>    -Volta ao modo de seleáÑo.
+ 
+ A  tabela  de  caracteres  contÇm  2048
+bytes, contados a partir do endereáo  de
+ediáÑo.
+
+ Exemplo de implementaáÑo de nova tabela
+de caracteres:
+ Ap¢s haver gerado uma nova tabela de ca
+ racteres (japoneses, por exemplo), o se
+ guinte programa a coloca em "aáÑo":
+ 
+ 10 CALL EDITOR
+ 20 SCREEN 0
+ 30 CALL COPYRN(&HC000,(&HC000+256*8,BAS
+    E(2))
+ 40 END
+ 
+-RENEW
+ CALL RENEW
+ 
+ Recupera o £ltimo programa  contido  na
+mem¢ria, caso este tenha se perdido devi
+do a um reset ou um comando NEW. Caso al
+guma linha em BASIC tenha sido  inserida
+ap¢s a perda o programa ser† destru°do.
+
+-BVERIFY
+ CALL BVERIFY
+
+ Compara um programa gravado em fita  no
+formato bin†rio com o contido na mem¢ria
+logo ap¢s ter sido gravado por BSAVE. Se
+forem  iguais  aparecer†  uma   mensagem 
+"Ok", caso contr†rio ser† dada a  mensa-
+gem de erro de verificaáÑo.
+
+-HEADER
+ CALL HEADER
+
+ Mostra o cabeáalho de um programa grava
+do em fita.Mostrar† seu nome, tipo e, se
+for bin†rio, seus endereáos  de  in°cio,
+fim e execuáÑo.
+
+-COPY
+ CALL COPYRV (<eRAMi>,<eRAMf>,<eVRAM>)
+ CALL COPYVR (<eVRAMi>,<eVRAMf>,<eRAM>)
+
+ O comando COPY copia um bloco da mem¢ri
+a para a VRAM e vice-versa.
+ COPYRV copia da RAM para a VRAM.<eRAMi>
+e <eRAMf> delimitam o bloco fonte conti-
+do na RAM e <eVRAM> o  endereáo  inicial
+do bloco destino contido na VRAM.
+ COPYVR  copia  da  VRAM  para  a   RAM.
+<eVRAMi> e <eVRAMf>  delimitam  o  bloco
+fonte, contido na VRAM, e <eRAM> o  ende
+reáo do bloco destino, contido na RAM.
+ Todos os argumentos devem  estar  entre
+-32768 e 65536.
+
+ Exemplo: vide exemplo do CALL EDITOR da
+          do anteriormente.
+
+-SETGREY
+ CALL SETGREY ( 0 / 1 )
+
+ Seleciona se a c¢pia da tela  deve  ser
+ou nÑo impressa com escala de cinza. "1"
+indica impressÑo com escala de cinza."0"
+indica impressÑo som escala de cinza.
+
+-DUMP
+ CALL DUMP
+
+ Tira uma c¢pia da tela (nas screens 0 a
+3) na impressora. Caso a screen seja  1,
+2 ou 3,os sprites tambÇm serÑo copiados.
+A c¢pia pode ser em modo simples  ou  em
+graduaáÑo de cinza. No modo  simples  um
+ponto s¢ ser† impresso para cores com c¢
+digo maior ou igual a 8. Em modo de gra-
+duaáÑo de cinza ser† impresso um  padrÑo
+para cada cor da tela.
+ Note que neste £ltimo comando espera-se
+que a impressora seja uma Epson FX80  ou
+compat°vel, nÑo  funcionando  na  GRAFIX
+MTA quando SETGREY(1) for selecionado.
+
+-SETKEY
+ CALL SETKEY ( 0 / 1 )
+
+ Liga ou desliga a c¢pia autom†tica, res
+pectivamente se o argumento for 1 ou  0.
+A c¢pia autom†tica Ç feita toda  vez  em
+que as interrupáîes estiverem ligadas  e
+a tecla <ESC> for pressionada. Ao se en-
+trar no EMA essa funáÑo  ser†  desligada
+atÇ que se retorne ao BASIC.
+
+Vari†veis £teis do Mega Assembler
+
+ EC01 - End. inicial do programa fonte.
+ EC03 - End. final do programa fonte.t
+ FFF0   Ligado ou nÑo.
+
+ Ap¢s um SAVE ou LOAD em bin†rio:
+
+ FA30/31 - End. inicial do bloco.
+ FA32/33 - End. final do bloco.
+ FA34/35 - End. de execuáÑo.
+
+Como recuperar um programa fonte perdido
+
+ Digite os comandos PAGE e DM 0.
+ Procure a £ltima instruáÑo do  programa
+(que deve ser conhecida por vocà). A ins
+truáÑo deve ser seguida de um byte 0. Po
+nha o cursor sobre esse byte e  anote  o
+endereáo.
+ Saia do comando DM e  tecle  o  comando
+'M EC03' e digite o byte menos significa
+tivo do endereáo anotado. Em seguida di-
+gite o byte mais significativo do  mesmo
+endereáo.
+
+Como gravar um cartucho
+
+ Com o micro desligado, coloque o MA  no
+slot de menor n£mero do seu micro (o su-
+perior do HotBit e o esquerdo do Expert)
+e o cartucho a ser gravado no slot  res-
+tante.
+ Ligue o micro. O cabeáalho  inicial  do
+MA deve aparecer no v°deo.  Tecle  'PAGE
+2,2', no HotBit,ou 'PAGE 3,3' no Expert.
+Procure o cartucho  nos  endereáos  4000
+e/ou 8000. Prepare o gravador  (o  disco
+nÑo pode ser usado pois ele nÑo foi ini-
+cializado ainda) e tecle  'SAVE  <prog>,
+<endi>,<endf>', sendo <prog>,  <endi>  e
+<endf> o nome e os endereáos  inicial  e
+final, respectivamente, que devem ser de
+terminados com o estudo do cartucho. Pa-
+ra ler pelo BASIC,  tecle  'BLOAD"CAS:",
+&h4000'. Um programa  copiado  por  este
+procedimento nÑo poder†  ser  executado,
+pois vocà apenas tem uma c¢pia do cartu-
+cho em RAM. Para executarmos o  programa
+a ser copiado devemos descobrir seu ende
+reáo de execuáÑo e coloc†-lo no seu ende
+reáo original de mem¢ria. Este  procedi-
+mento varia de cartucho para cartucho  e
+nÑo Ç poss°vel uma padronizaáÑo.
+ Para maiores informaáÑo recomendamos  a
+consulta de literatura especializada co-
+mo "THE MSX RED BOOK" da Avalon Software
+ou "THE MSX2 TECHNICAL HANDBOOK".
+
+Mnemìnicos para Z80 - MSX
+
+ Exemplo de uso do assembler  na geraáÑo
+de um programa:
+ Digite AUTO <RETURN> e na seqÅància di-
+gite o seguinte programa:
+
+10              ORG 0C100H
+20 CHPUT:       EQU 00A2H
+30              LD HL,PRINT
+40 SALT:        LD A,(HL)
+50              AND A
+60              RET Z
+70              CALL CHPUT
+80              INC HL
+90              JR SALT
+100 PRINT:      DB 'MEGA ASSEMBLER'
+110             DB 0
+120             END
+
+ Ap¢s   terminar   a   digitaáÑo   tecle
+<CTRL+STOP> para sair do AUTO. Para  uma
+compilaáÑo de verificaáÑo de erros tecle
+
+ >A <RETURN>
+
+ A compilaáÑo aparecer† na tela.
+ Se nenhuma mensagem de erro surgir, com
+pile novamente, s¢ que agora tecle:
+
+ >AOU <RETURN>
+
+ Com L C100 vocà poder† verificar  se  a
+compilaáÑo foi feita corretamente.
+ Para executar o programa acima, v† para
+o BASIC:
+
+ >BA <RETURN>
+
+ Tecle em seguida:
+
+ DEFUSR = &HC100 : PR = USR(0)  <RETURN>
+
+ Dever† aparecer na tela a mensagem  se-
+guinte:
+
+ MEGA ASSEMBLER
+
+
+
+
+
+
+
+ Rotinas de JosÇ Alvaro Toledo Jr
+ ColaboraáÑo CÇsar Augusto Othero Tiossi
+ Correáîes e atualizaáîes por A&L Soft

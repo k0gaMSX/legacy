@@ -1,0 +1,53 @@
+PROCEDURE PSEUDO_JUSTIFY IS
+   WIDTH: CONSTANT INTEGER := 30;  -- TO CHANGE OUTPUT COLUMN WIDTH
+   END_OF_LINE: CONSTANT INTEGER := 13;
+   BACK_SPACE: CONSTANT INTEGER := 8;
+   BLANK: CONSTANT INTEGER := 32;
+   TYPE LINE_ARRAY IS ARRAY (1..81) OF INTEGER;
+   LINE: LINE_ARRAY;
+   LINE_CT, PREV_CT, LOC: INTEGER;
+BEGIN -- PSEUDO_JUSTIFY
+   LOOP
+      LINE_CT := 1;
+      LOW_IN_CH;
+      EXIT WHEN LOW_CHAR = 13;
+      LOOP
+         LOW_OUT_CH;
+         LINE (LINE_CT) := LOW_CHAR;
+         IF LOW_CHAR = END_OF_LINE THEN
+            EXIT;
+         ELSIF LOW_CHAR = BACK_SPACE THEN
+            LINE_CT := LINE_CT - 1;
+         ELSE
+            LINE_CT := LINE_CT + 1;
+         END IF;
+         IF LINE_CT > WIDTH THEN
+            IF LOW_CHAR = BLANK THEN
+               LOW_CHAR := END_OF_LINE; LOW_OUT_CH;
+               LINE_CT := 1;
+            ELSE
+               PREV_CT := LINE_CT;
+               LOC := LINE_CT;
+               LOOP
+                  EXIT WHEN LOC <= 0;
+                  LOW_CHAR := BACK_SPACE; LOW_OUT_CH;
+                  LOW_CHAR := BLANK; LOW_OUT_CH;
+                  LOW_CHAR := BACK_SPACE; LOW_OUT_CH;
+                  EXIT WHEN LINE (LOC-1) = BLANK;
+                  LOC := LOC - 1;
+               END LOOP;
+               LOW_CHAR := END_OF_LINE; LOW_OUT_CH;
+               LINE_CT := PREV_CT - LOC;
+               LOOP
+                  LOW_CHAR := LINE (LOC); LOW_OUT_CH;
+                  LOC := LOC + 1;
+                  EXIT WHEN LOC >= PREV_CT;
+               END LOOP;
+            END IF;
+         END IF;
+         LOW_IN_CH;
+      END LOOP; -- MAIN READING AND ECHOING LOOP
+   END LOOP; -- OUTER LOOP OF PROGRAM
+   LOW_OUT_CH; -- ENDS LINE SINCE LOW_CHAR = 13
+END ;
+

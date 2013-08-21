@@ -1,0 +1,149 @@
+The language L/1 is defined by the following syntax.  These productions and
+the corresponding comments are based on the preliminary Ada specifications in
+ACM/SIGPLAN Notices, Vol. 14, No.  6, June, 1979, Part A, pp.  E1-E5.  The
+language defined by these productions is a subset of the full Ada language;
+that is, programs written in this restricted syntax are also full Ada programs
+(with the exception that the reserved words of Ada are not all reserved in
+L/1).
+
+This syntax description uses a simple variant of Backus-Naur form.
+     <     >   Enclose names denoting syntactic  categories;
+               the non-terminal symbols of the language.
+     [     ]   Enclose an optional item.
+     {     }   Enclose a repeated item.  The item may appear
+               zero or more times.
+
+Comments relative to the syntax definitions are done in the same way as
+comments in the language being defined.
+
+Throughout a program comments may appear which are not a formal part of the
+language:
+
+<comment> ::= -- <rest_of_line>
+-- The special character pair which introduced this line introduces a
+-- comment.  Comments always end the line they are on.  Embedded in the
+-- line comments are not allowed.  Comments can be embedded in compound
+-- statements by being placed at the end of separate lines.  Comments
+-- are terminated by the end-of-line marker.
+
+<program> ::= <unit_body> 
+-- This is a new production to define what is meant by a simple program.
+
+<unit_body> ::= <subprog_body>
+
+<subprog_body> ::= PROCEDURE <designator> IS <unpre_block> ;
+-- The only type of subprogram allowed is 'PROCEDURE'.  Parameters and
+-- 'RETURN' are not included.  <designator> is the name of the procedure.
+
+<designator> ::= <identifier>
+-- Use of special character names to overload operators is not allowed.
+
+<unpre_block> ::= <declar_part> BEGIN <seq_states> END
+-- An unprefixed block occurs in the original syntax, but was not given
+-- a separate name.  The 'exception' section is not allowed.  Neither is
+-- the placing of the designator on the 'END'.
+
+<declar_part> ::= { <declaration> }  { <subprog_body> } 
+-- With, use, visibility, and representation clauses are not allowed.
+
+<declaration> ::= <object_declar> |  <type_declar>
+
+<object_declar> ::= <ident_list> : [ CONSTANT ] <type_name> [ := <number> ] ;
+
+<ident_list> ::= <identifier> { , <identifier> } 
+
+<type_declar> ::= TYPE <ident> IS <array_type_def> ;
+
+<array_type_def> ::= ARRAY ( <number> ..  <number> ) OF <type_name>
+-- In this compiler the type_name 'INTEGER' is predefined.  The syntax
+-- is defined similarly to the full Ada syntax so that 'integer' does
+-- not have the appearance of a reserved key word.
+
+<seq_states> ::= { <simple_state> |  <compound_state> } 
+-- Labeled statements are not allowed as they are in Ada.
+
+<simple_state> ::= <assign_state> | <subprogram_call_state>
+                   | <exit_state> | NULL;
+-- goto, assert, return, code, parallel execution, and exception related
+-- statements are excluded.
+
+<compound_state> ::= <if_state>  |  <loop_state>
+-- case, accept, select, and block are excluded for simplicity.
+
+<assign_state> ::= <variable> := <expression> ;
+-- The assignment operator is valid only for underlying predefined types
+-- (eg.  integer).
+
+<subprog_call_state> ::= <subprog_name> ;
+-- A subprogram name is an identifier which was previously declared as the
+-- name of a procedure.  Parameters are not allowed for simplicity in the
+-- call/return mechanism.
+
+<exit_state> ::= EXIT [ WHEN <condition> ] ;
+-- Since statement labels are not allowed, only single level loop exits
+-- are allowed.
+
+<loop_state> ::= <basic_loop>
+-- Only basic loops are allowed for simplicity.  Loop exits are via the
+-- exit statement.
+
+<basic_loop> ::= LOOP <seq_states> END LOOP;
+-- Since labels are not allowed on statements, lables are not permitted
+-- on the 'END LOOP'.
+
+<if_state> ::= IF <condition> THEN <seq_states>
+               { ELSIF <condition> THEN <seq_states> } 
+               [ ELSE <seq_states> ]
+               END IF;
+
+<condition> ::= <relation>
+-- This is considerably simplified.  Ada's short circuit evaluations
+-- are not allowed;  neither are the usual logical connectives.  This
+-- also eliminates the possibility of complicated logical expressions.
+
+<relation> ::= <simple_exp> <relational_op> <simple_exp>
+-- A relational operator is required.
+
+<expression> ::= <simple_exp>
+-- This production shows the simplicity of this language compared to
+-- full Ada.  It also allows other productions to remain similar to
+-- the corresponding ones in full Ada.
+
+<simple_exp> ::= [ <add_op> ] <term> { <add_op> <term> } 
+
+<term> ::= <factor> { <mult_op> <factor> } 
+
+<factor> ::= <primary>
+-- The exponent operator excluded.
+
+<primary> ::= <literal> |  <variable> |  ( <expression> )
+-- Aggregates, allocators, function calls, and qualified expressions
+-- are excluded.
+
+<relational_op> ::=  =  |  /=  |  <  |  <=  |  >  |  >=
+
+<add_op> ::=  +  |  -
+
+<mult_op> ::=  *  |  /  |  MOD
+
+<variable> ::= <identifier> { ( <expression> ) } 
+-- The expressions in parentheses are the array subscripts and are
+-- valid only if the type of the <identifier> is array based.
+
+<identifier> ::= <letter> { [ _ ] <let_or_digit> } 
+-- Underscore ( _ ) is signifcant in an identifier.
+
+<let_or_digit> ::= <letter> | <digit>
+
+<literal> ::= <number>
+
+<number> ::= <digit> { [ _ ] <digit> } 
+-- Underscore is not significant in a number.  This is simplified to
+-- allow only integers as numbers.
+
+<letter> ::=   A | B | C | D | E | F | G | H | I | J
+             | K | L | M | N | O | P | Q | R | S | T
+             | U | V | W | X | Y | Z
+
+<digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+

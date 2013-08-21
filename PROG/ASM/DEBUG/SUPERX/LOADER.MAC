@@ -1,0 +1,357 @@
+;--------------------------------------
+;	 SUPER-X ver 1.21 LOADER
+;--------------------------------------
+; Version 1.2 is Copyright 1994 by Romi
+; Unoffical version 1.21 is Made By: NYYRIKKI 2002
+;
+; Changes in this file since version 1.2:
+;
+; - Added possibility to skip TNK and FNT file load by holding GRAPH down.
+; - Characters reselected so, that they work well also in non Japanese computers.
+; - Changed displayed information at load.
+;
+; Changes in version 1.21 have been done without permission from author as Romi could not be contacted.
+;--------------------------------------
+
+
+
+	.Z80
+
+	ASEG
+	ORG	100H
+
+FCB	EQU	0F41FH
+
+	.PHASE	0C000H-7
+
+;-- Ï¼ÝºÞÌ§²ÙÉ Í¯ÀÞ------+
+	DB	0FEH	;|
+	DW	TENSOU	;|
+	DW	0FFFFH	;|
+	DW	TENSOU	;|
+;------------------------+
+
+TENSOU:	LD	HL,0D000H
+	OR	A
+	SBC	HL,SP
+	JR	NC,TENSO2
+	LD	A,(0FFA7H) ;ÃÞ¨½¸Áª¯¸
+	CP	0C9H
+	JR	Z,TENSO3
+	LD	A,(0FAFCH) ;VRAMÁª¯¸
+	BIT	2,A
+	JR	NZ,TENSO1
+TENSO3:	LD	HL,STR_0
+	JP	PRINT1 ;¼Þ¯º³ Ì¶É³
+TENSO2:	LD	HL,STR_3
+	JP	PRINT1
+
+TENSO1:; SUPER-X.BDY ¦ LOAD
+	CALL	FCBCLR
+	LD	HL,FILNMS ;Ì§²Ùµ°ÌßÝ
+	LD	DE,FCB+1
+	LD	BC,11
+	LDIR
+	LD	DE,FCB
+	LD	C,0FH
+	CALL	0F37DH
+	INC	A
+	JP	NZ,LOAD1
+	LD	HL,STR_2 ;Ì§²Ù¶Þ Å²
+	CALL	PRINT1
+	JP	QUIT
+LOAD1:	LD	HL,(0F3DCH)
+	LD	(XYSAVE),HL
+	LD	HL,STR_5
+	CALL	PRINT1
+	LD	C,1AH ;DMA ¾¯Ä
+	LD	DE,8000H
+	CALL	0F37DH
+	LD	HL,1
+	LD	(FCB+14),HL ;Úº°ÄÞ»²½Þ
+
+	CALL	READ
+
+	LD	A,(0F342H) ;PAGE1¦RAM
+	LD	H,40H
+	CALL	24H
+
+	LD	HL,8000H
+	LD	DE,4000H
+	LD	BC,4000H
+	LDIR
+
+	LD	A,(0F342H)
+	CALL	STATE
+	INC	HL
+	LD	(4010H),HL
+	PUSH	HL
+	LD	A,(0FCC1H)
+	LD	H,40H
+	CALL	24H
+
+	EI
+	CALL	READ
+
+; PAGE0¦ RAMÆ¼Ã ÃÝ¿³
+	DI
+	IN	A,(0A8H)
+	PUSH	AF
+	AND	11111100B
+	LD	C,A
+	LD	A,(0F341H)
+	AND	11B
+	OR	C
+	OUT	(0A8H),A
+	LD	A,(0FFFFH)
+	CPL
+	PUSH	AF
+	AND	11111100B
+	LD	C,A
+	LD	A,(0F341H)
+	RRCA
+	RRCA
+	AND	11B
+	OR	C
+	LD	(0FFFFH),A
+
+	LD	BC,3F00H
+	LD	HL,8000H
+	LD	DE,100H
+	LDIR
+
+	POP	AF
+	LD	(0FFFFH),A
+	POP	AF
+	OUT	(0A8H),A
+
+	EI
+
+; ÒÓØÃÞ¨½¸ ·ØÊÅ½
+	LD	A,(0FAF8H)
+	CALL	STATE
+	LD	A,(HL)
+	AND	11011111B
+	LD	(HL),A
+
+; CALLÒ²Ú² ¶¸Á®³ ¼®Ø
+	POP	HL
+	LD	(HL),20H
+	LD	HL,(XYSAVE)
+	LD	(0F3DCH),HL
+	LD	HL,STR_1
+	CALL	PRINT1
+
+
+	LD	A,6
+	CALL	141H
+	BIT	2,A
+	JP	Z,SKIP
+
+
+
+; ²ÝÃÞ¯¸½ÀÝ¸ ÖÐºÐ
+	CALL	FCBCLR
+	LD	HL,FILNM1
+	LD	DE,FCB+1
+	LD	BC,11
+	LDIR
+	LD	DE,FCB
+	LD	C,0FH
+	CALL	0F37DH
+	INC	A
+	JR	NZ,SRH1
+	LD	HL,STR_4
+	CALL	PRINT1
+	JP	KFNTLD
+SRH1:	LD	HL,1
+	LD	(FCB+14),HL
+	LD	C,27H
+	LD	DE,FCB
+	LD	HL,2
+	CALL	0F37DH
+	LD	B,2
+	LD	HL,4012H
+	LD	IX,8000H
+SRH2:	LD	E,(IX)
+	LD	A,(0F342H)
+	PUSH	IX
+	PUSH	BC
+	CALL	14H
+	POP	BC
+	POP	IX
+	INC	HL
+	INC	IX
+	DJNZ	SRH2
+	EI
+	CALL	READ
+	LD	HL,8000H
+	LD	DE,8000H
+	LD	BC,4000H
+	CALL	LDIRVM
+	CALL	READ
+	LD	HL,8000H
+	LD	DE,0C000H
+	LD	BC,4000H
+	CALL	LDIRVM
+
+; ¶Ý¼ÞÌ«ÝÄ ÖÐºÐ(v1.1)
+KFNTLD:	CALL	FCBCLR
+	LD	HL,FILNM2
+	LD	DE,FCB+1
+	LD	BC,11
+	LDIR
+	LD	DE,FCB
+	LD	C,0FH
+	CALL	0F37DH
+	INC	A
+	JR	NZ,KFNTL1
+	LD	HL,STR_6
+	CALL	PRINT1
+	JR	QUIT
+KFNTL1:	LD	HL,1
+	LD	(FCB+14),HL
+	CALL	READ
+	LD	HL,8000H
+	LD	DE,0
+	LD	BC,4000H
+	CALL	P1LDVM
+
+	CALL	READ
+	LD	HL,8000H
+	LD	DE,4000H
+	LD	BC,4000H
+	CALL	P1LDVM
+
+	CALL	READ
+	LD	HL,8000H
+	LD	DE,8000H
+	LD	BC,4000H
+	CALL	P1LDVM
+
+	CALL	READ
+	LD	HL,8000H
+	LD	DE,0C000H
+	LD	BC,03000H
+	CALL	P1LDVM
+	JR	QUIT
+
+SKIP:
+	LD	HL,STR_7
+	CALL	PRINT1
+
+QUIT:	XOR	A ; NEW
+	LD	(8000H),A
+	LD	HL,TEXT
+	CALL	4601H
+	RET
+
+READ: ;PAGE2Æ Ø°ÄÞ
+	LD	C,27H
+	LD	DE,FCB
+	LD	HL,4000H
+	CALL	0F37DH
+	RET
+
+STATE:	;HL=AÉ ½Û¯Ä ±ÄØËÞ­°Ä ±ÄÞÚ½
+	LD	B,A
+	AND	3
+	RLCA
+	RLCA
+	RLCA
+	RLCA
+	LD	C,A
+	LD	A,B
+	AND	0CH
+	ADD	A,C
+	LD	C,A
+	LD	B,0
+	LD	HL,0FCC9H
+	ADD	HL,BC
+	RET
+
+; ÒÓØ(HL)=>VRAM(DE) BCbyte ÃÝ¿³
+LDIRVM:	EX	DE,HL
+	CALL	171H
+	EX	DE,HL
+LDRVM2:	PUSH	BC
+	POP	DE
+	LD	A,(0007H)
+	LD	C,A
+LDRVM1:	LD	A,(HL)
+	OUT	(C),A
+	INC	HL
+	DEC	DE
+	LD	A,D
+	OR	E
+	JR	NZ,LDRVM1
+	RET
+
+P1LDVM:	EX	DE,HL
+	PUSH	BC
+	DI
+	LD	A,(0007H)
+	INC	A
+	LD	C,A
+	XOR	A
+	OUT	(C),A
+	LD	A,45+80H
+	OUT	(C),A
+	LD	A,H
+	RLCA
+	RLCA
+	AND	3
+	SET	2,A
+	OUT	(C),A
+	LD	A,14+80H
+	OUT	(C),A
+	OUT	(C),L
+	LD	A,H
+	AND	3FH
+	SET	6,A
+	OUT	(C),A
+	EI
+	POP	BC
+	EX	DE,HL
+	JR	LDRVM2
+
+PRINT1:	LD	A,(HL)
+	CP	'$'
+	RET	Z
+	CALL	0A2H
+	INC	HL
+	JR	PRINT1
+
+FCBCLR:	LD	HL,FCB ; FCB¸Ø±
+	LD	DE,FCB+1
+	LD	BC,36
+	LD	(HL),0
+	LDIR
+	RET
+
+STR_0:	DEFM "SUPER-X can't run on this machine$"
+STR_1:	DEFM 'SUPER-X version 1.21'
+	DB 10,13
+	DEFM 'Ver: 1.2 Copyright 1994 by Romi'
+	DB 10,13
+	DEFM 'Ver: 1.21 Made 2002 by NYYRIKKI$'
+STR_2:	DEFM '"SUPER-X.BDY" not exist$'
+STR_3:	DEFM 'STACK error$'
+STR_4:	DB 10,13
+	DEFM 'INDEX TANK not exist$'
+STR_5:	DEFM 'Wait a minute..$'
+STR_6:	DB 10,13
+	DEFM 'FONT file not exist$'
+STR_7:	DB 10,13
+	DEFM 'Skipping INDEX TANK and FONT file$'
+
+FILNMS:	DEFM 'SUPER-X BDY'
+FILNM1:	DEFM 'SUPER-X TNK'
+FILNM2:	DEFM 'SUPER-X FNT'
+TEXT:	DB 3AH,94H,0
+
+XYSAVE:	DS 2
+
+	.DEPHASE
+
+	END
