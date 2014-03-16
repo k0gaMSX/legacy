@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------
-                    GEM - Gameboy Emulator for MSX v0.7
-                      (c) 2000/2001 by The New Image
+                  GEM - Gameboy Emulator for MSX v0.9990
+                      (c) 2000-2007 by The New Image
 
                       Programmed by Patriek Lesparre   
 
@@ -12,21 +12,15 @@
 About GEM
 ---------
 GEM is a Gameboy emulator for MSX2/turboR running MSX-DOS2 written in 100%
-assembly language. Although many games are playable now, keep in mind it's
-still in beta stages.
-
-Why am I writing it, you ask? Because I want to prove an MSX is capable
-of emulating a Gameboy at reasonable speed (which ofcourse is a subjective
-term).
+assembly language. As of version v1.0, Gfx9000 is required as well.
 
 
-System configuration
+System Configuration
 --------------------
 Minimum:
-MSX2, 256kB RAM, MSX-DOS2
-
-Recommended:
-MSX turboR
+MSX2, 256kB RAM, MSX-DOS2, Gfx9000
+or
+MSX turboR, Gfx9000
 
 GEM is optimized for R800, so running it on a MSX turboR gives the best
 performance.
@@ -64,98 +58,53 @@ Configuration mode controls are:
 ESC  - Exits GEM
 STOP - Exits configuration mode without changes
 BS   - Backspace resets the emulated Gameboy
-F5   - Toggles sound on/off (turning sound off should increase speed a bit)
+F5   - Toggles sound on/off
 0    - Display all frames
-1    - Display 1 out of 2 frames
-2    - Display 1 out of 4 frames
-3    - Display 1 out of 8 frames
-4    - Display 1 out of 16 frames
-5    - Display 1 out of 32 frames
-6    - Display 1 out of 64 frames
-7    - Display 1 out of 128 frames
+1    - Display 1/2 of all frames
+2    - Display 1/3 of all frames
+3    - Display 1/4 of all frames
+4    - Display 1/5 of all frames
+5    - Display 1/6 of all frames
+6    - Display 1/7 of all frames
+7    - Display 1/8 of all frames
 
 
-Future
-------
-Future plans are:
-- Increased compatibility
-- Better Gameboy MBC support
-- Joystick support
-- Mapper selection (to make it possible to use external mappers on turboR)
-- Some sort of patchingsystem to make incompatible ROMs compatible
-- Better sound support using SCC
-- LPE-Z380 version, possibly with Gfx9000 support
+What's New
+----------
+8 August 2007, v0.9990
 
+  This release signifies a major step. After the failing of the LPE-Z380
+  in the MSX scene, GEMZ was discontinued and I've decided to return to
+  GEM. The new goal for GEM is to emulate the Gameboy fast and accurate
+  enough to play the classic Gameboy games enjoyably and work towards
+  Gameboy Color emulation.
 
-History
--------
-1 June 2001, v0.7
+  New in this version:
 
-  SURPRISE! I honestly didn't plan on developing this version anymore, but
-  I got a sudden rush of inspiration. Be happy :)
+  - The v0.8 source code was lost, but was rebuilt by comparing the v0.8
+    binary with the v0.7 source code.
+  - A major reorganisation and clean-up of the entire source code. The
+    source code is now much more flexible, maintainable and better fit to
+    accept new features.
+  - Implemented a more flexible graphics conversion method.
+  - Got rid of all V99x8 renderers, GEM now requires Gfx9000.
+  - Full smooth scrolling in the V9990 renderer.
+  - Sped up GB interrupt handling.
+  - Fixed a recompiler bug that sometimes corrupted the GB AF register.
+  - More accurate CPU flag emulation, fixes some games.
+    * Implemented correct GB CPU flag register layout.
+    * Fixed or improved flag behaviour in various instructions.
+  - Fixed a bug in the config file parser. (Patch for v0.8 available)
+  - R800 LED enabled.
+  - Various small changes during the course of the reorganisation.
 
-  - Accurate CPU timing! The CPU cores now count cycles, not instructions.
-    This means another speed-up (about 15%), because the default CPU/LCD
-    Timing settings were previously set too high.
-  - Proper memory handling. Adds error-messages and ROM-size checks, allows
-    TSR's to remain loaded, no more crash on turboR on exit with some ROMs.
-  - Added CPU Core setting in the configuration file.
-  - Dynamic Recompiler!!! As far as I know, unique for an 8-bit computer.
-    For most games this means a whopping 25% to 50% speed increase! ^_^
-  - Accidentally left in some debug-code in v0.6, it was PUSHing and POPing
-    all Z80 registers every drawn frame!
-  - Manual update, some fixes/additions. Read it :)
-  - Sped up PUSH AF opcode, making it dynarec compatible as well.
-  - Rewrote ADD SP,d opcode for dynarec compatibility (remains same speed).
-  - Fixed a bug where an instruction accessing an unmapped GB memory-
-    region would not be executed at all.
-
-v0.1 (12 March 2000) - v0.6 (26 March 2001)
+v0.1 (12 March 2000) - v0.8 (24 September 2003)
   For info, read GEM.TXT of older versions.
-
-
-Technical stuff
----------------
-GEM is written in 100% highly optimized R800 assembly language. It uses
-several instructions that are undocumented for Z80, but should run fine on
-any MSX2 or higher.
-
-Even though the CPU cores (interpreting and recompiling) were designed for
-highest possible speed, they're very accurate at the same time. Only a few
-instructions have incorrect flag handling.
-
-As for MBC (Memory Bank Controller) support, only MBC1 is supported. Many
-games using other MBC's work fine as well, since most MBC's are similar.
-Even MBC1 emulation is incomplete though.
-
-With the window and practically full sprite support, the video emulation is
-as complete as it's likely to get. Who knows what I'll add/change in the
-future, but it's no longer a priority.
-The screen renderers use a virtual pattern mode, which means the screen is
-rendered in blocks of 8x8 pixels, just like a real Gameboy. In addition to
-this, patterns are cached in VRAM.
-The renderers emulate horizontal and vertical scrolling in blocks of 8x8
-pixels. Some of the renderes also support smooth scrolling, by redirecting
-the lowbits of the Gameboy scroll registers to the V9938 Display Adjust and
-Display Offset registers. This means the edges of the screen will be jumpy,
-maybe I will remedy this in the future. It's possible but slower.
-
-The renderers supporting raster effects do so per pattern row. Smooth
-scrolling is independant of raster effects, so enabling it can cause jumpy
-parallax scrolls. The palette is also independant, since supporting palette
-raster effects is far too costly in both speed and memory. Perhaps I can
-think of a brilliant solution in the future, but don't count on it ;)
-
-The software sprite renderer uses LMMM VRAM copy's to render sprites and
-also keeps four seperate pattern caches. The hardware sprite renderer is
-currently limited to 32 mono-colored 8x8 sprites. This is because of
-differences between Gameboy and MSX sprite hardware, which make it
-difficult to emulate one on the other.
 
 
 Disclaimer
 ----------
-- MSX is a trademark of ASCII Corporation.
+- MSX is a trademark of MSX Association.
   All other trademarks are property of their respective owners.
 - GEM is freeware and can be distributed freely as long as:
   * it is not modified
