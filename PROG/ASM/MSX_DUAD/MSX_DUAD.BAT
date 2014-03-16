@@ -1,2 +1,0 @@
-BASIC MSX-DUAD.BAS
-
