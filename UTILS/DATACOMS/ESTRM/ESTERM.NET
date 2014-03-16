@@ -1,0 +1,339 @@
+;★★★　EsTerm用 ネットワーク・モデム定義ファイル "ESTERM.NET"　★★★
+;
+;接続先定義 : @peer="接続先定義名"
+;	接続先(電話番号)を定義する。
+;	接続先定義は電話帳画面で参照される。
+;
+;ホスト定義 : @host="ホスト定義名"
+;	ホスト(オートログイン、文字コードなど)を定義する。
+;	ホスト定義は接続先定義のhost="ホスト定義名"で参照される。
+;
+;モデム定義 : @modem="モデム定義名"
+;	使用するモデム(DTE速度、モデム設定コマンドなど)を定義する。
+;	モデム定義は接続先定義のmodem="モデム定義名"で参照される。
+;
+;定義数の制限
+;	接続先定義(@peer)は100個まで
+;	ホスト定義(@host)は100個まで
+;	モデム定義(@modem)は30個まで
+;	それ以上は無視される。
+;
+;基本書式 : <名前>=<値>
+;           <名前>=<値>
+;           ......
+;
+;・空行は無視されるので適当に入れてもよい。
+;
+;・<名前>と=と<値>の間には空白を入れないこと。
+;	例 : telnumber=117      ;正しい例
+;	例 : telnumber = 110    ;正しくない例
+;
+;・<名前>に空白やコントロールコードを含めることはできない。
+;
+;・<名前>および<値>が長すぎる場合、長すぎた分は無視される。
+;
+;・<値>に空白を入れる場合には全体を""で囲む、もしくは空白の前に!を入れる。
+;	例 : hoehoe="ほえほえ へろへろ"
+;	例 : hoehoe=ほえほえ! へろへろ
+;
+;・<値>に空白が含まれない場合には""で囲っても囲わなくてもよい。
+;	例 : hoehoe=ほえほえへろへろ
+;	例 : hoehoe="ほえほえへろへろ"
+;
+;・<値>にコントロールコードを入れる場合には、!と@(00h)～_(1fh)を続けて書く。
+;	例 : response="mypassword!M" ;responseをmypassword[CR(0dh)]と定義する。
+;
+;・<値>に!を入れる場合には!!と書く。
+;
+;・;より行末までは、コメントとして扱われる。(<値>の""内をのぞく)
+;	例 : name="超速いモデム"  ;ここはコメントです。
+;	例 : name="超遅いモデム;ここはコメントじゃないよ"
+;
+;・自由度の高い記述ができるようになっているが、あまり変な記述をすると、
+;　裏技で予期せぬ解釈をされる恐れがあるので、以下の定義例を参考にして、
+;　あまり羽目を外さないようにするのが吉。
+;
+;・以下に、いくつかのネットおよび標準的なモデムの定義例を挙げましたので、
+;　これらを書き換えてに自分に合わせた定義にしてください。
+
+;接続先定義
+@peer=MARIO0						;接続先定義名
+name="MARIO-NET 一般アナログ回線 (～33.6kbps)"		;接続先名称
+country_number=81					;国番号(日本は81)
+resident_number=0427					;市外局番
+telnumber=95-3421					;電話番号
+host=MARIO						;接続先ホスト定義名
+modem=NORMAL						;使用モデム定義名
+
+;ホスト定義
+@host=MARIO				;ホスト定義名
+name=MARIO-NET				;ホスト名称
+charcode=SJIS				;受信文字コード
+keyboard=MSX				;キーボード種別
+logfile=MN$Y$M$D.LOG			;記録ファイル名
+;以下、オートログインの記述
+prompt="ID : "				;オートログイン待ち文字列
+response="ここにあなたのIDを入れる!M"	;オートログイン送出文字列
+prompt="PASS: "				;(以下同様、定義した順に実行される)
+response="ここにあなたのパスワードを入れる!M"
+;prompt="MAIN>> "
+;logstart				;通信記録の開始(追加モード)
+
+;モデム定義
+;
+;たいていのモデムはこの設定で動作すると思います。
+;ただし、dte_speedの部分だけは性能を発揮させるために
+;モデムとRS-232Cカートリッジの性能に合わせて書き換えてください。
+;
+;(9600bpsモデムで38400、14400bpsモデムで57600、28800bpsモデムで115200、
+; 33600bpsモデムで115200または230400。
+; RS-232Cカートリッジの最大速度と比べて遅い方に合わせます。
+; 速すぎると動きません。)
+;
+@modem=NORMAL				;モデム定義名
+name="標準的なモデム"			;モデム名称
+dte_speed=9600				;DTE速度(bps単位)
+dte_parameter=8N1NHNNN			;通信パラメータ
+modem_type=analog			;モデム種別
+					;(analog:アナログ、digital:デジタル)
+atwait=60				;ATコマンド送出後待ち時間(1/60秒単位)
+redialwait=600				;リダイヤル待ち時間(1/60秒単位)
+initat=					;ダイヤル前初期化ATコマンド
+					;(最初のATは省く。以下同様)
+dialat_pulse=DP				;ダイヤルATコマンド(パルス回線)
+dialat_tone=DT				;ダイヤルATコマンド(トーン回線)
+dialwaitstr=,				;ダイヤル待ち文字(外線発信用)
+add_number=no				;追加番号(リダイヤル規制回避用)
+
+;接続先定義
+@peer=MARIO2
+name="MARIO-NET 増設アナログ回線 (～33.6kbps)"
+country_number=81
+resident_number=0427
+telnumber=95-7487
+host=MARIO
+modem=NORMAL
+
+;接続先定義
+@peer=MARIO3
+name="MARIO-NET ISDN回線 (V.110 ～57.6kbps)"
+country_number=81
+resident_number=0427
+telnumber=95-7487
+host=MARIO
+modem=IT55_57K6
+
+;接続先定義
+@peer=NECONE
+name="ネットコンプレックスネット (～33.6kbps)"
+country_number=81
+resident_number=03
+telnumber=3831-8017
+host=NECONE
+modem=NORMAL
+
+;ホスト定義
+@host=NECONE
+name=ネットコンプレックスネット
+charcode=SJIS
+keyboard=MSX
+logfile=NC$Y$M$D.LOG
+prompt="ＩＤを入力してください : "
+response=ここにあなたのIDを入れる!M
+prompt="パスワードを入力してください : "
+response=ここにあなたのパスワードを入れる!M
+
+;接続先定義
+@peer=TOKYOBBS1
+name="東京BBS (～14.4kbps)"
+country_number=81
+resident_number=03
+telnumber=3857-9575
+host=TOKYOBBS
+modem=NORMAL
+
+;接続先定義
+@peer=TOKYOBBS2
+name="東京BBS (～2.4kbps)"
+country_number=81
+resident_number=03
+telnumber=3856-7575
+host=TOKYOBBS
+modem=NORMAL
+
+;接続先定義
+@peer=TOKYOBBS3
+name="東京BBS (～28.8kbps UP優先)"
+country_number=81
+resident_number=03
+telnumber=3857-6211
+host=TOKYOBBS
+modem=NORMAL
+
+;接続先定義
+@peer=TOKYOBBS4
+name="東京BBS (～14.4kbps 7分間回線)"
+country_number=81
+resident_number=03
+telnumber=3857-7822
+host=TOKYOBBS
+modem=NORMAL
+
+;ホスト定義
+@host=TOKYOBBS
+name=東京BBS
+charcode=SJIS
+keyboard=MSX
+logfile=TB$Y$M$D.LOG
+prompt="LOGIN : "
+response=ここにあなたのIDを入れる!M
+prompt="PASSWORD : "
+response=ここにあなたのパスワードを入れる!M
+
+;接続先定義
+@peer=BAMBOO
+name="Bamboo Field (～14.4kbps)"
+country_number=81
+resident_number=022
+telnumber=286-4894
+host=BAMBOO
+modem=NORMAL
+
+;ホスト定義
+@host=BAMBOO
+name="Bamboo Field"
+charcode=SJIS
+keyboard=MSX
+logfile=BF$Y$M$D.LOG
+prompt="IDentily : "
+response="ここにあなたのIDを入れる!M"
+prompt="PASSword : "
+response="ここにあなたのパスワードを入れる!M"
+
+;接続先定義
+@peer=SAKA
+name="SAKA-NET (～28.8kbps)"
+country_number=81
+resident_number=0726
+telnumber=93-1618
+host=SAKA
+modem=NORMAL
+
+;ホスト定義
+@host=SAKA
+name="SAKA-NET"
+charcode=SJIS
+keyboard=MSX
+logfile=SN$Y$M$D.LOG
+
+;ホスト定義
+@host=ILLUSION
+name="Illusion City"
+charcode=SJIS
+keyboard=MSX
+logfile=IL$Y$M$D.LOG
+prompt="![[8;9H![[32mInput ID  CODE![[33m:![[4;37m          ![[10D"
+response=ここにあなたのIDを入れる!M
+prompt="![[9;9H![[36mInput PassWord![[33m:![[m
+response=ここにあなたのパスワードを入れる!M
+prompt="![[>5l![[36;4mHit Any Key.![[m"
+response=!M
+
+;接続先定義
+@peer=MNP
+name="MSX Networker's Point (～14.4kbps)"
+country_number=81
+resident_number=0727
+telnumber=85-6714
+host=MNP
+modem=NORMAL
+
+;ホスト定義
+@host=MNP
+name="MSX Networker's Point"
+charcode=SJIS
+keyboard=MSX
+logfile=NP$Y$M$D.LOG
+prompt="ＩＤいれてね:"
+response=ここにあなたのIDを入れる!M
+prompt="PASSいれてね:"
+response=ここにあなたのパスワードを入れる!M
+
+;モデム定義
+@modem=SP288_28K8			;モデム定義名
+name="Sportster 28,800 [～28.8kbps]"	;モデム名称
+dte_speed=115200			;DTE速度
+dte_parameter=8N1NHNNN			;通信パラメータ
+modem_type=analog			;モデム種別(analog:アナログ、digital:)
+atwait=60				;ATコマンド送出後待ち時間(1/60秒単位)
+redialwait=600				;リダイヤル待ち時間(1/60秒単位)
+initat=&N0				;ダイヤル前初期化コマンド
+dialat_pulse=DP				;ダイヤルコマンド(パルス回線)
+dialat_tone=DT				;ダイヤルコマンド(トーン回線)
+dialwaitstr=,				;ダイヤル待ちコマンド(外線発信用)
+add_number=no				;追加番号(リダイヤル規制回避用)
+
+@modem=SP288_26K4
+name="Sportster 28,800 [26.4kbps]"
+dte_speed=115200
+dte_parameter=8N1NHNNN
+modem_type=analog
+atwait=60
+redialwait=600
+initat=&N13
+dialat_pulse=DP
+dialat_tone=DT
+dialwaitstr=,
+add_number=no
+
+@modem=IT55_38K4
+name="Aterm IT55 [V.110 38.4kbps]"
+dte_speed=115200
+dte_parameter=8N1NHNNN
+modem_type=digital
+atwait=60
+redialwait=600
+initat=\Q3N8
+dialat_pulse=D
+dialat_tone=D
+dialwaitstr=
+add_number=no
+
+@modem=IT55_57K6
+name="Aterm IT55 [V.110 57.6kbps]"
+dte_speed=115200
+dte_parameter=8N1NHNNN
+modem_type=digital
+atwait=60
+redialwait=600
+initat=\Q3N9
+dialat_pulse=D
+dialat_tone=D
+dialwaitstr=
+add_number=no
+
+@modem=MC6630_PIAFS
+name="MC-6630 [PIAFS 32kbps]"
+dte_speed=38400
+dte_parameter=8N1NHNNN
+modem_type=digital
+atwait=60
+redialwait=600
+initat=@O3
+dialat_pulse=D
+dialat_tone=D
+dialwaitstr=
+add_number=no
+
+@modem=MC6630_RMODEM
+name="MC-6630 [無線モデム 14.4kbps]"
+dte_speed=38400
+dte_parameter=8N1NHNNN
+modem_type=digital
+atwait=60
+redialwait=600
+initat=@O1
+dialat_pulse=D
+dialat_tone=D
+dialwaitstr=
+add_number=no
