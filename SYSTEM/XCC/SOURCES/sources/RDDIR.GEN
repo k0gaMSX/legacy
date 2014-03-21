@@ -1,0 +1,304 @@
+*r+
+.comment \
+ RDDIR.GEN : De directory lees module
+
+ Copyright (C) 1994-2003 Alex Wulms
+ Start date: 11-4-1994
+ De vier vaantjes 29, 3000 Leuven, BE
+ awulms@users.sourceforge.net
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License version 2 as
+ published by the Free Software Foundation.
+
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ more details.
+
+ You should have received a copy of the GNU General Public License along
+ with this program; if not, write to the Free Software Foundation, Inc., 59
+ Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+\
+		include	h:bios.mac
+		include	h:init.mac
+		include	h:misc.mac
+		include	h:eind.mac
+
+		public	dirleft		; haal linker directory op
+		public	dirright	; haal rechter directory op
+		public	getdirname	; haal directory naam op
+
+; **************************************
+; * haal linker directory op
+dirleft:	xor	a
+		ld	(lnrfibs),a	; assume: 0 fibs
+		ld	a,(dirside)
+		or	a
+		jr	z,dirl2		; in left window, chk/get current dir
+		ld	de,lpath	; in right window, chk if left dir
+		ld	a,(lstat)	; still exists
+		call	chkdir
+		jr	z,dirl4		; yes => get its contents
+		ld	de,lpath	; no => get current directory off
+		cp	#9d		;       left window
+		jr	nz,dirl1	; chkdir operation was not aborted
+		ld	hl,unknowntxt
+		ld	bc,4
+		inc	de
+		inc	de		; skip D:
+		ldir			; neem unknown tekst over
+		xor	a
+		ld	(lnrselnames),a	;   er zijn geen geselecteerde namen
+		ret
+dirl1:		ld	a,(de)
+		res	5,a
+		sub	'A'-1
+		ld	b,a
+		ld	a,(lstat)
+		call	getdirname
+		jr	dirl4		; and get its contents
+dirl2:		ld	hl,-128
+		add	hl,sp
+		ld	sp,hl		; reserveer ruimte voor dirname buffer
+		ex	de,hl		; DE = dirnamebuffer
+		push	de
+		BDOS	#19		; A = current drive (0=A, 1=B)
+		pop	de
+		inc	a
+		ld	b,a		; B = left drive
+		ld	a,(lstat)
+		call	getdirname	; haal directory naam op
+		push	af		; onthoud dir status
+		ex	de,hl		; HL = dirnamebuffer
+		ld	de,lpath	; tempname=>lpath en check if changed
+		call	chkcopname	; uit: Zf = name is changed
+		jr	nz,dirl3	; directory naam onveranderd
+		xor	a
+		ld	(lnrselnames),a	;   er zijn geen geselecteerde namen
+dirl3:		ld	hl,128+2
+		add	hl,sp
+		pop	af
+		ld	sp,hl		; herstel de stack
+		ret	c		; iets mislukt (invalid drive, etc)
+
+dirl4:		ld	a,(lfilter)
+		ld	b,a		; B = dir filter
+		ld	a,(lstat)
+		ld	ix,ldirbuf
+		ld	de,lpath
+		call	getdir
+		ld	(lnrfibs),a	; onthoud #gevonden fibs
+		ret
+
+; **************************************
+; * haal rechter directory op
+dirright:	xor	a
+		ld	(rnrfibs),a
+		ld	a,(dirside)
+		or	a
+		jr	nz,dirr2	; in right window, chk/get current dir
+		ld	de,rpath	; in left window, chk if right dir
+		ld	a,(rstat)	; still exists
+		call	chkdir
+		jr	z,dirr4		; yes => get its contents
+		ld	de,rpath	; no => get current directory off
+		cp	#9d		;       right window
+		jr	nz,dirr1	; chkdir operation was not aborted
+		ld	hl,unknowntxt
+		ld	bc,4
+		inc	de
+		inc	de		; skip D:
+		ldir			; neem unknown tekst over
+		xor	a
+		ld	(rnrselnames),a	;   er zijn geen geselecteerde namen
+		ret
+dirr1:		ld	a,(de)
+		res	5,a
+		sub	'A'-1
+		ld	b,a
+		ld	a,(rstat)
+		call	getdirname
+		jr	dirr4		; and get its contents
+dirr2:		ld	hl,-128
+		add	hl,sp
+		ld	sp,hl		; reserveer ruimte voor dirname buffer
+		ex	de,hl		; DE = dirnamebuffer
+		push	de
+		BDOS	#19		; A = current drive (0=A, 1=B)
+		pop	de
+		inc	a
+		ld	b,a		; B = left drive
+		ld	a,(rstat)
+		call	getdirname	; haal directory naam op
+		push	af		; onthoud dir status
+		ex	de,hl		; HL = dirnamebuffer
+		ld	de,rpath	; tempname=>rpath en check if changed
+		call	chkcopname	; uit: Zf = name is changed
+		jr	nz,dirr3	; directory naam onveranderd
+		xor	a
+		ld	(rnrselnames),a	; er zijn geen geselecteerde namen
+dirr3:		ld	hl,128+2
+		add	hl,sp
+		pop	af
+		ld	sp,hl		; herstel de stack
+		ret	c		; iets mislukt (invalid drive, etc)
+dirr4:		ld	a,(rfilter)
+		ld	b,a
+		ld	a,(rstat)
+		ld	ix,rdirbuf
+		ld	de,rpath
+		call	getdir
+		ld	(rnrfibs),a	; onthoud #gevonden fibs
+		ret
+
+; **************************************
+; * zet de naam van temppath naar path DE en
+; * kijk of de naam is veranderd
+; * in: DE = destination/oldname
+; *     HL = temp name
+; * uit: Zf  = naam is veranderd
+; *      NZf = naam is onveranderd
+chkcopname:	ld	bc,255		; B = flag, C = count > max # letters
+chkcopn2:	ld	a,(de)		; A = oude letter
+		cp	(hl)		; vergelijk met nieuwe letter
+		jr	z,chkcopn3	; zelfde => is nog goed
+		ld	b,1		; verschillend => B = 1
+		ld	a,(hl)		; en pak nieuwe letter
+chkcopn3:	ldi			; neem nieuwe letter over
+		or	a
+		jr	nz,chkcopn2	; nog niet end of name detected
+		dec	b		; geef terug of naam zelfde was
+		ret
+
+; **************************************
+; * haal directory op
+; * in: DE = directory name
+; *     IX = fibs buffer
+; *      A = dirstat
+; *      B = dirfilter (system, hidden)
+; * uit: A = #gevonden fibs
+getdir:		or	a
+		ret	z		; directory uit => doe niks
+		dec	a
+		jr	nz,getarchive	; 2 => haal info uit archive
+		push	bc
+		push	ix
+		push	de
+		ld	b,0
+		BDOS	#5b		; parse pathname
+		or	a
+		sbc	hl,de		; lastitem == seperator ?
+		ex	de,hl		; HL = lastitem
+		pop	de
+		pop	ix
+		pop	bc
+		jr	z,getdir2	; ja => alles goed
+		ld	(hl),'\'	; nee => plak er een slash achter
+		push	hl
+		inc	hl
+		ld	(hl),0
+		BDOS	#40		; find first entry
+		pop	hl
+		ld	(hl),0		; en wis de slash weer
+		jr	getdir3
+getdir2:	BDOS	#40		; pak meteen de find first
+getdir3:	ld	a,0
+		ret	nz		; niks gevonden => meteen klaar
+		ld	a,(ix+1)
+		cp	'.'		; de dot entry ?
+		ld	a,0
+		jr	nz,getdir5	; nee => alles goed
+		BDOS	#41		; ja => meteen de .. entry lezen
+		ld	a,0
+getdir4:	ret	nz		; niks gevonden => klaar
+getdir5:	inc	a		; weer 1 fib gehad
+		cp	255		; 255 fibs gehad => meer kan niet
+		ret	z
+		push	af
+		push	ix
+		pop	de		; DE = net opgehaalde fib
+		ld	hl,64
+		add	hl,de		; HL = next fib
+		push	hl
+		pop	ix		; zet IX er alvast op
+		ex	de,hl		; HL = actual fib, DE = next fib
+		ld	bc,64
+		ldir			; zet actual fib naar next fib
+		BDOS	#41		; en zoek naar de volgende entry
+		pop	bc
+		ld	a,b
+		jr	getdir4
+
+; **************************************
+; * haal namen uit archive
+; * in: DE = dirpath
+; *     IX = dirbuf
+getarchive:	ret
+
+; **************************************
+; * haal directory naam op
+; * in: DE = dirpath buffer
+; *      B = drive (1 = A, 2 = B)
+; *      A = dirstat (0 = uit, 1 = subdir, 2 = archive)
+; * uit:  DE = DEin
+; *       Cf = dirpath ophalen mislukt, in de buffer staat de D:(?)
+; *      NCf = alles goed gegaan
+getdirname:	or	a
+		ret	z		; uit => niks ophalen
+		push	de
+		call	getdirn2
+		pop	de
+		ret
+
+getdirn2:	cp	1
+		jr	nz,chkarchive	; kijk of archive nog aanwezig is
+		ex	de,hl
+		ld	a,b
+		add	a,'A'-1
+		ld	(hl),a
+		inc	hl
+		ld	(hl),':'
+		inc	hl
+		push	hl		; onthoud pos na ':'
+		ld	(hl),'\'	; path = D:\
+		inc	hl
+		ex	de,hl		; en plak de directory erachteraan
+		BDOS	#59		; get current directory
+		pop	hl
+		ret	z		; gelukt => klaar
+		ex	de,hl
+		ld	hl,unknowntxt
+		ld	bc,4
+		ldir			; neem unknown tekst over
+		scf			; geef terug dat het mislukt is
+		ret
+
+chkarchive:	scf			; werkt (nog) niet
+		ret
+
+unknowntxt:	db	'(?)',0
+
+; **************************************
+; * Check if a directory still exists
+; * in:  DE = dirname or (?)
+; *       A = dirstat (0 = uit, 1 = subdir, 2 = archive)
+; * out: Cf = directory no longer exists
+; *      NCf = directory still exists or dirstat = off
+chkdir:		or	a
+		ret	z		; off => irrelevant
+		ld	hl,-64
+		add	hl,sp
+		ld	sp,hl
+		push	hl
+		pop	ix		; IX = fib
+		ld	b,%00010010	; also search for directories
+		BDOS	#40		; find first entry
+chkdir2:	ex	af,af'
+		ld	hl,64
+		add	hl,sp
+		ld	sp,hl
+		ex	af,af'
+		ret
+

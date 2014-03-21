@@ -1,0 +1,565 @@
+*r+
+.comment \
+ POPUPS.GEN : De popup window management routines
+
+ Copyright (C) 1994-2003 Alex Wulms
+ Start date: 11-4-1994
+ De vier vaantjes 29, 3000 Leuven, BE
+ awulms@users.sourceforge.net
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License version 2 as
+ published by the Free Software Foundation.
+
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ more details.
+
+ You should have received a copy of the GNU General Public License along
+ with this program; if not, write to the Free Software Foundation, Inc., 59
+ Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+\
+		include	h:bios.mac
+		include	h:init.mac
+		include	h:scrio.mac
+		include	h:misc.mac
+
+		public	wpopup		; pop een window up
+		public	wpopdwn		; pop een window down
+		public	wcls		; clear the current window
+		public	wgetstring	; lees string uit
+		public	wprtchlb	; druk B letters vanaf HL af met coord.
+		public	wprtsp		; tekst vanaf (sp) in window zetten
+		public	wprthl		; tekst vanaf hl in window zetten
+		public	wputchar	; char in window zetten
+		public	wgetchar	; lees karakter uit
+
+windy:		equ	8 ; 6		; verschuiving van bottomy voor windows
+
+; **************************************
+; * maak een popup window
+; * in:   (SP) => xsize, ysize
+; * uit:  IY = wijst naar info blok:
+; *           (IY+0) = startxpos, opm: dit zijn de afmetingen van de binnenkant
+; *           (IY+1) = startypos
+; *           (IY+2) = xsize
+; *           (IY+3) = ysize
+; *       -oude IY staat op stack
+; *       -(systemy, systemx) staat op stack
+; *       -oude achtergrond staat op stack
+; *       -er is een gecentreerd kader gemaakt met een binnenblok van 
+; *        afmetingen xsize, ysize
+; *       -(systemy, systemx) = (1,1)
+; * opm: HL, DE, BC en AF blijven ongewijzigd
+wpopup:		call	savregs		; onthoud de registers
+		pop	hl
+		ld	e,(hl)		; E = xsize
+		inc	hl
+		ld	d,(hl)		; D = ysize
+		inc	hl
+		ld	(retaddr),hl	; en onthoud return addr
+		push	iy		; onthoud oude IY
+		ld	hl,(systemy)
+		push	hl		; zet systemy op de stack
+		push	de		; zet xsize, ysize op de stack
+		ld	hl,#0101
+		ld	(systemy),hl	; ga linksboven in window staan
+		ld	a,80
+		sub	e
+		srl	a
+		ld	e,a		; E = xpos
+		ld	a,(bottomy)
+		add	a,windy
+		ld	(bottomy),a	; zet window onderkant 4 lager
+		sub	d
+		srl	a
+		ld	d,a		; D = ypos
+		push	de		; zet ook de op de stack
+		ld	iy,0
+		add	iy,sp		; laat iy naar xsize, ysize wijzen
+
+		ld	a,(iy+2)
+		add	a,4
+		ld	e,a		; E = xsize+4 (2 links, 2 rechts)
+		ld	a,(iy+3)
+		add	a,4
+		ld	d,a		; D = ysize+4
+		push	de
+		call	mul16b		; DE = xsize * ysize = buffer size
+		pop	bc		; B,C = ysize, xsize
+		ld	hl,0
+		add	hl,sp
+		sbc	hl,de
+		ld	sp,hl		; reserveer ruimte op de stack
+		ex	de,hl		; DE = buffer positie
+		ld	h,(iy+0)	; xpos
+		dec	h		; -2+1 want 2 links van binnenkant
+		ld	l,(iy+1)	; ypos
+		dec	l		; idem dito maar dan erboven
+		push	bc		; onthoud ysize, xsize
+		call	c2vaddr		; zet om in video addr
+		pop	bc
+
+wpopup2:	push	bc		; onthoud de data
+		push	hl
+		ld	a,c
+		push	af		; onthoud xsize
+		call	setrd
+		pop	af
+		ld	b,a		; B = xsize
+		ex	de,hl		; HL = buffer pos
+		inir			; haal 1 regel binnen
+		ex	de,hl		; DE = nieuwe buffer pos
+		pop	hl
+		ld	bc,80
+		add	hl,bc		; next video addr
+		pop	bc
+		djnz	wpopup2		; en next yloop
+
+		call	wcls		; clear the window
+		ld	hl,(retaddr)
+		push	hl		; onthoud het ret addr
+		jr	restregs	; en herstel de registers
+
+; **************************************
+; * wis een popup window
+; * in: iy => xsize, ysize, xpos, ypos
+; *     stack opgebouwd als omschreven bin wpopup
+; * uit: achtergrond achter kader is hersteld
+; * opm: HL, DE, BC en AF blijven ongewijzigd
+wpopdwn:	call	savregs
+		pop	hl
+		ld	(retaddr),hl
+
+		ld	a,(bottomy)
+		sub	windy
+		ld	(bottomy),a	; zet bottomy weer terug
+		ld	a,(iy+2)
+		add	a,4
+		ld	c,a		; C = xsize+4 (2 links, 2 rechts)
+		ld	a,(iy+3)
+		add	a,4
+		ld	b,a		; B = ysize+4
+		ld	hl,0
+		add	hl,sp
+		ex	de,hl		; DE = buffer positie
+		ld	h,(iy+0)	; xpos
+		dec	h		; -2+1 want 2 links van binnenkant
+		ld	l,(iy+1)	; ypos
+		dec	l		; idem dito maar dan erboven
+		push	bc		; onthoud ysize, xsize
+		call	c2vaddr		; zet om in video addr
+		pop	bc
+
+wpopdwn2:	push	bc		; onthoud de data
+		push	hl
+		ld	a,c
+		push	af		; onthoud xsize
+		call	setwrt
+		pop	af
+		ld	b,a		; B = xsize
+		ex	de,hl		; HL = buffer pos
+		otir			; haal 1 regel binnen
+		ex	de,hl		; DE = nieuwe buffer pos
+		pop	hl
+		ld	bc,80
+		add	hl,bc		; next video addr
+		pop	bc
+		djnz	wpopdwn2	; en next yloop
+
+		ld	sp,iy		; wis screen buffer
+		pop	de		; xpos, ypos verwijderen
+		pop	de		; xsize, ysize
+		pop	hl		; systemx, systemy
+		ld	(systemy),hl	; herstel systemx, systemy
+		pop	iy		; herstel IY
+		ld	hl,(retaddr)
+		push	hl
+		jr	restregs	; and thats it
+
+; **************************************
+; * onthoud de standaard register set
+savregs:	ld	(oldhl),hl
+		ld	(oldde),de
+		ld	(oldbc),bc
+		push	af
+		pop	hl
+		ld	(oldaf),hl
+		ret
+
+; **************************************
+; * herstel de standaard register set
+restregs:	ld	hl,(oldaf)
+		push	hl
+		pop	af
+		ld	de,(oldde)
+		ld	bc,(oldbc)
+		ld	hl,(oldhl)
+		ret
+
+; **************************************
+; * wis een popup window
+; * in:   IY = window info blok
+; *       stack opgebouwd als omschreven bij wpopup
+wcls:		ld	hl,#0101
+		ld	(systemy),hl
+		ld	h,(iy+0)	; xpos
+		dec	h		; -2+1 want 2 links van binnenkant
+		ld	l,(iy+1)	; ypos
+		dec	l		; idem dito maar dan erboven
+		call	c2vaddr		; zet om in video addr
+		call	setwrt
+		ld	a,(iy+2)
+		add	a,4
+		ld	e,a		; E = xsize+4 (2 links, 2 rechts)
+		ld	a,(iy+3)
+		add	a,4
+		ld	d,a		; D = ysize+4
+
+		ld	a,' '
+		ld	b,e
+		call	fillvrm		; maak 1 lege regel
+		call	wclsnl	; stel volgende regel in
+		ld	a,' '
+		out	(c),a
+		ld	a,#18
+		ld	b,(iy+2)	; B = binnenkant xsize
+		out	(c),a
+		ld	a,#17
+		call	fillvrm
+		ld	a,#19
+		out	(c),a
+		ld	a,' '
+		or	a
+		out	(c),a		; +---------------------+
+		call	wclsnl
+		ld	b,(iy+3)
+wcls2:		push	bc
+		ld	a,' '
+		out	(c),a
+		ld	a,#16
+		ld	b,(iy+2)	; B = binnenkant xsize
+		out	(c),a
+		ld	a,' '
+		call	fillvrm
+		ld	a,#16
+		out	(c),a
+		ld	a,' '
+		or	a
+		out	(c),a		; |                     |
+		call	wclsnl
+		pop	bc
+		djnz	wcls2
+		ld	a,' '
+		out	(c),a
+		ld	a,#1a
+		ld	b,(iy+2)	; B = binnenkant xsize
+		out	(c),a
+		ld	a,#17
+		call	fillvrm
+		ld	a,#1b
+		out	(c),a
+		ld	a,' '
+		or	a
+		out	(c),a		; +---------------------+
+		call	wclsnl
+		ld	a,' '
+		ld	b,e
+		jp	fillvrm		; maak 1 lege regel
+
+wclsnl:		ld	bc,80
+		add	hl,bc
+		jp	setwrt
+
+; *************************************
+; * lees string uit
+; * in:  HL = addr. string buffer
+; *           opbouw: db y,x  : db 'string',0 met string en y,x al ingevuld
+; *      B  = lengte van string (zonder coordinaten en 0-byte)
+; * uit: string buffer bevat nieuwe string
+; *      NZ = ESC pressed
+; *      A  = 0
+; * verandert: HL,DE,BC,EI
+wgetstring:
+wgtstr:		ld	a,b
+		ld	(str_len),a
+		ld	(str_coor),hl
+		inc	hl
+		inc	hl
+		ld	(str_chars),hl
+		ld	(str_pos),hl
+		xor	a
+		ld	(insertflg),a
+		call	wgtstr2		; uit: NZ = ESC pressed !!
+		ld	a,0
+		ld	(insertflg),a	; insertflg resetten
+		ret
+
+wgtstr2:	ld	hl,(str_coor)
+		ld	a,(str_len)
+		ld	b,a
+		call	wprtchlb	; zet string op scherm
+wgtstr2a:	call	wgtstrcco	; bereken cursor coordinaat
+		call	wgetchar	; lees letter uit
+		cp	27
+		jr	nz,wgtstr2b	; geen ESC => verwerk verder
+		inc	a
+		ret			; ESC => geen NZ terug
+wgtstr2b:	cp	13
+		ret	z		; return ==> klaar,Z
+		cp	28
+		jr	z,wgtstrre	; rechts
+		cp	29
+		jr	z,wgtstrli	; links
+		cp	8
+		jr	z,wgtstrbs	; back space ( = links + delete)
+		cp	127
+		jr	z,wgtstrdel	; delete
+		cp	21
+		jr	z,wgtstrctrlu	; ^U
+		cp	18
+		jp	z,wgtstrins	; insert
+		cp	32
+		jr	c,wgtstr2a	; < 32 ==> illegaal karakter
+
+		call	wgtstrchi	; check insert en voer eventueel uit
+		ld	hl,(str_pos)
+		ld	(hl),a		; en zet in letter buffer
+		inc	hl
+wgtstr3:	call	wgtstrchpos	; check pos. en pas eventueel aan
+		ld	hl,(str_pos)
+		dec	hl
+		ld	(str_pos),hl
+		push	hl
+		call	wgtstrcco
+		pop	hl
+		ld	a,(hl)
+		call	wputchar
+		inc	hl
+		ld	(str_pos),hl
+		ld	a,(insertflg)
+		or	a
+		jr	z,wgtstr2a	; lees een nieuw karakter
+		jr	wgtstr2		; druk string af en lees nieuw kar.
+
+wgtstrre:	ld	hl,(str_pos)
+		inc	hl
+wgtstrr2:	call	wgtstrchpos
+		jr	wgtstr2a
+
+wgtstrli:	call	wgtstrli2
+		jr	wgtstr2a
+wgtstrli2:	ld	hl,(str_pos)
+		dec	hl
+wgtstrli3:	ld	(str_pos),hl
+		ld	de,(str_chars)	; begin pos. naam
+		dec	de
+		or	a
+		sbc	hl,de
+		ret	nz		; pos niet kleiner dan beginpos
+		add	hl,de
+		inc	hl		; x-pos was te klein ==> 1 vooruit
+		jr	wgtstrli3
+
+wgtstrctrlu:	ld	a,(str_len)
+		ld	b,a
+		ld	hl,(str_pos)
+wgtstrctrlu2:	ld	(hl),' '
+		inc	hl
+		djnz	wgtstrctrlu2	; erase string
+		jp	wgtstr2		; show string again
+
+wgtstrbs:	call	wgtstrli2	; eerst 1 naar links en dan delete
+wgtstrdel:	ld	hl,(str_chars)
+		ld	de,(str_len)
+		add	hl,de		; laatste letter naam
+		ld	de,(str_pos)
+		or	a
+		sbc	hl,de
+		jp	z,wgtstr2a	; helemaal achter valt niks te deleten
+		ld	c,l
+		ld	b,h		; BC = # te verplaatsen letters
+		add	hl,de		; HL weer achter naam zetten
+		ld	(hl),' '	; naam afsluiten met spatie !!!
+		ld	l,e
+		ld	h,d		; HL = DE = letter pos.
+		inc	hl		; HL staat 1 achter letter
+		ldir			; en verplaats de letters 1 pos.
+		ld	hl,(str_chars)
+		ld	de,(str_len)
+		add	hl,de
+		ld	(hl),0		; naam weer afsluiten met 0-byte
+		jp	wgtstr2		; en klaar met delete
+
+wgtstrins:	ld	a,(insertflg)
+		cpl
+		ld	(insertflg),a
+		jp	wgtstr2a
+
+wgtstrchpos:	ld	(str_pos),hl	; sla naam pos. op
+		ld	de,(str_chars)
+		or	a
+		sbc	hl,de		; begin addr. eraf tellen => HL = pos.
+		ld	bc,(str_len)
+		inc	bc
+		sbc	hl,bc
+		ret	nz		; pos. <> len+1 ==> goed
+		ld	hl,(str_pos)
+		dec	hl
+		ld	(hl),0		; naam met 0-byte afgesloten laten
+		jr	wgtstrchpos
+
+wgtstrchi:	ld	e,a
+		ld	a,(insertflg)
+		or	a
+		ld	a,e
+		ret	z		; insert flag = 0  ==>  geen insert
+		ld	hl,(str_chars)
+		ld	de,(str_len)
+		add	hl,de
+		ld	de,(str_pos)
+		or	a
+		sbc	hl,de
+		ret	z		; achter valt niks te inserten
+		ld	c,l
+		ld	b,h		; BC = # te verplaatsen bytes
+		add	hl,de		; HL weer (str_chars)+(str_len)
+		push	hl
+		ld	e,l
+		ld	d,h		; DE = (str_chars)+(str_len)
+		dec	hl		; HL = 1 minder
+		lddr			; letters 1 naar rechts
+		pop	hl
+		ld	(hl),0		; weer afsluiten met 0-byte
+		ret
+
+wgtstrcco:	ld	hl,(str_pos)
+		ld	de,(str_chars)
+		or	a
+		sbc	hl,de		; HL = pos. in naam
+		push	hl
+		ld	hl,(str_coor)	; addr. coordinaten
+		ld	b,(hl)
+		inc	hl
+		ld	e,(hl)		; E = x-pos, B = y-pos
+		ld	d,0
+		pop	hl
+		add	hl,de		; HL = x-pos in naam
+		ld	a,l
+		ld	(systemx),a
+		ld	a,b
+		ld	(systemy),a
+		ret
+
+str_coor:	dw	0		; start addr. string met coord.
+str_chars:	dw	0		; start addr. string characters deel
+str_pos:	dw	0		; pos. in string
+str_len:	dw	0		; maximum lengte van string
+
+; *************************************
+; * Druk B letters vanaf HL af met coordinaten erbij
+wprtchlb:	ld	de,systemy
+		ld	a,b
+		ldi
+		ldi
+		ld	b,a
+; *************************************
+; * Druk B letters vanaf HL af
+wprthlb:	ld	a,(hl)
+		or	a
+		jr	nz,$+4
+		ld	a,' '		; vervang 0 door ' '
+		call	wputchar
+		inc	hl
+		djnz	wprthlb
+		ret
+
+; **************************************
+; * druk tekst vanaf SP af
+wprtsp:		ex	(sp),hl
+		call	wprthl
+		ex	(sp),hl
+		ret
+ 
+; **************************************
+; * en vanaf HL
+wprthl:		ld	a,(hl)
+		or	a
+		ret	z
+		call	wputchar
+		inc	hl
+		jr	wprthl
+
+; **************************************
+; * print een karakter (met controle op CR/LF)
+wputchar:	cp	13
+		jr	z,wpc_cr
+		cp	10
+		jr	z,wpc_nl
+		push	bc
+		push	af
+		push	hl
+		ld	a,(systemx)
+		add	a,(iy+0)
+		ld	h,a
+		ld	a,(systemy)
+		add	a,(iy+1)
+		ld	l,a
+		call	c2vaddr		; zet coordinaten om in video addr
+		call	setwrt		; stel vdp alvast goed in
+		ld	hl,systemx
+		ld	a,(hl)
+		cp	(iy+2)
+		jr	z,wpc3		; naar next line toe
+		inc	a
+		ld	(hl),a
+wpc2:		pop	hl
+		pop	af
+		out	(c),a		; send char to vdp
+		pop	bc
+		ret
+wpc3:		ld	(hl),1		; naar next line toe
+		ld	hl,systemy
+		inc	(hl)
+		jr	wpc2
+
+wpc_cr:		ld	a,1
+		ld	(systemx),a
+		ld	a,13
+		ret
+
+wpc_nl:		push	hl
+		ld	hl,systemy
+		inc	(hl)
+		pop	hl
+		ret
+
+; **************************************
+; * lees karakter uit
+; * uit: A = karakter
+wgetchar:	push	hl
+		ld	hl,(systemy)
+		push	hl
+		ld	a,h
+		add	a,(iy+0)
+		ld	h,a
+		ld	a,l
+		add	a,(iy+1)
+		ld	l,a
+		ld	(systemy),hl	; zet cursor binnen window
+		call	getchar		; en lees karakter echt uit
+		pop	hl
+		ld	(systemy),hl
+		pop	hl
+		ret
+
+oldhl:		dw	0
+oldde:		dw	0
+oldbc:		dw	0
+oldaf:		dw	0
+retaddr:	dw	0
+bottomy:	db	23-windy	; onderkant van scherm voor berekening
+					; van window y-pos
+

@@ -1,0 +1,216 @@
+12345678901234567890123456789012345678901234567890123456789012345678901234
+(remark: everything untill first occurence of backslash \\P will be skipped)
+\P
+Welcome to XelaSoft Control Center (XCC) version 0.20 alpha.
+
+XCC is intended to be a tool for controlling your MSX under MSX-DOS 2.
+The final version will have many features which can also be found in
+programs like the Norton Commander on the MS-DOS PC.
+
+This version supports the following keys:
+ESC          : Set the directory windows on and off or abort the current
+               operation
+TAB          : Switch between left and right directory window
+CURSOR UP/DWN: Browse through the directory window
+INS          : Select/unselect a file. It is possible to select maximally
+               one hundred files at the same time per directory window
+CTRL + ENTER : Copy current file or directory name to the command line
+CTRL + U     : Clear the command line
+\P
+ENTER        : XCC will check the following list of conditions. As soon
+               as one of the conditions is fullfilled, the proper action
+               will be taken and no more conditions will be checked.
+               -You have typed in a command: the command will be executed
+               -The cursor is on a directory: the directory will be
+                entered
+               -The cursor is on a file with an EXEC association in the
+                configuration file (XCC.CFG): the associated command will
+                be executed
+               -The cursor is on a .COM file: the .COM file will be
+                loaded and executed. Prior to this you will be prompted
+                for the parameters which are required for this .COM file
+                Note that I/O redirection and pipelining have not (yet)
+                been implemented for this operation
+               -The cursor is on a .BAS or a .LDR file: XCC will leave
+\P
+                MSX DOS 2.x and enter BASIC. The .BAS or .LDR file will
+                be loaded and executed by BASIC.
+                Note that you won't return to MSXDOS or XCC after the
+                BASIC program has been executed.
+F1           : This help text
+F3           : Apply the configurable VIEW command on the current file
+F4           : Apply the configurable EDIT command on the current file
+F5           : Copy the selected files or the current file
+F6           : Rename or move the selected files or the current file or
+               directory
+               Note that when you move and rename a file or directory on
+               the same drive, the file or directory will be moved first
+               to the specified directory and afterwards renamed to the
+               specified file name
+F7           : Create a new directory
+\P
+F8           : Delete the selected files or the current file or directory
+F10          : Quit XCC
+GRAPH + F1   : Set left drive
+GRAPH + F2   : Set right drive
+\P
+The configuration file: XCC.CFG
+
+At startup, XCC reads a configuration file which is named XCC.CFG. Using
+this configuration file, it is possible to associate file name patterns
+with commands.
+
+There are three different association categories:
+[VIEW]   : this one is used when you press F3
+[EDIT]   : this one is used when you press F4
+[EXEC]   : this one is used when you press Enter
+
+An association category starts after a line containing the correct
+header (thus, [VIEW], [EDIT] or [EXEC]). Each of the following lines
+contains either only a filename match pattern or it contains a filename
+match pattern followed by a command and a filename pass pattern.
+\P
+When you press F3, F4 or Enter, XCC will use the correct association
+category in the following manner:
+
+-XCC searches through the filename match patterns until a pattern
+ is found that matches the current filename.
+-XCC searches from this point on through the list until the first
+ command is found.
+-XCC copies that command to the command line.
+-XCC copies those parts of the current filename to the command line which
+ are indicated with the filename pass pattern.
+-The command line will be executed.
+
+
+-A filename match pattern can be any filename, possibly containing wild
+ cards
+\P
+-A command can be any arbitrary command to be executed
+-A filename pass pattern is constructed using the following parts:
+ @:   pass drivename
+ @\\  pass full pathname
+ @.@  pass filename with extension
+ @    pass filename without extension
+
+For example, when using the following configuration file:
+[VIEW]
+*.txt
+*.hlp  type  @.@
+
+[EXEC]
+*.mod  mp @:@\\@
+\P
+1) XCC will execute the command
+type HELLO.TXT
+when you press F3 while the cursor is on a file named HELLO.TXT
+
+2) XCC will execute the command
+mp A:\\MUSIC\\MODS\\COOL
+when you press Enter while the cursor is on a file named COOL.MOD
+and you are currently in the directory \\MUSIC\\MODS on drive A:
+
+Please note that the configuration file will only be loaded when
+you start XCC. Thus, to make any changes in the file active, you
+must exit XCC and restart it again.
+\P
+Some planned features of XCC are:
+-Treating .pma files as if it are subdirectorys
+-Separate view programs for ascii, graphics and data files
+-The normal function keys as can be found in NC on the PC
+-Mouse support and pulldown menu's
+-Other nice options I can think of
+
+Downhere follow some trademarks to please the companies of which
+program names have been mentioned in this help text.
+Norton Commander and NC are trademarks of Peter Norton Computing Inc.
+MS-DOS is a registered trademark of Microsoft Corporation.
+\P
+XCC is a long term project of XelaSoft, the release date of the
+final version is not yet known.
+
+This version of XCC is public domain. It may be freely distributed
+for non-commercial purpose only. XelaSoft can not be held responsible for
+any kind of damage arising from the use of this program.
+
+Note that this is an ALPHA release, which still might contain some bugs.
+
+You can contact me at:
+awulms@inter.nl.net, or via snail mail at:
+XelaSoft, p.a.
+A. Wulms
+Oude Singel 206
+2312 RJ Leiden (Netherlands)
+\P
+XCC version history
+
+
+VERSION 0.1 , Release date:  6-17-1994
+
+- XCC can execute shell processes
+- It is possible to type in commands after the prompt
+- The left and right directory window give a full directory viewing
+- The functions of the following keys have been implemented:
+     ESC, TAB, CURSOR UP/DOWN and INS
+- The functions of the following function keys have been implemented:
+     F1, F5 and F10
+     GRAPH + F1, GRAPH + F2
+\P
+- After pressing ENTER, XCC chooses one of the following options:
+   -Execute a typed in command
+   -Execute the selected .COM file, ask first for a command line, ignore
+    I/O redirection and pipelining
+   -Enter the directory if the cursor is on it
+
+
+VERSION 0.11, Release date:  6-27-1994
+
+- Bug removed: The top and borderline and the cursor in the directory
+               window were invisible on MSX computers with background
+               color 0
+\P
+VERSION 0.12, Release date: 11-25-1994
+
+- Fixed colors used for top and borderline and the cursor in the
+  directory window in stead of inversing the fore- and background color
+- Minor internal improvements
+- Bug removed: XCC did not change the prompt when the drive was changed
+               with GRAPH+F1 or GRAPH+F2
+- Bug removed: You could select more filenames then XCC could remember.
+               File selection now stops after selecting 100 files
+- Bug removed: F5 sometimes assumed that a specified filename was a
+               directory name
+- Bug removed: Path color above directory window did not follow the
+               directory window cursor
+- New function keys implemented: F6 and F8
+- ENTER also recognizes .BAS and .LDR file extensions
+\P
+- CTRL+U erases the commandline
+
+
+VERSION 0.20, Release date:  1-21-1996
+
+- Many internal improvements
+- Bug removed: version 0.12 placed the cursor wrong in empty directories
+- Bug removed: function key handling was unpredictable in empty
+               directories
+- Bug removed: after reading non-active directory window, the path name
+               displayed above it could be wrong.
+- Bug removed: when renaming a file on a write protected floppy,
+               re-reading the directory could fail. Due to the disk
+               buffers, the actual rename operation was delayed by DOS2
+               until the directory was re-read
+\P
+- Bug removed: the screen got messed up when displaying 255 files
+- Bug removed: ESC key did not work in the quit popup dialog
+- Bug removed: when using F6 to rename a file in the \\ directory, XCC
+               erreanously assumed the file had to be moved when the user
+               entered a name starting with \\
+- Version information placed in header of XCC.OVL
+- New function keys implemented: F3, F4 and F7
+- CTRL+ENTER copies current file/dirname to commandline
+- Configuration file introduced to associate filenames with VIEW (F3)
+  commands, EDIT (F4) commands and EXEC (Enter) commands
+- CTRL+U also works in popup windows
+\E
+                                         

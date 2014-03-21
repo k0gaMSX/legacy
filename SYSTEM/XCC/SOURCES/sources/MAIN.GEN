@@ -1,0 +1,3144 @@
+*r+
+.comment \
+ MAIN.GEN : De hoofd module
+
+ Copyright (C) 1994-2003 Alex Wulms
+ Start date: 11-4-1994
+ De vier vaantjes 29, 3000 Leuven, BE
+ awulms@users.sourceforge.net
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License version 2 as
+ published by the Free Software Foundation.
+
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ more details.
+
+ You should have received a copy of the GNU General Public License along
+ with this program; if not, write to the Free Software Foundation, Inc., 59
+ Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+\
+		include	h:const.mac
+		include	h:bios.mac
+		include	h:init.mac
+		include	h:scrio.mac
+		include	h:rddir.mac
+		include	h:events.mac
+		include	h:misc.mac
+		include	h:popups.mac
+		include	h:eind.mac
+
+		public	mainloop	; de hoofdlus
+
+; **************************************
+; * de hoofdlus
+; * uit: Cf  = abort commander or return to basic
+; *             Z => abort  (A=0)
+; *            NZ => basic  (A=1)
+; *      NCf = voer shell commando uit
+; *        B = opened file handle
+; *       HL = length of file
+; *       PROGRAM, PARAMETERS, commandline, fcb1 en fcb2 zijn ingevuld
+; *       dma addr staat op #80
+; * opm: aangezien de shell nu nog via %SHELL% gaat, worden fcb1 en fcb2
+; *      nog niet ingevuld
+mainloop:	call	edit		; laat de user alles editten
+		ret	c		; user wil uit XCC
+		push	af
+		call	saveselection	; onthoud de selecties
+		pop	af
+		push	af
+		jr	nz,mainl2	; user heeft commando ingetikt
+		ld	hl,(fibptr)	; user heeft (.com) file geselecteerd
+		ld	(hl),255	; => herstel selection byte
+mainl2:		ld	hl,#80
+		inc	(hl)		; 1 extra karakter vanwege 1ste spatie
+		pop	af
+		push	af
+		call	cmd2scrbuf	; zet commando regel in scrbuf
+		ld	hl,#81
+		ld	de,#5c
+		call	cmd2fcb		; zet 1ste parameter in fcb1
+		ld	de,#6c
+		call	cmd2fcb		; en 2de parameter in fcb2
+
+		ld	hl,PARAMETERSvar
+		ld	de,#81
+		BDOS	#6c		; maak de PARAMETERS variable
+		pop	af		; user selection (.com of cmdline)
+		ld	hl,-256
+		add	hl,sp
+		ld	sp,hl		; maak buffer voor env vars
+		push	af
+		call	chkupper	; maak commandline eventueel uppercase
+		pop	af
+
+		call	opencmd		; open commando of %shell%
+		ex	af,af'
+		exx
+		ld	hl,256
+		add	hl,sp
+		ld	sp,hl		; herstel de stack pointer
+		exx
+		ex	af,af'
+		push	hl
+		push	bc
+		push	af
+		ld	de,#80
+		BDOS	setdma		; zet dma addr goed
+		pop	af
+		pop	bc
+		pop	hl
+		ret	nc
+		jr	mainloop
+
+; **************************************
+; * edit/wacht op de invoer
+; * uit:     C = user wil uit XCC, naar basic of dos
+; *              Z = user wil naar dos (A = 0)
+; *             NZ = user wil naar basic (A = 1)
+; *      NC, Z = user heeft (.com) file geselecteerd
+; *              (fibptr) => te openen (.com) file
+; *      NC, NZ = user heeft commando ingetypt
+; *             (#80) => #letters, (#82 e.v.) bevat het commando
+edit:		call	clrcmdline	; clear the command line
+edit2:		call	curon		; zet het cursor blok aan
+edit3:		call	printsp
+		db	27,'y5',0	; zet de cursor aan
+edit3a:		call	prttime		; laat de system time zien
+		call	prtfkeys	; laat de goede fkeys zien
+		call	chkfkeys
+		ret	c		; quit chosen
+		jr	nz,edit3b	; fkey geweest
+		BDOS	#0b		; get console status
+		jr	z,edit3a	; no key pressed
+		call	printsp
+		db	27,'x5',0	; zet de cursor weer uit
+		call	getchar
+		call	anakey		; analyseer de ingetypte toets
+		ret	c		; quit toets gekozen
+		jr	z,edit3		; niks geselecteerd
+edit3b:		dec	a
+		jr	z,edit
+; **************************************
+; * iets geselecteerd:
+; * onthoud de linker en rechter file naam en ga te ondernemen actie na
+		call	setoldnames	; onthoud de huidige filenamen
+		ld	a,(#80)
+		or	a
+		jr	z,edit3e	; niks ingetikt
+		ld	b,a		; B = #karakters
+		ld	hl,#82		; 1ste char van commando
+		ld	a,' '
+edit3c:		cp	(hl)
+		jr	nz,edit3d	; 1ste niet spatie => verwerk cmd
+		inc	hl
+		djnz	edit3c
+		jr	edit3		; alleen spaties getypt
+edit3d:		or	a		; cmd getypt => NC, NZ
+		ret
+
+edit3e:		ld	a,(lrstat)
+		or	a
+		jr	nz,edit4	; windows aan => verwerk fibentry
+; **************************************
+; * windows uit => scroll door
+		xor	a
+		inc	a
+		call	cmd2scrbuf	; zet commando regel in scrbuf
+		ld	hl,scrbuf+80
+		ld	de,scrbuf
+		ld	bc,23*80
+		ldir			; 23 regels scrollen
+		call	mkdosscreen	; maak het dos scherm weer
+		jp	edit		; en weer editten
+
+; **************************************
+; * windows aan => ga actie bij huidige fib na
+edit4:		call	getnrfibs	; A = #fibs
+		jr	z,edit3		; geen fibs aanwezig => negeer
+
+		call	getdflg		; get is_a_DIR flag
+		jp	nz,editchdir	; enter the directory
+		push	hl
+		call	chk_cfgenter	; is there a cmd for this file?
+		pop	hl
+		jr	nz,edit3b	; yes, and its now in the cmdbuf
+		push	hl
+		inc	hl		; ga op filenaam staan
+		ld	de,comext
+		call	chkext
+		pop	hl
+		jr	nc,strtcomfile	; .com file => vraag om params, etc
+		push	hl
+		inc	hl		; ga op filenaam staan
+		ld	de,basext
+		call	chkext
+		pop	hl
+		jr	nc,strtbasfile	; .bas file => naar basic en starten
+		push	hl
+		inc	hl
+		ld	de,ldrext
+		call	chkext
+		pop	hl
+		jp	c,edit3		; niet .ldr file => negeer
+
+; **************************************
+; * start een basic file
+strtbasfile:	ld	(fibptr),hl
+		ld	(hl),255	; herstel fibentry
+		inc	hl		; ga op filenaam staan
+		push	hl
+		ld	hl,#82
+		ld	b,75
+		ld	a,' '
+		call	setmem		; wis de cmdline
+		ex	de,hl		; DE = pos na de spatie
+		pop	hl		; geselecteerde file
+		push	hl
+		call	strcpy		; zet in te laden file in cmdline
+		ld	(de),a		; sluit af met 0-byte
+		ld	a,e
+		sub	#81
+		ld	(#80),a		; A = lengte van commando
+		ld	a,' '
+		jr	nz,$+3
+		xor	a		; leeg commando => cmdline begint met 0
+		ld	(#81),a		; anders begint cmdline met spatie
+		pop	de		; geselecteerde file
+		ld	hl,baskomtxt
+		call	strcpy		; zet 'basic' in (fibptr)
+		ld	(de),a		; sluit af met 0-byte
+		xor	a
+		call	cmd2scrbuf	; fprint("%s %s", fibptr, cmdline)
+		ld	hl,-255		; ofwel print "basic filename"
+		add	hl,sp
+		ld	sp,hl		; maak 255 bytes grote buffer
+		call	prgrm2shell	; program = %shell%
+		ld	hl,255
+		add	hl,sp
+		ld	sp,hl		; en geef buffer weer vrij
+		xor	a
+		inc	a
+		scf
+		ret			; basic mag gestart worden
+
+baskomtxt:	db	'BASIC',0
+
+; **************************************
+; * start een .com file
+strtcomfile:	ld	(fibptr),hl	; en onthoud ptr naar het fib
+		call	allcoff		; zet typecursor en grote cursor uit
+		call	wpopup
+		db	74,1
+		call	wprtsp
+cmdtxt:		db	'Command line parameters: '
+cmdtxtend:	db	0
+cmdtlen:	equ	cmdtxtend-cmdtxt
+		ld	hl,(systemy)
+		ld	(#80),hl
+		ld	hl,#82
+		ld	b,75-cmdtlen
+		ld	a,' '
+		call	setmem		; wis de cmdline
+		ld	b,74-cmdtlen
+		ld	hl,#80
+		call	wgetstring	; lees cmdline in
+		call	wpopdwn
+		ld	hl,#2000	; 0 karakters geweest, cmdline begint
+		ld	(#80),hl	; met een spatie
+		jp	nz,edit2	; op ESC geduwd => negeer
+		ld	hl,#20ff	; zet marker voor cmdline en een spatie
+		ld	(#80),hl	; op 1ste char van cmdline
+		ld	hl,#82+74-cmdtlen ; ga achter cmdline staan
+edit5:		dec	l
+		ld	a,(hl)
+		cp	' '
+		jr	z,edit5		; nog niet op laatste karakter
+		or	a
+		jr	z,edit5		; idem dito
+		inc	l
+		ld	(hl),0		; zet een 0 achter de string
+		ld	a,l
+		sub	#82		; A = #chars in de cmdline exclusief
+		ld	(#80),a		; de leading spatie op pos 0
+		xor	a		; geef een Z-flg terug
+		ret
+
+; **************************************
+; * verander de directory
+editchdir:	push	hl
+		call	curoff		; zet de cursor uit
+		pop	hl
+		ex	de,hl
+		inc	de		; DE = nieuwe dirname
+		ld	a,(de)
+		push	af		; onthoud 1ste karakter (. of geen .)
+		BDOS	#5a		; en ga naar de opgegeven dir toe
+		ld	a,(dirside)
+		or	a
+		push	ix
+		push	af
+		call	z,edlchdir	; de linker dir is veranderd
+		pop	af
+		call	nz,edrchdir	; de rechter dir is veranderd
+		pop	ix
+		pop	af
+		cp	'.'
+		jr	z,edchupdir	; ja => ga naar een updir toe
+
+		ld	hl,ddotstr
+		ld	de,loldname
+		ld	a,(dirside)
+		or	a
+		jr	z,$+5
+		ld	de,roldname
+		ld	bc,3
+		ldir			; oude naam wordt dubbele punt
+
+edchupdir:	ld	a,(dirside)
+		or	a
+		push	af
+		call	z,prtldcont
+		pop	af
+		call	nz,prtrdcont
+
+		jp	edit		; ga vanaf nieuwe prompt editten
+
+edlchdir:	push	ix
+		ld	hl,loldname
+		ld	de,lpath
+		call	edcdsavename	; onthoud de oude dir naam
+		call	prtldborder	; maak de linker directory rand
+		call	dirleft		; haal linker directory op
+		ld	a,(lstat)
+		ld	hl,2
+		ld	de,lpath
+		ld	bc,ldirbuf
+		jr	edlrchdir
+
+edrchdir:	push	ix
+		ld	hl,roldname
+		ld	de,rpath
+		call	edcdsavename	; onthoud de oude dir naam
+		call	prtrdborder	; maak de rechter directory rand
+		call	dirright	; haal rechter directory op
+		ld	a,(rstat)
+		ld	hl,42
+		ld	de,rpath
+		ld	bc,rdirbuf
+
+edlrchdir:	pop	ix
+		ld	(ix+dp_fibptr),c
+		ld	(ix+dp_fibptr+1),b
+		push	hl
+		push	de
+		call	prtdpath	; druk directory path af
+		pop	de
+		pop	hl
+		jp	invpathname	; inverteer dir name
+
+edcdsavename:	push	hl		; onthoud buffer voor oldname
+		call	parsepath
+		pop	de		; DE = buffer voor oldname
+		call	strcpy		; neem last item over
+		ld	(de),a
+		ret
+
+; **************************************
+; * clear the command line
+; * uit:  IX = dirparams
+clrcmdline:	call	prtprompt	; druk de prompt af
+		ld	hl,#2000	; 0 karakters geweest, cmdline begint
+		ld	(#80),hl	; met een spatie
+		ld	hl,#82
+		ld	(editpos),hl	; pos. in het commando
+		ld	ix,lparams
+		ld	a,(dirside)
+		or	a
+		ret	z
+		ld	ix,rparams
+		ret
+
+; **************************************
+; * maak het dos scherm (alleen regel 2..22)
+mkdosscreen:	ld	hl,#800+10
+		ld	bc,21*10
+		xor	a
+		MSX1	#56		; wis alternatieve kleur
+		ld	hl,80		; en pak het dos scherm terug
+		call	setwrt
+		ld	b,21
+		ld	hl,scrbuf+80
+mkdoss2:	push	bc
+		ld	b,80
+		otir
+		pop	bc
+		djnz	mkdoss2
+		ret
+
+; **************************************
+; * controleer de functie toetsen
+; * in:  IX = dirparams
+; * uit:  C,  Z = quit chosen
+; *       C, NZ = to basic chosen (note that basic reads the cmdline!)
+; *      NC,  Z = geen fkey geweest
+; *      NC, NZ = fkey geweest, zet prompt opnieuw aan, etc.
+; *               A = 1 => commandline wissen
+; *               A = 2 => return pressed
+; *      IX = dirparams
+chkfkeys:	ld	b,10
+chkfks2:	ld	a,b
+		call	chkfk		; controleer functietoets A
+		jr	nz,chkfks3	; pressed => voer goede routine uit
+		djnz	chkfks2
+		xor	a
+		ret			; geen fkey => klaar
+chkfks3:	call	chkgraph
+		jr	z,chkfks4	; geen graph => kijk naar ctrl
+		ld	a,10
+		add	a,b		; graph + fkey => 11..20
+		jr	chkfks5
+chkfks4:	call	chkctrl
+		ld	a,b
+		jr	z,chkfks5	; geen ctrl => 1..10
+		add	a,20		; wel  ctrl => 21..30
+chkfks5:	push	ix
+		ld	hl,fkjptable-2	; -2 want A = 1..30 ipv 0..29
+		call	dojptbl
+		pop	ix
+		ret
+
+fkjptable:	dw	fkey1, fkey2, fkey3, fkey4, fkey5  ; f1..f10
+		dw	fkey6, fkey7, fkey8, fkey9, fkey10
+		dw	gkey1, gkey2, gkey3, gkey4, gkey5  ; graph + f1..f10
+		dw	gkey6, gkey7, gkey8, gkey9, gkey10
+		dw	ckey1, ckey2, ckey3, ckey4, ckey5  ; ctrl  + f1..f10
+		dw	ckey6, ckey7, ckey8, ckey9, ckey10
+
+; **************************************
+; * f1: help wanted
+; * uit: NC, Z
+fkey1:		call	allcoff
+		call	openhlp		; open xcc.hlp
+		call	nc,shwhlp	; open was succesfull => show help
+		call	allcon
+		xor	a
+		ret
+
+; **************************************
+; * open xcc.hlp
+; * uit:  Cf = openen mislukt
+; *      NCf = openen gelukt
+; *        B = file handle
+openhlp:	ld	hl,-(64+2+1)
+		add	hl,sp		; HL = path buffer incl coord en 0-byte
+		ld	sp,hl
+		ld	(hl),4		; ypos = 4
+		inc	hl
+		ld	(hl),1		; xpos = 1
+		inc	hl
+		xor	a
+		ld	b,65
+		call	setmem		; wis path
+		ex	de,hl		; DE = path buffer exclusief coord
+		push	de
+		ld	hl,XCCpath
+		call	strcpy
+		ld	hl,xcchelptxt
+		call	strcpy		; zet path\xcc.hlp in buffer
+		pop	de
+openhlp2:	push	de
+		xor	a
+		BDOS	#43		; open xcc.hlp
+		pop	de
+		jp	z,openhlpdone	; xcc.hlp succesfull opened
+		call	wpopup
+		db	65,4
+		push	af
+		call	wprtsp
+		db	'Error opening help file:',13,10,0
+		pop	af
+		push	de
+		ld	hl,-64
+		add	hl,sp
+		ld	sp,hl
+		ex	de,hl		; DE = errbuf
+		push	de
+		ld	b,a
+		BDOS	#66		; explain error code
+		pop	hl
+		call	wprthl		; print error message
+		ld	hl,64
+		add	hl,sp
+		ld	sp,hl
+		pop	de		; DE = file name
+		call	wprtsp
+		db	13,10,'Please give the help file name (ESC = abort)',13,10,0
+		push	de
+		ex	de,hl		; HL = path buffer excl coord
+		dec	hl
+		dec	hl
+		ld	b,64
+		call	wgetstring	; lees nieuwe filename in
+		pop	de
+		call	wpopdwn		; verwijder window
+		jp	z,openhlp2	; try to open file
+		scf			; ESC pressed
+openhlpdone:	ex	af,af'
+		ld	hl,64+2+1
+		add	hl,sp
+		ld	sp,hl
+		ex	af,af'
+		ret
+
+xcchelptxt:	db	'XCC.HLP',0
+
+; **************************************
+; * laat de help zien
+; * in: B = file handle
+shwhlp:		push	bc		; onthoud filehandle
+		call	txtbinit	; initialize txtbuf routines
+		ld	hl,-200
+		add	hl,sp
+		ld	sp,hl		; reserve space for 50 filepointers
+		ex	de,hl		; DE = file pointers
+		call	wpopup
+		db	74,15
+		ld	b,50
+		xor	a		; start with page 0
+shwhlp2:	push	bc
+		call	srchpage	; zoek de 1st volgende pagina
+		pop	bc
+		jr	c,shwhlp3	; alle pagina's gevonden
+		inc	a
+		djnz	shwhlp2
+shwhlp3:	ld	(nrhlppages),a	; onthoud #paginas
+		or	a
+		ld	a,0
+		call	nz,shwhlp4	; show the help screens
+		call	wpopdwn
+		ld	hl,200
+		add	hl,sp
+		ld	sp,hl		; release file ptrs
+		pop	bc
+		JBDOS	#45		; close .hlp file
+
+; **************************************
+; * show the pages
+; * in:  A = page number
+; *     DE = fileptrs tbl
+shwhlp4:	push	de
+		push	af
+		add	a,a
+		add	a,a
+		ld	l,a
+		ld	h,0
+		add	hl,de		; HL = fileptrs tabelpos
+		ld	de,txtbfp
+		ld	bc,4
+		ldir			; neem de fileptr over
+		ld	hl,txtbuf
+		ld	(txtbpos),hl
+		ld	(txtbend),hl	; begin vooraan in txtbuf
+		call	wcls
+		ld	hl,#0310
+		ld	(systemy),hl
+		call	wprtsp
+		db	'SPACE or CURSOR DOWN: next page, CURSOR UP: previous page, ESC: quit ',0
+		ld	hl,#0101
+		ld	(systemy),hl
+
+shwhlp5:	call	txtbgchar	; haal karakter op
+		jr	c,shwhlp7	; end of page of andere error
+		cp	'\'
+		jr	z,shwhlp6	; '\' => is speciaal
+shwhlp5a:	call	wputchar	; druk karakter af
+		jr	shwhlp5
+shwhlp6:	call	txtbgchar
+		jr	c,shwhlp7
+		cp	'P'
+		jr	z,shwhlp7	; '\P' => next page
+		cp	'E'		; '\E' => end of page
+		jr	nz,shwhlp5a	; '\x' => druk x af
+shwhlp7:	pop	bc		; B = pagenum
+		pop	de		; DE = fileptr tbl
+		ld	hl,#4710
+		ld	(systemy),hl	; ga achter SPACE, etc. staan
+shwhlp8:	call	wgetchar
+		cp	27
+		ret	z
+		cp	30
+		jr	z,shwhlpup	; cursor up
+		cp	31
+		jr	z,shwhlpdwn	; cursor down
+		cp	' '
+		jr	nz,shwhlp8	; geen spatie
+
+shwhlpdwn:	ld	a,(nrhlppages)
+		dec	a		; A = highest page num
+		cp	b		; pagenum = highest page num ?
+		jr	z,shwhlp8	; ja => next page kan niet meer
+		ld	a,b
+		inc	a		; A = next page num
+		jp	shwhlp4
+
+shwhlpup:	ld	a,b		; A = pagenum
+		or	a
+		jr	z,shwhlp8	; is al helemaal boven
+		dec	a
+		jp	shwhlp4
+
+; **************************************
+; * zoek een pagina begin op en vul de bijhorende filepointer in
+; * in: DE = fileptrs tbl
+; *      A = page nummer
+; * uit:  Cf = mislukt
+; *      NCf = gelukt, pagepointer is ingevuld
+; * verandert: HL, BC
+srchpage:	push	af
+		push	de
+srchp2:		call	txtbgchar
+		jr	c,srchperr	; mislukt
+		cp	'\'
+		jr	nz,srchp2
+		call	txtbgchar
+		jr	c,srchperr
+		res	5,a
+		cp	'E'
+		jr	z,srchperr	; '\E' = end of help
+		cp	'P'
+		jr	nz,srchp2	; geen '\P' => negeer
+srchp3:		call	txtbgchar
+		jr	c,srchperr	; lege page ?
+		cp	13
+		jr	nz,srchp3	; skip alles tot cr/lf
+		call	txtbgchar	; lees lf nog weg
+		pop	de		; fileptrs buffer
+		pop	af		; A = pagenummer
+		push	af
+		push	de
+		add	a,a
+		add	a,a		; 4*pagenum
+		ld	l,a
+		ld	h,0		; HL = 4*pagenum
+		add	hl,de		; HL = fileptrs pos
+		push	hl
+		call	txtbgetfp	; DE:HL = fp bij current buf pos
+		ld_bc_hl		; DE:BC = fp
+		pop	hl
+		ld	(hl),c
+		inc	hl
+		ld	(hl),b
+		inc	hl
+		ld	(hl),e
+		inc	hl
+		ld	(hl),d
+		pop	de
+		pop	af
+		or	a
+		ret
+srchperr:	pop	de
+		pop	af
+		scf
+		ret
+
+; **************************************
+; * f2:
+fkey2:		xor	a
+		ret
+
+; **************************************
+; * f3:
+fkey3:		ld	hl,(view_cmds)
+		jr	chk_cfgcmds
+
+; **************************************
+; * f4:
+fkey4:		ld	hl,(edit_cmds)
+		jr	chk_cfgcmds
+
+; **************************************
+; * enter
+chk_cfgenter:	ld	hl,(exec_cmds)
+
+; **************************************
+; * Search for command associated with a filename
+; * in:  HL = list of (namepattern, command) pairs
+; * uit: Zf, NC        when no match is found
+; *      NZf, NCf, A=2 when a match is found
+chk_cfgcmds:	push	hl
+		call	chkcfile	; is cursor on a file ?
+		pop	hl
+		ret	z		; no, please ignore
+		call	srch_cmd	; find a command for the filename
+		jr	nc,chk_cfgcmd3	; found a command, execute it!
+chk_cfgcmd2:	xor	a		; nothing happened, please ignore
+		ret
+chk_cfgcmd3:	push	de		; remember command
+		call	clrcmdline	; clear the command line
+		pop	hl
+		call	str2cmdline	; put command on the command line
+		push	hl		; terminating null byte
+		ld	a,' '
+		call	anak_char	; put ' ' on cmdline
+		pop	hl
+		inc	hl
+		ld	c,(hl)		; C is pass pattern
+		ld	de,lpath
+		ld	a,(dirside)
+		or	a,
+		jr	z,$+5
+		ld	de,rpath
+		ld	a,(de)
+		inc	de
+		inc	de
+		bit	0,c		; pass drive?
+		jr	z,chk_cfgcmd4	; no
+		call	anak_char	; yes => druk drive af
+		ld	a,':'
+		call	anak_char
+chk_cfgcmd4:	ex	de,hl		; HL = pathname
+		bit	1,c		; pass pathname?
+		jr	z,chk_cfgcmd4a	; no
+		call	str2cmdline	; yes => put pathname on the cmdline
+		dec	hl
+		ld	a,'\'
+		cp	(hl)		; does the path end on a '\' ?
+		call	nz,anak_char	; no, place it now
+chk_cfgcmd4a:	ld	l,(ix+dp_fibptr)
+		ld	h,(ix+dp_fibptr+1)
+		inc	hl		; ga op 1ste letter van naam staan
+		bit	2,c		; pass filename ?
+		call	nz,name2cmdline	; yes => put filename on the cmdline
+		bit	3,c		; pass extension ?
+		jr	z,chk_cfgcmd6	; no => done
+chk_cfgcmd5:	ld	a,(hl)
+		inc	hl
+		or	a
+		jr	z,chk_cfgcmd6	; no extension found
+		cp	'.'
+		jr	nz,chk_cfgcmd5	; not yet at the extension
+		dec	hl
+		call	str2cmdline	; copy extension to the command line
+chk_cfgcmd6:	call	printsp
+		db	27,'x5',0	; zet de cursor weer uit
+		inc	a
+		inc	a		; NZ, NC, A=2  ==> simulate return
+		ret
+
+; **************************************
+; * copy a name to the command line
+name2cmdline:	ld	a,(hl)
+		or	a
+		ret	z
+		cp	'.'
+		ret	z		; at end of name
+		push	hl
+		call	anak_char	; pass character to cmdline
+		pop	hl
+		inc	hl		; next char
+		jr	name2cmdline
+
+; **************************************
+; * f5: copy
+; * in:  IX = dirparam
+; * uit: NC, Z
+fkey5:		call	getnrfibs	; A = #fibs in active window
+		ret	z		; 0 fibs or window off
+		xor	a
+		ld	(overwrtflg),a	; reset overwrite all flag
+		call	saveselection	; onthoud de selecties
+		call	setoldnames	; onthoud de huidige filenamen
+		ld	a,(ix+dp_nrselnames)
+		or	a
+		jr	nz,fkey5a	; A = #geselecteerde namen
+		call	chkcfile	; cursor on a file?
+		ret	z		; no => done
+fkey5a:		call	allcoff		; zet typecursor en grote cursor uit
+		ld	hl,-128
+		add	hl,sp
+		ld	sp,hl		; reserveer ruimte voor dest path
+		inc	hl
+		inc	hl		; laat 2 bytes vrij voor xpos, ypos
+		ld	(outname),hl	; onthoud pos van dest path (tekst)
+		ld	a,' '
+		ld	b,126
+		call	setmem
+		ex	de,hl		; DE = dest path buffer
+		ld	a,(ix+dp_nrselnames)
+		or	a
+		jp	z,fkey5d	; copy only 1 file
+		push	af
+		ld	hl,nfilestxt
+		push	hl
+		call	byte_str	; zet #files in het geheugen
+		pop	hl
+		call	f5getdest	; haal destination path op
+		pop	bc		; B = #te kopieren namen
+		jp	c,fkey5done	; ESC pressed => klaar
+		or	a
+		jr	nz,fkey5a2	; there is no last item, its a dir
+		call	wpopup
+		db	33,1
+		call	wprtsp
+		db	'Destination must be a directory.',0
+		call	wgetchar
+		call	wpopdwn
+		jr	fkey5done
+
+fkey5a2:	push	bc
+		push	ix
+		pop	hl
+		ld	bc,dp_selnames
+		add	hl,bc		; HL = 1ste geselecteerde naam
+		pop	bc		; B = #te kopieren namen
+		push	hl		; onthoud 1ste
+		push	ix
+fkey5b:		push	bc
+		push	de
+		push	hl
+		ld	a,1		; replace lastitem with sourcename
+		call	copy1file	; kopieer 1 file over
+		ex	af,af'		; onthoud foutcode
+		pop	hl
+		ld	de,13
+		add	hl,de		; naar next file toe
+		pop	de		; destination path
+		pop	bc
+		ex	af,af'
+		jr	c,fkey5c
+		djnz	fkey5b		; en gekopieerd
+fkey5c:		ld	de,-13
+		add	hl,de		; ga op laatst gekopieerde naam staan
+		pop	ix
+		ld	(ix+dp_nrselnames),b ; nog maar B files over
+		pop	de		; 1ste file
+		call	fkupdatefiles	; verplaats de niet gekopieerde namen
+		jr	fkey5done	; en klaar
+
+fkey5d:		ld	l,(ix+dp_fibptr)
+		ld	h,(ix+dp_fibptr+1)
+		inc	hl		; HL = sourcefile name
+		push	hl
+		call	f5getdest	; haal destination path op
+		pop	hl
+		jr	c,fkey5done	; ESC pressed => klaar
+		call	copy1file	; kopieer file HL naar dest DE
+
+fkey5done:	ld	hl,128
+		add	hl,sp
+		ld	sp,hl		; geef pathruimte vrij
+		jp	fkrescan	; herscan de dirs, etc
+
+; **************************************
+; * haal het destination path op voor copy
+; * in:  DE = destination path buffer
+; *      HL = tekst die na 'copy' moet komen te staan
+; * uit: buffer DE is ingevuld met het destination path
+; *       Cf = ESC pressed of een lege string opgegeven
+; *      NCf = destination given
+; *          A = mode: 0 => last item = file
+; *                    1 => there is no last item (destination is a directory)
+f5getdest:	push	ix
+		ld	ix,cpytxt
+		call	f5f6getdest
+		pop	ix
+		ret
+
+cpytxt:		db	'Copy ',0
+
+; **************************************
+; * f6: rename or move
+; * in:  IX = dirparam
+; * uit: NC, Z
+fkey6:		call	getnrfibs	; A = #fibs in active window
+		ret	z		; 0 fibs or window off
+		xor	a
+		ld	(overwrtflg),a	; reset overwrite all flag
+		call	saveselection	; onthoud de selecties
+		call	setoldnames	; onthoud de huidige filenamen
+		call	allcoff		; zet typecursor en grote cursor uit
+		ld	hl,-128
+		add	hl,sp
+		ld	sp,hl		; reserveer ruimte voor dest path
+		inc	hl
+		inc	hl		; laat 2 bytes vrij voor xpos, ypos
+		ld	(outname),hl	; onthoud pos van dest path (tekst)
+		ld	b,126
+		ld	a,' '
+		call	setmem		; erase the name
+		ex	de,hl		; DE = dest path buffer
+		ld	a,(ix+dp_nrselnames)
+		or	a
+		jp	z,fkey6d	; rename or move only 1 file
+		push	af
+		ld	hl,nfilestxt
+		push	hl
+		call	byte_str	; zet #files in het geheugen
+		pop	hl
+		call	f6getdest	; haal destination path op
+		pop	bc		; B = #te verplaatsen namen
+		jp	c,fkey6done	; ESC pressed => klaar
+		or	a
+		jr	nz,fkey6a2	; there is no last item, its a dir
+		call	wpopup
+		db	33,1
+		call	wprtsp
+		db	'Destination must be a directory.',0
+		call	wgetchar
+		call	wpopdwn
+		jr	fkey6done
+
+fkey6a2:	push	bc
+		push	ix
+		pop	hl
+		ld	bc,dp_selnames
+		add	hl,bc		; HL = 1ste geselecteerde naam
+		pop	bc		; B = #te kopieren namen
+		push	hl		; onthoud 1ste
+		push	ix
+fkey6b:		push	bc
+		push	de
+		push	hl
+		ld	a,1		; replace lastitem with sourcename
+		call	rnmv1fd		; rename/move 1 file/directory
+		ex	af,af'		; onthoud foutcode
+		pop	hl
+		ld	de,13
+		add	hl,de		; naar next file toe
+		pop	de		; destination path
+		pop	bc
+		ex	af,af'
+		jr	c,fkey6c
+		djnz	fkey6b		; en gerenamed/moved
+fkey6c:		ld	de,-13
+		add	hl,de		; ga op laatst gekopieerde naam staan
+		pop	ix
+		ld	(ix+dp_nrselnames),b ; nog maar B files over
+		pop	de		; 1ste file
+		call	fkupdatefiles	; verplaats de niet gekopieerde namen
+		jr	fkey6done	; en klaar
+
+fkey6d:		push	ix
+		pop	hl
+		ld	bc,dp_oldname
+		add	hl,bc		; HL = source file naam
+		push	hl
+		call	f6getdest	; haal destination path op
+		pop	hl
+		jr	c,fkey6done	; ESC pressed => klaar
+		call	rnmv1fd		; ren/mv file/dir HL naar dest DE
+
+fkey6done:	ld	hl,128
+		add	hl,sp
+		ld	sp,hl		; geef pathruimte vrij
+		jp	fkrescan	; herscan de dirs, etc
+
+; **************************************
+; * haal het destination path op voor rename/move
+; * in:  DE = destination path buffer
+; *      HL = tekst die na 'rename/move ' moet komen te staan
+; * uit: buffer DE is ingevuld met het destination path
+; *       Cf = ESC pressed of een lege string opgegeven
+; *      NCf = destination given
+; *          A = mode: 0 => last item = file
+; *                    1 => there is no last item (destination is a directory)
+f6getdest:	push	ix
+		ld	ix,rnmvtxt
+		call	f5f6getdest
+		pop	ix
+		ret
+
+rnmvtxt:	db	'Rename or move ',0
+
+; **************************************
+; * rename or move 1 file or directory
+; * in: HL = source file name
+; *     DE = destination path
+; *      A = mode: 0: don't replace last item with source file name
+; *                1: replace last item with source file name/add source name
+; * uit:  Cf = file renamen/moven mislukt
+; *      NCf = file renamen/moven gelukt
+; * Note that the last item (if it exists) of the name
+; * in buffer DE will be replaced with the source file name.
+; * If there is no last item, the sourcename will be added to the path
+rnmv1fd:	call	mkdestname	; make dest name, out: DE = sourcename
+		call	wpopup
+		db	64,3
+		call	wprtsp
+		db	'Renaming or moving ',0
+		call	shwsdname	; show the source and dest name
+
+		push	de
+		push	ix
+		ld	hl,-64
+		add	hl,sp
+		ld	sp,hl
+		push	hl
+		pop	ix
+		ld	b,%00010110	; find everything
+		BDOS	#40		; find source file
+		ld	hl,64
+		add	hl,sp
+		ld	sp,hl
+		pop	ix
+		pop	de
+		jr	z,rnmv1fd2	; source file/dir bestaat
+		call	errmessage	; iets mislukt => geef error melding
+		call	wpopdwn
+		scf			; is fatal error, abort
+		ret
+
+; determine action:
+; 1) move to another drive     (mv2drv)
+; 2) move to another directory (mv2dir)
+; 3) rename file or directory  (rename)
+; 4) rename file or directory to same name (error!)
+rnmv1fd2:	push	de
+		call	parseoutn	; parse out name
+		push	bc		; onthoud logical drive
+		BDOS	#19		; get current drive
+		push	af
+		call	prttime
+		pop	af
+		inc	a		; A = current logical drive
+		pop	bc		; B = parse flag, C = logical drive
+		pop	de		; DE = sourcename
+		cp	c		; dest drive = current drive ?
+		jp	nz,mv2drv	; nee => geval 1 => naar andere drive
+
+; nu nog over:
+; 2) move to another directory (mv2dir)
+; 3) rename file or directory  (rename)
+; 4) rename file or directory to same name (error!)
+		push	de		; onthoud source name
+		ld	hl,-128
+		add	hl,sp
+		ld	sp,hl		; reserve space for source/dest path
+		push	hl
+		call	getwholep	; haal source path op naar buffer HL
+		pop	hl
+		push	hl		; onthoud source path
+		ld	de,64
+		add	hl,de
+		push	hl		; onthoud dest path
+		ld	de,(outname)
+		call	getwholep	; haal dest path op naar buffer HL
+		pop	hl		; dest path
+		pop	de		; source path
+		call	z,istrcmp	; dest gevonden => vergelijk met elkaar
+		ld	hl,128
+		add	hl,sp
+		ld	sp,hl		; free space for path
+		pop	de		; DE = source name
+		jr	nz,rnmv1fd4	; source <> destination
+		call	wprtsp
+		db	'Source and destination are the same',0
+		call	wgetchar
+		call	wpopdwn
+		scf
+		ret
+
+; nu nog over:
+; 2) move to another directory (mv2dir)
+; 3) rename file or directory  (rename)
+rnmv1fd4:	push	de		; remember source name
+		call	parseoutn
+		pop	de
+		bit	1,b		; directory specified ?
+		jp	z,rename	; nee => rename file
+		push	de
+		ld	a,(hl)
+		push	af		; store first character of name
+		ld	(hl),0		; close the path
+		push	hl
+		ld	hl,-128
+		add	hl,sp
+		ld	sp,hl
+		ld	de,(outname)
+		call	getwholep	; haal dest path op naar buffer HL
+		jr	z,rnmv1fd5	; dest file/dir exists
+		ld	hl,128
+		add	hl,sp
+		ld	sp,hl
+		pop	hl
+		pop	af
+		ld	(hl),a		; sluit path weer
+		pop	de
+		call	errmessage	; iets mislukt => geef error melding
+		call	wpopdwn
+		scf			; is fatal error, abort
+		ret
+
+rnmv1fd5:	push	hl		; dest path onthouden
+		ex	de,hl
+		call	parsepath	; destination path ends on ..\????
+		bit	1,b		; or is only ????????.??? (dest = \)
+		jr	z,$+3		; no path, thus no trailing \
+		dec	hl		; go to the trailing \
+		ld	(hl),0		; erase first ? or the \
+		pop	hl		; HL = dest path
+		push	hl		; onthoudt het weer
+		ld	de,64
+		add	hl,de
+		ex	de,hl		; DE = buffer voor current path
+		push	de
+		ld	b,0
+		BDOS	#59
+		pop	de		; DE = current directory
+		pop	hl		; HL = whole destination path
+		call	istrcmp		; vergelijk dest dir met current dir
+		ld	hl,128
+		add	hl,sp		; geef ruimte voor current path vrij
+		ld	sp,hl
+		pop	hl
+		pop	bc
+		ld	(hl),b		; herstel de naam
+		pop	de		; source name terug
+		jr	z,rename	; current path = dest path => rename
+
+; **************************************
+; * Move the file to another directory
+; * in: DE = source name
+; *     (outname) = destination path+name
+; * uit:  Cf = mislukt, NCf = gelukt
+; * opm: het popup window is gemaakt
+mv2dir:		push	de
+		call	prttime
+		call	wprtsp
+		db	'Moving and possibly renaming file or directory',0
+		pop	de
+		call	mv2dir2		; echt moven
+		call	wpopdwn
+		ret
+
+; **************************************
+; * Rename the file
+; * in: DE = source name
+; *     (outname) = destination path+name
+; * uit:  Cf = mislukt, NCf = gelukt
+; * opm: het popup window is gemaakt
+rename:		call	wprtsp
+		db	'Renaming file or directory',0
+		push	de
+		call	prttime
+		pop	de
+		call	renfd1		; rename file (uit: Cf = mislukt)
+		call	wpopdwn		; wis window weer
+		ret
+
+; **************************************
+; * Move the or directory file to another drive
+; * in: DE = source name
+; *     (outname) = destination path+name
+; * uit:  Cf = mislukt, NCf = gelukt
+; * opm: het popup window is gemaakt
+mv2drv:		push	de
+		call	prttime
+		pop	de
+		call	mv2drv2
+		call	wpopdwn
+		ret
+
+; **************************************
+; * Move the file to another directory
+; * in: DE = source name
+; *     (outname) = destination path+name
+; * uit:  Cf = mislukt, NCf = gelukt
+; * opm: het popup window is gemaakt
+mv2dir2:	call	wpopup
+		db	64,2
+		push	de
+		call	parseoutn	; parse de outname
+		ld	a,(hl)
+		push	af
+		ld	(hl),0		; wis last item
+		push	hl
+		call	wprtsp
+		db	'Moving file or directory to',13,10,0
+		ld	hl,(outname)
+		call	wprthl
+		pop	hl
+		pop	bc
+		ld	(hl),b
+		pop	de
+		call	mv2dir3		; eerst moven
+		call	wpopdwn
+		ret	c		; mislukt
+		or	a
+		ret	nz		; skip
+
+		push	de
+		call	parseoutn	; HL = last item = dest name
+		pop	de		; DE = source name
+		push	de
+		call	istrcmp		; destination name = source name ?
+		pop	de
+		ret	z		; yes => rename not neccesary
+
+		ld	hl,-64
+		add	hl,sp
+		ld	sp,hl
+		push	hl		; buffer voor sourcepath+name
+		push	de		; echte source name
+		ex	de,hl		; DE = sourcepath+name buffer
+		ld	hl,(outname)
+		call	strcpy
+		ld	(de),a		; neem destinationame+path over
+		pop	hl		; echte source name
+		pop	de		; sourcepath+name buffer
+		push	de
+		push	hl
+		ld	b,0
+		BDOS	#5b		; HL = pos. voor echte source name
+		ex	de,hl
+		pop	hl		; echte source name
+		call	strcpy		; neem over
+		ld	(de),a		; en maak ascii z
+		pop	de		; sourcepath + echte source name
+		call	wpopup
+		db	64,4
+		call	wprtsp
+		db	'Renaming file or directory',13,10,0
+		push	de
+		ex	de,hl
+		call	wprthl		; laat sourcepath + echte naam zien
+		call	wprtsp
+		db	13,10,'to',13,10,0
+		call	parseoutn
+		call	wprthl		; en laat dest name zien
+		pop	de		; DE = sourcepath + echte source name
+		call	renfd1		; rename file (uit: Cf = mislukt)
+		call	wpopdwn
+		ex	af,af'
+		ld	hl,64
+		add	hl,sp
+		ld	sp,hl
+		ex	af,af'
+		ret			; en thats it
+
+; **************************************
+; * Move the file to another directory
+; * in: DE = source name
+; *     (outname) = destination path + name
+; * uit:  Cf = mislukt
+; *      NCf = gelukt of skipped
+; *            A = status: 0 = moven gelukt
+; *                        1 = file geskipped
+mv2dir3:	ld	a,(overwrtflg)
+		or	a
+		jr	nz,mv2dir5	; delete dest file if duplicate file
+		call	mv2dirreal	; probeer echt te moven
+		ret	z		; everything okidoki
+		cp	#d3		; duplicate file name error ?
+		jp	nz,mv2direrror	; no, some other error
+		push	de
+		call	askfexist	; determine action
+		pop	de
+		ld	a,1
+		ret	nc		; skip file
+mv2dir4:	push	de
+		ld	de,(outname)
+		BDOS	#4d		; delete file
+		pop	de
+		jr	z,mv2dir5	; delete gelukt, move alsnog
+		cp	#d1		; read only error ?
+		jp	nz,mv2direrror	; no, some other error
+		push	de
+		call	askfro		; determine action
+		pop	de
+		ld	a,1
+		ret	nc		; dont overwrite, skip file
+		push	de
+		ld	de,(outname)
+		ld	a,1
+		ld	l,0
+		BDOS	#50		; reset file attributes
+		pop	de
+		jr	mv2dir4		; and delete again
+mv2dir5:	call	mv2dirreal	; try to rename, ignore dupl err
+		ret	z		; gelukt => klaar
+		cp	#d3		; duplicate file name error ?
+		jr	z,mv2dir4	; ja => delete and rename again
+					; no => other error
+; **************************************
+; * some fatal error occured:
+; * -give error message
+; * -return with CF set
+; * in: A = error code
+mv2direrror:	call	errmessage	; geef error melding
+		scf			; fatal error => abort
+		ret
+
+; **************************************
+; * Probeer file echt te moven
+; * in:  DE = source name
+; *      (outname) = destination path+name
+; * uit: DE = source name
+; *      Zf = gelukt, NZf = mislukt, A = DOS2 error code
+mv2dirreal:	push	de
+		call	parseoutn	; parse de outname
+		pop	de
+		ld	a,(hl)
+		push	af
+		ld	(hl),0		; wis last item
+		push	hl
+		ld	hl,(outname)	; HL = dest name
+		bit	2,b		; drive name specified ?
+		jr	z,mv2dirr2	; nee => move naar path HL
+		inc	hl		; ja => skip drive name!
+		inc	hl
+mv2dirr2:	push	de
+		BDOS	#4f		; move file DE to path HL
+		pop	de		; DE = source name
+		pop	hl
+		pop	bc
+		ld	(hl),b		; herstel last item
+		ret
+
+; **************************************
+; * Rename the file
+; * in: DE = source name
+; *     (outname) = destination path+name
+; * uit:  Cf = mislukt, NCf = gelukt
+; * opm: het popup window is gemaakt
+renfd1:		ld	a,(overwrtflg)
+		or	a
+		jr	nz,renfd3	; delete dest file if duplicate file
+		call	renfdreal	; probeer echt te renamen
+		ret	z		; everything okidoki
+		cp	#d3		; duplicate file name error ?
+		jp	nz,renfderror	; no, some other error
+		push	de
+		call	askfexist	; determine action
+		pop	de
+		ret	nc		; skip file
+renfd2:		push	de
+		ld	de,(outname)
+		BDOS	#4d		; delete file
+		pop	de
+		jr	z,renfd3	; delete gelukt, rename alsnog
+		cp	#d1		; read only error ?
+		jp	nz,renfderror	; no, some other error
+		push	de
+		call	askfro		; determine action
+		pop	de
+		ret	nc		; dont overwrite, skip file
+		push	de
+		ld	de,(outname)
+		ld	a,1
+		ld	l,0
+		BDOS	#50		; reset file attributes
+		pop	de
+		jr	renfd2		; and delete again
+renfd3:		call	renfdreal	; try to rename, ignore dupl err
+		ret	z		; gelukt => klaar
+		cp	#d3		; duplicate file name error ?
+		jr	z,renfd2	; ja => delete and rename again
+					; no => other error
+; **************************************
+; * some fatal error occured:
+; * -give error message
+; * -return with CF set
+; * in: A = error code
+renfderror:	call	errmessage	; geef error melding
+		scf			; fatal error => abort
+		ret
+
+; **************************************
+; * Probeer file echt te renamen
+; * in:  DE = source name
+; *      (outname) = destination path+name
+; * uit: DE = source name
+; *      Zf = gelukt, NZf = mislukt, A = DOS2 error code
+renfdreal:	push	de
+		call	parseoutn	; HL = last item = dest name
+		pop	de		; DE = source name
+		push	de
+		BDOS	#4e		; rename file or subdirectory
+		pop	de		; DE = source name
+		ret	nz		; failed
+		push	de		; succeeded, now flush to force oper.
+		ld	b,0		; current drive
+		ld	d,b		; flush only
+		BDOS	#5f		; if write protected, then fails!
+		pop	de
+		ret
+	
+; **************************************
+; * Move the or directory file to another drive
+; * in: DE = source name
+; *     (outname) = destination path+name
+; * uit:  Cf = mislukt, NCf = gelukt
+; * opm: het popup window is gemaakt
+mv2drv2:	push	de
+		xor	a
+		BDOS	#50		; get attributes
+		pop	de
+		bit	4,l		; directory ?
+		jr	z,mv2drv3
+		call	wprtsp
+		db	"Can't move a directory to another drive",0
+		call	wgetchar
+		scf
+		ret
+
+mv2drv3:	call	wprtsp
+		db	'Moving file to another drive',0
+		push	de		; onthoud source name
+		ld	hl,(outname)	; HL = destination name
+		ex	de,hl		; HL = source name, DE = destination
+		xor	a		; don't replace last item
+		call	copy1file	; kopieer de file over
+		pop	de
+		ret	c		; kopieren mislukt
+		or	a
+		ret	nz		; file geskipped
+		ex	de,hl		; HL = source file name
+		call	delete1file	; wis de originele file
+		ret
+
+; **************************************
+; * haal het destination path op voor copy/rename/move
+; * in:  DE = destination path buffer
+; *      HL = tekst die na 'copy/rename/move ' moet komen te staan
+; *      IX = 'copy' of 'rename/move' txt
+; * uit: buffer DE is ingevuld met het destination path
+; *       Cf = ESC pressed of een lege string opgegeven
+; *      NCf = destination given
+; *          A = mode: 0 => last item = file
+; *                    1 => there is no last item (destination is a directory)
+f5f6getdest:	push	hl
+		push	de
+		ld	a,(dirside)
+		or	a
+		ld	hl,lpath
+		jr	nz,$+5		; source = right => destination = left
+		ld	hl,rpath	; source = left  => destination = right
+		call	strcpy		; neem path tot 0-byte over
+		pop	de
+		pop	hl
+		call	wpopup
+		db	65,2
+		push	hl
+		push	ix
+		pop	hl
+		call	wprthl		; print 'Copy ' of 'Rename/move '
+		pop	hl
+		call	wprthl		; tekst na 'Copy ' of 'Rename/move '
+		call	wprtsp
+		db	' to',13,10,0
+		push	de		; onthoud dest path buffer
+		ld	hl,(systemy)
+		ex	de,hl		; HL = dest path, DE = sysx, sysy
+		dec	hl
+		ld	(hl),d		; onthoud xpos
+		dec	hl
+		ld	(hl),e		; en ypos
+		ld	b,64
+		call	wgetstring	; lees destination path uit
+		pop	de
+		call	wpopdwn
+		scf
+		ret	nz		; ESC pressed
+		ld	a,(de)
+		or	a
+		scf
+		ret	z		; lege string
+		cp	' '
+		scf
+		ret	z		; begint met spatie => lege string
+		push	de
+		call	parsepath
+		xor	a
+		ld	(de),a		; make ASCIIZ
+		sbc	hl,de		; check if last item exists
+		ex	de,hl		; HL = pos na filename
+		pop	de
+		ld	a,1
+		ret	z		; no => destination is a dirname
+		push	hl
+		push	de
+		xor	a
+		BDOS	#50		; get attributes
+		pop	de
+		jr	z,f5getd2	; name exists => it is a dir or file
+		pop	hl		; user specified a non existing name
+		xor	a		; thus, it is certainly a filename
+		ret
+
+f5getd2:	bit	4,l		; is it a subdirectory ?
+		pop	hl
+		ret	z		; no => last item is a filename
+		ld	(hl),'\'	; yes => make this clear to dos
+		inc	hl
+		ld	(hl),a		; and make it ASCIIZ again
+		inc	a
+		ret
+
+; **************************************
+; * copy 1 file
+; * in: HL = source file name
+; *     DE = destination path
+; *      A = mode: 0: don't replace last item with source file name
+; *                1: replace last item with source file name/add source name
+; * uit:  Cf = file kopieren mislukt
+; *      NCf = file kopieren gelukt of file geskipped
+; *             A = status: 0 = kopieren gelukt
+; *                         1 = file geskipped
+; * Note that the last item (if it exists) of the name
+; * in buffer DE will be replaced with the source file name.
+; * If there is no last item, the sourcename will be added to the path
+copy1file:	call	wpopup
+		db	64,3
+		ld	(tmpsavstk),sp
+		push	af
+		call	wprtsp
+		db	'Copying ',0
+		pop	af
+		call	mkdestname	; make dest name, out: DE = sourcename
+		call	shwsdname	; show the source and dest name
+		ld	hl,0
+		ld	(cp1finhandle),hl ; reset inhandle and outhandle
+		push	de
+		xor	a
+		BDOS	#43		; open sourcefile
+		jp	nz,cp1ferror	; een error opgetreden
+		ld	a,b
+		ld	(cp1finhandle),a
+		pop	de
+		push	de
+		xor	a
+		BDOS	#50		; get file attributes
+		pop	de
+		push	hl		; remember attributes
+		xor	a
+		BDOS	#51		; get file date and time
+		push	de		; push file time
+		push	hl		; push file date
+copy1f2:	call	cp1fread	; lees de data in
+		push	af
+		push	hl
+		call	prttime
+		pop	hl
+		pop	af
+		cp	#c7
+		jr	z,copy1f4	; .eof error => klaar met kopieren
+		or	a
+		jp	nz,cp1ferror	; helaas pindakaas, mislukt dus
+		call	cp1fchkcreate	; maak eventueel destination file
+		ld	b,a		; B = outhandle
+		ld	de,dmabuf
+		push	af
+		ld	a,'W'
+		call	wputchar
+		pop	af
+		BDOS	#49		; write data
+		jp	nz,cp1ferror	; something went wrong
+		call	prttime
+		jr	copy1f2		; continue copying
+copy1f4:	ld	a,(cp1finhandle)
+		call	closehandle	; sluit infile
+		call	cp1fchkcreate	; create outfile if infile was empty
+		call	closehandle	; sluit outfile
+		call	prttime
+		pop	hl		; HL = file data
+		pop	ix		; IX = filetime
+		ld	de,(outname)
+		push	de		; dest name
+		ld	a,1
+		BDOS	#51		; set date and time
+		call	prttime
+		pop	de		; dest name
+		pop	hl		; L = file attr
+		ld	a,1
+		BDOS	#50		; set attr
+		call	wpopdwn		; herstel de windows
+		xor	a
+		ret
+
+; **************************************
+; * read data in
+; * in:  (cp1finhandle) = filehandle to read from
+; * out: HL = number of bytes read
+; *       A = error code: 0 = no error, #c7 = .eof err, rest is fatal error
+cp1fread:	ld	de,dmabuf
+		ld	hl,-2048
+		add	hl,sp
+		or	a
+		sbc	hl,de		; HL = SP-4096-dmabuf = inbufsize
+		ld	a,(cp1finhandle)
+		ld	b,a
+		ld	a,'R'
+		call	wputchar
+		JBDOS	#48		; read data from input file
+
+; **************************************
+; * eventually create the destination file
+; * in: (cp1fouthandle) = filehandle to be created ( !0 => already created)
+; * out: A = filehandle of the destination file
+; *     HL = HLin
+cp1fchkcreate:	ld	a,(cp1fouthandle)
+		or	a
+		ret	nz		; destfile has allready been created
+		push	hl		; onthoud #bytes
+		ld	a,(overwrtflg)
+		or	a
+		jr	nz,cp1fchkc2	; overwrite file if it exists
+		ld	b,128		; only create when its a new one
+		ld	de,(outname)
+		BDOS	#44		; create destination file
+		jr	z,cp1fchkcend	; everything okidoki
+		cp	#cb		; file exists error ?
+		jp	nz,cp1ferror	; no, some other error
+		call	askfexist	; determine action
+		jr	nc,cp1ferr2	; skip file
+cp1fchkc2:	xor	a		; no abort happened =>
+		ld	b,a		; always create the file
+		ld	de,(outname)
+		BDOS	#44
+		jr	z,cp1fchkcend	; everything okidoki
+		cp	#d1		; read only error ?
+		jp	nz,cp1ferror	; no, some other error
+		call	askfro		; determine action
+		jr	nc,cp1ferr2	; dont overwrite, skip file
+		ld	de,(outname)
+		ld	a,1
+		ld	l,0
+		BDOS	#50		; reset file attributes
+		jr	cp1fchkc2	; retry copying the file
+cp1fchkcend:	pop	hl
+		jp	nz,cp1ferror	; mislukt
+		ld	a,b
+		ld	(cp1fouthandle),a	; onthoud de uitvoer handle
+		ret
+
+; **************************************
+; * some fatal error occured:
+; * -give error message
+; * -restore stack and screen, and close the files
+; * in: A = error code
+cp1ferror:	push	af
+		call	errmessage	; geef error melding
+		pop	af
+		cp	#d4		; diskfull ?
+		jr	nz,cp1ferr1	; nee => verwijder outfile niet
+		ld	a,(cp1fouthandle)
+		or	a
+		jr	z,cp1ferr1	; huh?, not created maar toch full ?
+		ld	b,a
+		BDOS	#52		; delete filehandle
+		xor	a
+		ld	(cp1fouthandle),a; outfile has been deleted and closed
+cp1ferr1:	scf			; fatal error => abort
+
+; **************************************
+; * some error occured
+; * -restore stack and screen, and close the files
+; * in:  Cf = fatal error
+; *     NCf = no fatal error (skip file)
+; *       A = 1
+cp1ferr2:	ld	sp,(tmpsavstk)
+		call	wpopdwn		; herstel scherm
+		push	af
+		ld	a,(cp1finhandle)
+		call	closehandle
+		ld	a,(cp1fouthandle)
+		call	closehandle
+		pop	af
+		ld	a,1
+		ret
+
+; **************************************
+; * file allready exists, determine action
+; * uit:  Cf = overwrite
+; *      NCf = skip file
+askfexist:	call	gtactsp
+		db	'Destination already exists',13,10
+		db	'(O)verwrite, (A)ll or (S)kip ? ',0
+		db	3		; 3 antwoorden
+		db	'A'		; 'A' is standaard antwoord
+		db	'OSA'		; de mogelijke antwoorden
+		sub	1
+		ret	c		; was 0 => overwrite
+		ret	z		; was 1 => skip
+		ld	(overwrtflg),a	; was 2 => overwrite all
+		scf			; overwrite!
+		ret
+
+; **************************************
+; * file is marked readonly, determine action
+; * uit:  Cf = overwrite it
+; *      NCf = don't overwrite, skip
+askfro:		call	gtactsp
+		db	'Destination is marked read only',13,10
+		db	'Overwrite it anyway (Y/N) ? ',0
+		db	2,'NYN'
+		sub	1		; Yes => Cf, No => NCf
+		ret
+
+; **************************************
+; * close handle A as long as A != 0
+closehandle:	or	a
+		ret	z		; handle has already been closed
+		ld	b,a
+		BDOS	#45
+		ret	z		; succesvol gesloten
+		jp	errmessage	; geef error melding
+
+cp1finhandle:	db	0
+cp1fouthandle:	db	0
+
+overwrtflg:	db	0		; <> 0 => overwrite destination file
+outname:	dw	0		; output name voor copy/rename/move
+
+; **************************************
+; * make the destination file name and show both the source and dest name
+; * in: HL = source file name
+; *     DE = destination path
+; *      A = mode: 0: don't replace last item with source file name
+; *                1: replace last item with source file name/add source name
+; * uit: DE = source file name
+; * Note that the last item (if it exists) of the name
+; * in buffer DE will be replaced with the source file name.
+; * If there is no last item, the sourcename will be added to the path
+mkdestname:	push	af		; mode
+		push	hl		; source name
+		call	parsepath	; parse dest path
+		xor	a
+		ld	(de),a		; maak total path ASCIIZ
+		ex	de,hl		; DE = last item
+		pop	hl		; get sourcefile name
+		pop	af		; copy mode
+		push	hl
+		or	a
+		jr	z,mkdn2		; dont add/replace lastitem
+		call	strcpy		; plak achter destination path
+		ld	(de),a		; en sluit af met 0-byte
+mkdn2:		pop	de		; DE = source name
+		ret
+
+; **************************************
+; * show the source and dest name
+; * in:  DE = source file name
+; * uit: DE = source file name
+shwsdname:	push	de
+		ex	de,hl
+		call	wprthl		; print source name
+		call	wprtsp
+		db	' to',13,10,0
+		ld	hl,(outname)
+		call	wprthl		; print the outname
+		call	wprtsp
+		db	13,10,0
+		pop	de		; sourcefile
+		ret
+
+; **************************************
+; * f7: make dir
+; * in: IX = dirparam
+; * uit: NC, Z
+fkey7:		ld	a,(lrstat)	; staan de windows aan ?
+		or	a
+		ret	z		; nee => fkey niet relevant
+		call	allcoff		; zet typecursor en grote cursor uit
+
+		ld	hl,-67
+		add	hl,sp		; reserve space for dirname to be
+		ld	sp,hl		; created
+		ld	b,67
+		ld	a,' '
+		call	setmem		; erase memory
+		call	wpopup
+		db	65,2
+		call	wprtsp
+		db	'Create the directory',13,10,0
+		ex	de,hl		; DE = dirname buffer
+		push	de		; save dirname buffer
+		ld	hl,(systemy)
+		ex	de,hl		; HL = dirnamebuf, DE = sysx, sysy
+		ld	(hl),e		; store ypos
+		inc	hl
+		ld	(hl),d		; and xpos
+		dec	hl
+		ld	b,64
+		call	wgetstring	; read dirname
+		pop	de		; dirname buffer
+		call	wpopdwn
+		scf
+		jr	nz,fkey7done	; ESC pressed
+
+		inc	de
+		inc	de		; the actual dirname
+		push	de
+		call	parsepath	; parse the dirname
+		xor	a
+		ld	(de),a		; place a terminating null byte
+		pop	hl		; HL = dirname
+		call	wpopup
+		db	64,2
+		call	wprtsp
+		db	'Creating the directory',13,10,0
+		push	hl		; dirname
+		call	wprthl
+		pop	de		; dirname
+fkey7a:		push	de
+		xor	a		; readable and writable
+		ld	b,16		; dirflag
+		BDOS	#44		; create filehandle
+		pop	de
+		jr	z,fkey7a_done	; succeeded
+		cp	#cc		; directory exists error ?
+		jr	z,fkey7b	; yes => ask if it can be deleted
+		cp	#cb		; file exists error ?
+		jr	nz,fkey7a_err	; no, some other error
+fkey7b:		push	de
+		call	askfexist	; determine action
+		pop	de
+		jr	nc,fkey7a_done	; skip file
+fkey7c:		push	de
+		BDOS	#4d		; delete file
+		pop	de
+		jr	z,fkey7a	; delete gelukt, create dir again
+		cp	#d1		; read only error ?
+		jr	nz,fkey7a_err	; no, some other error
+		push	de
+		call	askfro		; determine action
+		pop	de
+		jr	nc,fkey7a_done	; dont overwrite, skip it
+		push	de
+		ld	a,1
+		ld	l,0
+		BDOS	#50		; reset file attributes
+		pop	de
+		jr	fkey7c		; and delete again
+fkey7a_err:	call	errmessage	; geef error melding
+		scf			; failed, don't re-scan dirs
+fkey7a_done:	call	wpopdwn		; delete 'Creating dir...' window
+fkey7done:	ex	af,af'
+		ld	hl,67		; done, restore the stackpointer
+		add	hl,sp
+		ld	sp,hl
+		ex	af,af'
+		call	nc,fkrescan	; dir created, re-scan dirs
+		call	allcon
+		xor	a
+		ret
+
+; **************************************
+; * f8: delete
+; * in:  IX = dirparam
+; * uit: NC, Z
+fkey8:		call	getnrfibs	; A = #fibs in active window
+		ret	z		; 0 fibs or window off
+		call	saveselection	; onthoud de selecties
+		call	setoldnames	; onthoud de huidige filenamen
+		call	allcoff		; zet typecursor en grote cursor uit
+		ld	a,(ix+dp_nrselnames)
+		or	a
+		jp	z,fkey8d	; delete only 1 file
+		push	af
+		ld	hl,nfilestxt
+		push	hl
+		call	byte_str	; zet #files in het geheugen
+		pop	hl
+		call	f8askdelete	; vraag of echt deleten
+		pop	bc		; B = #te kopieren namen
+		jp	c,fkey8done	; ESC pressed of No gekozen
+
+		push	bc
+		push	ix
+		pop	hl
+		ld	bc,dp_selnames
+		add	hl,bc		; HL = 1ste geselecteerde naam
+		pop	bc		; B = #te kopieren namen
+		push	hl		; onthoud 1ste
+		push	ix
+fkey8b:		push	bc
+		push	de
+		push	hl
+		call	delete1file	; wis 1 file
+		ex	af,af'		; onthoud foutcode
+		pop	hl
+		ld	de,13
+		add	hl,de		; naar next file toe
+		pop	de		; destination path
+		pop	bc
+		ex	af,af'
+		jr	c,fkey8c
+		djnz	fkey8b		; en gekopieerd
+fkey8c:		ld	de,-13
+		add	hl,de		; ga op laatst gewiste naam staan
+		pop	ix
+		ld	(ix+dp_nrselnames),b ; nog maar B files over
+		pop	de		; 1ste file
+		call	fkupdatefiles	; verplaats de niet gekopieerde namen
+		jr	fkey8done	; en klaar
+
+fkey8d:		ld	l,(ix+dp_fibptr)
+		ld	h,(ix+dp_fibptr+1)
+		inc	hl		; HL = sourcefile name
+		push	hl
+		call	f8askdelete	; vraag of file gedelete moet worden
+		pop	hl
+		jr	c,fkey8done	; ESC pressed of Nee gezegd => klaar
+		call	delete1file	; kopieer file HL naar dest DE
+
+fkey8done:
+
+; **************************************
+; * herscan de dirs, etc. na een file manipulatie function key
+; * (zoals F5: copy, F8: delete)
+; * uit: NC, Z
+fkrescan:	ld	hl,(systemy)
+		push	hl
+		call	mkdirwindows	; scan directories again, etc.
+		pop	hl
+		ld	(systemy),hl
+		call	allcon		; zet typecursor en grote cursor aan
+		xor	a
+		ret
+
+; **************************************
+; * vraag of de files gedelete moeten worden
+; * in:  HL = tekst die na 'delete' moet komen te staan
+; * uit:  Cf = ESC pressed of niet wissen
+; *      NCf = delete file(s)
+f8askdelete:	push	hl
+		ld	hl,deletetxt2
+		push	hl
+		ld	de,deletetxt2+1
+		ld	(hl),' '
+		ld	bc,11
+		ldir			; wis oude filenaam/nnn files text
+		pop	de
+		pop	hl
+		call	strcpy		; zet filenaam in gtact blok
+		ld	a,(deletetxt3)
+		push	af		; onthoud default antwoord
+		ld	hl,deletetxt
+		call	gtacthl
+		pop	bc		; B = default answer
+		or	a
+		ret	z		; 0 => yes, wis alles
+		scf
+		dec	a
+		ret	z		; 1 => no, wis niets
+		ld	a,b
+		ld	(deletetxt3),a	; 2 => ESC => herstel default antwoord
+		ret
+
+deletetxt:	db	'Delete '
+		;	'12345678.123'
+		;	'000 file(s)'
+deletetxt2:	db	'            ',13,10
+		db	'Are you sure (y/n) ? ',0
+		db	3
+deletetxt3:	db	'Y'
+		db	'YN',27
+
+; **************************************
+; * wis 1 file
+; * in: HL = source file name
+; * uit:  Cf = file wissen mislukt
+; *      NCf = file wissen gelukt
+delete1file:	call	wpopup
+		db	64,2
+		ld	(tmpsavstk),sp
+		call	wprtsp
+		db	'Deleting ',0
+		push	hl		; source name
+		call	wprthl
+		pop	de		; sourcefile
+		push	de
+		BDOS	#4d		; delete file or subdirectory
+		push	af
+		call	prttime
+		pop	af
+		pop	de
+		jr	z,rm1fdone	; klaar met delete
+		cp	#d1		; read only error ?
+		jp	nz,rm1ferror	; no, some other error
+		push	de
+		call	rm1fro		; determine action
+		pop	de
+		push	de
+		ld	a,1
+		ld	l,0
+		BDOS	#50		; reset file attributes
+		pop	de
+		BDOS	#4d		; delete again
+		push	af
+		call	prttime
+		pop	af
+		jp	nz,rm1ferror	; mislukt
+rm1fdone:	call	wpopdwn
+		or	a
+		ret			; and thats it
+
+; **************************************
+; * file is marked readonly, determine action
+rm1fro:		call	gtactsp
+		db	'The file is marked read only',13,10
+		db	'Delete it anyway (Y/N) ? ',0
+		db	2,'NYN'
+		or	a
+		ret	z		; 0 => delete it
+		jr	rm1ferr2	; dont overwrite
+
+; **************************************
+; * some fatal error occured:
+; * -give error message
+; * -restore stack and screen, and close the files
+; * in: A = error code
+rm1ferror:	call	errmessage	; geef error melding
+		scf			; fatal error => abort
+
+; **************************************
+; * some error occured
+; * -restore stack and screen, and close the files
+; * in:  Cf = fatal error
+; *     NCf = no fatal error
+rm1ferr2:	ld	sp,(tmpsavstk)
+		call	wpopdwn		; herstel scherm
+		ret
+
+; **************************************
+; * f9:
+fkey9:		xor	a
+		ret
+
+; **************************************
+; * f10: quit
+; * uit:  C, Z = really quit
+; *      NC, Z = dont quit
+fkey10:		call	allcoff		; zet typecursor en grote cursor uit
+		call	gtactsp
+		db	'Are you sure you want to quit (y/n) ? ',0
+		db	3
+		db	'YYN',27
+		or	a
+		jr	z,fkey10quit	; quit chosen
+		call	allcon
+		xor	a
+		ret
+fkey10quit:	xor	a
+		scf
+		ret
+
+; **************************************
+; * graph + f1: set left drive
+; * uit: NC, Z = dont quit
+gkey1:		ld	a,(lrstat)
+		or	a
+		ret	z		; windows uit => niet relevant
+		call	allcoff		; zet typecursor en grote cursor uit
+		ld	hl,leftdtxt
+		ld	de,lpath
+		call	askdrive	; vraag om de goede drive
+		jr	c,gkey1a	; ESC pressed, skip
+		ld	b,0
+		call	setdrive	; stel de linker drive in
+		ld	a,(dirside)
+		or	a
+		push	af
+		call	nz,setpathcolors; set correct colors above pathnames
+		pop	af
+		call	z,newprompt	; maak de nieuwe prompt
+gkey1a:		call	allcon		; zet typecursor en grote cursor aan
+		xor	a
+		ret
+
+; **************************************
+; * graph + f2: set right drive
+; * uit: NC, Z = dont quit
+gkey2:		ld	a,(lrstat)
+		or	a
+		ret	z		; windows uit => niet relevant
+		call	allcoff		; zet typecursor en grote cursor uit
+		ld	hl,rightdtxt
+		ld	de,rpath
+		call	askdrive	; vraag om de goede drive
+		jr	c,gkey2a
+		ld	b,1
+		call	setdrive	; geen ESC => stel de rechter drive in
+		ld	a,(dirside)
+		or	a
+		push	af
+		call	z,setpathcolors	; set correct colors above pathnames
+		pop	af
+		call	nz,newprompt	; laat de nieuwe prompt zien
+gkey2a:		call	allcon		; zet typecursor en grote cursor aan
+		xor	a
+		ret
+
+leftdtxt:	db	'left ',0
+rightdtxt:	db	'right',0
+
+; **************************************
+; * stel de drive in op side B
+; * in: B = side (0 = left, 1 = right)
+setdrive:	push	bc		; remember side
+		ld	hl,(systemy)
+		push	hl		; remember systemx,y
+		ld	a,(dirside)
+		push	af		; remember dirside
+		ld	a,b
+		ld	(dirside),a
+		or	a
+		push	af
+		call	z,mkleftwindow	; left drive has been changed
+		pop	af
+		call	nz,mkrightwindow; right drive has been changed
+		pop	af
+		ld	(dirside),a
+		pop	hl
+		ld	(systemy),hl
+		pop	bc
+		cp	b		; dirside = changed drive side ?
+		ret	z		; yes => alles goed
+		ld	a,(lpath)
+		dec	b
+		jr	z,$+5		; changed side=right -> dirside=left
+		ld	a,(rpath)
+		sub	'A'
+		ld	e,a
+		JBDOS	#0e		;       and restore drive from dirside
+
+; **************************************
+; * laat de nieuwe prompt zien (nadat de drive verandert is)
+newprompt:	call	prtprompt	; laat prompt van nieuwe drive zien
+		jp	prtcmdline	; druk de ingetypte commando's af
+
+; **************************************
+; * vraag om de juiste drive
+; * in:  HL = left/right txt
+; *      DE = lpath of rpath
+; * uit: Cf = ESC pressed
+; *      NC = drive opgegeven
+askdrive:	push	de
+		ld	de,askdt2
+		call	strcpy		; zet left/right text in de tekst
+
+		ld	hl,askdt1
+		ld	b,8*3
+		ld	a,' '
+		call	setmem
+		BDOS	#18		; get login vector
+
+		push	hl		; remember login vector
+		ld	a,'A'
+		ld	b,8
+		ld	de,askdt1	; tekst 'Connected drives are: '
+askd2:		rr	l
+		jr	nc,askd3	; no drive
+		ex	de,hl
+		ld	(hl),a		; set drive in the text
+		inc	hl
+		ld	(hl),':'	; a ':' behind it
+		inc	hl		; skip the space
+		inc	hl
+		ex	de,hl
+askd3:		inc	a
+		djnz	askd2
+		pop	hl
+
+		push	hl
+		ld	a,'A'
+		ld	bc,#0800
+		ld	de,askdt3+3	; the possible answers
+askd4:		rr	l
+		jr	nc,askd5
+		ld	(de),a
+		inc	de
+		inc	c
+askd5:		inc	a
+		djnz	askd4
+		ld	a,c		; A = #drives
+		inc	a		; +1 ivm ESC
+		ld	(askdt3),a	; #antwoorden
+		pop	hl		; login vector
+		pop	de		; (DE) = active drive
+		ld	a,(de)
+		ld	(askdt3+1),a	; default answer
+		push	hl
+		push	de		; (DE) = active drive
+		ld	hl,askdt
+		call	gtacthl		; get answer
+		pop	de
+		pop	hl		; L = login vector
+		or	a
+		scf
+		ret	z		; 0 => ESC pressed
+		ld	b,a		; B = antwoord nummer
+		ld	a,'A'-1		; start met drive A:
+askd6:		inc	a
+		rr	l
+		jr	nc,askd6	; niet geset => telt niet
+		djnz	askd6		; dit was niet de opgegeven drive
+		ld	(de),a		; path begint met drive naam
+		sub	'A'
+		ld	e,a		; E = drive nummer
+		BDOS	#0e		; select the drive
+		or	a
+		ret
+
+askdt:		db	'Connected drives: '
+askdt1:		db	'A: B: C: D: E: F: G: H: ',13,10
+		db	'Enter the new '
+askdt2:		db	'left  drive: ',0
+askdt3:		db	1		; 1 antwoord
+		db	'H'		; default antwoord
+		db	27		; ESC key
+		ds	8,0		; de 8 mogelijke drives
+
+; **************************************
+; * graph + f3:
+gkey3:
+
+; **************************************
+; * graph + f4:
+gkey4:
+
+; **************************************
+; * graph + f5:
+gkey5:
+
+; **************************************
+; * graph + f6:
+gkey6:
+
+; **************************************
+; * graph + f7:
+gkey7:
+
+; **************************************
+; * graph + f8:
+gkey8:
+
+; **************************************
+; * graph + f9:
+gkey9:
+
+; **************************************
+; * graph + f10:
+gkey10:
+
+; **************************************
+; * ctrl + f1:
+ckey1:
+
+; **************************************
+; * ctrl + f2:
+ckey2:
+
+; **************************************
+; * ctrl + f3:
+ckey3:
+
+; **************************************
+; * ctrl + f4:
+ckey4:
+
+; **************************************
+; * ctrl + f5:
+ckey5:
+
+; **************************************
+; * ctrl + f6:
+ckey6:
+
+; **************************************
+; * ctrl + f7:
+ckey7:
+
+; **************************************
+; * ctrl + f8:
+ckey8:
+
+; **************************************
+; * ctrl + f9:
+ckey9:
+
+; **************************************
+; * ctrl + f10:
+ckey10:		xor	a
+		ret
+
+; **************************************
+; * update de filelijst na een multiple file operatie
+; * in:  B = #niet bekeken files
+; *     HL = pos. van laatst bekeken naam
+; *     DE = beginpos van namenlijst
+fkupdatefiles:	ld	a,b
+		or	a
+		ret	z		; niks over => ook niets verplaatsen
+		push	hl		; onthoud pos van laatst bekeken naam
+		push	de		; onthoud beginpos van namenlijst
+		ld	c,b
+		ld	b,0		; BC = #nog te kopieren files
+		ld_hl_bc
+		add	hl,hl		; *2
+		add	hl,hl		; *4
+		ld_de_hl
+		add	hl,hl		; *8
+		add	hl,de		; *12
+		add	hl,bc		; *13 
+		ld_bc_hl		; BC = #naar voren te halen bytes
+		pop	de		; beginpos namenlijst
+		pop	hl		; laatst bekeken file (die mislukt is)
+		ldir			; zet namen vooraan in lijst
+		ret
+
+; **************************************
+; * vraag te ondernemen actie aan user
+gtactsp:	ex	(sp),hl
+		call	gtacthl
+		ex	(sp),hl
+		ret
+
+; **************************************
+; * vraag te ondernemen actie aan user
+; * in: HL = getact data, opbouw:
+; *          db 'asciiz string met het message'
+; *          db #antwoorden
+; *          db default antwoord
+; *          db toets1, toets2, ..., toetsN (in caps)
+; * uit: A  = gegeven antwoord (0,1,..,n-1)
+; *      HL = 1ste pos. na getact data
+gtacthl:	push	hl
+		ld	b,1		; B = minimaal # regels
+gtacthl1:	ld	a,(hl)
+		inc	hl
+		or	a
+		jr	z,gtacthl1a	; end of string
+		cp	10
+		jr	nz,gtacthl1	; geen \n ontdekt
+		inc	b		; \n => weer 1 regel gehad
+		jr	gtacthl1
+gtacthl1a:	pop	hl		; HL = begin van de regel
+		ld	a,b
+		ld	(gtacthl1b),a	; windowhoogte = #regels
+		call	wpopup
+		db	64
+gtacthl1b:	db	2
+		call	wprthl		; print het message
+		inc	hl
+		ld	c,(hl)		; C = #antwoorden
+		inc	hl
+		ld	a,(hl)		; A = default antwoord
+		inc	hl
+		ld_de_hl		; DE = 1ste antwoord
+		ld	b,0
+		add	hl,bc		; HL = 1ste pos na antwoorden
+		push	hl		; onthoud ff
+		ld	b,a
+		call	wputchar	; druk default antwoord af
+gtacthl2:	call	wgetchar	; haal toets op
+		cp	13
+		jr	nz,gtacthl3	; verwerk toets A
+		ld	a,b		; enter => A = default keuze
+gtacthl3:	push	bc		; onthoud default keuze
+		cp	'a'
+		jr	c,gtacthl3a
+		cp	'z'+1
+		jr	nc,gtacthl3a
+		res	5,a		; zet om in caps
+gtacthl3a:	ld	b,c		; B = #letters
+		ld_hl_de		; HL = 1ste keuze
+gtacthl4:	cp	(hl)
+		jr	z,gtacthl5	; legale toets
+		inc	hl
+		djnz	gtacthl4	; try next
+		pop	bc
+		jr	gtacthl2	; dont accept
+gtacthl5:	dec	de
+		cp	27
+		jr	z,gtacthl6	; ESC niet opslaan, rest wel opslaan
+		ld	(de),a		; pak keuze als nieuwe default keuze
+gtacthl6:	ld	a,c
+		sub	b		; A = toets nummer
+		pop	bc		; herstel stack
+		pop	hl		; 1ste pos na datablok
+		call	wpopdwn		; verwijder window
+		ret
+
+; **************************************
+; * zet A in str
+; * in: A  = char
+; *     HL = string
+byte_str:	ld	b,100
+		call	byte_s2
+		ld	b,10
+		call	byte_s2
+		ld	b,1
+
+byte_s2:	call	byte_sdiv	; C = A div B, A = A mod B
+		push	af		; onthoud rest
+		ld	a,c
+		add	a,'0'
+		ld	(hl),a
+		inc	hl
+		pop	af
+		ret
+
+byte_sdiv:	ld	c,255
+byte_sd2:	inc	c
+		sub	b
+		jr	nc,byte_sd2
+		add	a,b		; A = rest
+		ret
+
+; **************************************
+; * geef error message
+; * in: A = error code
+errmessage:	call	wpopup
+		db	69,1
+		ld	hl,-64
+		add	hl,sp
+		ld	sp,hl
+		ex	de,hl		; DE = error buffer
+		push	de
+		ld	b,a		; B = erro code
+		BDOS	#66		; get error message
+		call	wprtsp
+		db	'*** ',0
+		pop	hl
+		call	wprthl		; print error message
+		call	wgetchar	; wacht op toets
+		ld	hl,64
+		add	hl,sp
+		ld	sp,hl		; herstel stack
+		call	wpopdwn
+		ret			; en thats it
+
+; **************************************
+; * analyseer de ingedrukte toets
+; * in:  A = toets
+; *      IX = dirparams
+; * uit: Cf = quit
+; *      NC, Z => verder editten
+; *      NC,NZ => speciale gebeurtenis opgetreden:
+; *               A = 1 => commandline wissen
+; *               A = 2 => return pressed
+; *      IX = dirparams
+anakey:		cp	13
+		jr	nz,anak2
+		ld	a,(#fbe5+6)
+		and	2		; CTRL-key pressed?
+		jr	z,anak_ctrlcr	; ja => ^CR
+		ret			; RETURN => geef NZ, 2 terug
+anak2:		cp	27
+		jr	z,anak_esc	; ESC => zet de windows om
+		cp	21
+		jr	z,anak_ctrlu	; ^U
+		cp	30
+		jp	z,anak_up	; onhoog gestuurd
+		cp	31
+		jp	z,anak_dwn	; en omlaag
+		cp	9
+		jp	z,anak_tab	; tab => wissel window
+		cp	24
+		jp	z,anak_sel	; select => pull down menu's
+		cp	18
+		jp	z,anak_ins	; ins => select/unselect file
+		cp	8
+		jr	z,anak_bs
+		cp	127
+		ret	z		; negeer DEL key
+		cp	32
+		jr	nc,anak_char	; voer een letter in
+		xor	a		; negeer de rest
+		ret
+
+; **************************************
+; * Kopieer huidige file/dirnaam naar command line
+anak_ctrlcr:	call	getnrfibs	; get #fibs in active window
+		ret	z		; no fibs or window off
+		ld	l,(ix+dp_fibptr)
+		ld	h,(ix+dp_fibptr+1)
+		inc	hl		; ga op 1ste letter van naam staan
+		call	str2cmdline	; copy a string to the command line
+		ld	a,' '
+		jr	anak_char	; sluit naam af met een spatie
+
+; **************************************
+; * flip de windows status
+; * in:  IX = dirparams
+; * uit: IX = dirparams
+; *      Z, NC
+anak_esc:	ld	hl,(systemy)
+		push	hl
+		push	ix
+		ld	hl,lrstat
+		ld	a,(hl)
+		xor	1
+		ld	(hl),a
+		jr	nz,anak_esc2	; zet de windows aan
+		call	saveselection	; onthoud de selecties
+		call	setoldnames	; onthoud de huidige filenamen
+		call	mkdosscreen	; en maak het dos scherm
+		pop	ix
+		jr	anak_esc3	; en that's it
+anak_esc2:	call	mkdirwindows	; maak de directory windows
+		pop	ix
+		call	curon		; zet de cursor balk aan
+anak_esc3:	pop	hl
+		ld	(systemy),hl
+		xor	a
+		ret			; zorg ervoor dat edit verder gaat
+
+; **************************************
+; * ^U => wis de cmdline
+anak_ctrlu:	xor	a
+		inc	a		; herstart edit met verse prompt
+		ret
+
+; **************************************
+; * voeg een letter in
+; * uit: Z, NC
+; * verandert: AF, B, HL
+anak_char:	ld	b,a		; onthoud de letter
+		ld	a,(systemx)
+		cp	80
+		ret	z		; je zit al helemaal rechts
+		ld	a,b
+		call	fputchar	; druk de letter af
+		ld	hl,(editpos)
+		ld	(hl),a		; en sla op in de buffer
+		inc	hl
+		ld	(hl),0		; sluit af met een 0-byte
+		ld	(editpos),hl
+		ld	hl,#80
+		inc	(hl)		; weer 1 karakter gehad
+		xor	a
+		ret			; en that's it
+
+; **************************************
+; * wis laatste karakter
+; * uit: Z, NC
+anak_bs:	ld	hl,#80
+		ld	a,(hl)
+		or	a
+		ret	z		; zijn geen karakters meer
+		dec	(hl)		; 1 karakter minder
+		ld	hl,(editpos)
+		dec	hl
+		ld	(hl),0		; wis laatste karakter
+		ld	(editpos),hl
+		ld	hl,systemx
+		dec	(hl)		; 1 pos terug
+		ld	a,' '
+		call	fputchar	; wis karakter
+		dec	(hl)		; en ga er weer op staan
+		xor	a
+		ret
+
+; **************************************
+; * stuur 1 pos omhoog
+; * uit: Z, NC
+anak_up:	ld	a,(lrstat)
+		or	a
+		ret	z		; window staat uit
+		ld	a,(ix+dp_fibnr)
+		or	a
+		ret	z		; je zit al helemaal boven!
+		dec	(ix+dp_fibnr)	; 1 nummer omhoog
+		ld	l,(ix+dp_fibptr)
+		ld	h,(ix+dp_fibptr+1)
+		ld	de,-64
+		add	hl,de
+		ld	(ix+dp_fibptr),l
+		ld	(ix+dp_fibptr+1),h; 1 fib terug
+		ld	a,(ix+dp_logy)
+		or	a		; kun je nog omhoog ?
+		jr	z,scrldwn	; nee => scrol het window omlaag
+		call	curoff		; ja => cursor uit
+		dec	(ix+dp_logy)
+		call	curon		; en cursor weer aan
+		xor	a
+		ret
+
+scrldwn:	jr	anak_ud2
+
+; **************************************
+; * stuur 1 pos omlaag
+; * uit: Z, NC
+anak_dwn:	ld	a,(lrstat)
+		or	a
+		ret	z		; window staat uit
+		ld	a,(dirside)
+		or	a
+		ld	a,(lnrfibs)
+		jr	z,$+5
+		ld	a,(rnrfibs)
+		ld	b,a		; B = #fibs
+		ld	a,(ix+dp_fibnr)
+		inc	a
+		ret	z		; was al fib 255 => klaar
+		cp	b
+		ret	nc		; nieuw nr >= #fibs => kan nog
+anak_d2:
+		ld	(ix+dp_fibnr),a	; onthoud nieuw fibnr
+		ld	l,(ix+dp_fibptr)
+		ld	h,(ix+dp_fibptr+1)
+		ld	de,64
+		add	hl,de
+		ld	(ix+dp_fibptr),l
+		ld	(ix+dp_fibptr+1),h; 1 fib verder
+		ld	a,(ix+dp_logy)
+		cp	18		; kun je nog omlaag ?
+		jr	z,scrlup	; nee => scrol het window omhoog
+		call	curoff		; ja => cursor uit
+		inc	(ix+dp_logy)
+		call	curon		; en cursor weer aan
+		xor	a
+		ret
+
+scrlup:		ld	de,-18*64
+		add	hl,de		; HL = bovenste fib
+anak_ud2:	ld	c,(ix+dp_stat)	; C = dirstat
+		push	ix
+		push	hl
+		pop	ix		; IX = bovenste fib
+		ld	hl,(systemy)
+		push	hl		; onthoud systemx en systemy
+		ld	b,19		; B = #te printen fibs
+		ld	a,(dirside)
+		ld	hl,2
+		or	a
+		jr	z,$+5
+		ld	hl,42		; HL = xpos
+		ld	a,c		; A = dirstat
+		call	prtdir		; print de directory opnieuw uit
+		pop	hl
+		ld	(systemy),hl	; en herstel ze weer
+		pop	ix
+		xor	a
+		ret
+
+; **************************************
+; * wissel van window
+; * uit: Z, NC
+anak_tab:	ld	a,(lrstat)
+		or	a
+		ret	z		; window staat uit
+		ld	a,(dirside)
+		or	a
+		ld	a,(lstat)
+		jr	nz,$+5
+		ld	a,(rstat)	; A = status destination window
+		or	a
+		ret	z		; window uit => doe niks
+		call	curoff
+
+		ld	de,aborterr	; bij error per definitie abort zodat
+		BDOS	#64		; disk offline wordt genegeerd
+		ld	hl,dirside
+		ld	a,(hl)
+		xor	1
+		ld	(hl),a		; draai de dirside om
+		ld	hl,lpath
+		jr	z,$+5
+		ld	hl,rpath
+		ld	a,(hl)
+		res	5,a
+		sub	'A'		; haal drive uit path
+		push	hl
+		ld	e,a
+		BDOS	#0e		; verwissel de drive
+		pop	de
+		BDOS	#5a		; ga naar de goede dir toe
+		push	af
+		ld	de,errorhandler
+		BDOS	#64		; pak de normale error handler weer
+		pop	af
+		ld	a,(dirside)
+		jr	z,anak_t2	; alles goed gegaan
+		or	a
+		push	af
+		call	z,mkleftwindow
+		pop	af
+		call	nz,mkrightwindow
+anak_t2:	call	setpathcolors	; set colors of pathnames
+		xor	a
+		inc	a
+		ret			; herstart edit
+
+aborterr:	ld	a,1
+		or	a
+		ret
+
+; **************************************
+; * roep de pulldown menu's aan
+; * uit: Z, NC
+anak_sel:	xor	a
+		ret
+
+; **************************************
+; * select/unselect een file
+; * uit: Z, NC
+anak_ins:	call	getnrfibs
+		ret	z		; 0 fibs or window off
+		call	chkcfile	; cursor on a file?
+		jr	z,anak_i4	; no => can't select
+		ld	a,(hl)
+		xor	255		; flip selection status (0 <=> #ff)
+		jr	nz,anak_i2	; gedeselecteerd => kan altijd
+		ld	a,(ix+dp_nrselnames)
+		cp	maxnrnames	; max aantal al geselecteerd ?
+		jr	z,anak_i4	; ja => doe niks
+		inc	(ix+dp_nrselnames); nee => weer 1 naam meer
+		xor	a
+		jr	anak_i3
+anak_i2:	dec	(ix+dp_nrselnames); weer 1 naam minder
+anak_i3:	ld	(hl),a		; sla nieuwe status op
+		call	setselection	; stel nieuwe selectie in
+anak_i4:	jp	anak_dwn	; en 1 pos. omlaag
+
+; **************************************
+; * copy a string to the command line
+; * in: HL = asciiz string to be put in the command line
+; * uit: HL = terminating NULL byte
+; *       A = 0
+; *      Zf, NCf
+; * verandert: B
+str2cmdline:	ld	a,(hl)
+		or	a
+		ret	z		; string completely copied
+		push	hl
+		call	anak_char	; put char in cmdline
+		pop	hl
+		inc	hl
+		jr	str2cmdline	; copy next char
+
+; **************************************
+; * zet commando regel in scrbuf
+; * in:  Zf = commando staat in (fibptr), params in (#81)
+; *     NZf = alles staat in vram
+cmd2scrbuf:	push	af
+		ld	hl,(nambas)
+		ld	de,22*80
+		add	hl,de
+		call	setrd
+		pop	af
+		ld	hl,scrbuf+22*80
+		ld	b,80
+		jr	z,cmd2scrb2
+		inir			; lees commando uit de vram
+		ret
+
+cmd2scrb2:	in	a,(c)		; neem eerst de prompt over
+		cp	' '
+		jr	z,cmd2scrb3	; prompt afgelopen
+		ld	(hl),a
+		inc	hl
+		djnz	cmd2scrb2
+cmd2scrb3:	ex	de,hl		; plak dan de filename erachteraan
+		ld	hl,(fibptr)
+		inc	hl
+cmd2scrb4:	ld	a,(hl)
+		or	a
+		jr	z,cmd2scrb5	; kopieren tot de 0-byte
+		cp	'.'
+		jr	z,cmd2scrb5	; of tot de extensie
+		ldi
+		jr	cmd2scrb4
+cmd2scrb5:	ld	hl,#81		; en neem als laatste de params over
+		jp	strcpy
+
+; **************************************
+; * zet een commando in fcb formaat
+; * in:  HL = commandline (seperator(s) voor commando)
+; *      DE = fcb addr
+; * uit: HL = pos. na commando
+cmd2fcb:	push	de
+		xor	a
+		ld	(de),a		; neem aan: default drive
+		inc	de
+		ld	a,' '
+		ld	b,11
+		call	fillmemde	; wis naam
+		xor	a
+		ld	b,16-11-1
+		call	fillmemde	; en overige bytes in fcb
+		pop	de
+cmd2fcb2:	ld	a,(hl)
+		or	a
+		ret	z
+		cp	'>'
+		ret	z		; negeer redirection
+		cp	'|'
+		ret	z		; en pipelining
+		inc	hl
+		cp	' '
+		jr	z,cmd2fcb2
+		cp	9
+		jr	z,cmd2fcb2
+		cp	';'
+		jr	z,cmd2fcb2
+		cp	':'
+		jr	z,cmd2fcb2
+		dec	hl		; ga op 1ste char staan
+		push	de		; onthoud fcb pos
+		ex	de,hl		; DE = 1ste char filename
+		call	parsepath
+		ex	de,hl		; HL = name end, DE = lastitem
+		xor	a
+		sbc	hl,de		; kijk of lastitem wel bestaat
+		pop	hl		; HL = fcb pos
+		jr	z,$+3		; geen last item => 0
+		inc	a		; wel last item => 1
+		bit	2,b		; drive specified ?
+		jr	z,cmd2fcb3	; nee => niet invullen
+		ld	(hl),c		; ja => vul drive in
+cmd2fcb3:	or	a		; last item specified ?
+		jr	z,cmd2fcb4	; nee => dus niet overnemen
+		inc	hl
+		BDOS	#5c		; zet naam om in fcb
+cmd2fcb4:	ex	de,hl		; HL = (next) seperator
+		ret
+
+fillmemde:	ld	(de),a
+		inc	de
+		djnz	fillmemde
+		ret
+
+; **************************************
+; * set the correct path colors above the dir windows
+; * in: A = dirside (0 = left, 1 = right)
+; * note: both dirwindows must be on prior to calling this function
+setpathcolors:	or	a
+		ld	hl,42		; xpos te resetten pathname
+		ld	de,lpath	; te inverteren pathname
+		ld	bc,2		; xpos te inverteren pathname
+		jr	z,setpclr2
+		ld	c,l		; xpos te inverteren pathname
+		ld	hl,2		; xpos te resetten pathname
+		ld	de,rpath	; te inverteren pathname
+setpclr2:	push	bc
+		push	de
+		call	respathname	; wis de oude pathname
+		pop	de
+		pop	hl
+		jp	invpathname
+
+; **************************************
+; * open het juiste commando
+; * in:   HL = 256 bytes grote buffer
+; *       Zf = open (fibptr)
+; *      NZf = open %shell%
+; * uit:  Cf = mislukt
+; *      NCf = opened
+; *        B = file handle
+; *       HL = file lengte
+opencmd:	jr	z,openc2	; (fibptr) openen
+
+		call	prgrm2shell	; program = %shell%
+		jr	nz,openc4	; mislukt => geef foutmelding
+		ld_de_hl		; DE = filename
+		jr	openc3		; geluikt => open de hele boel
+
+openc2:		push	hl
+		ex	de,hl		; DE = buffer
+		ld	a,(dirside)
+		or	a
+		ld	hl,lpath
+		jr	z,$+5
+		ld	hl,rpath
+		call	strcpy		; neem path over
+		dec	hl		; ga op laatste char staan
+		ld	a,(hl)
+		cp	'\'
+		jr	z,openc2a	; eindigt op '\' => alles goed
+		ld	a,'\'
+		ld	(de),a		; oeps, zet gauw ertussen
+		inc	de
+openc2a:	ld	hl,(fibptr)
+		inc	hl
+		call	strcpy		; en de filenaam
+		ld	(de),a		; sluit wel nog af met een 0-byte
+		pop	de
+		push	de
+		ld	hl,PROGRAMvar
+		BDOS	#6c		; PROGRAM = path\filename
+		pop	hl		; HL = buffer
+		ld	de,(fibptr)	; DE = te openen fib
+
+openc3:		call	openc5
+		ret	nc		; everything okidoki
+openc4:		ld	b,a		; B = error code
+		push	hl
+		ex	de,hl		; DE = buffer
+		BDOS	#66		; vraag foutmelding op
+		call	fprtsp
+		db	'---- ',0
+		pop	hl
+		call	fprthl
+		scf
+		ret
+
+openc5:		push	hl		; onthoud buffer
+		push	de		; onthoud filenaam of fib
+		xor	a
+		BDOS	#43		; open command2 of watever
+		pop	de
+		pop	hl
+		scf
+		ret	nz		; mislukt
+		push	bc
+		ld	hl,0
+		ld_de_hl
+		ld	a,2
+		BDOS	#4a		; zet file pointer op eind
+		pop	bc
+		push	hl
+		push	bc
+		ld	hl,0
+		ld_de_hl
+		xor	a
+		BDOS	#4a		; file pointer terug op begin
+		pop	bc
+		pop	hl
+		or	a
+		ret
+
+; **************************************
+; * onthoud de filenamen
+; * en de huidige positie in de windows
+setoldnames:	ld	a,(dirwinsflg)
+		or	a
+		ret	z		; windows zijn nog niet aangeweest
+		ld	hl,(lfibptr)
+		inc	hl
+		ld	a,(lnrfibs)
+		or	a
+		jr	nz,$+5
+		ld	hl,lnrfibs	; 0 fibs => pak een lege naam
+		ld	de,loldname
+		call	strcpy
+		ld	(de),a		; inclusief 0-byte overnemen
+
+		ld	hl,(rfibptr)
+		inc	hl
+		ld	a,(rnrfibs)
+		or	a
+		jr	nz,$+5
+		ld	hl,rnrfibs	; 0 fibs => pak een lege naam
+		ld	de,roldname
+		call	strcpy
+		ld	(de),a		; inclusief 0-byte overnemen
+		ret
+
+; **************************************
+; * parse path (outname)
+parseoutn:	ld	de,(outname)
+; **************************************
+; * parse path DE
+parsepath:	ld	b,0
+		JBDOS	#5b		; parse path name
+
+; **************************************
+; * get whole path for file/directory DE to buffer HL
+; * uit:  Z = gelukt
+; *      NZ = file/dir bestaat niet
+; *      DE = DEin
+; *      HL = HLin
+; *      IX = IXin
+getwholep:	push	ix
+		push	hl
+		push	de
+		ld_bc_hl
+		ld	hl,-64
+		add	hl,sp
+		ld	sp,hl		; reserveer ruimte voor temp fib
+		push	hl
+		pop	ix		; IX = temp fib
+		push	bc		; onthoud whole path buffer
+		ld	b,%00010110	; find everything
+		BDOS	#40		; find first file/directory
+		pop	de		; DE = whole path buffer
+		jr	nz,getwp2	; file niet gevonden!
+		BDOS	#5e		; get whole path
+getwp2:		ld	hl,64
+		add	hl,sp
+		ld	sp,hl
+		pop	de
+		pop	hl
+		pop	ix
+		ret
+
+; **************************************
+; * program = %shell%
+; * in:  HL = 256 bytes grote buffer
+; * uit:  Z = gelukt
+; *      NZ = mislukt (PROGRAM = empty)
+; *      HL = HLin
+prgrm2shell:	push	hl		; %shell% openen => haal %shell% op
+		ex	de,hl		; DE = buffer
+		ld	hl,SHELLvar
+		ld	b,255
+		BDOS	#6b		; get %shell%
+		pop	hl
+		jr	z,prgrm2s2	; gelukt => zet in program
+		ld	(hl),0		; mislukt => zet lege naam in program
+prgrm2s2:	push	af		; onthoud gelukt/mislukt status
+		push	hl
+		ex	de,hl		; DE = string
+		ld	hl,PROGRAMvar
+		BDOS	#6c		; PROGRAM = %SHELL%
+		pop	hl		; HL = buffer
+		pop	af
+		ret
+
+; **************************************
+; * maak de commandline eventueel upper cases
+; * in: HL = buffer voor UPPER var
+chkupper:	ld	de,UPPERvar
+		call	chkvaron	; kijk of var DE op ON staan
+		ret	nz		; nee => klaar
+		push	hl
+		ld	hl,#81
+chkup2:		ld	a,(hl)
+		or	a
+		jr	z,chkupdone	; klaar
+		call	upcase
+		ld	(hl),a
+		inc	hl
+		jr	chkup2
+chkupdone:	pop	hl
+		ret
+
+; **************************************
+; * kijk of filenaam HL een extensie DE bevat
+; * uit:  Cf = namen verschillend
+; *      NCf = namen hetzelfde
+chkext:		ld	a,(hl)
+		inc	hl
+		cp	'.'
+		jr	z,chkext2
+		or	a
+		scf
+		ret	z		; naam afgelopen voor extensie
+		jr	chkext
+chkext2:	ex	de,hl		; HL => ext, DE = filename
+chkext3:	ld	a,(de)
+		call	upcase
+		cp	(hl)
+		scf
+		ret	nz		; verschillend
+		or	a
+		ret	z		; helemaal hetzelfde => alles goed
+		inc	hl
+		inc	de
+		jr	chkext3
+
+; **************************************
+; * onthoud de selecties
+saveselection:	ld	a,(dirwinsflg)
+		or	a
+		ret	z		; windows zijn nog niet aangeweest
+		ld	a,(lnrfibs)
+		ld	hl,ldirbuf
+		ld	de,lselnames
+		call	savesel2	; neem de linkernamen over
+		ld	a,(rnrfibs)
+		ld	hl,rdirbuf
+		ld	de,rselnames	; en neem de rechternamen over
+
+savesel2:	ld	b,a		; B = #fibs
+		inc	b		; B = #fibs+1
+		jr	savesel5
+savesel3:	ld	a,(hl)
+		inc	a
+		jr	z,savesel4	; niet geselecteerde naam
+		push	bc
+		inc	hl
+		ld	bc,13
+		ldir			; neem de naam over
+		ld	bc,-14
+		add	hl,bc		; herstel HL
+		pop	bc
+savesel4:	ld	a,64
+		add_hl_a		; naar next fib toe
+savesel5:	djnz	savesel3
+		ret
+
+; **************************************
+; * Check if the cursor is on a file
+; * uit: Zf = cursor not on a file
+; *      NZf = cursor on a file
+; *            HL = fib of the file
+; * changes: AF
+chkcfile:	call	getnrfibs	; get # fibs in the active window
+		ret	z		; 0 fibs (or windows off)
+		call	getdflg		; get is_a_DIR flag
+		xor	16		; convert into is_a_FILE flag
+		ret
+
+; **************************************
+; * Check if the cursor is on a directory
+; * uit: Zf = cursor not on a directory
+; *      NZf = cursor on a directory
+; *            HL = fib of the file
+; * changes: AF
+chkcdir:	call	getnrfibs	; get # fibs in the active window
+		ret	z		; 0 fibs (or windows off)
+
+; **************************************
+; * Get the is_a_DIR flag of a file
+; * uit: A = is_a_DIR flag (16 = dir, 0 = file)
+; *      HL = fib van de file
+getdflg:	push	de
+		ld	l,(ix+dp_fibptr); no, check build in commands
+		ld	h,(ix+dp_fibptr+1)
+		push	hl
+		ld	de,14
+		add	hl,de
+		ld	a,(hl)		; flags
+		pop	hl
+		pop	de
+		and	16		; select subdir bit (0=file, 16=dir)
+		ret
+
+; **************************************
+; * get # fibs in the active window
+; * out: A = #fibs or 0 when the window is off
+; *      Zf = (A==0)
+getnrfibs:	ld	a,(lrstat)	; staan de windows aan ?
+		or	a
+		ret	z		; nee => fkeys niet relevant
+		ld	a,(dirside)
+		or	a
+		ld	a,(lnrfibs)
+		jr	z,$+5
+		ld	a,(rnrfibs)
+		or	a
+		ret
+
+PARAMETERSvar:	db	'PARAMETERS',0
+UPPERvar:	db	'UPPER',0
+SHELLvar:	db	'SHELL',0
+PROGRAMvar:	db	'PROGRAM',0
+ddotstr:	db	'..',0		; dubbele punt
+
+nfilestxt:	db	'000 file(s)',0
+
+tmpsavstk:	dw	0		; tijdelijke savstack voor file manip.
+					; functies (zoals F5, F8)
+
+fibptr:		dw	0		; pointer naar het fib van het
+					; uit te voeren commando
+
+comext:		db	'COM',0
+basext:		db	'BAS',0
+ldrext:		db	'LDR',0
+
+editpos:	dw	#82		; pos. in line edit buffer
+
+nrhlppages:	db	0		; #help pages
+

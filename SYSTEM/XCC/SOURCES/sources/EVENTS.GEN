@@ -1,0 +1,200 @@
+*r+
+.comment \
+ EVENTS.GEN : De system events handlers
+
+ Copyright (C) 1994-2003 Alex Wulms
+ Start date: 11-4-1994
+ De vier vaantjes 29, 3000 Leuven, BE
+ awulms@users.sourceforge.net
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License version 2 as
+ published by the Free Software Foundation.
+
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ more details.
+
+ You should have received a copy of the GNU General Public License along
+ with this program; if not, write to the Free Software Foundation, Inc., 59
+ Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+\
+		include	h:bios.mac
+		include	h:init.mac
+		include	h:popups.mac
+		include	h:misc.mac
+
+		public	abortroutine	; (disk) operation aborted
+		public	abortflg	; gets primary error code on abort
+		public	errorhandler	; disk error
+		public	diskchangeroutine; change disk
+
+; **************************************
+; * in: A = primary error code
+; *     B = secondary error code
+; *     TPA paged in and user stack active
+; *     IX, IY and REG' as when the BDOS call was made
+; * uit: -A,B ongewijzigd als een RET wordt gedaan
+; *      -hierna wordt dan automatisch een warm boot gegeven
+; *      pop hl:ret   => ga terug naar de BDOS aanroep 
+abortroutine:	pop	hl
+		ld	(abortflg),a	; remember an abort has been done
+		or	a
+		ret
+
+abortflg:	db	0		; abort code
+
+; **************************************
+; * in:   A = error code
+; *       B = physical drive
+; *       C = b0 : set if writing
+; *           b1 : set if ignore not recommended
+; *           b2 : set if auto-abort suggested
+; *           b3 : set if sector number is valid
+; *      DE = sector number
+; * uit:  A = 0 => call system error routine
+; *       1 = abort
+; *       2 = retry
+; *       3 = ignore
+errorhandler:	ld	hl,(systsp)
+		push	hl		; bewaar systsp voor bij nesting
+		ld	(systsp),sp	; onthoud system stack
+		push	af
+		ld	hl,(savstk)
+		ld	a,10		; dos gebruikt 8 bytes stack, call dos
+		sub_hl_a		; kost 2 bytes stack => reserveer 10 B
+		pop	af
+		ld	sp,hl		; naar user stack
+		call	wpopup
+		db	64,2
+		push	bc		; remember drive and action flag
+		ld	hl,-64
+		add	hl,sp
+		ld	sp,hl
+		ld	b,a		; A = error
+		ex	de,hl		; DE = buffer
+		push	de
+		ld	ix,dobdos
+		ld	c,#66
+		call	dosystsp	; voer routine IX uit met systsp
+		pop	hl
+		call	wprthl
+		ld	hl,64
+		add	hl,sp
+		ld	sp,hl
+		pop	bc		; B = drive, C = action flag
+		bit	0,c
+		jr	nz,errorhwr	; writing
+		call	wprtsp		; reading
+		db	' reading',0
+		jr	errorh1
+errorhwr:	call	wprtsp
+		db	' writing',0
+errorh1:	call	wprtsp
+		db	' drive ',0
+		ld	a,b
+		add	a,'A'-1
+		call	wputchar
+; -----------------------------------
+		bit	2,c
+		jr	z,noautoabort
+		call	wprtsp
+		db	':',13,10,'Auto abort suggested',0
+noautoabort:
+; -----------------------------------
+		bit	1,c
+		jr	nz,noignore	; ignore not recommended
+		call	wprtsp		; ignore recommended
+		db	':',13,10,'(A)bort, (R)etry or (I)gnore ? ',0
+		jr	errorh2
+noignore:	call	wprtsp
+		db	':',13,10,'(A)bort or (R)etry ? ',0
+errorh2:	ld	a,(errprevansw)
+		ld	b,a		; B = vorig antwoord
+		call	wputchar	; druk previous antwoord af
+errorh3:	ld	ix,wgetchar
+		call	dosystsp
+		cp	13
+		jr	z,errorh5	; user previous answer
+		res	5,a
+		cp	'A'
+		jr	z,errorh4	; good answer
+		cp	'R'
+		jr	z,errorh4
+		cp	'I'
+		jr	nz,errorh3
+errorh4:	ld	b,a		; new answer
+errorh5:	call	wpopdwn
+		ld	sp,(systsp)
+		pop	hl		; HL = oude systsp
+		ld	(systsp),hl	; herstel
+		ld	a,b		; A = new/previous answer
+		ld	(errprevansw),a	; onthoud answer voor volgende keer
+		ld	c,1
+		cp	'A'
+		jr	z,errorh6	; abort => 1
+		inc	c
+		cp	'R'
+		jr	z,errorh6	; retry => 2
+		inc	c		; ignore => 3
+errorh6:	ld	a,c
+		ret
+
+errprevansw:	db	'A'		; vorige antwoord op vraag A,R,(I)
+systsp:		dw	0
+
+; **************************************
+; * change disk hook
+; * in: A = new disk
+diskchangeroutine:
+		ld	hl,(systsp)
+		push	hl		; onthoud systsp voor bij nesting
+		ld	(systsp),sp	; onthoud system stack
+		push	af
+		ld	hl,(savstk)
+		ld	a,10
+		sub_hl_a		; DOS heeft 10 bytes gebruikt
+		pop	af
+		ld	sp,hl
+		push	ix
+		call	wpopup
+		db	54,1
+		push	af
+		call	wprtsp
+		db	'Insert disk for drive ',0
+		pop	af
+		call	wputchar
+		call	wprtsp
+		db	': and press any key when ready',0
+		ld	ix,wgetchar
+		call	dosystsp	; wacht op char
+		call	wpopdwn
+		pop	ix
+		ld	sp,(systsp)	; terug naar system stack
+		pop	hl
+		ld	(systsp),hl	; en herstel systsp
+		pop	hl		; verwijder ret addr
+		ret
+
+; **************************************
+; * voer routine IX uit met de systemstack ingeschakeld
+; * opm: Dit is nodig indien vanuit errorhandler of diskchangerout
+; *      een aanroep naar de BDOS wordt gedaan, dit vanwege het feit
+; *      dat errorh en diskch naar de userstack terugschakelen.
+; *      Indien nu een BDOS aanroep wordt gedaan schakelt DOS 2 weer
+; *      naar de systemstack toe en overschrijft daarmee de oude systemstack
+; *      Om dit te voorkomen dient daarom de systemstack actief te zijn op
+; *      het moment dat een BDOS routine wordt uitgevoerd!
+dosystsp:	ld	hl,(systsp)
+		ld	(systsp),sp	; onthoud user stack
+		ld	sp,hl		; terug naar system stack
+		push	hl
+		call	jpix		; explain error code
+		pop	hl
+		ld	sp,(systsp)	; terug naar user stack
+		ld	(systsp),hl	; en onthoud systemstack weer
+		ret
+jpix:		jp	(ix)
+

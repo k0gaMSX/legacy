@@ -1,0 +1,724 @@
+*r+
+.comment \
+ MISC.GEN : Diverse handige routines
+
+ Copyright (C) 1994-2003 Alex Wulms
+ Start date: 11-4-1994
+ De vier vaantjes 29, 3000 Leuven, BE
+ awulms@users.sourceforge.net
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License version 2 as
+ published by the Free Software Foundation
+
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ more details.
+
+ You should have received a copy of the GNU General Public License along
+ with this program; if not, write to the Free Software Foundation, Inc., 59
+ Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+\
+		include	h:bios.mac
+		include	h:init.mac
+		include	h:scrio.mac
+		include	h:events.mac
+		include	h:popups.mac
+		include	h:eind.mac
+
+		public	getchar		; lees karakter uit
+		public	chkfk		; check fk A     , uit: NZ = pressed
+		public	chkshift	; check shift key, uit: NZ = pressed
+		public	chkctrl		; check ctrl key , uit: NZ = pressed
+		public	chkgraph	; check graph key, uit: NZ = pressed
+		public	chkvaron	; kijk of var DE op ON staat, HL=wrkbuf
+		public	istrcmp		; comp string HL en DE, ignore case
+		public	upcase		; zet A om in uppercase
+		public	setmem		; HL = dest, A = value, B = #bytes
+		public	strcpy		; neem string TOT 0-byte over (HL->DE)
+		public	strcmp		; flags = (string HL - string DE)
+		public	strlength	; B = length of string HL (zonder 0-B)
+		public	mul16b		; DE = D * E
+		public	cp_hl_bc	; flags = (HL-BC)
+		public	dojptbl		; voer entry A van jptable HL uit
+		public	jphl		; jump naar addr HL
+		public	txtbinit	; initialize txtbuffer routines
+		public	txtbgchar	; get next char from text buffer
+		public	txtbgetfp	; get txtbuf filepointer
+		public	srch_cmd	; find a command for a filename
+		public	ld_config	; load configuration information
+
+		public	txtbfp		; filepointer for txtbuf file
+		public	txtbend		; end of txt in txtbuf
+		public	txtbpos		; current pos in txtbuf
+
+; **************************************
+; * lees karakter uit
+; * uit: A = karakter
+getchar:	push	hl
+		push	de
+		push	bc
+getch2:		ld	a,(insertflg)
+		or	a
+		jr	z,getch2a
+		call	printsp
+		db	27,'y4',27,'y5',0
+		jr	getch3
+getch2a:	call	printsp
+		db	27,'y5',0	; zet de cursor aan
+getch3:		call	prttime		; laat de system time zien
+		call	prtfkeys	; laat de functie toetsen zien
+		BDOS	#0b		; get console status
+		jr	z,getch3	; no key pressed
+		xor	a
+		ld	(abortflg),a	; geen abort geweest
+		BDOS	#7		; direct console in/out
+		call	printsp
+		db	27,'x5',27,'x4',0 ; zet de cursor weer uit
+		ld	a,(abortflg)	; this will be set if there is some
+		or	a		; input error (like ctrl/c, stop)
+		jr	nz,getch2
+		ld	a,l		; A = character
+		pop	bc
+		pop	de
+		pop	hl
+		ret
+
+; *************************************
+; * controleer functie toets
+; * in:  A = functie toets nummer (1..10)
+; * uit: NZ = f-toets wordt ingedrukt
+; * verandert: A
+chkfk:		push	af
+		call	chkshift	; controleer op shift
+		jr	z,chkfkns	; geen shift geduwd => accepteer 1..5
+		pop	af		; shift geduwd ==> accepteer 6..10
+		sub	5		; van 6..10 naar 1..5
+		jr	chkfk3		; controleer ze
+chkfkns:	pop	af
+chkfk3:		dec	a		; 1..5 => 0..4
+		cp	5
+		jr	c,chkfk4	; 0..4 ==> controleren
+		xor	a
+		ret
+chkfk4:		push	hl
+		push	de
+		add	a,a
+		ld	hl,chkfkmap
+		add_hl_a
+		ld	a,(hl)		; haal toets matrix rij nummer op
+		inc	hl
+		ld	d,.high. newkey
+		add	a,.low. newkey
+		ld	e,a
+		jr	nc,$+3
+		inc	d
+		ld	a,(de)		; DE = newkey + matrix rij
+		and	(hl)		; reset alles behalve toets
+		xor	(hl)		; maak: pressed ==> NZ,
+		pop	de		;       not pressed => Z
+		pop	hl
+		ret
+
+chkfkmap:	db	6,%00100000	; F1/F6
+		db	6,%01000000	; F2/F7
+		db	6,%10000000	; F3/F8
+		db	7,%00000001	; F4/F9
+		db	7,%00000010	; F5/F10
+
+; *************************************
+; * controleer of shift wordt ingeduwd
+; * uit: NZ = shift wordt ingeduwd
+; * verandert: A
+chkshift:	ld	a,(newkey+6)
+		and	1
+		xor	1
+		ret
+
+; *************************************
+; * controleer of ctrl wordt ingeduwd
+; * uit: NZ = ctrl wordt ingeduwd
+; * verandert: A
+chkctrl:	ld	a,(newkey+6)
+		and	2
+		xor	2
+		ret
+
+; *************************************
+; * controleer of graph wordt ingeduwd
+; * uit: NZ = graph wordt ingeduwd
+; * verandert: A
+chkgraph:	ld	a,(newkey+6)
+		and	4
+		xor	4
+		ret
+
+; **************************************
+; * kijk of environment var DE op ON staat
+; * in: HL = buffer
+; *     DE = ASCIIZ name string
+; * uit:  Zf = staat op ON
+; *      NZf = staat niet op ON
+chkvaron:	push	hl
+		ex	de,hl		; zet goed voor BDOS functie
+		ld	b,255
+		BDOS	#6b
+		pop	hl
+		ret	nz		; var afwezig => ook niet aan
+		push	hl
+		ex	de,hl
+		ld	hl,onstring
+chkvo2:		ld	a,(hl)
+		or	a
+		jr	z,chkvodone	; alles matcht
+		ld	a,(de)
+		call	upcase
+		cp	(hl)
+		jr	nz,chkvodone	; niet ON.......
+		inc	hl
+		inc	de
+		or	a
+		jr	nz,chkvo2
+chkvodone:	pop	hl
+		ret
+
+onstring:	db	'ON',0
+
+; **************************************
+; * vergelijk string HL en DE met elkaar
+; * negeer de case hierbij
+; * uit:  Z     = str HL = str DE
+; *      NZ, C  = str HL < str DE
+; *      NZ,NC  = str HL > str DE
+; * verandert: HL, DE, C, A
+istrcmp:	ld	a,(de)
+		call	upcase
+		ld	c,a
+		ld	a,(hl)
+		call	upcase
+		cp	c
+		ret	nz		; verschillend
+		or	a
+		ret	z		; tot en met het einde hetzelfde
+		inc	hl
+		inc	de
+		jr	istrcmp
+
+; **************************************
+; * zet A om in een uppercase karakter
+upcase:		cp	'a'
+		ret	c
+		cp	'z'+1
+		ret	nc
+		sub	32
+		ret
+
+; **************************************
+; * fill up a memory area
+; * in: HL = addr
+; *      A = data
+; *      B = #bytes
+; * out: B = 0
+; * changes: F
+setmem:		push	hl
+setmem2:	ld	(hl),a
+		inc	hl
+		djnz	setmem2
+		pop	hl
+		ret
+
+; **************************************
+; * neem een asciiz string TOT de 0-byte over
+; * in: HL = source
+; *     DE = destination
+; * uit: A = 0
+strcpy:		ld	a,(hl)
+		or	a
+		ret	z
+		ldi
+		jr	strcpy
+
+; **************************************
+; * vergelijk ASCIIZ string HL met ASCIIZ string DE
+; * uit: Z = (*HL == *DE)
+; *      C = (*HL < *DE)
+strcmp:		ld	a,(de)
+		cp	(hl)
+		ccf
+		ret	nz		; verschillend
+		or	a
+		ret	z		; einde string bereikt
+		inc	hl
+		inc	de
+		jr	strcmp
+
+; **************************************
+; * haal de lengte van een string op
+; * in: HL = stringptr
+; * uit: B = lengte van string (zonder 0-byte meegeteld)
+strlength:	xor	a
+		ld	b,a
+strl2:		cp	(hl)
+		ret	z		; einde gevonden
+		inc	hl
+		inc	b		; weer 1 letter gehad
+		jr	strl2
+
+; **************************************
+; * Vermenigvuldig D en E met elkaar, en
+; * geef een 16 bits uitkomst
+; * in: D,E: de factoren
+; * uit: DE,A: uitkomst, DE = uitkomst, A = MSB uitkomst
+; *      B = 0
+; * verandert: F
+mul16b:		xor	a
+		ld	b,8
+mul16b2:	rr	e
+		jr	nc,$+3		; geen 1 => niet optellen
+		add	a,d
+		rra			; schuif uitkomst lsb naar C-flag
+		djnz	mul16b2
+		rr	e		; en C-flg kan naar lsb
+		ld	d,a
+		ret
+
+; **************************************
+; * vergelijk HL en BC met elkaar
+; * uit:  C    : HL < BC
+; *      NC, Z : HL = BC
+; *      NC,NZ : HL > BC
+cp_hl_bc:	ld	a,h
+		cp	b
+		ret	c		; HL < BC
+		ret	nz		; HL > BC
+		ld	a,l
+		cp	c
+		ret
+
+; **************************************
+; * voer entry A van jptable HL uit
+dojptbl:	add	a,a
+		add_hl_a
+		ld	a,(hl)
+		inc	hl
+		ld	h,(hl)
+		ld	l,a
+; **************************************
+; * jump naar addr HL
+jphl:		jp	(hl)
+
+; **************************************
+; * initialize txtbuf routines
+; * in:  B = file handle
+; * out: A = file handle
+; *      HL = txtbuf
+txtbinit:	ld	hl,0
+		ld	(txtbfp),hl
+		ld	(txtbfp+2),hl	; reset txtbuf file pointer
+		ld	a,b
+		ld	(txtbfh),a	; init txtbuf filehandle
+		ld	hl,txtbuf
+		ld	(txtbend),hl
+		ld	(txtbpos),hl	; txtbuffer is nog leeg
+		ret
+
+; **************************************
+; * haal karakter uit txtbuffer
+; * in: (txtbfp, txtbfp+2) : txtbuf filepointer
+; *     (txtbfh)           : txtbuf filehandle
+; *     (txtbend)          : current end of txtbuf
+; *     (txtbpos)          : current pos in txtbuf
+; * uit:  Cf = mislukt (EOF of zo)
+; *      NCf = gelukt
+; *        A = character
+; * verandert: HL, DE
+txtbgchar:	ld	hl,(txtbend)
+		ld	de,(txtbpos)
+		or	a
+		sbc	hl,de		; HL = txtbend-txtbpos
+		call	z,txtbreadfile	; lees data uit de file
+		ret	c		; something went wrong
+		ex	de,hl		; HL = txtbpos
+		ld	a,(hl)
+		inc	hl
+		ld	(txtbpos),hl
+		ret
+
+; **************************************
+; * read data to the txtbuffer
+; * uit:  Cf = mislukt
+; *      NCf = buffer (gedeeltelijk) vol geladen
+; *       DE = nieuwe buffer positie
+; * verandert: HL, DE
+txtbreadfile:	push	bc
+		call	txtbgetfp	; DE:HL = fp bij current buf pos
+		ld	(txtbfp),hl
+		ld	(txtbfp+2),de	; remember the startpoint of the buffer
+		ld	a,(txtbfh)
+		ld	b,a		; B = filehandle to read from
+		xor	a
+		push	bc
+		BDOS	#4a		; set filehandle poiner
+		pop	bc
+		ld	de,txtbuf
+		ld	hl,1024
+		push	de
+		BDOS	#48		; read from file handle
+		pop	de
+		push	af
+		add	hl,de		; HL = #bytes + txtbuf
+		ld	(txtbend),hl
+		pop	af
+		pop	bc
+		scf
+		ret	nz
+		or	a
+		ret
+
+; **************************************
+; * bereken de filepointer bij de huidige txtbuf positie
+; * uit: DE:HL = txtbf positie
+txtbgetfp:	ld	hl,(txtbpos)
+		ld	de,txtbuf
+		or	a
+		sbc	hl,de		; HL = #bytes dat in txtbuf zat
+		ld	de,(txtbfp)
+		add	hl,de		; HL = txtbfp LSB
+		ld	de,(txtbfp+2)
+		ret	nc
+		inc	de		; DE = txtbfp MSB
+		ret
+
+; **************************************
+; * find a command, associated with a filename
+; * in:  IX = dirparam
+; *      HL = ptr to list of (filepattern, command, pass info) triplets
+; * uit:  Cf = not found
+; *       NCf = found, DE = ptr to command
+; * Note: when a filepattern has been matches, the list will be scanned
+; *       until the first non-null command has been found
+srch_cmd:	ex	de,hl		; DE = ptr to list of triplets
+		ld	hl,-22
+		add	hl,sp
+		ld	sp,hl		; reserve space for 2 fcb's
+		ld	(srchcmd_fcb1),hl; first fcb
+		ld	bc,11
+		add	hl,bc
+		ld	(srchcmd_fcb2),hl; second fcb
+		ld	l,(ix+dp_fibptr)
+		ld	h,(ix+dp_fibptr+1)
+		ld	bc,14
+		add	hl,bc
+		bit	4,(hl)		; is it a subdir?
+		scf
+		jr	nz,srch_cmd2	; yes => ignore
+		ld	bc,-13
+		add	hl,bc		; HL = filename to be found
+		ex	de,hl		; DE = filename, HL = ptr to list
+		push	hl		; store ptr to list
+		ld	hl,(srchcmd_fcb1)
+		BDOS	#5c		; put name DE in FCB HL
+		pop	hl		; HL = ptr to list
+		call	srch_cmd3	; really search for command
+srch_cmd2:	ex	af,af'		; store Cf
+		ld	hl,22
+		add	hl,sp
+		ld	sp,hl		; free stack space
+		ex	af,af'		; getback Cf
+		ret
+
+; **************************************
+; * really search for a command
+; * in:  HL = pointer to list of (filepattern, cmd, passinfo) triplets
+; *      (srchcmd_fcb1) = filepattern to be found in FCB format
+; * uit:  Cf = not found
+; *       NCf = found, DE = ptr to command
+srch_cmd3:	ld	a,(hl)
+		cp	1		; < 1 ?
+		ret	c		; yes => end of list, not found!
+		ex	de,hl		; DE = filename
+		ld	hl,(srchcmd_fcb2)
+		BDOS	#5c		; put pattern in fcb2
+		inc	de		; go to first character of cmd
+		push	de		; store ptr to first character of cmd
+		ld	b,11		; check 11 chars
+		ld	hl,(srchcmd_fcb1); filename to be found
+		ld	de,(srchcmd_fcb2); matchpattern, possibly with '?'
+srch_cmd4:	ld	a,(de)
+		cp	'?'		; wild chard?
+		jr	z,srch_cmd5	; yes, always matches
+		cp	(hl)
+		jr	nz,srch_cmd6	; to bad, not the same
+srch_cmd5:	inc	hl
+		inc	de
+		djnz	srch_cmd4	; check next character
+		pop	de		; YES, we found the pattern
+srch_cmd5a:	ld	a,(de)		; is this a command ?
+		or	a
+		ret	nz		; yes => return ptr to command
+		inc	de
+		inc	de		; no => go to next triplet
+		ld	a,(de)		; is there a next triplet?
+		cp	1
+		ret	c		; no => pattern matched but no cmd
+srch_cmd5b:	ld	a,(de)		; yes => skip pattern part to see
+		inc	de		;   if this triplet contains a command
+		or	a
+		jr	nz,srch_cmd5b
+		jr	srch_cmd5a
+		ret
+srch_cmd6:	pop	hl		; skip command
+srch_cmd7:	ld	a,(hl)		; get cmd char or terminating null
+		inc	hl
+		or	a
+		jr	nz,srch_cmd7	; haven't skipped the complete cmd
+		inc	hl		; skip pass pattern
+		jr	srch_cmd3	; try next pair
+
+srchcmd_fcb1:	dw	0		; ptr to first fcb
+srchcmd_fcb2:	dw	0		; ptr to second fcb
+
+; **************************************
+; * load configuration info
+ld_config:	ld	hl,-64
+		add	hl,sp
+		ld	sp,hl
+		push	hl
+		ex	de,hl		; DE = temporary buffer
+		ld	hl,XCCpath	; path XCC is loaded from
+		call	strcpy		; copy to buffer
+		ld	hl,cfgname
+		call	strcpy		; add xcc.cfg to path
+		ld	(de),a
+		pop	de
+		xor	a
+		BDOS	#43		; open xcc.cfg
+		ld	hl,64
+		add	hl,sp
+		ld	sp,hl
+		ret	nz		; opening xcc.cfg failed
+
+		call	txtbinit	; initialize txtbuf routines
+		push	bc
+		ld	bc,cmd_attachments
+		call	ld_cfg2
+		xor	a
+		ld	(bc),a		; place a trailing 0-byte
+		pop	bc
+		BDOS	#45		; close xcc.cfg
+; ------------------------------
+;		call	printsp
+;		db	13,10,0
+;		ld	hl,(edit_cmds)
+;		call	shw_cmds
+; ------------------------------
+		ret
+
+; ------------------------------
+;shw_cmds:	ld	a,(hl)
+;		or	a
+;		ret	z
+;		call	printhl		; print filename pattern
+;		ld	a,'.'
+;		call	putchar
+;		inc	hl
+;		call	printhl		; print command
+;		ld	a,'.'
+;		call	putchar
+;		inc	hl
+;		ld	a,(hl)
+;		call	hex4
+;		inc	hl		; go to next position
+;		call	printsp
+;		db	13,10,0
+;		jr	shw_cmds
+;
+;hex4:		and	#0f
+;		cp	10
+;		jr	c,$+4
+;		add	a,7
+;		add	a,'0'
+;		jp	putchar		; print pass flags
+; ------------------------------
+
+ld_cfg2:	call	txtbgchar
+		ret	c		; EOF reached
+		cp	'#'
+		jr	z,ldc_nl	; skip until next line
+		cp	'['
+		jr	z,ldc_gettype	; determine type
+		call	skipwspaces	; skip all white spaces before pattern
+		jr	c,ld_cfg3	; EOF or CTRL => skip until next line
+		call	txtbstrcpy	; copy match pattern
+		jr	c,ld_cfgerr	; EOF or EOL => place 2 NULL chars
+		call	skipwspaces	; skip all white spaces
+		jr	c,ld_cfgerr	; EOF or CTRL => place 2 NULL chars
+		call	txtbstrcpy	; copy command
+		jr	c,ld_cfgerr2	; EOF or EOL => place 1 NULL char
+		call	skipwspaces	; skip all white spaces
+		jr	c,ld_cfgerr2	; EOF or CTRL => place 1 NULL char
+		push	bc
+		call	ld_passpattern	; load the pass pattern
+		ld	a,b		; A = pass pattern
+		pop	bc
+		ld	(bc),a		; store pass pattern
+		inc	bc
+		ret	c		; was EOF
+		jr	ld_cfg3
+ld_cfgerr:	xor	a		; DO NOT AFFECT C-flg!
+		ld	(bc),a		; close (empty) command string
+		inc	bc
+ld_cfgerr2:	xor	a
+		ld	(bc),a		; reset pass pattern
+		inc	bc
+ld_cfg3:	ld	a,e		; A = last read character
+		jr	ldc_nl2		; skip until LF
+
+ldc_nl:		call	txtbgchar
+		ret	c		; reached EOF
+ldc_nl2:	cp	10		; LF?
+		jr	nz,ldc_nl	; no, read next char
+		ld	hl,cmd_attachments+1024-80
+		call	cp_hl_bc	; enough space?
+		jr	nc,ld_cfg2	; yes, analyze next line
+		call	printsp
+		db	13,10
+		db	"*** Could not load all configuration data"
+		db	13,10,0
+		ret
+
+ldc_gettype:	xor	a
+		ld	(bc),a		; close current list
+		inc	bc
+		call	txtbgchar
+		ret	c		; reached EOF
+		call	upcase
+		cp	'V'
+		jr	z,ldc_vtype	; V => assume view type
+		cp	'E'
+		jr	nz,ldc_nl2	; not Execute or Edit
+		call	txtbgchar
+		ret	c
+		call	upcase
+		cp	'X'
+		jr	z,ldc_extype
+		cp	'D'
+		jr	nz,ldc_nl2
+ldc_edtype:	ld	(edit_cmds),bc
+		jr	ldc_nl2
+ldc_vtype:	ld	(view_cmds),bc
+		jr	ldc_nl2
+ldc_extype:	ld	(exec_cmds),bc
+		jr	ldc_nl2
+
+; * in: A = first char of pattern
+ld_passpattern:	ld	b,0		; no pass flags set
+; ----------------------------
+;		push	af
+;		call	printsp
+;		db	'parsing pass pattern: ',0
+;		pop	af
+; ----------------------------
+		jr	ld_passp1a	; don't read character the 1st time
+ld_passp1:
+		call	txtbgchar
+		ret	c		; EOF => ok
+ld_passp1a:
+; ----------------------------
+;		push	af
+;		ld	a,b
+;		call	hex4
+;		pop	af
+; ----------------------------
+		ld	e,a		; E = last read character
+		cp	'@'		; drive, path, name or extension part?
+		jr	nz,ret_res_cf	; no => done
+		bit	2,b		; have we seen the name allready?
+		set	3,b		; assume yes, so this was the extension
+		jr	nz,ret_res_cf	; correct assumption, done
+		res	3,b		; wrong, its the drive, path or name
+		set	2,b		; assume its the filename part
+		call	txtbgchar
+		ret	c		; EOF => ok
+		ld	e,a		; E = last read character
+		cp	'.'
+		jr	z,ld_passp1	; at '.' => was correct assumption
+		cp	13
+		ret	z		; EOL => was correct assumption
+		cp	10
+		ret	z		; EOL => correct assumption
+		res	2,b		; was not a name, its a drive or path
+		bit	1,b		; have we seen the path allready?
+		jr	nz,ret_res_cf	; yes => don't check drive or path
+		cp	'\'
+		jr	z,ld_ppwaspath
+		bit	0,b		; have we seen the drive allready?
+		jr	nz,ret_res_cf	; yes => don't check drive
+		cp	':'
+		jr	nz,ret_res_cf	; was not a drive, error
+ld_ppwasdrive:	set	0,b		; pass a drive
+		jr	ld_passp1	; parse rest of string
+ld_ppwaspath:	set	1,b		; pass a path
+		jr	ld_passp1	; parse rest of string
+
+; **************************************
+; * return with a NCf
+ret_res_cf:	or	a		; return with a NCf
+		ret
+
+; **************************************
+; * skip all white spaces
+; * uit: Cf = reached EOF or a CTRL character
+; *      NCf = last read character is a non CTRL character
+; *      E = last read character or 0 at EOF
+skipwspaces:	jr	skipwspc3
+skipwspc2:	call	txtbgchar
+		ld	e,0
+		ret	c		; reached eof
+skipwspc3:	ld	e,a		; E = last read character
+		cp	9		; is it a white space ?
+		jr	z,skipwspc2	; yes => skip it
+		cp	' '
+		jr	z,skipwspc2	; also white space => skip it
+		ret			; CTRL char => Cf, rest => NCf
+
+; **************************************
+; * copy a string until EOF or a control character
+; * in:  BC = destination
+; *       A = first character to copy
+; * out: BC = next position, string is terminated with a NULL char
+; *      Cf = EOF or EOL
+; *      NCf = reached control character, A = last read character
+; *       E = last read character, or 0 at EOF
+txtbstrcpy:	ld	(bc),a		; store character
+		inc	bc
+		call	txtbgchar
+		ld	e,0
+		jr	c,txtbstrcpy2	; EOF
+		ld	e,a
+		cp	' '+1		; still a character ?
+		jr	nc,txtbstrcpy	; yes => copy
+		cp	13
+		jr	z,txtbstrcpy2	; EOL
+		cp	10
+		jr	z,txtbstrcpy2	; idem dito
+		xor	a
+		ld	(bc),a
+		inc	bc
+		ld	a,e		; A = last read character
+		ret
+txtbstrcpy2:	xor	a
+		ld	(bc),a
+		inc	bc
+		scf
+		ret
+
+cfgname:	db	'xcc.cfg',0
+
+txtbfp:		ds	4,0		; filepointer for txtbuf file
+txtbfh:		db	0		; filehandle
+txtbend:	dw	0		; end of txt in txtbuf
+txtbpos:	dw	0		; current pos in txtbuf
+

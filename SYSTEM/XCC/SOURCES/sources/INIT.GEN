@@ -1,0 +1,392 @@
+*r+
+.comment \
+ INIT.GEN : De initialisatie module
+
+ Copyright (C) 1994-2003 Alex Wulms
+ Start date: 11-4-1994
+ De vier vaantjes 29, 3000 Leuven, BE
+ awulms@users.sourceforge.net
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License version 2 as
+ published by the Free Software Foundation
+
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ more details.
+
+ You should have received a copy of the GNU General Public License along
+ with this program; if not, write to the Free Software Foundation, Inc., 59
+ Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+\
+debug:		equ	1=0
+version:	equ	3		; version of XCC code
+					; 0..1 => reserved (was dirside)
+					;    2 => xcc path introduced
+					;    3 => ASCIIZ version txt introduced
+
+		include	h:const.mac
+		include	h:bios.mac
+		include	h:main.mac
+		include	h:scrio.mac
+		include	h:rddir.mac
+		include	h:events.mac
+		include	h:misc.mac
+		include	h:eind.mac
+
+		public	vdpaddr
+		public	domsx1
+		public	domsx2
+		public	dobdos
+
+		public	XCCpath		; path where XCC was loaded from
+		public	vtxt		; text containing actual version
+
+		public	dirside		; left or right dir side (0 = left)
+		public	lrstat		; windows aan of uit (0 = uit)
+
+		public	lpath		; left window default dir path
+		public	lparams		; left dir edit params
+		public	lstat		; left window dir status
+		public	lfilter		; directory filter (dir attr value)
+		public	lfibptr		; pos in left fib buffer
+		public	loldname	; laatst gebruikte file/dir naam
+		public	lnrselnames	; #geselecteerde namen links
+		public	llogy		; logische ypos in window
+		public	lfibnr		; nummer laatst gebruikte file/dir naam
+		public	lnrfibs		; #fibs in the right dir window
+		public	lselnames	; max maxnrnames geselecteerde namen
+
+		public	rpath		; right window default dir path
+		public	rparams		; right dir edit params
+		public	rstat		; right window dir status
+		public	rfilter		; directory filter (dir attr value)
+		public	rfibptr		; pos in right fib buffer
+		public	roldname	; laatst gebruikte file/dir naam
+		public	rnrselnames	; #geselecteerde namen links
+		public	rlogy		; logische ypos in window
+		public	rfibnr		; nummer laatst gebruikte file/dir naam
+		public	rnrfibs		; #fibs in the right dir window
+		public	rselnames	; max maxnrnames geselecteerde namen
+
+		public	mkdirwindows	; maak de directory windows
+		public	mkleftwindow	; maak het linker window
+		public	mkrightwindow	; en maak het rechter window
+
+		public	savstk		; stackpos voor abort, etc
+		public	dirwinsflg	; <> 0 => windows zijn aan(geweest)
+
+		public	exec_cmds	; ptr to the execute commands
+		public	view_cmds	; ptr to the view commands
+		public	edit_cmds	; ptr to the edit commands
+		public	cmd_attachments	; buffer holding attachment info
+
+		jp	begin
+
+		dw	resend-resbegin	; lengte van residente code
+
+; **************************************
+; * alles dat in de overlay file bijgehouden moet worden
+resbegin:
+		db	version		; version of XCC header
+
+XCCpath:	ds	64,0		; path where XCC was loaded from
+vtxt:		db	'XCC 0.20 alpha',0
+
+dirside:	db	0		; left or right dir side (0 = left)
+lrstat:		db	1		; windows aan of uit (0 = uit)
+
+lpath:		db	'H:\'
+		ds	lpath+128-$,0	; left window default dir path
+lparams:
+lstat:		db	1		; left window dir status
+lfilter:	db	%00010110	; find also dirs, system & hidden files
+lfibptr:	dw	ldirbuf
+loldname:	ds	13,0		; laatst gebruikte file/dir naam
+lnrselnames:	db	0		; #geselecteerde namen links
+llogy:		db	0		; logische ypos in window
+lfibnr:		db	0		; nummer laatst gebruikte file/dir naam
+lnrfibs:	db	0		; #fibs in the left dir window
+lselnames:	ds	13*maxnrnames,0	; buffer voor de geselecteerde namen
+
+rpath:		db	'H:\'
+		ds	rpath+128-$,0	; right window default dir path
+rparams:
+rstat:		db	1		; right window dir status
+rfilter:	db	%00010110	; find also dirs, system & hidden files
+rfibptr:	dw	rdirbuf
+roldname:	ds	13,0		; laatst gebruikte file/dir naam
+rnrselnames:	db	0		; #geselecteerde namen links
+rlogy:		db	0		; logische ypos in window
+rfibnr:		db	0		; nummer laatst gebruikte file/dir naam
+rnrfibs:	db	0		; #fibs in the right dir window
+rselnames:	ds	13*maxnrnames,0	; buffer voor de geselecteerde namen
+
+frstflg:	db	1		; true => entering XCC for first time
+
+exec_cmds:	dw	cmd_attachments	; ptr to the execute commands
+view_cmds:	dw	cmd_attachments	; ptr to the view commands
+edit_cmds:	dw	cmd_attachments	; ptr to the edit commands
+cmd_attachments:ds	1024,0		; buffer holding attachment info
+
+; **************************************
+; * einde van de residente kode
+resend:
+
+; **************************************
+; * de diverse edit parameters
+dp_stat:	equ	0		; huidige directory window status
+dp_filter:	equ	1		; dir-filter
+dp_fibptr:	equ	2		; pos in fib buffer
+dp_oldname:	equ	4		; laatst gebruikte file/dir naam
+dp_nrselnames:	equ	17		; #geselecteerde namen
+dp_logy:	equ	18		; logische ypos in window
+dp_fibnr:	equ	19		; nummer laatst gebruikte file/dir naam
+dp_selnames:	equ	20		; de geselecteerde namen
+
+; possible values for dirstat:
+; 0 = directory window off
+; 1 = displaying a subdirectory
+; 2 = displaying an archive file
+
+; **************************************
+; * start alles op
+begin:		ld	hl,7
+		ld	a,(#fcc1)
+		call	#c		; rdslot
+		ld	(vdpaddr),a
+		ld	hl,5
+		ld	a,#c3
+skipchain:	cp	(hl)		; jp instructie ?
+		jr	nz,endchain	; nee => dit is de bdos routine
+		inc	hl
+		ld	e,(hl)
+		inc	hl
+		ld	d,(hl)		; DE = volgende pos in de chain
+		ex	de,hl		; HL = volgende pos in de chain
+		jr	skipchain
+endchain:	ld	(dobdos2+1),hl	; sla addr echte bdos routine op
+		jr	start
+
+vdpaddr:	db	#98
+
+domsx1:		push	iy
+		ld	iy,(#fcc0)
+		jr	dofun1c
+
+domsx2:		push	iy
+		ld	iy,(#faf7)
+dofun1c:	call	#1c
+		pop	iy
+		ret
+
+dobdos:		push	hl
+		ld	hl,(savstk)
+		ex	(sp),hl		; onthoud oude savstk voor nesting
+		ld	(savstk),sp	; onthoud SP voor events routines
+dobdos2:	call	0		; voer de bdos routine uit
+		ex	(sp),hl
+		ld	(savstk),hl	; herstel savstk
+		pop	hl		; en pak de goede HL
+		ret
+
+start:		if	debug
+		 ld	 sp,(6)
+		endif
+		call	setbl0		; set VDP to block 0
+		ld	hl,frstflg
+		ld	a,(hl)
+		or	a
+		call	nz,frsttime	; entering XCC for the first time
+		ld	b,0
+		call	set2con		; filehandle 0 => console
+		ld	b,1
+		call	set2con		; filehandle 1 => console
+		ld	de,abortroutine
+		BDOS	#63		; define abort routine
+		ld	de,errorhandler
+		BDOS	#64		; and define disk error handler
+		ld	hl,#f24f
+		ld	de,olddiskch_hook
+		ld	bc,3
+		ldir			; onthoud de oude disk change hook
+		ld	a,#c3
+		ld	(#f24f),a
+		ld	hl,diskchangeroutine
+		ld	(#f250),hl	; set diskchange hook
+
+		ld	a,(systemx)
+		cp	1
+		jr	z,start2	; zit al aan begin van regel
+		call	printsp
+		db	13,10,0		; voer ff een newline uit
+start2:		call	printsp
+		db	13,10,0		; en scroll tot boven input lijn
+
+		call	savescreen	; onthoud het scherm, etc.
+		call	screen0		; pak screen 0, etc.
+		call	mkborders	; zet de randen erom
+		xor	a
+		ld	(lnrfibs),a	; reset nrfibs voor als de windows
+		ld	(rnrfibs),a	; uit staan
+		xor	a
+		ld	(dirwinsflg),a	; windows zijn nog niet aangeweest
+		call	mkdirwgcurdir	; maak dir windows of get current dir
+		call	mainloop	; voer de mainloop uit
+		push	hl		; onthoud terug te geven parameters
+		push	bc
+		push	af
+		call	restscreen	; herstel het scherm, etc.
+		ld	hl,#0118
+		ld	(systemy),hl	; ga op onderste regel staan
+		ld	hl,olddiskch_hook
+		ld	de,#f24f
+		ld	bc,3
+		ldir			; herstel de disk change hook
+		ld	de,0
+		BDOS	#63		; undefine abort routine
+		ld	de,0
+		BDOS	#64		; and disk error handler
+		pop	af
+		pop	bc
+		pop	hl
+		ret
+
+olddiskch_hook:	ds	3,0		; de oude diskchange hook
+
+; **************************************
+; * entering XCC for the first time
+frsttime:	ld	(hl),0		; next time isn't the first time
+		BDOS	#19		; get default drive name
+		add	a,'A'
+		ld	(lpath),a	; leftdrive = rightdrive = default drv
+		ld	(rpath),a
+		jp	ld_config	; load configuration information
+
+; **************************************
+; * maak de directory windows aan of haal de current dir op
+mkdirwgcurdir:	ld	a,(lrstat)
+		or	a		; staan de windows aan ?
+		jr	nz,mkdirwindows	; ja => maak ze aan
+		BDOS	#19		; get current drive (0=A:, 1=B:)
+		inc	a
+		ld	b,a		; B = current drive (1=A:, 2=B:)
+		ld	a,(dirside)
+		or	a
+		ld	a,(lstat)
+		ld	de,lpath
+		jr	z,mkdirwgc2
+		ld	a,(rstat)
+		ld	de,rpath
+mkdirwgc2:	jp	getdirname
+
+; **************************************
+; * maak de directory windows aan
+; * uit: IX = params blok van actieve window (lparams of rparams)
+mkdirwindows:	ld	a,1
+		ld	(dirwinsflg),a	; windows zijn aangeweest
+		ld	a,(dirside)
+		or	a
+		jr	nz,mkdirw2
+		call	mkrightwindow	; je zit links => maak eerst rechts
+		jr	mkleftwindow
+mkdirw2:	call	mkleftwindow	; je zit rechts => maak rechter links
+mkrightwindow:	call	prtrdborder	; idem dito voor rechts
+		call	dirright	; haal rechter directory op
+		ld	bc,(rnrselnames); C = #geselecteerde namen
+		ld	de,rselnames	; DE = geselecteerde namen
+		ld	a,(rnrfibs)
+		ld	ix,rdirbuf
+		call	chksel		; neem eventuele selectie over
+		ld	(rnrselnames),a	; onthoud nieuw # geselecteerde namen
+		jp	prtrightdir	; laat rechter directory zien
+
+mkleftwindow:	call	prtldborder	; maak de linker directory rand
+		call	dirleft		; haal linker directory op
+		ld	bc,(lnrselnames); C = #geselecteerde namen
+		ld	de,lselnames	; DE = geselecteerde namen
+		ld	a,(lnrfibs)
+		ld	ix,ldirbuf
+		call	chksel		; neem eventuele selectie over
+		ld	(lnrselnames),a	; onthoud nieuw # geselecteerde namen
+		jp	prtleftdir	; laat linker directory zien
+
+; **************************************
+; * pak screen 0 met de volgende instellingen:
+; *  - width 80, 24 lines, key off, click off
+; *  - kleuren uit klok chip
+screen0:	ld	a,80
+		ld	(linl40),a	; width 80
+		ld	a,24
+		ld	(crtcnt),a	; 24 lines
+		xor	a
+		ld	(cnsdfg),a	; key off
+		jp	chscrmod	; en naar screen 0 toe
+
+savstk:		dw	0		; stackpos voor events routines
+
+; **************************************
+; * neem eventueel oude selectie over
+; * in:  C = #geselecteerde namen
+; *     DE = de geselecteerde namen 
+; *      A = #namen in de fibbuffer
+; *     IX = de fibbuffer
+; * uit: A = nieuw # geselecteerde namen
+chksel:		inc	a
+		ld	b,a		; B = #fibs+1
+		ld	l,0		; L = nieuw # geselecteerde namen
+		jr	chksel3
+chksel2:	push	bc
+		push	de
+		push	hl
+		bit	4,(ix+14)	; is het een directory ?
+		call	z,chksel4	; nee => kijk of naam in lijst zit
+		pop	hl
+		pop	de
+		jr	nz,chksel2a	; nee => alles goed
+		ld	(ix+0),0	; ja => selecteer de naam
+		inc	l		; en weer 1 naam geselecteerd
+chksel2a:	ld	bc,64
+		add	ix,bc		; next fibpositie
+		pop	bc
+chksel3:	djnz	chksel2
+		ld	a,l		; A = nieuw # geselecteerde namen
+		ret
+
+chksel4:	ld	b,c		; B = #geselecteerde namen
+		inc	b
+		jr	chksel8
+chksel5:	push	ix
+		pop	hl
+		inc	hl		; HL = naam
+		push	de		; onthoud lijstpos
+chksel6:	ld	a,(de)
+		cp	(hl)
+		jr	nz,chksel7	; verschil gevonden
+		inc	hl
+		inc	de
+		or	a
+		jr	nz,chksel6	; namen nog niet op
+		pop	de
+		ret			; naam is hetzelfde => klaar
+chksel7:	ld	hl,13
+		pop	de
+		add	hl,de		; next name
+		ex	de,hl		; DE = next lijstpos
+chksel8:	djnz	chksel5
+		xor	a
+		inc	a
+		ret			; niet gevonden
+
+; **************************************
+; * set filehandle B to console
+set2con:	BDOS	#45		; close file handle
+		ld	de,contxt
+		ld	a,4		; handle must be inheritable!
+		JBDOS	#43		; en re-open met als device 'con'
+
+contxt:		db	'CON',0
+dirwinsflg:	db	0		; <> 0 => windows zijn aan(geweest)
+

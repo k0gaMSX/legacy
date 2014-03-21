@@ -1,0 +1,188 @@
+*l-
+; algemene macros, afgeleid van bios.gen
+dos:		equ	1=1		; true als dos programma
+
+; Copyright (C) 2003 Alex Wulms
+; De vier vaantjes 29, 3000 Leuven, BE
+; awulms@users.sourceforge.net
+
+
+; This program is free software; you can redistribute it and/or modify
+; it; under the terms of the GNU General Public License version 2 as
+; published by the Free; Software Foundation.
+
+
+; This program is distributed in the hope that it will be useful, but
+; WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+; or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+; more details.
+
+; You should have received a copy of the GNU General Public License along
+; with this program; if not, write to the Free Software Foundation, Inc., 59
+; Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+add_hl_a:	MACRO
+		add	a,l
+		ld	l,a
+		jr	nc,$+3
+		inc	h
+		ENDM
+
+sub_hl_a:	MACRO
+		cpl
+		add	a,l
+		ld	l,a
+		ld	a,255
+		adc	a,h
+		ld	h,a
+		inc	hl
+		ENDM
+
+ld_hl_bc:	MACRO
+		ld	l,c
+		ld	h,b
+		ENDM
+
+ld_bc_hl:	MACRO
+		ld	c,l
+		ld	b,h
+		ENDM
+
+
+ld_hl_de:	MACRO
+		ld	l,e
+		ld	h,d
+		ENDM
+
+ld_de_hl:	MACRO
+		ld	e,l
+		ld	d,h
+		ENDM
+
+ld_bc_de:	MACRO
+		ld	c,e
+		ld	b,d
+		ENDM
+
+ld_de_bc:	MACRO
+		ld	e,c
+		ld	d,b
+		ENDM
+
+locate:		MACRO	@x,@y		; escape code voor locate
+		db	27,"Y",@y+31,@x+31
+		ENDM
+
+
+MSX1:		MACRO	@adres		; roep routine in MSX-1 rom bios aan
+		if	dos
+		  ld	ix,@adres
+		  call	domsx1		; onder dos ==> via interslot call
+		else
+		  call	@adres		; onder (disk) basic ==> via directe
+		endif			; call
+		ENDM
+
+JMSX1:		MACRO	@adres		; roep routine in MSX-1 rom bios aan
+		if	dos
+		  ld	ix,@adres
+		  jp	domsx1		; onder dos ==> via interslot call
+		else
+		  jp	@adres		; onder (disk) basic ==> via directe
+		endif			; call
+		ENDM
+
+MSX2:		MACRO	@adres		; roep routine in MSX-2 subrom aan
+		ld	ix,@adres
+		call	domsx2
+		ENDM
+
+JMSX2:		MACRO	@adres		; roep routine in MSX-2 subrom aan
+		ld	ix,@adres
+		jp	domsx2
+		ENDM
+
+BDOS:		MACRO	@functie	; roep bdos functie @functie aan
+		ld	c,@functie
+		call	dobdos		; voer bdos routine uit
+		ENDM
+
+JBDOS:		MACRO	@functie	; roep bdos functie @functie aan
+		ld	c,@functie
+		jp	dobdos		; voer bdos routine uit
+		ENDM
+
+FCB:		MACRO	@nr,@drive,@naam,@extensie 
+		db	@drive
+fcbname@nr:	db	"@naam"
+		ds	8 + fcbname@nr - $, ' ' ; aanvullen tot 8 letters
+fcbext@nr:	db	"@extensie"
+		ds	3 + fcbext@nr - $, ' '  ; aanvullen tot 3 letters
+		dw	0		; current blok
+reclen@nr:	dw	1
+fillen@nr:	dw	0		; file size
+		ds	15,0		; datum, tijd, device ID + directory
+					; allocation, first & last cluster,
+					; last cluster rel., current record
+recnum@nr:	dw	0		; random record
+		dw	0		; 2e helft random record 
+		ENDM
+
+setdma:		equ	#1a		; set transfer adress (DE)
+open:		equ	#0f		; open file, DE = addr FCB
+create:		equ	#16		; create file, DE = addr FCB
+close:		equ	#10		; close file, DE = addr FCB
+readrec:	equ	#27		; read record, DE = FCB, HL = # records
+writerec:	equ	#26		; write record, DE = FCB, HL = # rec.
+
+fcbpar1:	equ	#5c		; fcb eerste argument
+fcbpar2:	equ	#6c		; fcb tweede argument
+
+dppage:		equ	#faf5		; display page
+acpage:		equ	#faf6		; active page
+logopr:		equ	#fb02		; logische vdp operatie
+atrbyt:		equ	#f3f2		; vdp kleur (lijn,pset,etc.)
+
+systemy:	equ	#f3dc
+systemx:	equ	#f3dd
+
+scrmod:		equ	#fcaf		; huidige scherm mode
+linl40:		equ	#f3ae		; breedte in 40/80 koloms mode
+crtcnt:		equ	#f3b1		; scherm hoogte
+linlen:		equ	#f3b0		; huidige scherm breedte
+nambas:		equ	#f922		; startpos van namen table
+cgpbas:		equ	#f924		; char generator pattern table
+cnsdfg:		equ	#f3de		; fkey statys
+
+newkey:		equ	#fbe5		; keyboard matrix
+
+insertflg:	equ	#fca8		; INS wel/niet actief
+
+jiffy:		equ	#fc9e		; interrupt counter
+*l+
+
+
+
+		 db	#ba, #0d, #01	; mov dx, #010d (error melding)
+		 db	#b4, #09	; mov ah, #09   (print string)
+		 db	#cd, #21	; int 21h
+		 db	#c3		; ret
+		 db	'MSX Program !!$'
+
+msx__noerr:	 ld	hl,7
+		 ld	a,(#fcc1)
+		 call	#c		; rdslot
+		 ld	(vdpaddr),a
+		 jr	start
+
+vdpaddr:	 db	#98
+domsx1:		 ld	iy,(#fcc0)
+		 jp	#1c
+domsx2:		 ld	iy,(#faf7)
+		 jp	#1c
+start:
+		endif
+*l+
+
+
+

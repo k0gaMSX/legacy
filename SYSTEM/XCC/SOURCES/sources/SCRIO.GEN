@@ -1,0 +1,1324 @@
+*r+
+.comment \
+ SCRIO.GEN : De screen in/out module
+
+ Copyright (C) 1994-2003 Alex Wulms
+ Start date: 11-4-1994
+ De vier vaantjes 29, 3000 Leuven, BE
+ awulms@users.sourceforge.net
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License version 2 as
+ published by the Free Software Foundation.
+
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ more details.
+
+ You should have received a copy of the GNU General Public License along
+ with this program; if not, write to the Free Software Foundation, Inc., 59
+ Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+\
+		include	h:bios.mac
+		include	h:init.mac
+		include	h:main.mac
+		include	h:misc.mac
+		include	h:rddir.mac
+		include	h:eind.mac
+
+		public	savescreen	; onthoud het scherm, etc
+		public	restscreen	; herstel het scherm, etc
+		public	chscrmod	; verander de scherm mode
+		public	mkborders	; maak de border teksten
+		public	prtfkeys	; druk de 'normale' fkeys af
+		public	prttime		; druk de system time af
+		public	prtprompt	; zet de prompt op het scherm
+		public	prtcmdline	; druk de ingetypte commando's af
+		public	prtldborder	; maak de linker directory rand
+		public	prtrdborder	; en maak de rechter directory rand
+		public	fillvrm		; stuur B maar A naar vdp (poort C)
+		public	prtleftdir	; laat de linker directory inhoud zien
+		public	prtldcont	; laat alleen de linker inhoud zien
+		public	prtrightdir	; laat de rechter directory inhoud zien
+		public	prtrdcont	; laat alleen de rechter inhoud zien
+		public	prtdir		; laat een directory inhoud zien
+		public	prtdpath	; druk directory path af
+		public	invpathname	; inverteer path name
+		public	respathname	; reset de path name inversie
+		public	allcon		; zet alle cursors aan
+		public	allcoff		; zet alle cursors uit
+		public	curon		; zet de grote cursor aan
+		public	curoff		; en weer uit
+		public	setselection	; zet de selectie aan/uit
+		public	int4_str	; druk 32bits getal af (HL->n, C->VDP)
+		public	printsp		; +
+		public	printhl		; ++ we all know what these are
+		public	putchar		; +
+		public	fprtsp		; +
+		public	fprthl		; ++ snelle varianten ervan
+		public	fputchar	; +
+		public	c2vaddr		; zet xpos,ypos om in vaddr
+		public	setwrt		; set vdp to addr HL (MSX 1 method)
+		public	setrd		; set vdp to addr HL (MSX 1 method)
+		public	setbl0		; set vdp to blok 0
+
+; **************************************
+; * onthoud het scherm (mits het 80 koloms is)
+savescreen:	call	svresfkeys	; onthoud en reset de fkeys
+		ld	a,(scrmod)
+		or	a
+		jr	nz,saves3	; geen 80 koloms mode => onthoud niks
+		ld	a,(linlen)
+		cp	80
+		jr	nz,saves3	; idem dito
+		ld	hl,(nambas)
+		call	setrd		; set vdp to read
+		ld	hl,scrbuf
+		ld	de,80*24
+saves2:		ini			; lees 1 byte in
+		dec	de
+		ld	a,d
+		or	e
+		jr	nz,saves2
+		ret
+
+saves3:		ld	hl,scrbuf	; geen 80 koloms mode => reset de
+		ld	de,scrbuf+1	; screen buffer
+		ld	bc,80*24-1
+		ld	(hl),' '
+		ldir
+		ret
+
+; **************************************
+; * herstel het scherm
+restscreen:	call	restfkeys
+		ld	bc,(vdpaddr)
+		inc	c
+		di
+		ld	a,#01
+		out	(c),a
+		ld	a,#8d
+		out	(c),a		; zet alternatieve kleur uit
+		ld	hl,(nambas)
+		call	setwrt		; set vdp to write
+		ld	hl,scrbuf
+		ld	de,80*24
+rests2:		outi			; schrijf 1 byte weg
+		dec	de
+		ld	a,d
+		or	e
+		jr	nz,rests2
+		ret
+
+; **************************************
+; * onthoud de functietoetsen en reset ze tevens
+svresfkeys:	ld	hl,#f87f	; fkeys
+		ld	de,oldfkeys
+		ld	a,10		; 10 keys te doen
+svresfk2:	ldi			; neem 1ste karakter over
+		dec	hl
+		ld	(hl),0		; en wis 1ste karakter
+		ld	bc,16
+		add	hl,bc		; next fkey
+		dec	a
+		jr	nz,svresfk2
+		ret
+
+; **************************************
+; * herstel de functietoetsen
+restfkeys:	ld	hl,oldfkeys
+		ld	de,#f87f
+		ld	a,10		; 10 keys te doen
+restfk2:	ldi			; neem 1ste karakter over
+		ld	bc,15
+		ex	de,hl
+		add	hl,bc		; next fkey
+		ex	de,hl
+		dec	a
+		jr	nz,restfk2
+		ret
+
+oldfkeys:	ds	10,0
+
+; **************************************
+; * verander de screen mode
+; * in: A = nieuwe screen mode
+chscrmod:	ld	hl,scrmod
+		cp	(hl)
+		jr	nz,chscrmod2	; ander scherm => zeker omschakelen
+		ld	hl,linl40
+		or	a
+		jr	z,$+3
+		inc	hl
+		ld	a,(linlen)	; A = huidige scherm breedte
+		cp	(hl)		; vergelijk met nieuwe breedte
+		ret	z		; breedte ongewijzigd => doe niks
+		ld	a,(scrmod)
+chscrmod2:	JMSX1	#5f
+		
+; **************************************
+; * maak de borders
+mkborders:	ld	hl,#800
+		ld	bc,10
+		ld	a,255
+		MSX1	#56		; zet lijn 1 op alternatieve kleur
+		ld	hl,#800+10
+		ld	bc,22*10
+		xor	a
+		MSX1	#56		; wis midden deel
+		ld	hl,#800+23*10
+		ld	bc,10
+		ld	a,%00111111
+		MSX1	#56		; onderste lijn op alternatieve kleur
+		ld	a,(#f3ea)
+		cp	2		; backcolor = 0 of 1 ?
+		ld	a,#b0		; nee => alternative color 11,0
+		jr	nc,$+4
+		ld	a,#b4		; ja => alternative color 11,4
+		ld	bc,(vdpaddr)
+		inc	c
+		di
+		out	(c),a
+		ld	a,#8c
+		out	(c),a
+		ld	a,#10
+		out	(c),a
+		ld	a,#8d
+		out	(c),a		; zet alternatieve kleur aan
+		ei
+
+		ld	hl,(cgpbas)
+		call	setwrt
+		ld	hl,myfont
+		ld	b,24
+		otir			; stel de nieuwe karakters in
+
+		ld	hl,(nambas)
+		ld	bc,80
+		ld	a,' '
+		MSX1	#56		; wis de 1ste lijn
+		ld	hl,#0101
+		ld	(systemy),hl
+		ld	hl,vtxt
+		call	fprthl		; print de versie informatie
+		ld	hl,#1401	; X = 20, Y = 1
+		ld	(systemy),hl
+		call	fprtsp
+		;	 12345678901234567890123456789012345678901234567890
+		db	'Left    Files    Commands    Op'
+		db	'tions    Right',0
+		ld	a,255
+		ld	(oldfkstat),a	; er zijn nog geen fkeys zichtbaar
+		call	prtfkeys
+		jr	prttime
+
+myfont:		db	%00010000	; char 0
+		db	%00011000
+		db	%00011000
+		db	%00011100
+		db	%00011000
+		db	%00011000
+		db	%00010000
+		db	%00010000
+
+		db	%00010000	; char 1
+		db	%00110000
+		db	%01110000
+		db	%11110000
+		db	%01110000
+		db	%00110000
+		db	%00010000
+		db	%00010000
+
+		db	%00000000	; char 2
+		db	%00010000
+		db	%00111000
+		db	%01111100
+		db	%00111000
+		db	%00010000
+		db	%00000000
+		db	%00000000
+
+; **************************************
+; * druk de systeemtijd af
+prttime:	ld	a,(jiffy)
+		ld	b,a
+		ld	hl,oldjif
+		sub	(hl)
+		cp	10		; 10 ints geweest sinds vorige update ?
+		ret	c		; nee => klaar
+		ld	(hl),b		; ja => onthoud nieuwe update tijd
+		ld	hl,71
+		call	setwrt
+		push	bc		; remember VDP dataport
+		BDOS	#2c		; gettime
+		ld	e,0		; reset sentiseconds
+		ld	bc,(oldtime)
+		ld	(oldtime),hl	; remember hours, minuts
+		call	cp_hl_bc	; comp HL, BC
+		ld	bc,(oldtime+2)
+		ld	(oldtime+2),de	; remember seconds, centiseconds
+		jr	nz,prttime2	; time has been changed
+		ex	de,hl
+		call	cp_hl_bc	; comp HL, BC
+		ex	de,hl
+prttime2:	pop	bc		; C = VDP data port
+		ret	z		; time is still the same
+		push	de
+		push	hl
+		ld	a,' '
+		ld	(nulflg),a	; 1ste keer => leading zero = spatie
+		ld	a,h
+		call	pdir2digits	; print hours
+		ld	a,':'
+		out	(c),a
+		pop	hl
+		ld	a,l
+		call	pdir2digits	; print minutes
+		ld	a,':'
+		out	(c),a
+		pop	af
+		jp	pdir2digits	; print seconds
+
+oldtime:	ds	4,0		; previous time
+oldjif:		db	0		; vorig update moment
+
+; **************************************
+; * druk de juiste functie toetsen af
+prtfkeys:	ld	hl,graphkeys
+		call	chkgraph
+		jr	nz,prtfk2	; graph => graphkeys (nr 11..20)
+		ld	hl,ctrlkeys
+		call	chkctrl
+		jr	nz,prtfk2	; ctrl => ctrlkeys (nr 21..30)
+		ld	hl,nkeys	; niks => nkeys    (nr 1..10)
+prtfk2:		ld	a,(oldfkstat)
+		cp	(hl)
+		ret	z		; deze fkeys zijn al zichtbaar
+		ld	a,(hl)
+		inc	hl
+		ld	(oldfkstat),a	; neem de nieuwe fkeys status
+		push	hl
+		ld	hl,23*80
+		call	setwrt
+		pop	hl
+		ld	b,80
+		otir			; laat de fkeys zien
+		ret			; en thats all folks
+
+		;	 1234567812345678123456781234567812345678
+nkeys:		db	0
+; *------------
+;		db	' 1Help   2       3View   4Edit   5Copy  '
+;		db	' 6RenMov 7Mkdir  8Delete 9PullDn10Quit  ',0
+; *------------
+; *------------
+		db	' 1Help   2       3View   4Edit   5Copy  '
+		db	' 6RenMov 7Mkdir  8Delete 9      10Quit  ',0
+; *------------
+
+graphkeys:	db	1
+		db	' 1LftDrv 2RgtDrv 3       4       5      '
+		db	' 6       7       8       9      10      ',0
+
+ctrlkeys:	db	2
+		db	' 1       2       3       4       5      '
+		db	' 6       7       8       9      10      ',0
+
+oldfkstat:	db	255
+
+; **************************************
+; * zet de prompt op het scherm
+; * opm: laat IX ongewijzigd
+prtprompt:	ld	hl,22*80
+		ld	bc,80
+		ld	a,' '
+		push	ix
+		MSX1	#56		; wis de oude prompt regel
+		pop	ix
+		ld	hl,#0117
+		ld	(systemy),hl	; ga naar begin van de regel toe
+
+		ld	hl,-255
+		add	hl,sp
+		ld	sp,hl		; maak buffer
+; *---------------
+;		push	hl
+;		call	fprtsp
+;		db	'{ ',0
+;		ld	hl,lpath
+;		call	fprthl
+;		call	fprtsp
+;		db	' }{ ',0
+;		ld	hl,rpath
+;		call	fprthl
+;		call	fprtsp
+;		db	' }',0
+;		call	fputchar
+;		pop	hl
+; *---------------
+		ld	de,lpath
+		ld	a,(dirside)
+		or	a,
+		jr	z,$+5
+		ld	de,rpath
+		ld	a,(de)
+		inc	de
+		call	fputchar	; druk drive af
+		push	de
+		ld	de,PROMPTvar
+		call	chkvaron	; kijk of prompt ON staat
+		pop	hl
+		call	z,fprthl	; ja => druk hele path af
+		ld	a,'>'
+		call	fputchar
+		ld	hl,255
+		add	hl,sp
+		ld	sp,hl
+		ret
+
+PROMPTvar:	db	'PROMPT',0
+
+; **************************************
+; * druk de ingetypte commando's af
+; * in: cursor staat achter de prompt (de prompt is net afgedrukt)
+prtcmdline:	ld	hl,#82		; letters staan vanaf #82
+		ld	a,(#80)		; (#80) = #ingetypte letters
+		ld	b,a
+		inc	b
+		jr	prtcmdl3
+prtcmdl2:	ld	a,(hl)
+		inc	hl
+		call	fputchar
+prtcmdl3:	djnz	prtcmdl2
+		ret
+
+
+; **************************************
+; * maak de linker directory border
+prtldborder:	ld	a,(lstat)	; directory status
+		ld	hl,80		; start addr voor characters
+		ld	de,0		; alternatieve color offset
+		jr	prtdirborder
+
+; **************************************
+; * maak de rechter directory border
+prtrdborder:	ld	a,(rstat)
+		ld	hl,80+40
+		ld	de,5
+
+prtdirborder:	or	a
+		ret	z		; dir staat uit => doe niks
+		push	hl
+		ld	hl,#800+10
+		add	hl,de
+		ld	bc,5
+		xor	a
+		MSX1	#56		; wis alternatieve kleur
+		pop	hl
+
+		call	prtdsetaddr	; stel addr in en naar next line toe
+		ld	a,#18
+		out	(c),a
+		ld	a,#17
+		ld	b,38
+		call	fillvrm
+		ld	a,#19
+		out	(c),a		; +-----------------+
+
+		ld	b,19
+prtdirb2:	push	bc
+		call	prtdsetaddr	; stel addr in en naar next line toe
+		ld	a,#16
+		out	(c),a
+		ld	a,' '
+		ld	b,38
+		call	fillvrm
+		ld	a,#16
+		out	(c),a		; |                 |
+		pop	bc
+		djnz	prtdirb2
+
+		call	prtdsetaddr
+		ld	a,#1a
+		out	(c),a
+		ld	a,#17
+		ld	b,38
+		call	fillvrm
+		ld	a,#1b
+		out	(c),a		; +-----------------+
+		ret
+
+
+; **************************************
+; * stel addr in en naar next line toe
+prtdsetaddr:	call	setwrt
+		ld	de,80
+		add	hl,de
+		ret
+
+; **************************************
+; * stuur B maal A naar de vram
+fillvrm:	out	(c),a
+		or	a
+		djnz	fillvrm
+		ret
+
+; **************************************
+; * laat de linker directory zien (pathname + contents)
+prtleftdir:	ld	a,(lstat)
+		or	a
+		ret	z		; uit => doe niks
+		ld	de,lpath
+		ld	hl,2
+		call	prtdpath	; druk directory path af
+		ld	a,(dirside)
+		ld	hl,2
+		ld	de,lpath
+		or	a
+		call	z,invpathname	; inverteer linker dir
+
+; **************************************
+; * laat de linker directory inhoud zien
+; * probeer op de oude filenaam te gaan staan
+prtldcont:	ld	ix,lparams
+		ld	hl,ldirbuf
+		ld	(lfibptr),hl
+		ld	a,(lnrfibs)
+		ld	de,loldname
+		ld	bc,2
+		jr	prtlrdcont
+
+; **************************************
+; * laat de rechter directory inhoud zien (pathname + contents)
+prtrightdir:	ld	a,(rstat)
+		or	a
+		ret	z		; staat uit
+		ld	de,rpath
+		ld	hl,42
+		call	prtdpath	; druk directory path af
+		ld	a,(dirside)
+		ld	hl,42
+		ld	de,rpath
+		or	a
+		call	nz,invpathname	; inverteer rechter dir
+
+; **************************************
+; * laat de rechter directory inhoud zien
+; * en probeer op de oude filenaam te gaan staan
+prtrdcont:	ld	ix,rparams
+		ld	hl,rdirbuf
+		ld	(rfibptr),hl
+		ld	a,(rnrfibs)
+		ld	de,roldname
+		ld	bc,42
+
+; **************************************
+; * laat de linker of rechter directory inhoud zien
+; * probeer op de oude filenaam te gaan staan
+prtlrdcont:	push	bc		; onthoud xpos
+		ld	b,a		; B = #fibs
+		ld	c,0		; nog 0 fibs bekeken
+		inc	b
+		jr	prtlrdc3
+prtlrdc2:	push	hl
+		push	de
+		inc	hl		; ga op de naam staan
+		call	strcmp		; vergelijk de namen met elkaar
+		pop	de
+		pop	hl
+		jr	z,prtlrdc4	; gevonden => naar deze dir toe
+		ld	a,64
+		add_hl_a		; next fib
+		inc	c		; weer 1 gehad
+prtlrdc3:	djnz	prtlrdc2
+		ld	a,(ix+dp_fibnr)	; A = laatst gebruikte fib
+		ld	b,(ix+dp_nrfibs)
+		cp	b		; vergelijk met huidig aantal fibs
+		jr	c,prtlrdc3a	; fibnum < #fibs => alles goed
+		ld	a,b
+		or	a
+		jr	z,prtlrdc3a	; er zijn 0 fibs => ga op pos 0 staan
+		dec	a		; pak laatste fib
+prtlrdc3a:	ld	c,a		; C = fibnr
+		ld	l,a
+		ld	h,0		; HL = fibnr
+		add	hl,hl		; *2
+		add	hl,hl		; *4
+		add	hl,hl		; *8
+		add	hl,hl		; *16
+		add	hl,hl		; *32
+		add	hl,hl		; *64
+		ld	e,(ix+dp_fibptr)
+		ld	d,(ix+dp_fibptr+1); DE = fibbuffer
+		add	hl,de		; ga op juiste fibpositie staan
+		ld	a,b		; A = #fibs
+		sub	c		;     -fibnr
+		ld	b,a		; B = #fibs-fibnr
+prtlrdc4:	ld	(ix+dp_fibptr),l
+		ld	(ix+dp_fibptr+1),h; ga op de dir staan
+		ld	a,c
+		ld	(ix+dp_fibnr),a	; onthoud fibnr
+		cp	18
+		jr	c,$+4
+		ld	a,18
+		ld	(ix+dp_logy),a	; logy <= 18
+		ld	a,c
+		add	a,b		; A = totaal #fibs
+		ld	b,a		; B = totaal #fibs
+		ld	c,(ix+dp_stat)	; C = dirstat
+		ex	de,hl		; DE = nieuwe fib
+		ld	l,(ix+dp_logy)
+		ld	h,0		; HL = logy
+		add	hl,hl		; *2
+		add	hl,hl		; *4
+		add	hl,hl		; *8
+		add	hl,hl		; *16
+		add	hl,hl		; *32
+		add	hl,hl		; *64
+		ex	de,hl		; HL = nieuwe fib, DE = 64*logy
+		sbc	hl,de		; HL = fib die bovenaan komt
+		pop	de		; DE = xpos
+		push	ix
+		push	hl
+		pop	ix		; IX = fib die bovenaan komt
+		ex	de,hl		; HL = xpos
+		ld	a,c		; A = dirstat
+		call	prtdir		; print de directory opnieuw uit
+		pop	ix
+		ret
+
+prtlrdc5:	pop	hl		; HL = xpos
+		push	ix
+		call	prtlrdc6
+		pop	ix
+		ret
+
+prtlrdc6:	xor	a
+		ld	(ix+dp_logy),a
+		ld	(ix+dp_fibnr),a	; cursor komt helemaal bovenaan
+
+		ld	b,c		; B = #fibs
+		ld	a,(ix+dp_stat)	; A = status
+		ld	e,(ix+dp_fibptr)
+		ld	d,(ix+dp_fibptr+1)
+		push	de
+		pop	ix		; IX = dirbuf
+
+; **************************************
+; * laat een directory zien
+; * in: A  = dirstat
+; *     IX = dirbuf
+; *     HL = xpos van de inhoud
+; *      B = #fibs
+; * opbouw dirwindow:
+; * xpos: 23456789012345678901234567890123456789
+; * char: FILENAME EXTxxx12345678 yy-mm-dd hh:mm
+; * xxx zijn de attributen h, r en s in de volgorde hrs
+; * als er maar 1 attribuut is, staan ze in het midden, anders naar links
+; * uitgelijnd
+prtdir:		or	a
+		ret	z		; directory staat uit
+		dec	a
+		ret	nz		; archives nog niet
+		dec	l		; 1 minder want border gaat ook mee
+		ld	h,l		; H = xpos
+		ld	l,3		; L = ypos
+		inc	b		; B = #fibs + 1
+		ld	a,19+1
+		jr	z,prtdir1	; #fibs = 255
+		cp	b
+		jr	nc,prtdir3
+prtdir1:	ld	b,a		; maximaal 19+1 namen tegelijk
+		jr	prtdir3
+prtdir2:	push	bc
+		push	hl
+		ld	(systemy),hl	; pak naampos
+		ld	a,(ix+0)
+		cp	255		; is de naam geselecteerd ?
+		ld	a,#16
+		jr	z,$+4		; nee => |
+		ld	a,#00		; ja =>  >
+		push	af
+		call	fputchar	; zet vdp goed
+		ld	a,(vdpaddr)
+		ld	c,a
+		call	pdirname	; druk de naam af
+		call	pdirattr	; druk de attributen af
+		call	pdirsize	; de grootte
+		call	pdirdate	; de datum
+		call	pdirtime	; en de tijd
+		pop	af
+		jr	z,$+4
+		ld	a,#01
+		out	(c),a
+		ld	de,64
+		add	ix,de		; next fib
+		pop	hl
+		inc	l		; next y
+		pop	bc
+prtdir3:	djnz	prtdir2
+		ret
+
+; **************************************
+; * druk directory path af
+; * in:  A = dirstat
+; *     DE = path
+; *     HL = xpos
+prtdpath:	or	a
+		ret	z
+		cp	1
+		jr	z,prtdp2	; subdir => druk af
+		ret
+prtdp2:		ld	h,l
+		ld	l,2
+		ld	(systemy),hl	; sla x,y op
+		ld_hl_de		; HL = begin van naam
+		call	strlength	; B = length(string hl)
+		inc	b
+		inc	b		; 2 extra vanwege spaties eromheen
+		ld	a,38
+		sub	b		; A = 38-lengte
+		jr	c,prtdp5	; past niet helemaal
+		srl	a		; A = 38-lengte/2 = #spaties links
+		ld	hl,systemx
+		add	a,(hl)
+		ld	(hl),a		; goed uitlijnen
+		ex	de,hl		; HL = begin van naam
+		ld	a,' '
+		call	fputchar	; druk 1 spatie af
+		jr	prtdp7		; en druk de directory af
+prtdp5:		neg			; A = lengte-38 = #te skippen karakters
+		add	a,3		; +3 vanwege ...
+		push	af
+		ex	de,hl		; HL = begin van naam
+		ld	a,' '
+		call	fputchar	; druk 1 spatie af
+		ld	b,3
+prtdp6:		ld	a,(hl)
+		call	fputchar
+		inc	hl
+		djnz	prtdp6		; uitvoer => D:\
+		call	fprtsp
+		db	'...',0		; uitvoer => D:\...
+		pop	af		; A = #te skippen karakters
+		add_hl_a		; skip ze
+prtdp7:		call	fprthl		; print de rest uit
+		ld	a,' '
+		jp	fputchar	; en zet een spatie erachter
+
+; **************************************
+; * druk de naam uit fib IX af
+; * in:  IX = fib
+; *       C = vdp data poort
+; * uit:  C = vdp data poort
+pdirname:	push	ix
+		pop	hl
+		inc	hl		; ga op naam staan
+		ld	a,(hl)
+		cp	'.'
+		ld	b,12
+		jr	z,pdirn2	; '.' of '..' entry
+		ld	b,8
+		call	pdirn1		; print tot extensie (of tot einde)
+		ld	a,' '
+		out	(c),a
+		ld	a,(hl)		; A = leading period or NULL
+		or	a
+		jr	z,$+3
+		inc	hl		; skip period
+		ld	b,3
+
+pdirn1:		ld	a,(hl)
+		or	a
+		jr	z,pdirn3	; naam op => nu nog uitvullen
+		cp	'.'
+		jr	z,pdirn3	; idem dito
+		out	(c),a
+		inc	hl
+		djnz	pdirn1
+		ret
+
+pdirn2:		ld	a,(hl)
+		or	a
+		jr	z,pdirn3	; naam op => nu nog uitvullen
+		out	(c),a
+		inc	hl
+		djnz	pdirn2
+		ret
+
+pdirn3:		jr	pdirfillout
+
+; **************************************
+; * druk de attributen af in de volgorde hrs
+; * in:  IX = fib
+; *       C = vdp data poort
+; * uit:  C = vdp data poort
+pdirattr:	ld	b,3
+		ld	a,(ix+14)	; A = attr
+		and	%00000111	; A = shr bits
+		jr	z,pdirfillout	; geen bits geset
+		ld	d,a		; onthoud attr bits
+		jp	pe,pdirat2	; even pariteit => 2 bits geset
+		cp	7
+		jr	z,pdirat2	; 3 bits geset
+		ld	a,' '		; 1 bit geset => centreren
+		call	pdirat3
+pdirat2:	ld	a,'h'
+		bit	1,d
+		call	nz,pdirat3
+		ld	a,'r'
+		bit	0,d
+		call	nz,pdirat3
+		ld	a,'s'
+		bit	2,d
+		call	nz,pdirat3
+		jr	pdirfillout
+
+pdirat3:	out	(c),a
+		dec	b
+		ret
+
+; **************************************
+; * vul een onderdeel uit met B spaties
+; *       C = vdp data poort
+; * uit:  C = vdp data poort
+; * opm: B mag 0 zijn
+pdirfillout:	inc	b
+		jr	pdirfo3
+pdirfo2:	ld	a,' '
+		out	(c),a
+pdirfo3:	djnz	pdirfo2
+		ret
+
+; **************************************
+; * druk de grootte uit fib IX af
+; * in:  IX = fib
+; *       C = vdp data poort
+; * uit:  C = vdp data poort
+pdirsize:	bit	4,(ix+14)	; dir of file name ?
+		jr	nz,pdirs2	; dir name => no size but ' <dir> '
+		push	ix
+		pop	hl
+		ld	de,21
+		add	hl,de		; ga op filesize staan
+		call	int4_str	; druk filesize af
+		bit	0,(ix+0)
+		ld	a,' '
+		jr	nz,$+4		; niet geselecteerd => spatie
+		ld	a,#02		; wel geselecteerd  => <>
+		out	(c),a
+		ret
+
+pdirs2:		ld	hl,pdirstxt
+		ld	b,9
+		otir
+		ret
+
+pdirstxt:	db	'  <dir>  '
+
+; **************************************
+; * druk de datum uit fib IX af
+; * in:  IX = fib
+; *       C = vdp data poort
+; * uit:  C = vdp data poort
+pdirdate:	ld	a,' '
+		ld	(nulflg),a	; 1ste keer => leading zero = spatie
+		call	pdirmm
+		ld	a,'-'
+		out	(c),a
+		call	pdirdd
+		ld	a,'-'
+		out	(c),a
+		call	pdiryy
+		bit	0,(ix+0)
+		ld	a,' '
+		jr	nz,$+4		; niet geselecteerd => spatie
+		ld	a,#02		; wel geselecteerd  => <>
+		out	(c),a
+		ret
+
+pdiryy:		ld	a,(ix+18)	; bit 7..1 = year
+		rrca
+		and	127		; A = year (0..99 => 1980..2079)
+		add	a,80
+		cp	100
+		jr	c,pdiryy2
+		sub	100		; A = laatste 2 digits van eeuw
+pdiryy2:	jr	pdir2digits	; druk 'yy' af
+
+pdirmm:		ld	l,(ix+17)
+		ld	h,(ix+18)	; bit 8..5 = month
+		add	hl,hl		; => 9..6
+		add	hl,hl		; => 10..7
+		add	hl,hl		; => 11..8
+		ld	a,h
+		and	15		; A = month
+		jr	pdir2digits	; druk 'mm' af
+
+pdirdd:		ld	a,(ix+17)	; dd
+		and	31
+		jr	pdir2digits
+
+; **************************************
+; * druk de tijd uit fib IX af
+; * in:  IX = fib
+; *       C = vdp data poort
+; * uit:  C = vdp data poort
+pdirtime:	ld	a,' '
+		ld	(nulflg),a	; 1ste keer => leading zero = spatie
+		call	pdirhour	; hour
+		ld	a,':'
+		out	(c),a
+		jr	pdirmin		; minute
+
+pdirhour:	ld	a,(ix+16)	; bit 7..3 = hours
+		rrca
+		rrca
+		rrca
+		and	31
+		jr	pdir2digits
+
+pdirmin:	ld	l,(ix+15)
+		ld	h,(ix+16)	; bit 10..5 = minutes
+		add	hl,hl		; 11..6
+		add	hl,hl		; 12..7
+		add	hl,hl		; 13..8
+		ld	a,h
+		and	63
+		jr	pdir2digits
+
+; **************************************
+; * druk een getal van maximaal 2 digits af
+; * in:   C = vdp data poort
+; *       nulflg moet goed staan voor leading zeros
+; * uit:  C = vdp data poort
+; *       (nulflg) = '0'
+pdir2digits:	ld	b,10
+		ld	e,255
+pdir2d2:	sub	b
+		inc	e
+		jr	nc,pdir2d2
+		add	a,b
+		push	af
+		ld	a,e
+		call	pdir2d3		; druk eventueel af
+		ld	a,'0'
+		ld	(nulflg),a	; laatste zeker afdrukken
+		pop	af
+pdir2d3:	add	a,'0'
+		cp	'0'
+		jr	nz,pdir2d4
+		ld	a,(nulflg)
+pdir2d4:	out	(c),a
+		ret
+
+; **************************************
+; * Maak de geinverteerde pathname
+; * in: HL = xpos (2 of 42)
+; *     DE = path name
+invpathname:	push	hl
+		ex	de,hl		; HL = pathname
+		call	strlength	; B = length(string hl)
+		inc	b
+		inc	b		; 2 extra vanwege spaties erom
+		ld	a,38
+		sub	b		; centreren
+		jr	nc,invpn2
+		ld	b,38
+		xor	a		; maximaal 38 letters, op xpos = 0
+invpn2:		srl	a		; centreren
+		inc	a		; A = startx
+		ld	hl,0
+		ld	(invpnbuf),hl
+		ld	(invpnbuf+2),hl
+		ld	(invpnbuf+3),hl	; wis de buffer
+invpn3:		push	bc
+		push	af
+		call	invpn4		; set bit A in invpnbuf
+		pop	af
+		inc	a
+		pop	bc
+		djnz	invpn3
+		pop	hl		; HL = startx
+		srl	l
+		srl	l
+		srl	l		; /8 => goede startgroep
+		ld	de,#800+10
+		add	hl,de
+		call	setwrt
+		ld	hl,invpnbuf
+		ld	b,5
+		otir			; en naar vram
+		ret
+
+invpn4:		ld	e,a
+		srl	a
+		srl	a
+		srl	a
+		ld	hl,invpnbuf
+		add_hl_a		; A = set/res pos in buffer
+		ld	a,e
+		and	7		; A = 7 - bit nummer
+		ld	e,128		; van links naar rechts laten lopen
+		inc	a
+invpn5:		dec	a
+		jr	z,invpn6
+		srl	e
+		jr	invpn5
+invpn6:		ld	a,e
+		or	(hl)
+		ld	(hl),a
+		ret
+
+invpnbuf:	ds	5,0
+
+; **************************************
+; * Zet de path name inversie uit
+; * in: HL = xpos (2 of 42)
+respathname:	srl	l
+		srl	l
+		srl	l		; L = goede offset
+		ld	de,#800+10
+		add	hl,de
+		call	setwrt
+		ld	b,5
+		xor	a
+respn2:		out	(c),a
+		or	a
+		djnz	respn2
+		ret
+
+; **************************************
+; * zet de typcursor en de grote cursor aan
+allcon:		call	printsp
+		db	27,'y5',0	; en typcursor weer aan
+		jr	curon
+
+; **************************************
+; * zet de typcursor en de grote cursor uit
+allcoff:	call	printsp
+		db	27,'x5',0	; zet de typecursor uit
+		jr	curoff		; zet de grote cursor uit
+
+; **************************************
+; * zet de cursor aan
+; * in: (llogy) or (rlogy) = logische cursory (0..18)
+; *     (dirside)          = kant van window waar cursor in zit
+curon:		ld	a,(lrstat)
+		or	a
+		ret	z		; dir staat uit
+		ld	de,curondata
+		jr	curonoff
+
+; **************************************
+; * zet de cursor uit
+; * in: (logy)    = logische cursory (0..18)
+; *     (dirside) = kant van window waar cursor in zit
+curoff:		ld	de,curoffdata
+
+; **************************************
+; * zet de cursor aan of uit
+; * in: (logy)    = logische cursory (0..18)
+; *     (dirside) = kant van window waar cursor in zit
+; *     DE        = cursor data
+curonoff:	ld	a,(dirside)
+		ld	hl,#800+20
+		or	a
+		jr	z,$+5
+		ld	hl,#800+25	; HL => goede side
+		ld	a,(llogy)
+		jr	z,$+5
+		ld	a,(rlogy)
+		ld	c,a
+		add	a,a		; *2
+		add	a,a		; *4
+		add	a,c		; *5
+		add	a,a		; *10 => goede regel
+		add_hl_a
+		call	setwrt		; stel vdp addr in
+		ex	de,hl
+		ld	b,5
+		otir			; zet cursor aan of uit
+		ret
+
+curondata:	db	127,255,255,255,254
+curoffdata:	db	0  ,0  ,0  ,0  ,0
+
+; **************************************
+; * zet de selectie aan/uit
+; * in: A = nieuwe status (#ff = uit, 0 = aan)
+; *     (llogy) of (rlogy) = logische cursory (0..18)
+; *     (dirside)          = kant van window waar cursor in zit
+setselection:	ld	de,seloffdata
+		inc	a
+		jr	z,setsel2	; #ff => selectie uitzetten
+		ld	de,selondata
+setsel2:	ld	a,(dirside)
+		ld	h,1
+		or	a
+		jr	z,$+4
+		ld	h,41		; H = goede xpos
+		ld	a,(llogy)
+		jr	z,$+5
+		ld	a,(rlogy)
+		add	a,3		; zet om naar ypos
+		ld	l,a		; L = ypos
+		call	c2vaddr		; zet om in vaddr
+		call	setwrt
+		ld	a,(de)
+		inc	de
+		out	(c),a		; zet linkerrand goed
+		ld	bc,24
+		add	hl,bc
+		call	setwrt
+		ld	a,(de)
+		out	(c),a		; zet voor datum goed
+		ld	bc,9
+		add	hl,bc
+		call	setwrt
+		ld	a,(de)
+		inc	de
+		out	(c),a		; zet na datum goed
+		ld	bc,6
+		add	hl,bc
+		call	setwrt
+		ld	a,(de)
+		out	(c),a		; en zet rechterrand goed
+		ret
+
+seloffdata:	db	#16,' ',#16	; off : |      |
+selondata:	db	#00,#02,#01	; on  : + .  . +
+
+; **************************************
+; * druk 32 bits getal af
+; * in: HL = pointer naar 32 bits getal
+; *      C = vdp i/o poort
+; * uit: C = vdp i/o poort
+; * opm: neem aan dat filesize <= 32 MB (dus maximaal 8 digits)
+; * verandert: HL, DE, BC, AF
+int4_str:	ld	de,int4_sbuf
+		ld	b,4
+int4_s1:	ld	a,(hl)
+		inc	hl
+		ld	(de),a
+		inc	de
+		djnz	int4_s1		; neem getal over
+
+		ld	a,' '
+		ld	(nulflg),a
+		ld	hl,exp7		; 10^7 .. 10^0
+		ld	b,8
+int4_2:		push	bc
+		ld	c,255		; begin 1 te laag
+int4_3:		push	hl
+		ld	de,int4_sbuf
+		call	sub32bits	; (de) -= (hl)
+		pop	hl
+		inc	c
+		jr	nc,int4_3	; ging nog 1 keer
+		ld	de,int4_sbuf
+		call	add32bits	; want 1 keer teveel
+		ld	a,c
+		or	a
+		jr	nz,int4_4	; geen 0 => druk meteen af
+		ld	a,(nulflg)	; wel nul => pak de nulflg
+		jr	int4_5
+int4_4:		ld	a,'0'
+		ld	(nulflg),a
+		ld	a,c
+		add	a,'0'
+int4_5:		pop	bc
+		out	(c),a		; stuur karakter naar vdp
+		ld	a,b
+		cp	2
+		jr	nz,int4_6	; nog niet bij laatste digit
+		ld	a,'0'
+		ld	(nulflg),a	; laatste digit altijd afdrukken
+int4_6:		djnz	int4_2		; next digit
+		ret
+
+exp9:
+;		db	0,202,154,59 
+;		db	0,225,245,5
+exp7:		db	128,150,152,0
+		db	64,66,15,0
+		db	160,134,1,0
+		db	16,39,0,0
+		db	232,3,0,0
+		db	100,0,0,0
+		db	10,0,0,0
+		db	1,0,0,0  
+
+nulflg:		db	0		; karakter dat ipv de 0 komt
+int4_sbuf:	ds	4,0		; buffer voor getal
+
+; **************************************
+; * 32 bits aftelling:
+; * (de) -= (hl)
+sub32bits:	ld	b,4
+		xor	a
+sub32b2:	ld	a,(de)
+		sbc	a,(hl)
+		ld	(de),a
+		inc	hl
+		inc	de
+		djnz	sub32b2
+		ret
+
+; **************************************
+; * 32 bits optelling:
+; * (de) += (hl)
+add32bits:	ld	b,4
+		xor	a
+add32b2:	ld	a,(de)
+		adc	a,(hl)
+		ld	(de),a
+		inc	hl
+		inc	de
+		djnz	add32b2
+		ret
+ 
+; **************************************
+; * wat tekst routines
+; * opm: IX en IY blijven ongewijzigd
+printsp:	ex	(sp),hl
+		call	printhl
+		ex	(sp),hl
+		ret
+ 
+printhl:	ld	a,(hl)
+		or	a
+		ret	z
+		call	putchar
+		inc	hl
+		jr	printhl
+
+putchar:	push	ix
+		MSX1	#a2
+		pop	ix
+		ret
+
+; **************************************
+; * wat snelle tekst routines
+fprtsp:		ex	(sp),hl
+		call	fprthl
+		ex	(sp),hl
+		ret
+ 
+fprthl:		ld	a,(hl)
+		or	a
+		ret	z
+		call	fputchar
+		inc	hl
+		jr	fprthl
+
+fputchar:	push	af
+		cp	13
+		jr	z,fpc_cr
+		cp	10
+		jr	z,fpc_nl
+		push	hl
+		push	bc
+		push	af
+		ld	hl,(systemy)
+		call	c2vaddr		; zet coordinaten om in video addr
+		call	setwrt
+		pop	af
+		out	(c),a
+		pop	bc
+		pop	hl
+		ld	a,(systemx)
+		cp	80
+		jr	z,fpc_nextline
+		inc	a
+		ld	(systemx),a
+		pop	af
+		ret
+
+fpc_nextline:	ld	a,1
+		ld	(systemx),a
+fpc_cr:		ld	a,(systemy)
+		inc	a
+		ld	(systemy),a
+		pop	af
+		ret
+
+fpc_nl:		ld	a,1
+		ld	(systemx),a
+		pop	af
+		ret
+
+; **************************************
+; * reken coordinaten om in een video addr
+; * in:  (H,L) = (xpos, ypos) met (1,1) = linksboven
+; * uit: HL = erbij horend video addr
+; * verandert: AF, BC
+c2vaddr:	dec	h		; H = systemx-1
+		dec	l		; L = systemy-1
+		ld	a,h		; A = xpos
+		ld	h,0		; HL = ypos
+		ld_bc_hl
+		add	hl,hl		; *2
+		add	hl,hl		; *4
+		add	hl,bc		; *5
+		add	hl,hl		; *10
+		add	hl,hl		; *20
+		add	hl,hl		; *40
+		add	hl,hl		; HL = ypos*80
+		ld	c,a		; BC = xpos
+		add	hl,bc		; +xpos => name table pos
+		ret
+
+; **************************************
+; * stel het vdp write addr in volgens MSX 1 methode (alleen 14 bits offset)
+; * in: HL = addr
+; * uit: C = vdp data poort addr
+; * verandert: AF, B, EI
+setwrt:		ld	b,%01000000
+		jr	setrdwrt
+
+; **************************************
+; * stel het vdp read addr in volgens MSX 1 methode (alleen 14 bits offset)
+; * in:  HL = addr
+; * uit: C = vdp data poort
+; * verandert: AF, B, EI
+setrd:		ld	b,%00000000
+
+setrdwrt:	ld	a,(vdpaddr)
+		inc	a
+		ld	c,a
+		di
+		out	(c),l
+		ld	a,h
+		and	%00111111
+		or	b
+		out	(c),a
+; ---------------------------------
+;		ld	a,h
+;		rlca
+;		rlca
+;		and	3
+;		out	(c),a
+;		ld	a,#8e
+;		out	(c),a
+; ---------------------------------
+		ei
+		dec	c
+		ret
+
+; **************************************
+; * set vdp to blok 0
+setbl0:		ld	a,(vdpaddr)
+		inc	a
+		ld	c,a
+		xor	a
+		di
+		out	(c),a
+		ld	a,#8e
+		out	(c),a
+		ei
+		ret
+

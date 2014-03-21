@@ -1,0 +1,659 @@
+.comment \
+ XCC.GEN : De lader + het hoge residente deel
+
+ Copyright (C) 1994-2003 Alex Wulms
+ Start date: 11-4-1994
+ De vier vaantjes 29, 3000 Leuven, BE
+ awulms@users.sourceforge.net
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License version 2 as
+ published by the Free Software Foundation
+
+
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ more details.
+
+ You should have received a copy of the GNU General Public License along
+ with this program; if not, write to the Free Software Foundation, Inc., 59
+ Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+\
+dobdos:		equ	5		; bdos addr
+
+		include	h:bios.mac
+
+quithook:	equ	#fecb		; de 1ste run/clear hook
+
+		db	#eb, #03	; jmp short error / ex de,hl: inc bc
+		jr	msx__noerr
+		db	0		; ff ruimte laten (ivm 03)
+		db	#ba, #0d, #01	; mov dx, #010d (error melding)
+		db	#b4, #09	; mov ah, #09   (print string)
+		db	#cd, #21	; int 21h
+		db	#c3		; ret
+		db	'MSX Program !!$'
+
+msx__noerr:	ld	hl,7
+		ld	a,(#fcc1)
+		call	#c		; rdslot
+		ld	(vdpaddr),a
+		jr	start
+
+vdpaddr:	db	#98
+domsx1:		ld	iy,(#fcc0)
+		jp	#1c
+domsx2:		ld	iy,(#faf7)
+		jp	#1c
+start:
+		ld	a,(#37)
+		ld	(programflg),a	; onthoud of PROGRAM geldig is
+
+		call	printsp
+		db	27,'x5XelaSoft Control Center loader. Copyright (c) 2003 Alex Wulms.',13,10,
+		db	'This is free software to which you may contribute. See help for more details', 13, 10, 0
+		call	chkdos2		; dos 2 noodzakelijk
+		ret	c		; afwezig
+		call	chktpa
+		ret	c		; niet genoeg tpa space
+		call	getsegment	; haal segment op voor overlay deel
+		ret	c		; mislukt
+		call	getsegp0p1	; haal segment code page 0 en 1 op
+		call	ldovl		; laad de overlay file in
+		ret	c		; mislukt
+		jp	sethigh		; init. de hoge code en start ze op
+
+; **************************************
+; * haal standaard segment op page 0 en 1 op
+getsegp0p1:	ld	hl,(mapjptblptr)
+		ld	de,#1b
+		add	hl,de
+		call	jphl
+		ld	(p0seg),a	; onthoud standard segment op page 0
+		ld	de,6
+		add	hl,de
+		call	jphl
+		ld	(p1seg),a	; en standaard segment op page 1
+		ret
+
+; **************************************
+; * kijk of er voldoende TPA space is
+; * uit: Cf = mislukt
+chktpa:		ld	hl,-#c400
+		add	hl,sp
+		ccf
+		ret	nc		; genoeg ruimte, alles goed
+		call	printsp
+		db	'Not enough free TPA space.',13,10,0
+		scf
+		ret
+
+; **************************************
+; * kijk of dos 2 aanwezig is
+; * indien niet, geef dan foutmelding en klaar
+; * uit: Cf = mislukt
+chkdos2:	BDOS	#6f		; get dos version number
+		ld	e,0
+		ld	a,b
+		cp	2
+		jr	c,nodos2	; b < 2 ==> geen dos 2
+		ld	a,d
+		cp	2
+		ret	nc		; d >= 2 ==> is dos 2
+nodos2:		call	printsp
+		db	'MSX DOS 2 required.',13,10,0
+		scf
+		ret
+
+; **************************************
+; * haal 1 segment op voor de overlay code
+; * uit: Cf = mislukt
+getsegment:	xor	a
+		ld	de,#0402
+		call	#ffca
+		ld	(mapjptblptr),hl
+		ld	de,3
+		add	hl,de
+		ld	(fre_seg+1),hl	; init. jp fre_seg
+		ld	de,#18-3
+		add	hl,de
+		ld	(put_p0+1),hl	; init. jp put_p0
+		ld	de,#1e-#18
+		add	hl,de
+		ld	(put_p1+1),hl	; init. jp put_p1
+		ld	de,-#1e
+		add	hl,de
+		push	bc		; onthoud primary mapper slot
+		set	5,b		; try specified slot, then other slot
+		ld	a,1		; allocate system segment
+		call	jphl		; allocate a segment
+		pop	de		; D = primary mapper slot
+		jr	c,nosegment
+		ld	(ovlseg),a
+		ld	a,b
+		ld	(segslt),a	; onthoud segment nummer en segment slt
+		sub	d		; A = segment slt - prim slt
+		or	a
+		jr	nz,usesltmap	; verschillend => gebruik slot swaprout
+		ld	hl,smapswp	; zelfde => gebruik mapper swaprout
+		ld	de,swapmemin
+		ld	bc,maplen
+		ldir
+		ld	hl,mapalltbl
+		ld	(allptrtbl),hl
+		ret
+
+usesltmap:	ld	hl,ssltswp
+		ld	de,swapmemin
+		ld	bc,sltlen
+		ldir
+		ld	hl,sltalltbl
+		ld	(allptrtbl),hl
+		ret
+
+nosegment:	call	printsp
+		db	'No free memory segment found.',13,10,0
+		scf
+		ret
+
+; **************************************
+; * jump naar addr HL
+jphl:		jp	(hl)
+
+; **************************************
+; * wat print routines
+printsp:	ex	(sp),hl
+		call	printhl
+		ex	(sp),hl
+		ret
+ 
+printhl:	ld	a,(hl)
+		MSX1	#a2
+		inc	hl
+		or	a
+		jr	nz,printhl
+		ret
+
+; **************************************
+; * laad de overlay file in
+; * uit: terug naar dos als openen/laden is mislukt
+ldovl:		call	ldovl2
+		ret	z		; alles goed gegaan
+		push	af
+		call	printsp
+		db	'Error opening: ',0
+		ld	hl,OVLname
+		call	printhl
+		call	printsp
+		db	13,10,0
+		call	freesegment	; geef het segment vrij
+		pop	bc
+		JBDOS	#62		; terminate with error code
+
+ldovl2:		ld	a,(programflg)
+		or	a
+		call	nz,ldovl3	; haal naam uit PROGRAM variable
+
+		ld	de,OVLname
+		xor	a
+		BDOS	#43		; open de file
+		ret	nz		; openen mislukt
+
+		push	bc		; onthoud de file handle
+		ld	hl,#3f00
+		ld	de,#8000
+		BDOS	#48		; lees de data in
+		ld	(ovllen),hl	; onthoud de lengte
+		pop	bc
+
+		push	hl		; onthoud # gelezen bytes
+		BDOS	#45		; sluit de file
+		ld	a,(#8005)	; .ovl version number
+		cp	2
+		push	af
+		call	nc,setXCCpath	; kopieer XCC path naar .ovl file
+		pop	af
+		cp	3
+		call	nc,printversion
+		pop	bc
+		ld	hl,#8000
+		ld	de,#4100
+		call	cp2ovlsegment	; zet .ovl data in het overlay segment
+		xor	a
+		ret			; alles goed gegaan
+
+ldovl3:		ld	hl,-80
+		add	hl,sp
+		ld	sp,hl		; reserveer ruimte voor naam
+		push	hl
+		ex	de,hl		; DE = buffer voor PROGRAM var
+		ld	hl,PROGRAMvar
+		ld	b,65
+		BDOS	#6b		; get environment variable PROGRAM
+		pop	de
+		push	de
+		ld	b,0
+		BDOS	#5b		; parse pathname
+		ex	de,hl		; DE = last item
+		ld	hl,OVLname
+		ld	bc,OVLname_end-OVLname
+		ldir			; neem de overlay naam over
+		ex	de,hl		; HL = 1ste pos na naam
+		pop	de		; DE = start van naam buffer
+		or	a
+		sbc	hl,de
+		ld_bc_hl		; BC = lengte van naam
+		ex	de,hl		; HL = start van naam buffer
+		ld	de,OVLname
+		ldir			; vervang OVL naam door de nieuwe naam
+		ld	hl,80
+		add	hl,sp
+		ld	sp,hl		; en geef stack ruimte terug
+		ret
+
+PROGRAMvar:	db	'PROGRAM',0
+OVLname:	db	'xcc.ovl',0
+OVLname_end:	ds	OVLname+80-$,0
+
+; **************************************
+; * print de versie informatie
+printversion:	call	printsp
+		db	'Starting ',0
+		ld	hl,#8005+1+64
+		jp	printhl
+
+; **************************************
+; * kopieer XCC path naar .ovl file
+setXCCpath:	ld	de,OVLname
+		push	de
+		ld	b,0
+		BDOS	#5b		; parse OVLname
+		pop	de		; HL = last item, DE = OVLname
+		or	a
+		sbc	hl,de		; HL = length of path
+		ret	z		; 0 bytes => klaar
+		ld_bc_hl
+		ex	de,hl		; HL = OVLname
+		ld	de,#8006	; XCCpath in .ovl file
+		ldir			; neem over
+		ret
+
+; **************************************
+; * init. de hoge code en start ze op
+; * uit: HL = opstart addr van de hoge code
+sethigh:	ld	hl,(6)		; HL = old bdos ptr
+		ld	(jpbdos+1),hl
+		ld	de,-((endhigh-starthigh+256) .and. #ff00)
+		add	hl,de		; HL = new bdos ptr
+		ld	(6),hl		; en onthoud de nieuwe ptr
+		dec	hl
+		dec	hl
+		dec	hl		; HL = nieuwe kode pos (incl header)
+		ld	sp,hl		; zet de stack beneden de kode
+		push	hl		; onthoud nieuwe kode pos
+		call	realloc		; reallocate de adres verwijzingen
+		pop	de		; DE = nieuwe kode positie
+		ld	hl,starthigh
+*l+
+		ld	bc,endhigh-starthigh
+*l-
+		ldir			; zet de kode hoog
+
+		ld	hl,(1)
+		inc	hl
+		ld	e,(hl)
+		inc	hl
+		ld	d,(hl)		; DE = old warm boot addr
+all2pos1:	ld	(oldwboot),de
+all1pos1:	ld	de,rejoinparent
+		ld	(hl),d
+		dec	hl
+		ld	(hl),e		; laat bij warmboot naar rejoin gaan
+
+		ld	hl,quithook	; ook bij terugkeer naar basic moet
+all1pos2:	ld	de,oldhook	; juiste oninit kode worden uitgevoerd
+		ld	bc,5
+		ldir			; onthoud de 'init z80 stack' hook
+		ld	a,#c3
+		ld	(quithook),a
+all1pos3:	ld	hl,newhook
+		ld	(quithook+1),hl	; en zet jp naar quit code
+
+		ld	hl,0
+		ld	de,#4000
+		ld	bc,#100
+		call	cp2ovlsegment	; zet systeemgebied in ovl segment
+
+all1pos4:	jp	mainloop	; en start mainloop op
+
+; **************************************
+; * kopieer data naar/uit het overlay segment
+; * in: HL = source addr
+; *     DE = destination addr
+; *     BC = #bytes
+; * opm: het overlay segment wordt ingeschakeld op page 1 (#4000..#7fff)
+cp2ovlsegment:	push	hl
+		push	de
+		push	bc
+		ld	a,(segslt)
+		call	selpage1	; schakel segment slot in
+		ld	a,(ovlseg)
+		call	put_p1		; schakel .OVL segment in
+		pop	bc		; BC = #te kopieren bytes
+		pop	de		; DE = destination
+		pop	hl		; (SP) = maptjptblptr, HL = source
+		ldir			; zet data over
+		ld	a,(p1seg)	; standaard segment op page 1
+		call	put_p1		; herstel segment
+		ld	a,(#f342)
+		jp	selpage1	; en pak tpa terug
+
+; **************************************
+; * reallocate de adres verwijzingen
+; * in: HL = nieuwe kode positie van de hoge kode
+realloc:	ld	de,-starthigh
+		add	hl,de		; HL = nieuwe kode pos - oude pos
+		ld_bc_hl		; BC = kode verplaatsing
+		ld	hl,allptrs	; reallocate 1st de normale ptrs
+		call	realloc2
+		ld	hl,(allptrtbl)	; en dan nog van de swapmem code
+realloc2:	ld	e,(hl)
+		inc	hl
+		ld	d,(hl)
+		inc	hl
+		ld	a,d
+		or	e
+		ret	z		; no more ptrs
+		push	hl
+		ex	de,hl		; HL = ptr
+		ld	e,(hl)
+		inc	hl
+		ld	d,(hl)		; DE = aan te passen addr
+		ex	de,hl
+		add	hl,bc
+		ex	de,hl		; DE += verplaatsing
+		ld	(hl),d
+		dec	hl
+		ld	(hl),e
+		pop	hl
+		jr	realloc2
+
+allptrs:	dw	all1pos1+1, all1pos2+1, all1pos3+1
+		dw	all1pos4+1, all1pos5+1, all1pos6+1
+		dw	all1pos7+1, all1pos8+1, all1pos9+1
+		dw	all1pos10+1, all1pos11+1, all1pos12+1
+		dw	all1pos13+1, all1pos14+1, all1pos15+1
+		dw	all1pos16+1, all1pos17+1
+		dw	all2pos1+2, all2pos2+2
+		dw	0
+
+mapalltbl:	dw	mall1pos1+1+swapmemin-mswapmemin
+		dw	mall1pos2+1+swapmemin-mswapmemin
+		dw	mall1pos3+1+swapmemin-mswapmemin
+		dw	mall1pos4+1+swapmemin-mswapmemin
+		dw	mall1pos5+1+swapmemin-mswapmemin
+		dw	0
+
+sltalltbl:	dw	sall1pos1+1+swapmemin-sswapmemin
+		dw	sall1pos2+1+swapmemin-sswapmemin
+		dw	sall1pos3+1+swapmemin-sswapmemin
+		dw	sall1pos4+1+swapmemin-sswapmemin
+		dw	sall1pos5+1+swapmemin-sswapmemin
+		dw	sall1pos6+1+swapmemin-sswapmemin
+		dw	sall1pos7+1+swapmemin-sswapmemin
+
+		dw	sall2pos1+2+swapmemin-sswapmemin
+		dw	0
+
+; **************************************
+; * aantal variabelen
+programflg:	db	0		; PROGRAM variable wel/niet geldig
+mapjptblptr:	dw	0		; mapper jump table positie
+allptrtbl:	dw	mapalltbl
+
+
+; *---------------------------------------------------------------------*
+; * de code die voor swapmem nodig is, is afhankelijk van de geheugen	*
+; * indeling: als .ovl mapper = primary mapper, hoeft er alleen met	*
+; * de mapper geschakeld te worden. Anders moet er data overgekopieerd	*
+; * worden uit het goede slot						*
+; *---------------------------------------------------------------------*
+
+; *---------------------------------------------------------------------*
+; * start van mapper swap deel						*
+; *---------------------------------------------------------------------*
+smapswp:
+mput_p0:	equ	smapswp-6	; pos. van put_p0 en put_p1 t.o.v.
+mput_p1:	equ	smapswp-3	; de swap code voor jr
+
+mswapmemin:	jr	mswapmi2
+mswapmemout:	jr	mswapmo2
+
+; **************************************
+; * swap het residente deel van de code in
+mswapmi2:
+mall1pos1:	ld	a,(ovlseg)
+		jr	mput_p0
+
+; **************************************
+; * swap het residente deel van de code uit
+mswapmo2:
+mall1pos2:	ld	a,(p0seg)
+mall1pos3:	call	put_p1		; standaard segment 0 => page 1
+		ld	hl,#5c
+		ld	de,#405c
+		ld	bc,#100-#5c
+		ldir			; neem fcb's en cmdline over
+mall1pos4:	call	put_p0		; standaard segment 0 => page 0
+mall1pos5:	ld	a,(p1seg)
+		jr	mput_p1
+
+emapswp:
+; *---------------------------------------------------------------------*
+; * einde van mapper swap deel						*
+; *---------------------------------------------------------------------*
+
+; *---------------------------------------------------------------------*
+; * start van slot swap deel						*
+; *---------------------------------------------------------------------*
+ssltswp:
+sput_p0:	equ	ssltswp-6	; pos. van put_p0 en put_p1 t.o.v.
+sput_p1:	equ	ssltswp-3	; de swap code voor jr
+
+sswapmemin:	jr	swapmem
+sswapmemout:	jr	swapmem
+
+; **************************************
+; * verwissel het geheugen byte voor byte
+; * dit is nodig als het .ovl segment zich niet in de primary mapper bevind
+swapmem:
+sall1pos1:	ld	a,(segslt)
+sall1pos2:	call	selpage1+swapmemin-sswapmemin; selecteer slt op page 1
+sall1pos3:	ld	a,(ovlseg)
+sall1pos4:	call	put_p1		; schakel segment .OVL segment in
+		ld	hl,#4100
+		ld	de,#100
+sall2pos1:	ld	bc,(ovllen)
+swapmem2:	ld	a,(de)
+		ldi
+		dec	hl
+		ld	(hl),a
+		inc	hl
+sall1pos5:	jp	pe,swapmem2+swapmemin-sswapmemin
+sall1pos6:	ld	a,(p1seg)
+sall1pos7:	call	put_p1
+		ld	a,(#f342)
+; **************************************
+; * pak slot A op page 1
+selpage1:	ld	h,#40
+		jp	#24		; en pak tpa terug
+esltswp:
+
+maplen:		equ	emapswp-smapswp	; lengte van mapper swap code
+sltlen:		equ	esltswp-ssltswp	; lengte van slot swap code
+
+		if	(maplen > sltlen)
+larglen:	 equ	maplen
+		else
+larglen:	 equ	sltlen
+		endif
+
+; *---------------------------------------------------------------------*
+; * einde van slot swap deel						*
+; *---------------------------------------------------------------------*
+
+; *---------------------------------------------------------------------*
+; * Hier start het residente deel dat hoog komt te staan		*
+; *---------------------------------------------------------------------*
+starthigh:
+
+; **************************************
+; * XCC header
+		db	'XCC'
+
+; **************************************
+; * jump to the bdos
+jpbdos:		jp	0
+
+; **************************************
+; * dit is de mainloop, deze wordt bereikt vanaf addr 0
+mainloop:
+all1pos5:	ld	sp,starthigh	; zet stack zo hoog mogelijk
+all1pos6:	call	swapmemin	; swap residente deel in
+		call	#100		; voer kode uit
+		push	af
+		push	hl
+		push	bc
+all1pos7:	call	swapmemout	; save residente deel weer
+		pop	bc
+		pop	hl
+		pop	af
+		jr	c,quitcode	; Cf => quit
+
+; **************************************
+; * voer shell commando uit
+; * in:  B = opened file handle in te lezen commando
+; *     HL = lengte van commando
+; *     alle parameters zijn al goed ingevuld
+		push	bc		; onthoud file handle
+		ld	de,#100
+		BDOS	#48		; lees commando in
+		pop	bc
+		BDOS	#45		; en close het commando bestand
+
+		BDOS	#60		; fork to child
+		jr	nz,forkfailed	; fork failed => print error
+		ld	a,b
+all1pos8:	ld	(parentid),a	; onthoud parent id
+all1pos9:	ld	sp,starthigh
+		ld	a,1
+		ld	(#37),a		; geef aan dat PARAM geldig is
+		call	#100		; en voer het commando uit
+
+; **************************************
+; * rejoin with parent process
+rejoinparent:
+all1pos10:	ld	a,(parentid)
+		ld	b,a
+		BDOS	#61		; rejoin parent process
+		ld	a,b
+		or	a		; is er een error geweest ?
+jrzmainl1:	jr	z,mainloop	; nee => alles goed
+		cp	140		; .OKCMD error ?
+		jr	z,mainloop	; ja => alles goed
+		cp	128		; ABORT error ?
+		jr	z,mainloop	; ja => alles goed
+
+; **************************************
+; * fork is mislukt, shell kan daarom niet
+forkfailed:	ld	hl,-64
+		add	hl,sp
+		ld	sp,hl		; maak ruimte voor errbuf
+		ex	de,hl		; DE = errbuf
+		push	de
+		ld	b,a		; B = error code
+		BDOS	#66		; vraag error code op
+all1pos11:	ld	de,sterstring
+		BDOS	#9		; druk een *** string af
+		pop	hl
+ff2:		ld	a,(hl)
+		or	a
+		jr	z,jrzmainl1
+		push	hl
+		ld	e,a
+		BDOS	2		; druk karakter af
+		pop	hl
+		inc	hl
+		jr	ff2
+
+sterstring:	db	13,10,'*** $'
+
+; **************************************
+; * quit commander: herstel ptrs en geef segment vrij
+quitcode:	dec	a
+		jr	z,tobasic	; 1 => naar basic
+all1pos12:	call	newhook2	; verwijder segment en quit hook
+		ld	hl,(1)
+		inc	hl
+all2pos2:	ld	de,(oldwboot)
+		ld	(hl),e
+		inc	hl
+		ld	(hl),d		; herstel wboot entry
+all1pos13:	ld	hl,(jpbdos+1)
+		ld	(6),hl		; bdos jp entry
+		rst	0		; en warm boot naar dos
+
+; **************************************
+; * ga naar basic toe
+tobasic:	call	#f368		; select drive rom
+		jp	#4022		; en start basic op
+
+; **************************************
+; * user wil naar basic => verwijder alles
+; * opm: BC moet ongewijzigd blijven
+newhook:
+all1pos14:	call	newhook2	; geef hook en segment vrij
+		jp	quithook	; en voer de oude hook uit
+
+; **************************************
+; * geef de hook en het segment vrij
+newhook2:
+all1pos15:	ld	hl,oldhook
+		ld	de,quithook
+		ld	bc,5
+		ldir			; herstel de hook
+
+; **************************************
+; * geef het system segment vrij
+freesegment:
+all1pos16:	ld	a,(segslt)
+		ld	b,a
+all1pos17:	ld	a,(ovlseg)
+fre_seg:	jp	0		; geef 1 segment vrij
+
+; **************************************
+; * pak segment A op page 0
+put_p0:		jp	0
+; **************************************
+; * pak segment A op page 1
+put_p1:		jp	0
+
+swapmemin:	jr	$+0
+swapmemout:	jr	$+0
+		
+		ds	larglen-4
+
+; **************************************
+; * de variabelen
+p0seg:		db	0		; standard segment on page 0
+p1seg:		db	0		; standard segment on page 1
+ovlseg:		db	0		; segment nummer voor ovl file
+segslt:		db	0		; slot van het segment
+oldwboot:	dw	0		; oude warm boot ptr
+parentid:	db	0		; id of parent process
+ovllen:		dw	0		; length of the overlay file
+oldhook:	ds	5,0		; de oude quithook
+endhigh:
+
