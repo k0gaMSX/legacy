@@ -1,0 +1,4486 @@
+*u+,q-
+
+	org 04000h-7
+	db 0feh
+	dw start+04000h
+	dw einde+04000h
+	dw start+04000h
+
+bdos2	equ 0f37dh
+sfirst	equ 011h
+snext	equ 012h
+setdma	equ 01ah
+create	equ 22
+read	equ 39
+write	equ 38
+open	equ 15
+close	equ 16
+delete	equ 19
+seldsk	equ 14
+
+
+xpos	equ 08000h	;->in song maar 200 lang!
+xleng	equ xpos+200	;->last position
+xuser1	equ xleng+1	;->usercode #1
+xmmvoc	equ xuser1+2	;->module instrumenten
+xmmsti	equ xmmvoc+16*9	;->instrumenten module
+xpasti	equ xmmsti+16	;->instrumenten/volumes pac
+xstpr	equ xpasti+32	;->stereo-instellingen
+xtempo	equ xstpr+10	;->begintempo
+xsust	equ xtempo+1	;->modulation depth
+xnaam	equ xsust+1	;->songnaam
+xchip	equ xnaam+40	;->voorkeurchip
+xbegvm	equ xchip+1	;->begininstrumenten module
+xbegvp	equ xbegvm+9	;->begininstrumenten pac
+xorgp1	equ xbegvp+9	;->data van softwarevoices pac
+xorgnr	equ xorgp1+6*8	;->nummers van software voices
+xsmpkt	equ xorgnr+6	;->samplekitnaam
+xdrblk	equ xsmpkt+8	;->drumblokken pac
+xdrvol	equ xdrblk+15	;->volumes drum pac
+xdrfrq	equ xdrvol+3	;->frequenties drum pac
+xuser2	equ xdrfrq+3*6	;->usercode#2 (=1 op met andere codering)
+xrever	equ xuser2+2	;->reverb instellingen
+xloop	equ xrever+9	;->loop position
+xbegmd	equ 08240h
+
+ownvdt	equ 0c400h+176*25
+smpnr	equ 0f975h
+loaded	equ 0f976h
+notvcm	equ 0f977h
+notvcp	equ 0f977h+9
+smpadr	equ notvcp+9
+smknam	equ smpadr+56
+vcenr	equ smknam+8
+fkndat	equ vcenr+1
+keybdt	equ fkndat+1
+midint	equ keybdt+1	;0=musmod   1=turbo-r   2=vak
+usrdat	equ midint+1
+us2dat	equ usrdat+2
+naudat	equ us2dat+2
+scandt	equ naudat+1
+
+
+
+sngpag	equ	1
+edtpag	equ	2
+dskpag	equ	3
+em1pag	equ	4
+em2pag	equ	5
+vocpag	equ	6
+smppag	equ	7
+val255	equ	0f346h
+
+subs	equ	0d900h
+subs2	equ	0d914h
+subs3	equ	0d928h
+
+
+
+start:	push	hl
+	ld	hl,(0f3dch)
+	push	hl
+	add	a,a
+	ld	e,a
+	ld	d,0
+	ld	hl,jmpdat-2
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	call	exec
+	pop	hl
+	ld	(0f3dch),hl
+	pop	hl
+	ret
+exec:	jp	(hl)
+
+
+
+;**** disk menu voor samples ****
+
+disksm:	call	maksc3
+	call	moverr
+	ld	hl,smpadr-4
+	ld	a,(smpnr)
+	add	a,a
+	add	a,a
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	de,sadrbf
+	ld	bc,4
+	ldir
+	ld	a,1
+	ld	(blkdt2),a
+	call	menbl2
+	ld	a,25
+	ld	(0f3dch),a
+
+main3:	ld	ix,main3d
+	call	keyhan
+	jr	main3
+
+
+main3d:	db	30
+	dw	curup8
+	db	31
+	dw	curdw8
+	db	28
+	dw	curlr8
+	db	29
+	dw	curlr8
+	db	" "
+	dw	selmn3
+	db	27
+	dw	enddis
+	db	0
+
+selmn3:	ld	a,(blkdt2)
+	ld	ix,selm3d
+	jp	keyhn2
+
+selm3d:	db	1
+	dw	ldsmp
+	db	2
+	dw	svsmp
+	db	3
+	dw	shwsmp
+	db	4
+	dw	delsmp
+	db	5
+	dw	lddrum
+	db	6
+	dw	svdrum
+	db	7
+	dw	shwdrm
+	db	8
+	dw	deldrm
+	db	10
+	dw	format
+	db	11
+	dw	enddis
+	db	0
+
+
+;**** load sample ****
+
+ldsmp:	call	shwsmp
+	ld	a,(filcnt)
+	or	a
+	jp	z,nospld
+	ld	hl,ldtxt5
+	call	print
+	call	curwlk
+
+lodsmp:	call	namsmp
+	call	lodvb2
+
+	ld	hl,(sadrbf)
+	ld	(dstadr),hl
+	ld	hl,(lengte)
+	xor	a
+	rr	h
+	rr	l
+	xor	a
+	rr	h
+	rr	l	;deel lengte door 4
+	ld	(lengte),hl
+
+	push	hl
+
+	xor	a
+	ld	hl,(sadrbf+2)
+	inc	hl
+	ld	de,(sadrbf)
+	sbc	hl,de
+	pop	de
+	push	de
+	rst	020h
+	jp	c,nofit	;sample te groot!
+
+lodsm2:	ld	hl,patltx
+	call	print
+	pop	bc
+
+	push	bc
+	pop	hl
+	ld	de,01000h
+	rst	020h
+	call	nc,lodsm4
+	ld	a,b
+	or	c
+	jr	z,lodsmx
+
+	push	bc
+	call	lodprt	;lees sample
+	pop	bc
+	call	m2vsmp	;zet sample in audio
+
+lodsmx:	ld	de,(lengte)
+	ld	hl,(sadrbf)
+	add	hl,de
+	dec	hl
+	ld	de,01fffh
+	rst	020h
+	call	nc,lodsm5
+	ld	(sadrbf+2),hl
+	ld	hl,smpadr-4
+	ld	a,(smpnr)
+	add	a,a
+	add	a,a
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ex	de,hl
+	ld	hl,sadrbf
+	ld	bc,4
+	ldir
+lodsm3:	ld	de,0da00h
+	ld	c,close
+	call	bdos
+	call	stpdrv
+	ld	a,sngpag
+	out	(0feh),a
+	jp	ldend
+lodsm5:	ld	hl,01fffh
+	ret
+
+
+lodsm4:	push	bc
+	ld	bc,01000h
+	push	bc
+	call	lodprt	;lees sample
+	pop	bc
+	call	m2vsmp	;zet sample in audio
+	pop	hl
+	ld	bc,-01000h
+	add	hl,bc
+	ld	b,h
+	ld	c,l
+	ld	hl,(dstadr)
+	ld	de,01000h
+	add	hl,de
+	ld	(dstadr),hl
+	ret
+
+
+;lees stukje sample
+
+lodprt:	push	bc
+	ld	de,08000h
+	ld	c,setdma
+	call	bdos	;dma adres = 8000
+
+	pop	hl
+	add	hl,hl
+	add	hl,hl
+	ld	de,0da00h
+	ld	c,read
+	jp	bdos	;lees stukje file
+
+
+nofit:	ld	hl,nfittx	;sample past niet
+	call	print
+nofitl:	call	getkey
+	res	5,a
+	cp	"Y"
+	jr	z,nofit1
+	cp	"N"
+	jr	z,nofit2
+	jr	nofitl
+
+nofit1:	call	clrlin
+	jp	lodsm2
+nofit2:	pop	af	;gepushte lengte
+	call	clrlin
+	jp	lodsm3
+
+nospld:
+	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	ret	nz
+	ld	hl,nspltx
+	call	print
+	call	getkey
+	jp	clrlin
+
+
+
+
+; **** save sample ****
+
+svsmp:	call	shwsmp
+	ld	a,(filcnt)
+	or	a
+	jp	z,entna7
+	ld	hl,svtxt5
+	call	print
+	ld	hl,savsmp
+	ld	(relsav),hl
+	call	curwk2
+entna7:	ld	b,a
+	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	jp	nz,ldend
+	ld	a,b
+	call	entnam
+	ld	hl,nnbuf	;entna2
+	ld	de,fcbsav+1
+	ld	bc,8
+	ldir
+	ld	a,25
+	ld	(0f3dch),a
+	call	wiscl3
+	call	clrlin
+	call	namsp3
+	jr	savsp2
+
+savsmp:	call	wiscl3
+	call	namsmp
+savsp2:	;push  af
+	ld	a,em1pag
+	out	(0feh),a
+	call	savvb5
+	ld	hl,patstx
+	call	print
+	ld	hl,(sadrbf)
+	ld	(dstadr),hl
+	xor	a
+	ld	hl,(sadrbf+2)
+	inc	hl
+	ld	de,(sadrbf)
+	sbc	hl,de
+	push	hl
+	pop	bc
+	ld	de,01000h
+	rst	020h
+	call	nc,savsp4
+
+	ld	a,b
+	or	c
+	jr	z,savspx
+
+	push	bc
+	call	g2tsmp
+	pop	bc
+	call	savprt
+
+savspx:	ld	de,0da00h
+	ld	c,close
+	call	bdos
+	call	shwsmp
+	call	stpdrv
+	ld	a,sngpag
+	out	(0feh),a
+	;pop	 af
+	jp	ldend
+
+
+savsp4:	push	bc
+	ld	bc,01000h
+	push	bc
+	call	g2tsmp	;haal sample uit audio
+	pop	bc
+	call	savprt	;schrijf sample
+	pop	hl
+	ld	bc,-01000h
+	add	hl,bc
+	ld	b,h
+	ld	c,l
+	ld	hl,(dstadr)
+	ld	de,01000h
+	add	hl,de
+	ld	(dstadr),hl
+	ret
+
+
+
+;schrijf stukje sample
+
+savprt:	push	bc
+	ld	de,08000h
+	ld	c,setdma
+	call	bdos	;dma adres = 8000
+	pop	hl
+	add	hl,hl
+	add	hl,hl
+	ld	de,0da00h
+	ld	c,write
+	jp	bdos	;schrijf stukje file
+
+
+
+
+
+;**** delete sample ****
+
+delsmp:	call	shwsmp
+	ld	a,(filcnt)
+	or	a
+	jp	z,nospdl
+	ld	hl,deltx3
+	call	print
+	call	curwlk
+
+	call	namsmp
+	call	delsn4
+	cp	"Y"
+	jp	nz,ldend
+	call	shwsmp
+	jp	ldend
+
+nospdl:	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	ret	nz
+	ld	hl,nspdtx
+	call	print
+	call	getkey
+	jp	clrlin
+
+
+
+
+
+
+
+
+
+;**** disk menu voor voices ****
+
+diskvc:	ld	a,(vcenr)
+	ld	(ownnr),a
+	call	maksc2
+	call	moverr
+	ld	a,1
+	ld	(blkdt2),a
+	call	menblk
+	ld	a,25
+	ld	(0f3dch),a
+
+main2:	ld	ix,main2d
+	call	keyhan
+	jr	main2
+
+main2d:	db	30
+	dw	curup8
+	db	31
+	dw	curdw8
+	db	28
+	dw	curlr8
+	db	29
+	dw	curlr8
+	db	" "
+	dw	selmn2
+	db	27
+	dw	enddis
+	db	0
+
+selmn2:	ld	a,(blkdt2)
+	ld	ix,selm2d
+	jp	keyhn2
+
+selm2d:	db	1
+	dw	ldvce
+	db	2
+	dw	svvce
+	db	3
+	dw	shwvce
+	db	4
+	dw	delvce
+	db	5
+	dw	ldvcb
+	db	6
+	dw	svvcb
+	db	7
+	dw	shwvcb
+	db	8
+	dw	delvcb
+	db	10
+	dw	format
+	db	11
+	dw	enddis
+	db	0
+
+
+
+
+;**** load voice ****
+
+ldvce:	call	shwvce
+	ld	a,(filcnt)
+	or	a
+	jp	z,noveld
+	ld	hl,ldtxt3
+	call	print
+	call	curwlk
+
+lodvce:	call	namvce
+	call	lodvb2
+	ld	hl,9
+	ld	(lengte),hl
+	ld	hl,ownvdt-25+16
+	ld	de,25
+	ld	a,(ownnr)
+	ld	b,a
+lodve3:	add	hl,de
+	djnz	lodve3
+	ex	de,hl
+	jp	lodvb3
+
+noveld:
+	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	ret	nz
+	ld	hl,neldtx
+	call	print
+	call	getkey
+	jp	clrlin
+
+
+
+
+
+
+; **** save voice ****
+
+svvce:	call	shwvce
+	ld	a,(filcnt)
+	or	a
+	jp	z,entna6
+	ld	hl,svtxt3
+	call	print
+	ld	hl,savvce
+	ld	(relsav),hl
+	call	curwk2
+entna6:	ld	b,a
+	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	jp	nz,ldend
+	ld	a,b
+	call	entnam
+	ld	hl,nnbuf		   ;entna2
+	ld	de,fcbsav+1
+	ld	bc,8
+	ldir
+	ld	a,25
+	ld	(0f3dch),a
+	call	wiscl3
+	call	clrlin
+	call	namve3
+	call	savve2
+	call	shwvce
+	call	stpdrv
+	jp	ldend
+
+savvce:	call	namvce
+	call	savve2
+	call	stpdrv
+	jp	ldend
+
+savve2:	ld	hl,9
+	ld	(lengte),hl
+	call	savvb5
+	ld	hl,ownvdt-25+16
+	ld	de,25
+	ld	a,(ownnr)
+	ld	b,a
+savve3:	add	hl,de
+	djnz	savve3
+	ex	de,hl
+	jp	savvb6
+
+
+
+
+;**** delete voice ****
+
+delvce:	call	shwvce
+	ld	a,(filcnt)
+	or	a
+	jp	z,novedl
+	ld	hl,deltx3
+	call	print
+	call	curwlk
+	call	namvce
+	call	delsn4
+	cp	"Y"
+	jp	nz,ldend
+	call	shwvce
+	jp	ldend
+
+novedl:	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	ret	nz
+	ld	hl,nedltx
+	call	print
+	call	getkey
+	jp	clrlin
+
+
+;**** load voicebank ****
+
+ldvcb:	call shwvcb
+	ld   a,(filcnt)
+	or   a
+	jp   z,novbld
+	ld   hl,ldtxt4
+	call print
+	call curwlk
+
+
+lodvcb:	call	namvcb
+	call	lodvb2
+	ld	hl,144
+	ld	(lengte),hl
+	ld	de,ownvdt
+lodvb3:	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+	ld	de,0da00h
+	ld	hl,(lengte)
+	ld	c,read
+	call	bdos		 ;lees file
+	ld	de,0da00h
+	ld	c,close
+	call	bdos
+	call	stpdrv
+	jp	ldend
+
+lodvb2:	ld	de,0da00h
+	ld	c,open
+	call	bdos		 ;open de file
+	jp	c,abcod3
+	or	a
+	jp	nz,fnfer2
+	call	clrlin
+	ld	hl,patltx
+	call	print
+	ld	hl,1
+	ld	(0da00h+groot-fcbsav),hl	   ;blokgrootte = 1
+	dec	hl
+	ld	(0da00h+blok-fcbsav),hl
+	ld	(0da00h+blok-fcbsav+2),hl	   ;bloknummer = 0
+	ld	hl,(0da00h+bleng-fcbsav)	   ;bestandslengte
+	ld	(lengte),hl
+	ld	a,em1pag
+	out	(0feh),a
+	ret
+
+novbld:	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	ret	nz
+	ld	hl,nbldtx
+	call	print
+	call	getkey
+	jp	clrlin
+
+
+; **** save voicebank ****
+
+svvcb:	call	shwvcb
+	ld	a,(filcnt)
+	or	a
+	jp	z,entna5
+	ld	hl,svtxt4
+	call	print
+	ld	hl,savvcb
+	ld	(relsav),hl
+	call	curwk2
+
+entna5:	ld	b,a
+	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	jp	nz,ldend
+	ld	a,b
+	call	entnam
+	ld	hl,nnbuf		   ;entna2
+	ld	de,fcbsav+1
+	ld	bc,8
+	ldir
+	ld	a,25
+	ld	(0f3dch),a
+	call	wiscl3
+	call	clrlin
+	call	namvb3
+	call	savvb2
+	call	shwvcb
+	call	stpdrv
+	jp	ldend
+
+savvcb:	call	namvcb
+	call	savvb2
+	call	stpdrv
+	jp	ldend
+
+savvb2:	ld	hl,9*16
+	ld	(lengte),hl
+	call	savvb5
+	ld	de,ownvdt
+savvb6:	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+	ld	de,0da00h
+	ld	hl,(lengte)
+	ld	c,write
+	call	bdos		 ;schrijf file
+	or	a
+	jp	nz,fwrer2		   ;write error
+	ld	de,0da00h
+	ld	c,close
+	jp	bdos		   ;sluit file
+
+savvb5:	ld	de,0da00h
+	ld	c,create
+	call	bdos		;maak de file
+	jp	c,abcod4
+	or	a
+	jp	nz,fcrer2		   ;file creation error
+	call	clrlin
+	ld	hl,patstx
+	call	print
+	ld	hl,1
+	ld	(0da00h+groot-fcbsav),hl	   ;blokgrootte = 1
+	dec	hl
+	ld	(0da00h+blok-fcbsav),hl
+	ld	(0da00h+blok-fcbsav+2),hl	   ;bloknummer = 0
+	ret
+
+
+;**** delete voicebank ****
+
+delvcb:	call	shwvcb
+	ld	a,(filcnt)
+	or	a
+	jp	z,novbdl
+	ld	hl,deltx4
+	call	print
+	call	curwlk
+
+	call	namvcb
+	call	delsn4
+	cp	"Y"
+	jp	nz,ldend
+	call	shwvcb
+	jp	ldend
+
+novbdl:	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	ret	nz
+	ld	hl,nbdltx
+	call	print
+	call	getkey
+	jp	clrlin
+
+
+
+
+;**** disk menu voor songs/samplekits ****
+
+disksn:	call	makscr
+	call	moverr
+
+	ld	a,1
+	ld	(blkdt2),a
+	call	menblk
+	ld	a,25
+	ld	(0f3dch),a
+
+
+;**** hoofmenu ****
+
+main:	ld	ix,maind
+	call	keyhan
+	jr	main
+
+maind:	db	30
+	dw	curup
+	db	31
+	dw	curdow
+	db	28
+	dw	curlr
+	db	29
+	dw	curlr
+	db	" "
+	dw	selmen
+	db	27
+	dw	enddis
+	db	0
+
+curup:	ld	a,(blkdt2)
+	dec	a
+	ret	z
+	ld	(blkdt2),a
+	jp	menblk
+
+curup8:	ld	a,(blkdt2)
+	dec	a
+	ret	z
+	ld	(blkdt2),a
+	jp	menbl2
+
+curdow:	ld	a,(blkdt2)
+	cp	14
+	ret	z
+	inc	a
+	ld	(blkdt2),a
+	jp	menblk
+
+curdw8:	ld	a,(blkdt2)
+	cp	11
+	ret	z
+	inc	a
+	ld	(blkdt2),a
+	jp	menbl2
+
+
+curlr:	ld	a,(blkdt2)
+	sub	9	;9
+	jp	z,swdrv
+	dec	a	;10
+	ret	nz
+	ld	a,(packin)
+	xor	1
+	ld	(packin),a
+	jp	prtpak
+
+curlr8:	ld	a,(blkdt2)
+	sub	9	;9
+	ret	nz
+swdrv:	ld	a,(0fb21h)
+	cp	1
+	ret	z
+	ld	a,(drive)
+	xor	1
+	ld	(drive),a
+	push	af
+	call	prtdrv
+	pop	af
+	ld	e,a
+	ld	c,seldsk
+	call	bdos
+	jp	shwdr4
+
+
+selmen:	ld	a,(blkdt2)
+	ld	ix,selm1d
+	jp	keyhn2
+
+selm1d:	db	1
+	dw	ldsong
+	db	2
+	dw	svsong
+	db	3
+	dw	shwsng
+	db	4
+	dw	delsng
+	db	5
+	dw	lddrum
+	db	6
+	dw	svdrum
+	db	7
+	dw	shwdrm
+	db	8
+	dw	deldrm
+	db	11
+	dw	format
+	db	12
+	dw	fstlod
+	db	13
+	dw	fsdlod
+	db	14
+	dw	enddis
+	db	0
+
+
+
+
+;**** load song ****
+
+ldsong:	call	shwsng
+	ld	a,(filcnt)
+	or	a
+	jp	z,nofld
+	ld	hl,ldtxt
+	call	print
+	call	curwlk
+	jp	lodsng
+
+nofld:	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	ret	nz
+	ld	hl,nfldtx
+	call	print
+	call	getkey
+	jp	clrlin
+
+
+lodsng:	call	namsng
+	ld	de,0da00h
+	ld	c,open
+	call	bdos		 ;open de file
+	jp	c,abcod2
+	or	a
+	jp	nz,fnferr
+	call	clrlin
+	ld	hl,patltx
+	call	print
+
+	ld	hl,1
+	ld	(0da00h+groot-fcbsav),hl	   ;blokgrootte = 1
+	dec	hl
+	ld	(0da00h+blok-fcbsav),hl
+	ld	(0da00h+blok-fcbsav+2),hl	   ;bloknummer = 0
+	ld	hl,(0da00h+bleng-fcbsav)	   ;bestandslengte
+	ld	(lengte),hl
+	ld	a,em1pag
+	out	(0feh),a
+
+	xor	a
+	ld	(packi2),a
+
+	ld	de,08000h
+	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+
+	ld	de,0da00h
+	ld	hl,1
+	ld	c,read
+	call	bdos		 ;lees file
+	ld	hl,(lengte)
+	dec	hl
+	ld	(lengte),hl
+
+	ld	de,08001h
+	ld	c,setdma
+	call	bdos		 ;dma adres = 8001
+
+	ld	a,(08000h)
+	cp	255
+	jr	nz,lodsnx
+	ld	(packi2),a
+
+	ld	de,08000h
+	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+
+lodsnx:	ld	de,0da00h
+	ld	hl,(lengte)
+	ld	c,read
+	call	bdos		 ;lees file
+
+	ld	de,0da00h
+	ld	c,close
+	call	bdos
+	call	stpdrv
+	ld	a,1
+	ld	(loaded),a
+	call	mecrc
+	call	chkown
+	jp	ldend
+
+
+; **** save song ****
+
+svsong:	ld	hl,(usrdat)
+	ld	de,(us2dat)
+	ld	a,h
+	xor	22
+	ld	h,a
+	rst	020h
+	jr	z,svcont
+;	 di
+;	 halt
+svcont:	call	shwsng
+	ld	a,255
+	ld	(val255),a
+	ld	a,(filcnt)
+	or	a
+	jp	z,entna3
+	ld	hl,svtxt
+	call	print
+	ld	hl,savsng
+	ld	(relsav),hl
+	call	curwk2
+
+entna3:	ld	b,a
+	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	jp	nz,ldend
+	ld	a,b
+	call	entnam
+	ld	hl,nnbuf	;entna2
+	ld	de,fcbsav+1
+	ld	bc,8
+	ldir
+	ld	a,25
+	ld	(0f3dch),a
+	call	wiscl3
+	call	clrlin
+	call	namsn3
+	call	savsn2
+	call	shwsng
+	jp	ldend
+
+
+savsng:	call	namsng
+	call	savsn2
+	call	stpdrv
+	jp	ldend
+
+savsn2:	ld	hl,smknam
+	ld	de,xsmpkt
+	ld	bc,8
+	ldir
+	call	crunch
+	ld	a,em1pag
+	out	(0feh),a
+savsn5:	ld	de,0da00h
+	ld	c,create
+	call	bdos	;maak de file
+	jp	c,abcod3
+	or	a
+	jp	nz,fcrerr	;file creation error
+
+	call	clrlin
+	ld	hl,patstx
+	call	print
+
+	ld	hl,1
+	ld	(0da00h+groot-fcbsav),hl	   ;blokgrootte = 1
+	dec	hl
+	ld	(0da00h+blok-fcbsav),hl
+	ld	(0da00h+blok-fcbsav+2),hl	   ;bloknummer = 0
+	ld	a,(packin)
+	or	a
+	jr	z,savsnx
+
+	ld	de,val255
+	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+	ld	de,0da00h
+	ld	hl,1
+	ld	c,write
+	call	bdos		 ;schrijf file
+
+savsnx:	ld	de,08000h
+	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+
+	ld	de,0da00h
+	ld	hl,(lengte)
+	ld	c,write
+	call	bdos		 ;schrijf file
+	or	a
+	jp	nz,fwrerr		   ;file write error
+
+	ld	de,0da00h
+	ld	c,close
+	call	bdos
+	ld	a,sngpag
+	out	(0feh),a
+	ret
+
+fcrer2:	pop	hl
+fcrerr:	call	clrlin
+	ld	hl,fcetxt
+	call	print
+	call	getkey
+	ld	a,em1pag
+	out	(0feh),a
+	jp	ldend
+
+fwrer2:	pop	hl
+fwrerr:	call	clrlin
+	ld	hl,fwrtxt
+	call	print
+	ld	de,0da00h		   ;sluit file weer
+	ld	c,close
+	call	bdos
+	call	getkey
+	ld	a,sngpag
+	out	(0feh),a
+	jp	ldend
+
+
+
+; **** enter new name (save song) ****
+
+entnam:	push	af
+	call	clrlin
+	call	wiscl3
+	ld	hl,nsntxt
+	call	print
+	ld	hl,0800h+22*10+2
+	call	setwrt
+	ld	hl,blkdt4+6
+	ld	b,2
+	otir
+	ld	hl,01717h
+	ld	(0f3dch),hl
+	ld	a,(filcnt)
+	or	a
+	jp	z,entnm2
+	pop	af
+
+	ld	hl,nnbuf
+	ld	de,nnbuf+1
+	ld	bc,7
+	ld	(hl)," "
+	ldir
+	call	0a2h
+	ld	hl,nnbuf
+	ld	(hl),a
+	inc	hl
+	ld	a,2
+	ld	(nnbuf2),a
+
+
+nnlus:	call	getkey
+	cp	8
+	jp	z,bsnn
+	cp	0dh
+	jp	z,retnn
+	cp	27
+	jp	z,escnn
+	cp	"0"
+	jr	c,nnlus
+	cp	"?"
+	jr	z,nnlus
+	cp	"z"+1
+	jr	nc,nnlus
+	ld	(hl),a
+	call	0a2h
+	inc	hl
+	ld	a,(nnbuf2)
+	inc	a
+	ld	(nnbuf2),a
+	cp	9
+	jp	z,entnm3
+	jp	nnlus
+
+entnm3:	call	getkey
+	cp	8
+	jp	z,bsnn
+	cp	0dh
+	jr	nz,entnm3
+	jp	retnn
+
+entnm2:	pop	af
+	ld	hl,nnbuf
+	ld	de,nnbuf+1
+	ld	bc,7
+	ld	(hl)," "
+	ldir
+	ld	hl,nnbuf
+	ld	a,1
+	ld	(nnbuf2),a
+	jp	nnlus
+
+bsnn:	ld	a,(nnbuf2)
+	cp	1
+	jp	z,nnlus
+	dec	a
+	ld	(nnbuf2),a
+	dec	hl
+	ld	(hl)," "
+	push	hl
+	ld	hl,0f3ddh
+	dec	(hl)
+	ld	a," "
+	call	0a2h
+	dec	(hl)
+	pop	hl
+	jp	nnlus
+
+retnn:	ld	a,(nnbuf2)
+	cp	1
+	jp	z,nnlus
+	ret
+
+escnn:	ld	a,25
+	ld	(0f3dch),a
+	call	wiscl3
+	pop	hl
+	jp	clrlin
+
+ldend2:	pop	af
+ldend:	call	wiscl3
+	ld	a,sngpag
+	out	(0feh),a
+	jp	clrlin
+
+fnfer2:	pop	af
+fnferr:	call	clrlin
+	ld	hl,fnftxt	;file not found!
+	call	print
+	call	getkey
+	jr	ldend
+
+;**** delete song ****
+
+delsng:	call	shwsng
+	ld	a,(filcnt)
+	or	a
+	jp	z,nofldl
+	ld	hl,deltxt
+	call	print
+	call	curwlk
+	call	namsng
+	call	delsn4
+	cp	"Y"
+	jp	nz,ldend
+	call	shwsng
+	jp	ldend
+
+nofldl:	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	ret	nz
+	ld	hl,nfdltx
+	call	print
+	call	getkey
+	jp	clrlin
+
+delsn4:	call	clrlin
+	ld	hl,sfdltx
+	call	print
+	ld	hl,22*80+34
+	call	setwrt
+	ld	hl,fcbsav+1
+	ld	b,8
+	otir
+	ld	a,"?"
+	out	(c),a
+dels4l:	call	getkey
+	res	5,a
+	cp	"N"
+	jp	z,ldend2
+	cp	"Y"
+	jr	nz,dels4l
+	push	af
+	call	wiscl3
+	ld	de,0da00h
+	ld	c,delete
+	call	bdos
+	jp	c,abcod4
+	pop	af
+	ret
+
+
+
+
+;**** load samplekit ****
+
+lddrum:	call	shwdrm
+	ld	a,(filcnt)
+	or	a
+	jp	z,nodld
+	ld	hl,ldtxt2
+	call	print
+	call	curwlk
+	jp	loddrm
+
+
+nodld:	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	ret	nz
+	ld	hl,ndldtx
+pandw:	call	print
+	call	getkey
+	jp	clrlin
+
+
+loddrm:	call	namdrm
+	ld	a,em1pag
+	out	(0feh),a
+	ld	a,1
+	ld	(sampdt),a
+	call	loddr2
+	ld	a,sngpag
+	out	(0feh),a
+	call	stpdrv
+	jp	ldend
+
+loddr2:	ld	hl,fcbsav+1
+	ld	de,smknam
+	ld	bc,8
+	ldir
+	ld	de,0da00h
+	ld	c,open
+	call	bdos		 ;open de file
+	jp	c,abcod3
+	or	a
+	jp	nz,fnferr
+
+	call	clrlin
+	ld	hl,patltx
+	call	print
+
+	ld	hl,1
+	ld	(0da00h+groot-fcbsav),hl	   ;blokgrootte = 1
+	dec	hl
+	ld	(0da00h+blok-fcbsav),hl
+	ld	(0da00h+blok-fcbsav+2),hl	   ;bloknummer = 0
+	ld	hl,(0da00h+bleng-fcbsav)	   ;bestandslengte
+	ld	(lengte),hl
+	ld	de,smpadr
+	ld	c,setdma
+	call	bdos
+	ld	hl,56
+	ld	de,0da00h
+	ld	c,read
+	call	bdos
+
+	ld	de,08000h
+	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+
+	ld	de,0da00h
+	ld	hl,04000h
+	ld	c,read
+	call	bdos		 ;lees file
+	call	movsmp
+
+	ld	de,08000h
+	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+
+	ld	de,0da00h
+	ld	hl,04000h
+	ld	c,read
+	call	bdos		 ;lees file
+	call	movsmp
+
+	ld	de,0da00h
+	ld	c,close
+	jp	bdos
+
+
+
+; **** save samplekit ****
+
+svdrum:	call	shwdrm
+	ld	a,(filcnt)
+	or	a
+	jp	z,entna4
+	ld	hl,svtxt2
+	call	print
+	ld	hl,savdrm
+	ld	(relsav),hl
+	call	curwk2
+
+entna4:	ld	b,a
+	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	jp	nz,ldend
+	ld	a,b
+	call	entnam
+
+	ld	hl,nnbuf		   ;entna2
+	ld	de,fcbsav+1
+	ld	bc,8
+	ldir
+	ld	a,25
+	ld	(0f3dch),a
+	call	wiscl3
+	call	clrlin
+	call	namdr3
+	ld	a,em1pag
+	out	(0feh),a
+	ld	a,1
+	ld	(sampdt),a
+	call	savdr2
+	ld	a,sngpag
+	out	(0feh),a
+	call	stpdrv
+	call	shwdrm
+	jp	ldend
+
+savdrm:	call	namdrm
+	ld	a,em1pag
+	out	(0feh),a
+	ld	a,1
+	ld	(sampdt),a
+	call	savdr2
+	ld	a,sngpag
+	out	(0feh),a
+	call	stpdrv
+	jp	ldend
+
+
+
+savdr2:	ld	de,0da00h
+	ld	c,create
+	call	bdos		 ;maak de file
+	jp	c,abcod3
+	or	a
+	jp	nz,fcrer2
+
+	call	clrlin
+	ld	hl,patstx
+	call	print
+
+	ld	hl,1
+	ld	(0da00h+groot-fcbsav),hl	   ;blokgrootte = 1
+	dec	hl
+	ld	(0da00h+blok-fcbsav),hl
+	ld	(0da00h+blok-fcbsav+2),hl	   ;bloknummer = 0
+
+	ld	de,smpadr
+	ld	c,setdma
+	call	bdos		 ;dma adres = smpadr
+
+	ld	hl,56
+	ld	de,0da00h
+	ld	c,write
+	call	bdos
+	or	a
+	jp	nz,fwrer2
+
+	call	getsmp
+	ld	de,08000h
+	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+
+	ld	de,0da00h
+	ld	hl,04000h
+	ld	c,write
+	call	bdos		 ;schrijf file
+	or	a
+	jp	nz,fwrer2
+
+	call	getsmp
+	ld	de,08000h
+	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+
+	ld	de,0da00h
+	ld	hl,04000h
+	ld	c,write
+	call	bdos		 ;schrijf file
+	or	a
+	jp	nz,fwrer2
+
+	ld	de,0da00h
+	ld	c,close
+	jp	bdos
+
+
+
+
+
+;**** delete samplekit ****
+
+deldrm:	call	shwdrm
+	ld	a,(filcnt)
+	or	a
+	jp	z,nodrdl
+	ld	hl,deltx2
+	call	print
+	call	curwlk
+
+	call	namdrm
+	call	delsn4
+	cp	"Y"
+	jp	nz,ldend
+	call	shwdrm
+	jp	ldend
+
+
+nodrdl:	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	ret	nz
+	ld	hl,nddltx
+	jp	pandw
+
+
+
+
+
+
+
+; **** format disk ****
+
+format:	ld	hl,fortxt
+	call	print
+	ld	hl,22*80+52
+	call	setwrt
+	ld	a,(drive)
+	add	a,"A"
+	out	(c),a
+	call	getkey
+	res	5,a
+	cp	"Y"
+	jr	z,forma2
+	jp	clrlin
+
+forma2:	call	clrlin
+	ld	hl,for2tx
+	call	print
+forma3:	call	getkey
+	cp	"1"
+	jr	c,forma3
+	cp	"3"
+	jr	nc,forma3
+	sub	"1"-1
+	push	af
+	call	clrlin
+	ld	hl,for3tx
+	call	print
+	ld	a,(drive)
+	ld	d,a
+	ld	a,em1pag
+	out	(0feh),a
+	ld	a,(0fb22h)
+	ld	(forma4),a
+	ld	hl,08000h
+	ld	bc,04000h
+	pop	af
+
+	rst	030h
+forma4:	db	0
+	dw	0401ch
+
+	push	af
+	ld	a,sngpag
+	out	(0feh),a
+	pop	af
+	call	c,forma5
+	jp	clrlin
+
+forma5:	ld	hl,for4tx
+	call	print
+	jp	getkey
+
+
+;---------------load soundtracker drumkit--------------
+
+
+fsdlod:
+	call	shwfsd
+	ld	a,(filcnt)
+	or	a
+	jp	z,nofdld
+	ld	hl,ld3txt
+	call	print
+	call	curwlk
+	jr	lodfsd
+
+nofdld:	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	ret	nz
+	ld	hl,nfddtx
+	call	print
+	call	getkey
+	jp	clrlin
+
+
+lodfsd:	call	namfsd
+	ld	de,0da00h
+	ld	c,open
+	call	bdos		 ;open de file
+	jp	c,abcod2
+	or	a
+	jp	nz,fnferr
+	ld	a,1
+	ld	(sampdt),a
+	call	clrlin
+	ld	hl,patltx
+	call	print
+	ld	a,em1pag
+	out	(0feh),a
+	call	lodfd2
+	call	movsmp
+	ld	a,"2"
+	ld	(0da00h+1+10),a		;sm2
+	ld	de,0da00h
+	ld	c,open
+	call	bdos		 ;open de file
+	jp	c,abcod2
+	or	a
+	jp	nz,fnferr
+	call	lodfd2
+	call	movsmp
+	call	clrlin
+	call	stpdrv
+	ld	hl,smpadd	;zet 4kB sample adressen zoals FST
+	ld	de,smpadr
+	ld	bc,56
+	ldir
+	jp	ldend
+
+
+lodfd2:	ld	hl,1
+	ld	(0da00h+groot-fcbsav),hl	   ;blokgrootte = 1
+	dec	hl
+	ld	(0da00h+blok-fcbsav),hl
+	ld	(0da00h+blok-fcbsav+2),hl	   ;bloknummer = 0
+	ld	de,08000h
+	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+
+	ld	de,0da00h
+	ld	hl,7
+	ld	c,read
+	call	bdos		 ;lees file
+
+	ld	de,08000h
+	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+
+	ld	de,0da00h
+	ld	hl,16384
+	ld	c,read
+	call	bdos		 ;lees file
+
+	ld	de,0da00h
+	ld	c,close
+	jp	bdos
+
+
+
+
+
+
+
+;-------------------------load soundtracker song--------------------------
+
+fstlod:
+	call	shwfst
+	ld	a,(filcnt)
+	or	a
+	jp	z,noffld
+	ld	hl,ld2txt
+	call	print
+	call	curwlk
+	call	rempit
+	jr	lodfst
+
+noffld:	ld	hl,(0fb41h)
+	ld	de,0
+	rst	020h
+	ret	nz
+	ld	hl,nffdtx
+	call	print
+	call	getkey
+	jp	clrlin
+
+
+lodfst:	call	namfst
+	ld	de,0da00h
+	ld	c,open
+	call	bdos		 ;open de file
+	jp	c,abcod2
+	or	a
+	jp	nz,fnferr
+	call	clrlin
+	ld	hl,patltx
+	call	print
+
+	ld	hl,1
+	ld	(0da00h+groot-fcbsav),hl	   ;blokgrootte = 1
+	dec	hl
+	ld	(0da00h+blok-fcbsav),hl
+	ld	(0da00h+blok-fcbsav+2),hl	   ;bloknummer = 0
+	ld	a,em1pag
+	out	(0feh),a
+
+	ld	de,08000h
+	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+
+	ld	de,0da00h
+	ld	hl,7
+	ld	c,read
+	call	bdos		 ;lees file
+
+	ld	de,08000h
+	ld	c,setdma
+	call	bdos		 ;dma adres = 8000
+
+	ld	de,0da00h
+	ld	hl,16384
+	ld	c,read
+	call	bdos		 ;lees file
+
+	ld	de,0da00h
+	ld	c,close
+	call	bdos
+	call	clrlin
+	call	stpdrv
+	call	ldend
+	ld	a,1
+	ld	(loaded),a
+
+
+;*************************** instrumenten musicmodule **********************
+
+sttomb:	push	af
+	push	bc
+	push	hl
+	push	de
+	call	r800d
+	call	renew
+	call	moonbk
+	ld	hl,08000h
+	xor	a
+	ld	(hl),a
+	ld	de,08001h
+	ld	bc,03fffh
+	ldir
+
+
+begin:	ld	hl,omztxt
+	call	print
+	call	sndbk
+	ld	de,tmpstr
+	ld	hl,0bf00h	;instrumenten
+	ld	bc,99
+	ldir
+	call	moonbk
+	ld	b,16
+	ld	de,xmmvoc
+tiet3:	push	bc
+	ld	hl,0c400h+16	;begin voice bank
+	ld	b,9
+tiet4:	ld	a,(hl)
+	ld	(de),a
+	inc	hl
+	inc	de
+	djnz	tiet4
+	pop	bc
+	djnz	tiet3
+
+	ld	hl,tmpstr
+	ld	de,xmmvoc
+	ld	b,9
+po2:	push	bc
+	ld	b,8
+po3:	ld	a,(hl)
+	ld	(de),a
+	inc	hl
+	inc	de
+	djnz	po3
+	inc	hl
+	inc	hl
+	ld	a,(hl)
+	ld	(de),a
+	pop	bc
+	inc	hl
+	inc	de
+	djnz	po2
+	call	mvbprt
+
+;**************************** instrument op kanaal ***********************
+
+inskan:	call	sndbk
+	ld	de,tmpstr
+	ld	hl,0bf63h	;instrumenten nummers
+	ld	bc,9
+	ldir
+	call	moonbk
+	ld	a,176
+	ld	(owndat),a
+	ld	hl,tmpstr
+	ld	de,xmmsti
+	ld	b,9
+lus4:	push	hl
+	push	bc
+	ld	a,b
+	ld	(kanaal),a
+	ld	a,(hl)
+	cp	151
+	jr	nc,ownins
+	ld	b,a
+	ld	hl,insdat-1
+lus3:	inc	hl
+	djnz	lus3
+	ld	a,(hl)
+	cp	255
+	jr	z,ownins
+	cp	18
+	jp	c,bassup
+ownret:	ld	(de),a
+	pop	bc
+	pop	hl
+	inc	hl
+	inc	de
+	djnz	lus4
+	ld	b,7
+	ld	a,1
+loop1:	ld	(de),a	;rest volmaken
+	inc	de
+	djnz	loop1
+	ld	hl,xbegvm	;start instrumenten
+	ld	b,9
+	xor	a
+lus1:	inc	a
+	ld	(hl),a
+	inc	hl
+	djnz	lus1
+	call	mvbprt
+	jp	verder
+
+ownins:	ld	a,(kanaal)
+	ld	b,a
+	ld	a,9
+	sub	b
+	push	de
+	ld	hl,xmmvoc
+	ld	c,9
+	call	berhl
+	ex	de,hl
+	ld	a,(owndat)
+	inc	a
+	ld	(owndat),a
+	ld	b,176
+	sub	b
+	ld	hl,ownvdt+16	;own voice in voice bank zetten
+	ld	c,25
+	call	berhl
+	ex	de,hl
+	ld	bc,9
+	ldir
+	pop	de
+	ld	a,(owndat)
+	jp	ownret
+
+bassup:	push	af
+	ld	a,(kanaal)
+	ld	b,a
+	ld	a,9
+	sub	b
+	ld	hl,xmmvoc
+	ld	c,9
+	call	berhl
+	ld	a,(hl)
+	inc	a
+	ld	(hl),a
+	inc	hl
+	ld	a,(hl)
+	inc	a
+	ld	(hl),a
+	pop	af
+	jp	ownret
+
+berhl:	or	a
+	ret	z
+	ld	b,a
+berhl2:	push	bc
+	ld	b,0
+	add	hl,bc
+	pop	bc
+	djnz	berhl2
+	ret
+
+insdat:	db	92,93,94,95,101,255,255,255,97,103,104,255,22,23,105
+	db	98,99,79,81,82,83,88,89,90,91,80,78,85,86,255
+	db	134,140,141,255,255,255,137,136,135,10,11,6,7,8,13
+	db	14,5,1,2,9,3,255,255,18,19,255,58,59,60,158
+	db	159,27,43,44,45,48,51,52,255,56,255,57,50,255,148
+	db	255,255,125,126,255,255,119,120,121,255,123,124,68,63,64
+	db	65,66,107,108,108,110,111,117,118,113,114,163,33,255,32
+	db	255,36,37,100,145,146,42,49,46,47,76,62,29,30,25
+	db	61,255,255,168,169,170,255,255,255,255,255,255,255,167,255
+	db	171,149,154,162,165,166,161,255,129,128,147,175,176,255,255
+
+owndat:	db	175
+
+;****************************** original pac ************************
+
+verder:	call	sndbk
+	ld	de,tmpstr
+	ld	hl,0bf6ch	;original pac
+	ld	bc,8
+	ldir
+	call	moonbk
+	ld	b,6
+	ld	de,xorgp1
+loop2:	push	bc
+	ld	hl,tmpstr
+	ld	bc,8
+	ldir
+	pop	bc
+	djnz	loop2
+	call	mvbprt
+
+;************************* instrumentnummers pac **********************
+
+	call	sndbk
+	ld	de,tmpstr
+	ld	hl,0bf74h
+	ld	bc,6
+	ldir
+	call	moonbk
+	ld	hl,tmpstr
+	ld	de,xpasti
+	ld	b,6
+tiet1:	push	bc
+	ld	a,(hl)
+	and	0f0h	;voice nummer
+	jp	z,origi	;original
+	rra
+	rra
+	rra
+	rra
+	ld   (de),a
+retori:	inc  de
+	ld   a,(hl)
+	and  00fh	;volume
+	ld   (de),a
+	inc  hl
+	inc  de
+	pop  bc
+	djnz tiet1
+
+	ld   b,10	;rest invullen
+loop5:	ld   a,1
+	ld   (de),a
+	xor  a
+	inc  de
+	ld   (de),a
+	inc  de
+	djnz loop5
+	xor  a
+	ld   b,6	;begin instrumenten
+	ld   de,xbegvp
+loop6:	inc  a
+	ld   (de),a
+	inc  de
+	djnz loop6
+	ld   a,1
+	ld   (de),a
+	inc  de
+	ld   (de),a
+	inc  de
+	ld   (de),a
+	call mvbprt
+	jp   stfrq
+
+origi:	ld   a,16
+	ld   (de),a
+	push hl
+	push de
+	call sndbk
+	ld   a,(0bf8dh)
+	ld   c,a
+	ld   a,(0bf8ch)
+	push af
+	call moonbk
+	pop  af
+	cp   2
+	jr   c,own1
+	ld   a,c
+	cp   151
+	jr   nc,own1
+	ld   b,a
+	ld   hl,insdat-1
+tiet2:	inc  hl
+	djnz tiet2
+	ld   a,(hl)
+	cp   255
+	jr   z,own1
+	cp   18
+	jr   c,basup2
+endori:	ld   (xorgnr),a
+	pop  de
+	pop  hl
+	jp   retori
+
+own1:	ld   a,(owndat)
+	inc  a
+	ld   b,176
+	sub  b
+	ld   hl,ownvdt-25+16
+	ld   c,25
+	call berhl
+	ld   de,xorgp1
+	ld   b,3
+eerst3:	ld   a,(de)
+	ld   (hl),a
+	inc  hl
+	inc  de
+	djnz eerst3
+	ld   a,(de)
+	and  000000111b
+	ld   c,a
+	ld   a,(de)
+	and  011000000b
+	ld   (hl),a
+	inc  hl
+	inc  de
+	ld   b,4
+tweede:	ld   a,(de)
+	ld   (hl),a
+	inc  hl
+	inc  de
+	djnz tweede
+	ld   a,c
+	rlc  a
+	ld   (hl),a
+	ld   a,(owndat)
+	inc  a
+	jr   endori
+
+basup2:	push	af
+	ld	hl,xorgp1
+	ld	a,(hl)
+	inc	a
+	ld	(hl),a
+	inc	hl
+	ld	a,(hl)
+	inc	a
+	ld	(hl),a
+	pop	af
+	jp	endori
+
+
+;********** zet drum frequenties en volumes *********
+
+stfrq:	ld   hl,drvol
+	ld   de,xdrvol
+	ld   bc,3+18
+	ldir
+	jp   naam
+
+drvol:	db 001h,031h,033h
+drfrq:	db 020h,005h,050h,005h,0c0h,001h
+	db 020h,050h,035h,005h,0c0h,001h
+	db 020h,005h,050h,005h,0c0h,001h
+
+;******************** naam ************************
+
+naam:	call	sndbk
+	ld	a,(0bf8ch)
+	ld	de,tmpstr
+	ld	hl,0bfa6h
+	ld	bc,40
+	ldir
+	push	af
+	call	moonbk
+	pop	af
+	ld	bc,40
+	cp	3
+	ld	a,19
+	jr	c,naam2
+	ld	bc,35
+	ld	a,24
+naam2:	ld	hl,tmpstr
+	ld	de,xnaam
+	ldir
+	ld	b,a
+	ld	a," "
+loop7:	ld	(hl),a
+	inc	hl
+	djnz	loop7
+	xor	a
+	ld	(hl),a
+	call	mvbprt
+
+drnaam:	call	sndbk
+	ld	de,tmpstr
+	ld	hl,0bf84h
+	ld	bc,8
+	ldir
+	call	moonbk
+	ld	hl,tmpstr
+	ld	de,xsmpkt
+	ld	bc,8
+	ldir
+
+;************************* tempo **************************
+
+	call	sndbk
+	ld	a,(0bf82h)
+	push	af
+	call	moonbk
+	pop	af
+;	 dec	a	 ;i.v.m.  maximum speed 24=mb  25=st
+	ld	(xtempo),a
+	call	mvbprt
+
+;************************ aantal tracks *********************
+
+	ld	hl,xpos
+	ld	b,xleng-xpos
+	ld	a,1
+loop9:	ld	(hl),a
+	inc	hl
+	djnz	loop9
+	call	sndbk
+	ld	a,(0bff8h)
+	push	af
+	call	moonbk
+	pop	af
+	inc	a
+	ld	(xleng),a
+	ld	(maxpat),a
+	call	mvbprt
+
+;***************** fm drum instellingen ********************
+
+	call	sndbk
+	ld	a,(0bf8ch)	;versie nummer
+	ld	c,a
+	call	moonbk
+	ld	a,c
+	ld	hl,drblk1
+	cp	2
+	jr	c,setdrm
+	ld	hl,drblk2
+setdrm:	ld	de,xdrblk
+	ld	bc,15
+	ldir
+	jp	sustan
+
+drblk1:	db	010h,8,0,4,2,1,018h,014h,012h,011h,00ch,00ah,9,6,5
+drblk2:	db	010h,8,1,4,1,3,018h,014h,012h,011h,00ch,00eh,00dh,5,00bh
+
+;***************** sustain ,reverberation and xloop *****************
+
+sustan:	xor	a
+	or	000100000b
+	ld	hl,xsust
+	ld	(hl),a
+	xor	a
+	ld	hl,xrever
+	ld	b,9
+loopa:	ld	(hl),a
+	inc	hl
+	djnz	loopa
+	ld	hl,xloop
+	ld	a,0ffh
+	ld	(hl),a
+	call	mvbprt
+
+;****************** stereo instellingen + org. nummer *********************
+
+	ld	a,3
+	ld	hl,xstpr
+	ld	b,10
+loopb:	ld	(hl),a
+	inc	hl
+	djnz	loopb
+	dec	a
+	ld	(xchip),a
+	dec	a
+	ld	hl,xstpr+6
+	ld	(hl),a
+	inc	hl
+	ld	(hl),a
+	inc	hl
+	ld	(hl),a
+	ld	hl,xorgnr
+	ld	b,6
+loopc:	ld	a,(hl)
+	cp	0
+	jr	nz,alvol
+	ld	a,1
+	ld	(hl),a
+alvol:	inc	hl
+	djnz	loopc
+	call	mvbprt
+
+;****************** check soundtracker 1 ,2 of pro ****************
+
+	call	sndbk
+	ld	a,(0bf8ch)
+	cp	2
+	jr	z,drum2	;FST2 drum verwijderen van vol.
+	cp	3
+	jp	z,pro	;FST pro overbodige data verwijderen
+	ld	hl,08000h
+l2:	ld	b,9
+l1:	ld	a,(hl)
+	and	0c0h
+	cp	040h
+	jr	nz,nooff
+	ld	(hl),040h
+nooff:	inc	hl
+	djnz	l1
+	inc	hl
+	inc	hl
+	inc	hl
+	ld	a,h
+	cp	0bfh
+	jr	nz,l2
+	ld	hl,0800bh
+	ld	de,0000ch
+l3:	ld	a,(hl)
+	cp	0
+	jr	z,nodrm	;geen drum aanwezig
+	and	00fh
+	ld	b,a	;musmod drum
+	sla	a
+	sla	a
+	sla	a
+	sla	a
+	ld	c,a	;fmpac drum
+	push	hl
+	dec	hl
+	dec	hl
+	ld	a,(hl)
+	and	a
+	pop	hl
+	ld	a,c
+	jr	z,nofreq	;geen frequentie -> geen musmod drum
+	or	b
+	ld	(hl),a
+	jr	nodrm1
+
+nofreq:	ld	(hl),a
+	push	hl
+	xor	a
+	dec	hl
+	ld	(hl),a
+	dec	hl
+	ld	(hl),a
+	pop	hl
+	jr	nodrm1
+
+nodrm:	dec	hl
+	xor	a
+	ld	(hl),a
+	inc	hl
+nodrm1:	add	hl,de
+	ld	a,h
+	cp	0bfh
+	jr	nz,l3
+	call	mvbprt
+
+drum2:	ld	hl,0800bh
+	ld	de,0000ch
+drm3:	push	hl
+	ld	a,(hl)	;drumnummer
+	and	00fh
+	jr	nz,chkvol	;musmod drum <> 0
+	dec	hl
+	ld	(hl),0	;volume = 0
+
+nodrum:	pop	hl
+	add	hl,de
+	ld	a,h
+	cp	0bfh
+	jr	nz,drm3
+	call	mvbprt
+	jr	chkdub
+
+chkvol:	dec	hl
+	ld	a,(hl)
+	or	a
+	jp	nz,nofrq
+chkvo2:	inc	hl
+	ld	a,(hl)
+	and	0f0h
+	ld	(hl),a
+	jp	nodrum
+
+nofrq:	dec	hl
+	ld	a,(hl)
+	or	a
+	jr	nz,nodrum
+	inc	hl
+	ld	(hl),0
+	jp	chkvo2
+
+;******************************************
+;* file beveiliging sountracker pro files *
+;******************************************
+
+pro:	ld	hl,08000h
+	ld	de,03f00h
+chtr2:	ld	a,(hl)
+	xor	l
+	ld	(hl),a
+	inc	hl
+	dec	de
+	ld	a,d
+	or	e
+	jr	nz,chtr2
+	jp	drum2
+
+
+;****************** overzetten muziekstuk ****************************
+
+lvol:	defb	0
+lfreq:	defb	0
+smpo:	defb	0
+
+chkdub:	ld	hl,0
+	ld	(lvol),hl
+	xor	a
+	ld	(smpo),a
+	ld	hl,08009h
+	ld	de,0000ch
+nxtdub:	push	hl
+	ld	a,(hl)
+	or	a
+	jr	z,chknxt
+	ld	b,a
+	inc	hl
+	ld	a,(hl)
+	or	a
+	ld	c,a
+	jr	z,smpoff
+	xor	a
+	ld	(smpo),a
+nxt3:	ld	a,c
+	or	a
+	jr	z,nxt2
+	ld	a,(lfreq)
+	cp	c
+	jr	nz,setfrq
+	ld	(hl),0
+nxt2:	dec	hl
+	ld	a,c
+	cp	1
+	jr	z,setnul
+	ld	a,(lvol)
+	cp	b
+	jp	nz,setvol
+setnul:	ld	(hl),0
+	jp	chknxt
+
+setvol:	ld	a,b
+	ld	(lvol),a
+	jp	chknxt
+
+setfrq:	ld	a,c
+	ld	(lfreq),a
+	jp	nxt2
+
+smpoff:	ld	c,1
+	ld	a,(smpo)
+	or	a
+	jr	nz,nxt3
+	ld	a,1
+	ld	(hl),a
+	ld	(lfreq),a
+	ld	(smpo),a
+	dec	hl
+	xor	a
+	ld	(hl),a
+
+chknxt:	pop	hl
+	add	hl,de
+	ld	a,h
+	cp	0bfh
+	jr	nz,nxtdub
+	call	mvbprt
+
+;****  kijken of sample 15 in gebruik is *******
+;
+;**  zo ja!  dan wordt smp15 gezet **
+
+
+chksmp:	xor	a
+	ld	(smp15),a
+	ld	hl,0800bh
+	ld	de,0000ch
+smpnxt:	ld	a,(hl)
+	and	000001111b	;afzonderen music module drum
+	cp	15
+	jr	z,set15
+nxtsmp:	add	hl,de
+	ld	a,h
+	cp	0bfh
+	jr	nz,smpnxt
+	call	mvbprt
+	jp	chkdu2
+
+set15:	ld	a,(hl)
+	and	011110000b	;red fm-pac drum
+	ld	b,a
+	ld	a,1
+	ld	(smp15),a
+	ld	a,14
+	or	b
+	ld	(hl),a
+	jp	nxtsmp
+
+chkdu2:	call	moonbk
+	ld	hl,dubdat
+	ld	b,84
+	xor	a
+clear:	ld	(hl),a
+	djnz	clear
+	call	sndbk
+	ld	a,1
+	ld	(patnr),a
+	ld	(track1),a
+check:	inc	a
+	ld	(trcknr),a
+	dec	a
+	call	setpat	;set pattern number
+nxttrk:	ld	a,(track1)
+	call	shtrk	;set begingeheugenplaats van track nr
+	ld	d,h
+	ld	e,l
+	ld	a,(maxpat)
+	inc	a
+	ld	b,a
+	ld	a,(trcknr)
+	cp	b
+	jp	nc,nxtpat
+	call	shtrk	; ''      ''      ' '        ''
+	ld	b,192
+ls2:	push	bc
+	ld	a,(hl)
+	ld	b,a
+	ld	a,(de)
+	cp	b
+	jr	nz,notsme	;verschillende tracks
+	pop	bc
+	inc	hl
+	inc	de
+	djnz	ls2
+	ld	a,(trcknr)
+	call	setpat	;patterns gelijk
+	jr	notsm1
+
+notsme:	pop	bc
+notsm1:	ld	a,(trcknr)
+	inc	a
+	ld	(trcknr),a
+	jp	nxttrk
+
+shtrk:	ld	hl,08000h-192
+	ld	b,a
+ls1:	push	bc
+	ld	bc,192
+	add	hl,bc
+	pop	bc
+	djnz	ls1
+	ret
+
+nxtpat:	ld	a,(patnr)
+	inc	a
+	ld	(patnr),a
+
+verhog:	ld	a,(maxpat)
+	inc	a
+	ld	b,a
+	ld	a,(track1)
+	cp	b
+	jp	nc,endchk
+	inc	a
+	ld	(track1),a
+	ld	b,0
+	ld	c,a
+	ld	hl,dubdat-1
+	add	hl,bc
+	ld	a,(hl)
+	cp	0	;is track data nog leeg
+	jr	nz,verhog
+	call	mvbprt
+	ld	a,(track1)
+	jp	check
+
+setpat:	ld	b,0
+	ld	c,a
+	ld	a,(patnr)
+	ld	hl,dubdat-1
+	add	hl,bc
+	ld	(hl),a
+	ret
+
+
+endchk:	call	moonbk
+	ld	a,(maxpat)
+	ld	(xleng),a
+	ld	a,(patnr)
+	dec	a
+	cp	78
+	jr	c,past
+	ld	a,77
+past:	ld	(aanpat),a
+	call	mvbprt
+
+fac2:	call	moonbk
+	ld	a,1
+	ld	(patnr),a
+	ld	(trcknr),a
+	ld	hl,xbegmd
+	ld	(blstda),hl
+loopd:	call	copy
+	ld	hl,tmpstr
+	ld	de,(blstda)
+	ld	b,9
+loope:	push	bc
+	push	hl
+	ld	a,b
+	ld	(kanaal),a
+	ld	a,(hl)
+	cp	0
+	jp	z,nodat
+	cp	040h
+	jp	c,musdat	;music data
+	jp	z,offev	;off event
+	cp	041h
+	jp	z,revup	;reverberation up
+	cp	042h
+	jp	z,revdwn	;reverberation down
+	cp	04dh
+	jp	c,pitup	;pitchbend up
+	cp	057h
+	jp	c,pitdwn	;pitchbend down
+	cp	071h
+	jp	c,tempo	;tempo change
+	cp	0c0h
+	jp	c,volum	;volume change
+	cp	0c1h
+	jp	nc,bright	;brightness setting
+nodat:	xor	a
+nodata:	ld	(de),a
+	pop	hl
+	pop	bc
+	inc	de
+	inc	hl
+	djnz	loope
+	ld	a,(hl)
+	ld	(de),a	;frequentie
+	inc	hl
+	inc	de
+	ld	a,(hl)
+	cp	1
+	jr	z,nodel	;i.v.m. sample off
+	srl	a	;delen door 2
+nodel:	ld	(de),a	;volume
+	inc	hl
+	inc	de
+	ld	a,(hl)
+	rrc	a
+	rrc	a
+	rrc	a
+	rrc	a	;wissel drums
+	ld	(de),a
+nofm:	inc	de	;cmd kanaal
+	ld	a,(cmd)
+	ld	(de),a
+	xor	a
+	ld	(cmd),a
+	inc	de
+	inc	hl
+	or	a
+	push	hl
+	push	de
+	ld	de,tmpstr
+	sbc	hl,de
+	pop	de
+	ld	a,l
+	pop	hl
+	cp	192
+	jr	nc,endtmp
+	ld	b,9
+	jp	loope
+
+endtmp:	ld	hl,(blstda)
+	ld	bc,16*13
+	add	hl,bc
+	ld	(blstda),hl
+	ld	a,(patnr)
+	inc	a
+	ld	(patnr),a
+	ld	hl,aanpat
+	cp	(hl)
+	jp	nc,stop
+	jp	loopd
+
+copy:	ld	a,(trcknr)
+	ld	b,0
+	ld	c,a
+	ld	hl,dubdat-1
+	add	hl,bc
+	ld	a,(patnr)
+	ld	b,a
+	ld	a,(hl)
+	cp	b
+	jr	nc,copy1	;track nog niet gecopieerd
+	ld	a,(trcknr)
+	inc	a
+	ld	(trcknr),a
+	jr	copy
+
+copy1:	di
+	call	sndbk
+	ld	a,(trcknr)
+	call	shtrk
+	ld	de,tmpstr
+	ld	bc,192
+	ldir
+	call	moonbk
+	ei
+	call	mvbprt
+	ret
+
+musdat:	push	af
+	call	getin3
+	cp	18
+	jr	c,musda2
+	pop	af
+	add	a,24
+	jp	nodata
+
+musda2:	pop	af
+	add	a,12
+	jp	nodata
+
+getin3:	ld	a,(kanaal)
+	ld	b,a
+	ld	a,9
+	sub	b
+	ld	c,a
+	ld	b,0
+	ld	hl,xmmsti
+	add	hl,bc
+	ld	a,(hl)
+	ret
+
+offev:	ld	a,061h
+	jp	nodata
+
+revup:	ld	hl,rever
+	ld	a,9
+	sub	b
+revu1:	cp	0
+	jr	z,revu2
+	dec	a
+	inc	hl
+	jr	revu1
+revu2:	ld	a,(hl)
+	cp	0ech
+	jr	z,nohigh
+	inc	a
+	ld	(hl),a
+nohigh:	jp	chgrev
+
+
+revdwn:	ld	hl,rever
+	ld	a,9
+	sub	b
+revd1:	cp	0
+	jr	z,revd2
+	dec	a
+	inc	hl
+	jr	revd1
+revd2:	ld	a,(hl)
+	cp	0dah
+	jr	z,nolow
+	dec	a
+	ld	(hl),a
+chgrev:	ld	b,0dah
+	sub	b
+	ld	c,a
+	ld	b,0
+	ld	hl,revdat
+	add	hl,bc
+	ld	a,(hl)
+nolow:	jp	nodata
+
+;		t-9  t-8  t-7  t-6  t-5  t-4  t-3  t-2  t-1  t+0
+revdat:	db	0e0h,0e0h,0e0h,0e0h,0e0h,0e1h,0e1h,0e2h,0e2h,0e3h
+	db	0e4h,0e4h,0e5h,0e5h,0e6h,0e6h,0e6h,0e6h,0e6h
+;		t+1  t+2  t+3  t+4  t+5  t+6  t+7  t+8  t+9
+
+pitup:	ld	c,a
+	ld	a,(pitbyt)
+	or	a
+	jp	nz,nodat
+	ld	a,c
+	ld	b,043h
+	sub	b
+	add	a,0d0h
+	cp	0dah
+	jr	c,goed1
+	ld	a,0d9h
+goed1:	jp	chgpit
+
+pitdwn:	ld	c,a
+	ld	a,(pitbyt)
+	or	a
+	jp	nz,nodat
+	ld	a,c
+	ld	b,04ch
+	sub	b
+	ld	b,a
+	ld	a,0d1h
+pitd1:	dec	a
+	djnz	pitd1
+	cp	0c7h
+	jr	nc,chgpit
+	ld	a,0c7h
+chgpit:	ld	b,0c7h
+	sub	b
+	ld	c,a
+	ld	b,0
+	ld	hl,pittab
+	add	hl,bc
+	ld	a,(hl)
+goed2:	jp	nodata
+
+;		p-9  p-8  p-7  p-6  p-5  p-4  p-3  p-2  p-1  p+0
+pittab:	db	0cbh,0cch,0cch,0cdh,0cdh,0ceh,0ceh,0cfh,0cfh,0d0h
+	db	0d1h,0d1h,0d2h,0d2h,0d3h,0d3h,0d4h,0d4h,0d5h
+;		p+1  p+2  p+3  p+4  p+5  p+6  p+7  p+8  p+9
+
+tempo:	ld	b,059h
+	sub	b
+	cp	24
+	jr	c,settmp
+	ld	a,23
+settmp:	ld	(cmd),a
+	jp	nodat
+
+volum:	ld	b,07fh
+	sub	b
+	ld	b,a
+	ld	a,0b1h
+vol1:	dec	a
+	djnz	vol1
+	cp	072h
+	jr	nc,goed3
+	ld	a,072h
+goed3:	jp	nodata
+
+bright:	jp	nodat
+
+mvbprt:	push	hl
+	push	bc
+	ld	hl,22*80+25
+	call	setwrt
+	ld	a,(mvbbyt)
+	or	a
+	jr	z,mvbstr
+	xor	a
+	ld	(mvbbyt),a
+	ld	a," "
+	out	(c),a
+	jr	mvbend
+mvbstr	inc	a
+	ld	(mvbbyt),a
+	ld	a,"*"
+	out	(c),a
+mvbend:	pop	bc
+	pop	hl
+	ret
+
+moonbk:	ld	a,sngpag
+	out	(0feh),a
+	ret
+
+sndbk:	ld	a,em1pag
+	out	(0feh),a
+	ret
+
+
+stop:	ld	a,(aanpat)
+	ld	b,a
+	ld	c,0
+	ld	hl,dubdat
+stop2:	ld	a,(hl)
+	cp	b
+	jr	nc,stop1
+	ld	a,c
+	ld	(patnr),a
+	inc	hl
+	inc	c
+	ld	a,c
+	cp	84
+	jr	z,stop1
+	jp	stop2
+
+stop1:	ld	a,(patnr)
+	ld	(xleng),a
+	inc	a
+genoeg:	ld	de,xpos
+	ld	hl,dubdat
+	ld	c,a
+	ld	b,0
+	ldir
+klaar:	call	clrlin
+	call	zetsam
+	call	z80
+	pop	de
+	pop	hl
+	pop	bc
+	pop	af
+	ret
+
+renew:	xor	a
+	ld	hl,blstda
+	ld	b,100
+lo7:	ld	(hl),a
+	inc	hl
+	djnz	lo7
+	ld	hl,rever
+	ld	b,9
+	ld	a,0e3h
+lo8:	ld	(hl),a
+	inc	hl
+	djnz	lo8
+	ret
+
+zetsam:	ld	hl,smpadd
+	ld	de,smpadr
+	ld	bc,56
+	ldir
+	ld	a,(smp15)
+	or	a
+	ret	z
+	xor	a
+	ld	hl,smpadr+52
+	ld	(hl),a
+	inc	hl
+	ld	(hl),a
+	ret
+
+
+rempit:	call	clrlin
+	ld	hl,remtxt
+	call	print
+rempi3:	ld	hl,0800h+22*10+3
+	call	setwrt
+	ld	a,(pitbyt)
+	or	a
+	jr	z,piton
+	ld	a,(yesblk)
+	out	(c),a
+	jp	rempi2
+piton:	ld	a,(noblk)
+	out	(c),a
+
+rempi2:	call	getkey
+	ld	c,0
+	cp	28
+	jr	z,rempi4
+	inc	c
+	cp	29
+	jr	z,rempi4
+	cp	" "
+	jr	nz,rempi2
+	ld	hl,0800h+22*10+3
+	call	setwrt
+	ld	a,(clrblk)
+	out	(c),a
+	call	clrlin
+	ret
+
+rempi4:	ld	a,c
+	ld	(pitbyt),a
+	jp	rempi3
+
+
+
+blstda:	defb	0,0
+trckda:	defb	0,0
+blstad:	defb	0,0
+trckad:	defb	0,0
+aanpat:	defb	0
+maxpat:	defb	0
+cmd:	defb	0
+track1:	defb	0
+trcknr:	defb	0
+patnr:	defb	0
+
+dubdat:	defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+rever:	defb	0e3h,0e3h,0e3h,0e3h,0e3h,0e3h,0e3h,0e3h,0e3h
+
+smp15:	defb	0
+kanaal:	db	0
+pitbyt:	db	0
+
+;*** zoek juiste naam op uit vram ***
+
+
+namfsd:	call	namsna
+namfd3:	ld	hl,04000h
+	ld	(lengte),hl
+	ld	hl,fsdext
+	jp	namsnb
+
+namfst:	call	namsna
+namfs3:	ld	hl,04000h
+	ld	(lengte),hl
+	ld	hl,fstext
+	jp	namsnb
+
+namsng:	call	namsna
+namsn3:	ld	hl,04000h
+	ld	(lengte),hl
+	ld	hl,sngext
+	jp	namsnb
+
+namdrm:	call	namsna
+namdr3:	ld	hl,04000h
+	ld	(lengte),hl
+	ld	hl,drmext
+	jp	namsnb
+
+
+namsmp:	call	namsna
+namsp3:	ld	hl,9
+	ld	(lengte),hl
+	ld	hl,smpext
+	jp	namsnb
+
+namvce:	call	namsna
+namve3:	ld	hl,9
+	ld	(lengte),hl
+	ld	hl,vceext
+	jp	namsnb
+
+namvcb:	call	namsna
+namvb3:	ld	hl,9*16
+	ld	(lengte),hl
+	ld	hl,vcbext
+	jp	namsnb
+
+
+namsna:	ld	a,(filpnt)
+	ld	b,a
+	ld	hl,nambuf-8
+	ld	de,8
+namsn2:	add	hl,de
+	djnz	namsn2
+	ld	de,fcbsav+1
+	ld	bc,8
+	ldir
+	ret
+namsnb:	ld	de,fcbsav+9
+	ld	bc,3
+	ldir
+	ld	hl,fcbsav
+	ld	de,0da00h
+	ld	bc,37
+	ldir
+	ret
+
+
+
+
+
+filup:	push	af
+	ld	a,(filpnt)
+	cp	7
+	jp	c,filup2
+	sub	6
+	ld	(filpnt),a
+	ld	hl,filpy
+	dec	(hl)
+	call	filblk
+filup2:	pop	af
+	ret
+
+filri:	push	af
+	ld	a,(filpnt)
+	ld	b,a
+	ld	a,(filcnt)
+	cp	b
+	jp	z,filri2
+	ld	a,(filpx)
+	cp	6
+	jp	z,filri2
+	inc	a
+	ld	(filpx),a
+	ld	a,b
+	inc	a
+	ld	(filpnt),a
+	call	filblk
+filri2:	pop	af
+	ret
+
+fillef:	push	af
+	ld	a,(filpx)
+	dec	a
+	jp	z,fille2
+	ld	(filpx),a
+	ld	hl,filpnt
+	dec	(hl)
+	call	filblk
+fille2:	pop	af
+	ret
+
+fildow:	push	af
+	ld	a,(filcnt)
+	inc	a
+	ld	b,a
+	ld	a,(filpnt)
+	add	a,6
+	cp	b
+	jp	nc,fildo2
+	ld	(filpnt),a
+	ld	hl,filpy
+	inc	(hl)
+	call	filblk
+fildo2:	pop	af
+	ret
+
+shwfsd:	ld	hl,fsdext
+	jp	shwdir
+shwfst:	ld	hl,fstext
+	jp	shwdir
+shwsmp:	ld	hl,smpext
+	jp	shwdir
+shwsng:	ld	hl,sngext
+	jp	shwdir
+shwdrm:	ld	hl,drmext
+	jp	shwdir
+shwvce:	ld	hl,vceext
+	jp	shwdir
+shwvcb:	ld	hl,vcbext
+	jp	shwdir
+
+enddis:	pop	af    ;stack leeg
+	ret
+
+
+filblk:	call	wiscl3
+	ld	a,(filpy)
+	ld	b,a
+	ld	hl,0800h-1
+	ld	de,10
+filbl2:	add	hl,de
+	djnz	filbl2
+	ld	a,(filpx)
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	call	setwrt
+	push	bc
+	ld	a,(filpx)
+	add	a,a
+	ld	b,0
+	ld	c,a
+	ld	hl,blkdt4-2
+	add	hl,bc
+	pop	bc
+	ld	b,2
+	otir
+	ret
+
+
+menbl2:	ld	hl,blkdt8-2
+	jr	menblx
+menblk:	ld	hl,blkdat-2
+menblx:	push	hl
+	call	wiscol
+	add	a,a
+	ld	b,0
+	ld	c,a
+	pop	hl
+	add	hl,bc
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	call	setwrt
+	ld	hl,blkdt3
+	ld	b,3
+	otir
+	ret
+
+wiscol:	push	af
+	ld	hl,0800h
+	call	setwrt
+	ld	b,0
+wiscl2:	xor	a
+	out	(c),a
+	djnz	wiscl2
+	pop	af
+	ret
+
+wiscl3:	push	af
+	ld	hl,0800h
+	ld	b,23
+wiscl5:	push	bc
+	call	setwrt
+	ld	b,7
+wiscl4:	xor	a
+	out	(c),a
+	djnz	wiscl4
+	ld	bc,10
+	add	hl,bc
+	pop	bc
+	djnz	wiscl5
+	pop	af
+	ret
+
+
+shwdir:	ld	(0fb41h),sp
+	push	hl
+	call	clrlin
+	ld	hl,patftx
+	call	print
+	pop	hl
+	ld	de,fcb+9
+	ld	bc,3
+	ldir
+shwdr4:	ld	hl,fcb	 ;zet dirzoek naam
+	ld	de,0da00h
+	ld	bc,37
+	ldir
+
+	call	clrfil
+	ld	hl,nambuf
+	ld	(nbdat),hl
+	ld	de,nambuf+1
+	ld	bc,6*19*8-1
+	ld	(hl)," "
+	ldir
+	xor	a
+	ld	(filcnt),a
+
+	ld	de,0d980h
+	ld	c,setdma			      ;set dma
+	call	bdos
+
+	ld	de,0da00h			      ;search first
+	ld	c,sfirst
+	call	bdos
+	jp	c,abcode
+	jr	cont
+
+dirlus:	ld	de,0da00h
+	ld	c,snext			      ;search next
+	call	bdos
+cont:	or	a
+	jr	nz,enddir
+
+	ld	hl,0d981h
+	ld	de,(nbdat)
+	ld	bc,8
+	ldir
+	ld	(nbdat),de
+	ld	hl,filcnt
+	inc	(hl)
+	jr	dirlus
+
+abcode:	call	clrlin
+	ld	hl,abtxt
+	call	print
+	call	09fh
+	jp	clrlin
+abcod2:	call	abcode
+	jp	ldend
+abcod3:	call	abcode
+	jp	ldend2
+abcod4:	pop	af
+	jr	abcod3
+
+enddir:	di
+	call	stpdrv
+	ei
+	call	clrlin
+	ld	hl,nambuf
+	ld	(nbdat),hl
+	ld	hl,83
+	ld	b,19
+prdir1:	push	bc
+	push	hl
+	call	setwrt
+	ld	b,6
+prdir2:	push	bc
+	ld	hl,(nbdat)
+	ld	b,8
+	otir
+	ld	a," "
+	ld	a," "
+	out	(c),a
+	ld	(nbdat),hl
+	pop	bc
+	djnz	prdir2
+
+	pop	hl
+	ld	bc,80
+	add	hl,bc
+	pop	bc
+	djnz	prdir1
+	ret
+
+makscr:	ld	hl,0		;bouw beeld op
+	call	setwrt
+	ld	hl,blddt1
+	call	decrc
+	call	prtpak
+maksc4:	call	prtdrv
+	ei
+	ret
+
+maksc2:	ld	hl,0	;bouw beeld op voor voices
+	call	setwrt
+	ld	hl,blddt2
+	call	decrc
+	ld	hl,20*80+76
+	call	setwrt
+	ld	hl,decdat-2
+	ld	a,(ownnr)
+maksc5:	add	a,a
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	b,2
+	otir
+	jr	maksc4
+
+maksc3:	ld	hl,0	;bouw beeld op voor samples
+	call	setwrt
+	ld	hl,blddt4
+	call	decrc
+	ld	hl,20*80+73
+	call	setwrt
+	ld	hl,decdat-2
+	ld	a,(smpnr)
+	jr	maksc5
+
+
+clrlin:	ld	hl,emptxt
+	jp	print
+
+
+;*** kijk of own voices zijn gebruikt ***
+
+chkown:
+;-- fm-pac test
+
+	ld	b,6
+	ld	hl,xorgnr
+chkwl2:	push	bc
+	ld	a,(hl)
+	cp	177
+	call	nc,chkow5
+	inc	hl
+	pop	bc
+	djnz	chkwl2
+	jp	chkowm
+
+chkow5:	push	hl
+	push	af
+	ld	a,7	;kopieer own voicedata
+	sub	b
+	ld	b,a
+	ld	hl,xorgp1-8
+	ld	de,8
+chkow6:	add	hl,de
+	djnz	chkow6
+	pop	af
+	sub	176
+	ld	b,a	;bron-adres berekend
+
+	push	hl
+	ld	hl,ownvdt-25+16
+	ld	de,25
+chkow7:	add	hl,de
+	djnz	chkow7
+	ex	de,hl	;bestemmings-adres berekend
+	pop	hl
+	push	hl	;ix=hl
+	pop	ix
+	ld	(0c100h),de
+	push	de	;iy=de
+	pop	iy
+	ld	bc,3
+	ldir
+	inc	de
+	inc	hl
+	ld	bc,4
+	ldir
+	ld	a,(ix+3)
+	ld	b,a
+	and	0111b
+	sla	a
+	ld	(iy+8),a
+	ld	a,b
+	and	011000000b
+	ld	(iy+3),a
+	pop	hl
+	ret
+
+;-- muziek module test
+
+chkowm:	ld	b,16
+	ld	hl,xmmsti
+chkowl:	push	bc
+	ld	a,(hl)
+	cp	177
+	call	nc,chkow2
+	inc	hl
+	pop	bc
+	djnz	chkowl
+	ret
+
+chkow2:	push	hl
+	push	af
+	ld	a,17	   ;kopieer own voicedata
+	sub	b
+	ld	b,a
+	ld	hl,xmmvoc-9
+	ld	de,9
+chkow3:	add	hl,de
+	djnz	chkow3
+	pop	af
+	sub	176
+	ld	b,a
+
+	push	hl
+	ld	hl,ownvdt-25+16
+	ld	de,25
+chkow4:	add	hl,de
+	djnz	chkow4
+	ex	de,hl
+	pop	hl
+	ld	bc,9
+	ldir
+	pop	hl
+	ret
+
+
+;*** decrunch en print in beeld ***
+
+decrc:
+drclus:	ld	a,(hl)				 ;lees data op hl
+	cp	0feh
+	jr	z,drc2
+	or	a
+	ret	z
+	out	(c),a
+	inc	hl
+	jr	drclus
+
+drc2:	inc	hl
+	ld	a,(hl)			   ;aantal *
+	ld	b,a
+	inc	hl
+	ld	a,(hl)
+drc3:	out	(c),a
+	djnz	drc3
+	inc	hl
+	jr	drclus
+
+setwrt:	ld	a,(0007)
+	di
+	inc	a
+	ld	c,a
+	ld	a,h
+	and	0c0h
+	rlca
+	rlca
+	out	(c),a
+	ld	a,08eh
+	out	(c),a
+	ld	a,h
+	out	(c),l
+	and	03fh
+	or	040h
+	out	(c),a
+	dec	c
+	ret
+
+
+
+stpdrv:	ld	b,0
+stpdr2:	push	bc
+	call	0fd9fh
+	pop	bc
+	djnz	stpdr2
+	ret
+
+
+prtpak:	ld	hl,14*80+74
+	call	setwrt
+	ld	hl,usrtxt
+	ld	a,(packin)
+	or	a
+	jr	z,prtpa2
+	ld	hl,edttxt
+prtpa2:	ld	b,4
+	otir
+	ret
+
+
+prtdrv:	ld	hl,13*80+70
+	call	setwrt
+	ld	a,(drive)
+	add	a,"A"
+	out	(c),a
+	ld	a,":"
+	ld	a,":"
+	out	(c),a
+	ret
+
+;**** print text op command line ****
+
+print:	push	hl
+	ld	hl,22*80+2
+	call	setwrt
+	pop	hl
+	jp	decrc
+
+
+;*** verplaat error routines ***
+
+
+moverr:	ld	a,0c3h
+	ld	(0f24fh),a
+	ld	hl,insert-derror+0d802h
+	ld	(0f24fh+1),hl
+	ld	hl,0d800h
+	ld	(0f323h),hl
+	ld	hl,0d802h
+	ld	(0d800h),hl
+	ld	hl,derror
+	ld	de,0d802h
+	ld	bc,einde-derror+1
+	ldir
+	ret
+
+
+
+
+;******  music cruncher  ******
+
+
+crunch:	call	r800d
+	call	clrlin
+	ld	hl,patctx
+	call	print
+
+	ld	hl,08000h+200	;zet settings neer
+	ld	de,08000h
+	ld	bc,376
+crunl1:	call	wrtdat
+	inc	hl
+	inc	de
+	dec	bc
+	ld	a,b
+	or	c
+	jr	nz,crunl1
+
+	ld	a,(08000h)	;last position,verplaats pat/pos data
+	inc	a
+	ld	b,a
+
+	ld	a,(packin)
+	or	a
+	jr	z,crunly
+	ld	b,201
+
+crunly:	push	bc
+	ld	hl,08000h
+crunl2:	call	wrtdat
+	inc	hl
+	inc	de
+	djnz	crunl2
+
+	push	de
+	pop	ix
+
+	ld	a,sngpag
+	out	(0feh),a
+
+	pop	bc	;zoek hoogste gebruikte pattern
+	ld	e,1
+	ld	hl,08000h
+crunl3:	ld	a,(hl)
+	cp	e
+	jr	c,crunl4
+	ld	e,a
+crunl4:	inc	hl
+	djnz	crunl3
+	ld	d,0
+
+	ld	a,(packin)
+	or	a
+	jr	z,crunlx
+	ld	e,76
+
+crunlx:	push	ix
+	dec	ix
+	dec	ix
+	pop	hl
+	add	hl,de
+	add	hl,de
+
+	ld	a,sngpag
+	out	(0feh),a
+
+	ld	b,e	;aantal patterns
+	ex	de,hl
+	ld	hl,08240h
+	ld	a,242
+	ld	(numzer),a
+crunl5:	push	bc
+	inc	ix
+	inc	ix
+	ld	a,em1pag
+	out	(0feh),a
+
+	push	de
+	res	7,d
+	ld	(ix+0),e	;pattern adres
+	ld	(ix+1),d
+	pop	de
+	ld	a,sngpag
+	out	(0feh),a
+	call	crunlc
+	pop	bc
+	djnz	crunl5
+
+	ld	a,em1pag
+	out	(0feh),a
+	xor	a
+	ld	(de),a
+	inc	de
+	ex	de,hl
+	ld	de,-08000h
+	add	hl,de
+	ld	(lengte),hl
+	call	z80
+	ret
+
+crunlc:	ld	b,16	;aantal steps per pattern
+crunl6:	push	bc
+	ld	b,13
+crunl7:	push	bc	;aantal bytes per step
+	ld	a,(hl)
+	or	a
+	jr	nz,crunl8
+	ld	a,(numzer)
+	inc	a
+	ld	(numzer),a
+	call	wrtdt2
+	pop	bc
+	djnz	crunl7
+	jr	crunla
+
+crunl8:	ld	a,(numzer)
+	cp	242
+	jr	z,crunl9
+	inc	de
+crunl9:	ld	a,(hl)
+	call	wrtdt2
+	inc	de
+	ld	a,242
+	ld	(numzer),a
+	pop	bc
+	djnz	crunl7
+
+crunla:	ld	a,(numzer)
+	cp	242
+	jr	z,crunlb
+	inc	de
+	ld	a,242
+	ld	(numzer),a
+crunlb:	pop	bc
+	djnz	crunl6
+	ret
+
+
+wrtdat:	ld	a,sngpag
+	out	(0feh),a
+	ld	a,(hl)
+	ex	af,af'
+	ld	a,em1pag
+	out	(0feh),a
+	ex	af,af'
+	ld	(de),a
+	ret
+wrtdt2:	ex	af,af'
+	ld	a,em1pag
+	out	(0feh),a
+	ex	af,af'
+	ld	(de),a
+	ld	a,sngpag
+	out	(0feh),a
+	inc	hl
+	ret
+wrtdt3:	ld	a,em1pag
+	out	(0feh),a
+	ld	a,(hl)
+	ex	af,af'
+	ld	a,sngpag
+	out	(0feh),a
+	ex	af,af'
+	ld	(de),a
+	ret
+wrtdt4:	ex	af,af'
+	ld	a,sngpag
+	out	(0feh),a
+	ex	af,af'
+	ld	(de),a
+	ld	a,em1pag
+	out	(0feh),a
+	inc	de
+	ret
+
+
+
+;******* music decruncher ********
+
+mecrc:	call	r800d
+	call	clrlin
+	ld	hl,patdtx
+	call	print
+	ld	a,sngpag
+	out	(0feh),a
+	call	resall
+
+
+	ld	hl,08000h	;zet settings neer
+	ld	de,08000h+200
+	ld	bc,376	;aantal bytes v. settings
+mecrl1:	call	wrtdt3
+	inc	hl
+	inc	de
+	dec	bc
+	ld	a,b
+	or	c
+	jr	nz,mecrl1
+
+	ld	a,em1pag
+	out	(0feh),a
+
+	ld	a,(08000h)	;last position,verplaats pat/pos data
+	inc	a
+	ld	b,a
+
+	ld	a,(packi2)
+	or	a
+	jr	z,mecrly
+	ld	b,201
+
+mecrly:	push	bc
+	ld	de,08000h
+mecrl2:	call	wrtdt3
+	inc	hl
+	inc	de
+	djnz	mecrl2
+
+	push	hl
+	pop	ix
+
+	pop	bc	;zoek hoogste gebruikte pattern
+	ld	e,1
+	ld	hl,08000h
+mecrl3:	ld	a,(hl)
+	cp	e
+	jr	c,mecrl4
+	ld	e,a
+mecrl4:	inc	hl
+	djnz	mecrl3
+
+	ld	d,0
+
+	ld	a,(packi2)
+	or	a
+	jr	z,mecrlx
+	ld	e,76
+
+mecrlx:	push	ix
+	pop	hl
+	add	hl,de
+	add	hl,de	;sla pattern adressen over
+
+	ld	a,em1pag
+	out	(0feh),a
+
+	ld	de,08240h
+	ld	bc,03dc0h
+mecrl6:	ld	a,(hl)
+	or	a
+	jr	z,mecrla
+	cp	243
+	jr	nc,mecrl7
+	call	wrtdt4
+mecrl9:	inc	hl
+	dec	bc
+	ld	a,b
+	or	c
+	jr	nz,mecrl6
+
+mecrla:	ld	a,sngpag
+	out	(0feh),a
+	jp	z80
+
+mecrl7:	push	bc
+	sub	242
+	ld	b,a
+mecrl8:	xor	a
+	call	wrtdt4
+	djnz	mecrl8
+	pop	bc
+	jr	mecrl9
+
+
+;**** wis files in beeld ****
+
+
+clrfil:	ld	hl,80
+	ld	b,19
+clrfi2:	push	bc
+	push	hl
+	call	setwrt
+	ld	hl,clrftx
+	call	decrc
+	pop	hl
+	ld	de,80
+	add	hl,de
+	pop	bc
+	djnz	clrfi2
+	ret
+
+
+
+;*******************************
+;*  set samples in audio-ram   *
+;*******************************
+
+sampdt:	db	1
+
+movsmp:	ld	a,(sampdt)
+	xor	1
+	ld	(sampdt),a
+	or	a
+	call	z,movsm2	 ;initialization
+	ld	a,(sampdt)
+	cp	1
+	call	z,movsm3
+
+	di
+	ld	a,4
+	out	(0c0h),a
+	ld	a,060h
+	out	(0c1h),a
+
+	ld	bc,04000h
+	ld	hl,08000h
+movsm6:	ld	a,0fh
+	out	(0c0h),a
+	ld	a,(hl)
+	out	(0c1h),a
+	ld	a,4
+	out	(0c0h),a
+	ld	a,080h
+	out	(0c1h),a
+	inc	hl
+	dec	bc
+	ld	a,b
+	or	c
+	jr	z,movsm4
+movsm5:	in	a,(0c0h)
+	bit	7,a
+	jr	z,movsm5
+	bit	4,a
+	jr	z,movsm6
+movsm4:	nop
+	ld	a,4
+	out	(0c0h),a
+	ld	a,078h
+	out	(0c1h),a
+	ld	a,080h
+	out	(0c1h),a
+
+	ld	a,7
+	out	(0c0h),a
+	ld	a,1
+	out	(0c1h),a
+	ei
+	ret
+movsm2:	ld	b,10
+	ld	hl,sampd2
+movsm8:	ld	a,(hl)
+	out	(0c0h),a
+	inc	hl
+	ld	a,(hl)
+	out	(0c1h),a
+	inc	hl
+	djnz	movsm8
+	ret
+movsm3:	ld	b,10
+	ld	hl,sampd3
+	jr	movsm8
+getsm2:	ld	b,10
+	ld	hl,sampd4
+	jr	movsm8
+getsm3:	ld	b,10
+	ld	hl,sampd5
+	jr	movsm8
+
+sampd2:	db	004h,078h,004h,080h,007h,001h,007h,060h,008h,000h,009h
+	db	000h,00ah,000h,00bh,0ffh,00ch,00fh,010h,0f0h
+sampd3:	db	004h,078h,004h,080h,007h,001h,007h,060h,008h,000h,009h
+	db	000h,00ah,010h,00bh,0ffh,00ch,01fh,010h,0f0h
+sampd4:	db	004h,078h,004h,080h,007h,001h,007h,020h,008h,000h,009h
+	db	000h,00ah,000h,00bh,0ffh,00ch,00fh,010h,0f0h
+sampd5:	db	004h,078h,004h,080h,007h,001h,007h,020h,008h,000h,009h
+	db	000h,00ah,010h,00bh,0ffh,00ch,01fh,010h,0f0h
+
+
+
+;*********************************
+;*  haal samples uit audio-ram   *
+;*********************************
+
+getsmp:	ld	a,(sampdt)
+	xor	1
+	ld	(sampdt),a
+	or	a
+	call	z,getsm2
+	ld	a,(sampdt)
+	cp	1
+	call	z,getsm3
+	di
+	ld	a,4
+	out	(0c0h),a
+	ld	a,060h
+	out	(0c1h),a
+
+	ld	b,2
+
+getsme:	ld	a,0fh
+	out	(0c0h),a
+	in	a,(0c1h)
+getsmf:	in	a,(0c0h)
+	bit	7,a
+	jr	z,getsmf
+	djnz	getsme
+
+	ld	bc,04000h
+	ld	hl,08000h
+getsm6:	ld	a,0fh
+	out	(0c0h),a
+	in	a,(0c1h)
+	ld	(hl),a
+	ld	a,4
+	out	(0c0h),a
+	ld	a,080h
+	out	(0c1h),a
+	inc	hl
+	dec	bc
+	ld	a,b
+	or	c
+	jr	z,getsm4
+getsm5:	in	a,(0c0h)
+	bit	7,a
+	jr	z,getsm5
+	bit	4,a
+	jr	z,getsm6
+getsm4:	nop
+	ld	a,4
+	out	(0c0h),a
+	ld	a,078h
+	out	(0c1h),a
+	ld	a,080h
+	out	(0c1h),a
+	ld	a,7
+	out	(0c0h),a
+	ld	a,1
+	out	(0c1h),a
+	ei
+	ret
+
+
+
+
+;*********************************
+;*  set samples in audio-ram-2   *
+;*********************************
+
+m2vsmp:	push	bc
+	pop	hl
+	add	hl,hl
+	add	hl,hl
+	push	hl
+	call	m2vsm2
+	pop	bc
+	di
+	ld	a,4
+	out	(0c0h),a
+	ld	a,060h
+	out	(0c1h),a
+	ld	hl,08000h
+m2vsm6:	ld	a,0fh
+	out	(0c0h),a
+	ld	a,(hl)
+	out	(0c1h),a
+	ld	a,4
+	out	(0c0h),a
+	ld	a,080h
+	out	(0c1h),a
+	inc	hl
+	dec	bc
+	ld	a,b
+	or	c
+	jr	z,m2vsm4
+m2vsm5:	in	a,(0c0h)
+	bit	7,a
+	jr	z,m2vsm5
+	bit	4,a
+	jr	z,m2vsm6
+m2vsm4:	nop
+	ld	a,4
+	out	(0c0h),a
+	ld	a,078h
+	out	(0c1h),a
+	ld	a,080h
+	out	(0c1h),a
+	ld	a,7
+	out	(0c0h),a
+	ld	a,1
+	out	(0c1h),a
+	ei
+	ret
+m2vsm2:	ld	b,5
+	ld	hl,s2mpd2
+m2vsm8:	ld	a,(hl)
+	out	(0c0h),a
+	inc	hl
+	ld	a,(hl)
+	out	(0c1h),a
+	inc	hl
+	djnz	m2vsm8
+
+	ld	hl,(dstadr)
+	ld	c,9
+	ld	a,l
+	call	mmout
+	inc	c
+	ld	a,h
+	call	mmout
+	ld	de,(lengte)
+	add	hl,de
+	inc	c
+	ld	a,l
+	call	mmout
+	inc	c
+	ld	a,h
+	jp	mmout
+g2tsm2:	ld	b,5
+	ld	hl,s2mpd4
+	jr	m2vsm8
+
+s2mpd2: db 004h,078h,007h,001h,007h,060h,008h,000h,010h,0f0h
+s2mpd4: db 004h,078h,007h,001h,007h,020h,008h,000h,010h,0f0h
+
+
+
+;*********************************
+;*  haal samples uit audio-ram   *
+;*********************************
+
+g2tsmp:	push	bc
+	pop	hl
+	ld	(lengte),hl
+	add	hl,hl
+	add	hl,hl
+	push	hl
+	call	g2tsm2
+	di
+	ld	a,4
+	out	(0c0h),a
+	ld	a,060h
+	out	(0c1h),a
+
+	ld	b,2
+getsmg:	ld	a,0fh
+	out	(0c0h),a
+	in	a,(0c1h)
+getsmh:	in	a,(0c0h)
+	bit	7,a
+	jr	z,getsmh
+	djnz	getsmg
+
+	pop	bc
+	ld	hl,08000h
+g2tsm6:	ld	a,0fh
+	out	(0c0h),a
+	in	a,(0c1h)
+	ld	(hl),a
+	ld	a,4
+	out	(0c0h),a
+	ld	a,080h
+	out	(0c1h),a
+	inc	hl
+	dec	bc
+	ld	a,b
+	or	c
+	jr	z,g2tsm4
+g2tsm5:	in	a,(0c0h)
+	bit	7,a
+	jr	z,g2tsm5
+	bit	4,a
+	jr	z,g2tsm6
+g2tsm4:	nop
+	ld	a,4
+	out	(0c0h),a
+	ld	a,078h
+	out	(0c1h),a
+	ld	a,080h
+	out	(0c1h),a
+	ld	a,7
+	out	(0c0h),a
+	ld	a,1
+	out	(0c1h),a
+	ei
+	ret
+
+
+;*** loop door files heen ***
+
+
+curwlk:	call	wiscl3
+	ld	hl,0101h
+	ld	(filpx),hl
+	ld	a,l
+	ld	(filpnt),a
+	call	filblk
+
+curwll:	call	getkey
+	cp	27
+	jp	z,ldend2
+	cp	30
+	call	z,filup
+	cp	28
+	call	z,filri
+	cp	29
+	call	z,fillef
+	cp	31
+	call	z,fildow
+	cp	" "
+	jr	nz,curwll
+	ret
+
+curwk2:	call	wiscl3
+	ld	hl,0101h
+	ld	(filpx),hl
+	ld	a,l
+	ld	(filpnt),a
+	call	filblk
+curw2l:	call	getkey
+	cp	27
+	jp	z,ldend2
+	cp	30
+	call	z,filup
+	cp	28
+	call	z,filri
+	cp	29
+	call	z,fillef
+	cp	31
+	call	z,fildow
+	cp	" "
+	jr	z,curwk3
+	cp	"!"
+	jr	c,curw2l
+	cp	"9"+1
+	ret	c
+	cp	"A"
+	jr	c,curw2l
+	cp	"Z"+1
+	ret	c
+	cp	"a"
+	jr	c,curw2l
+	cp	"z"+1
+	jr	nc,curw2l
+	ret
+
+curwk3:	pop	af	;ret adres weg
+	ld	hl,(relsav)
+	jp	(hl)
+
+
+resall:	ld	hl,xbegmd
+	ld	de,xbegmd+1
+	ld	bc,0c000h-xbegmd-1
+	ld	(hl),0
+	ldir
+
+ramld5:	ld	hl,0c000h
+	call	setrd
+	ld	de,0240h
+	ld	hl,08000h
+ramld6:	in	a,(c)
+	ld	(hl),a
+	inc	hl
+	dec	de
+	ld	a,d
+	or	e
+	jr	nz,ramld6
+	ei
+	ret
+
+setrd:	di
+	ld	c,098h
+	ld	a,h
+	and	0c0h
+	rlca
+	rlca
+	out	(099h),a
+	ld	a,08eh
+	out	(099h),a
+	ld	a,l
+	out	(099h),a
+	ld	a,h
+	and	03fh
+	out	(099h),a
+	ret
+
+
+
+;**** key handler ***
+
+
+keyhan:	call	getkey
+keyhn2:	ld	c,a
+keylus:	ld	a,(ix+0)
+	or	a
+	ret	z
+	ld	l,(ix+1)
+	ld	h,(ix+2)
+	cp	c
+	jr	z,keyexe
+	inc	ix
+	inc	ix
+	inc	ix
+	jr	keylus
+keyexe:	jp	(hl)
+
+
+
+;*** get key ***
+
+getkey:	push	hl
+	call	0156h
+	pop	hl
+	jp	09fh
+
+
+mmout:	ex	af,af'
+	ld	a,c
+	out	(0c0h),a
+	ex	af,af'
+	out	(0c1h),a
+	ret
+
+z80:	ld	a,(02dh)
+	cp	3
+	ret	c
+	ld	a,00h	;lampje niet uit!
+	jp	0180h
+
+
+r800d:	ld	a,(02dh)
+	cp	3
+	ret	c
+	ld	a,082h
+	jp	0180h
+
+bdos:	ld	(0fb41h),sp
+	call	bdos2
+	ld	hl,0
+	ld	(0fb41h),hl
+	scf
+	ccf
+	ret
+
+blddt1:	db	24,0feh,58,23,18,23,18,0feh,17,23,25
+	db	22,0feh,58,32,22,32,22,"    DISK MENU    ",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Load Song       ",22
+	db	22,0feh,58,32,22,32,22," Save Song       ",22
+	db	22,0feh,58,32,22,32,22," Show Songs      ",22
+	db	22,0feh,58,32,22,32,22," Delete Song     ",22
+blddt5:	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Load Samplekit  ",22
+	db	22,0feh,58,32,22,32,22," Save Samplekit  ",22
+	db	22,0feh,58,32,22,32,22," Show Samplekits ",22
+	db	22,0feh,58,32,22,32,22," Delete Samplekit",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Drive:          ",22
+	db	22,0feh,58,32,22,32,22," File mode:      ",22
+	db	22,0feh,58,32,22,32,22," Format Disk     ",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Load FST-Song   ",22
+	db	22,0feh,58,32,22,32,22," Load FST-Drumkit",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Back to Editor  ",22
+	db	20,0feh,58,23,17,23,17,0feh,17,23,19
+	db	22,0feh,78,32,22
+	db	26,0feh,78,23,27
+	db	0
+
+blddt2:	db	24,0feh,58,23,18,23,18,0feh,17,23,25
+	db	22,0feh,58,32,22,32,22,"    DISK MENU    ",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Load Voice      ",22
+	db	22,0feh,58,32,22,32,22," Save Voice      ",22
+	db	22,0feh,58,32,22,32,22," Show Voices     ",22
+	db	22,0feh,58,32,22,32,22," Delete Voice    ",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Load V-bank     ",22
+	db	22,0feh,58,32,22,32,22," Save V-bank     ",22
+	db	22,0feh,58,32,22,32,22," Show V-banks    ",22
+	db	22,0feh,58,32,22,32,22," Delete V-bank   ",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Drive:          ",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Format Disk     ",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Back to Editor  ",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Own Voicenr: 00 ",22
+	db	20,0feh,58,23,17,23,17,0feh,17,23,19
+	db	22,0feh,78,32,22
+	db	26,0feh,78,23,27
+	db	0
+
+blddt4:	db	24,0feh,58,23,18,23,18,0feh,17,23,25
+	db	22,0feh,58,32,22,32,22,"    DISK MENU    ",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Load Sample     ",22
+	db	22,0feh,58,32,22,32,22," Save Sample     ",22
+	db	22,0feh,58,32,22,32,22," Show Samples    ",22
+	db	22,0feh,58,32,22,32,22," Delete Sample   ",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Load Samplekit  ",22
+	db	22,0feh,58,32,22,32,22," Save Samplekit  ",22
+	db	22,0feh,58,32,22,32,22," Show Samplekits ",22
+	db	22,0feh,58,32,22,32,22," Delete Samplekit",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Drive:          ",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Format Disk     ",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Back to Editor  ",22
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,20,0feh,17,23,19
+	db	22,0feh,58,32,22,32,22," Samplenr:       ",22
+	db	20,0feh,58,23,17,23,17,0feh,17,23,19
+	db	22,0feh,78,32,22
+	db	26,0feh,78,23,27
+	db	0
+
+
+decdat:	db	"1 2 3 4 5 6 7 8 9 10111213141516"
+clrftx:	db	22,0feh,58,32,0
+edttxt:	db	"EDIT"
+usrtxt:	db	"USER"
+ldtxt:	db	"Select song to load...",0
+ld2txt:	db	"Select FST-song to load...",0
+ld3txt:	db	"Select FST-drumkit to load...",0
+remtxt:	db	"Remove pitchbend data: YES  NO",0
+omztxt:	db	"Converting FST-song...",0
+svtxt:	db	"Select song to save or enter new name...",0
+deltxt:	db	"Select song to delete...",0
+ldtxt2:	db	"Select samplekit to load...",0
+svtxt2:	db	"Select samplekit to save or enter new name...",0
+deltx2:	db	"Select samplekit to delete...",0
+ldtxt3:	db	"Select voice to load...",0
+svtxt3:	db	"Select voice to save or enter new name...",0
+deltx3:	db	"Select voice to delete...",0
+ldtxt4:	db	"Select voicebank to load...",0
+svtxt4:	db	"Select voicebank to save or enter new name...",0
+deltx4:	db	"Select voicebank to delete...",0
+ldtxt5:	db	"Select sample to load...",0
+svtxt5:	db	"Select sample to save or enter new name...",0
+fcetxt:	db	"File creation error!! ",0
+fwrtxt:	db	"WRITE ERROR!! Operation aborted...",0
+nffdtx:	db	"No FST-songs on disk to load...",0
+nfddtx:	db	"No FST-drumkits on disk to load...",0
+nfldtx:	db	"No songs on disk to load...",0
+nfdltx:	db	"No songs on disk to delete...",0
+ndldtx:	db	"No samplekits on disk to load...",0
+nddltx:	db	"No samplekits on disk to delete...",0
+neldtx:	db	"No voices on disk to load...",0
+nedltx:	db	"No voices on disk to delete...",0
+nbldtx:	db	"No voicebanks on disk to load...",0
+nbdltx:	db	"No voicebanks on disk to delete...",0
+nspltx:	db	"No samples on disk to load...",0
+nspdtx:	db	"No samples on disk to delete...",0
+nfittx:	db	"Sample is too big! Load it anyway (y/n)?",0
+sfdltx:	db	"Are you sure you want to delete ........",0
+patltx:	db	"Loading...",0
+patstx:	db	"Saving...",0
+patdtx:	db	"Decrunching...",0
+patctx:	db	"Crunching...",0
+patftx:	db	"Reading Directory...",0
+fortxt:	db	"Are you sure you want to format the disk in drive  : (y/n)?",0
+for2tx:	db	"Single or Double sided disk (1/2)?",0
+for3tx:	db	"Formatting...",0
+for4tx:	db	"Disk error while formatting!!",0
+nsntxt:	db	"Enter new filename:                          ",0
+fnftxt:	db	"LOAD ERROR!! Operation aborted...",0
+abtxt:	db	"DISK NOT READY! Operation aborted...",0
+
+yesblk:	db	001110000b
+noblk:	db	000000011b
+clrblk:	db	000000000b
+emptxt:	db	0feh,76," ",0
+ownnr:	db	0
+filcnt:	db	0
+packin:	db	1
+packi2:	db	0
+drive:	db	0
+dstadr:	dw	0
+
+lngblk:	dw	0
+
+
+nbdat:	dw	0
+nambuf:	ds	6*19*8
+blkdat:	dw	0800h+3*10+7
+	dw	0800h+4*10+7
+	dw	0800h+5*10+7
+	dw	0800h+6*10+7
+	dw	0800h+8*10+7
+	dw	0800h+9*10+7
+	dw	0800h+10*10+7
+	dw	0800h+11*10+7
+	dw	0800h+13*10+7
+	dw	0800h+14*10+7
+	dw	0800h+15*10+7
+	dw	0800h+17*10+7
+	dw	0800h+18*10+7
+	dw	0800h+20*10+7
+blkdt2:	db	0
+blkdt3:	db	3,255,254
+blkdt4:	db	011111b,011100000b,01111b,011110000b,0111b,011111000b
+	db	011b,011111100b,01b,011111110b,0,011111111b
+blkdt8:	dw	0800h+3*10+7
+	dw	0800h+4*10+7
+	dw	0800h+5*10+7
+	dw	0800h+6*10+7
+	dw	0800h+8*10+7
+	dw	0800h+9*10+7
+	dw	0800h+10*10+7
+	dw	0800h+11*10+7
+	dw	0800h+13*10+7
+	dw	0800h+15*10+7
+	dw	0800h+17*10+7
+
+
+filpx:	db	0
+filpy:	db	0
+filpnt:	db	0
+fcb:	db	0,"????????MBM"
+	db	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+fsdext:	db	"SM1"
+fstext:	db	"MUS"
+sngext:	db	"MBM"
+drmext:	db	"MBK"
+vceext:	db	"MBV"
+vcbext:	db	"MBB"
+smpext:	db	"MBS"
+relsav:	dw	0
+
+fcbsav:	db	0,"???????????"
+	dw	0
+groot:	dw	0
+bleng:	dw	0
+	db	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+blok:	dw	0
+	dw	0
+
+lengte:	dw	0
+nnbuf:	db	"        "
+nnbuf2:	db	0
+numzer:	db	0
+
+tmpstr:	ds	192
+
+sadrbf:	ds	4
+mvbbyt:	db	0
+jmpdat:	dw	disksn,disksm,diskvc
+
+smpadd:	dw	00000h,003ffh	;1
+	dw	00400h,007ffh	;2
+	dw	00800h,00bffh	;3
+	dw	00c00h,00fffh	;4
+	dw	01000h,013ffh	;5
+	dw	01400h,017ffh	;6
+	dw	01800h,01bffh	;7
+	dw	01c00h,01fffh	;8
+	dw	00000h,007ffh	;9
+	dw	00800h,00fffh	;10
+	dw	01000h,017ffh	;11
+	dw	01800h,01fffh	;12
+	dw	00000h,00fffh	;13
+smpa14:	dw	01000h,01fffh	;14
+
+
+
+
+;**** disk error hook routines ****
+
+derror:	ld	a,(0f342h)
+	ld	h,040h
+	di
+	call	024h
+	ei
+	ld	sp,(0fb41h)
+	scf
+	ret
+
+insert:	push	af
+	ld	hl,22*80+2
+	call	setwr2-derror+0d802h
+	ld	hl,instxt-derror+0d802h
+	ld	b,60
+	otir
+	ld	hl,22*80+2+22
+	call	setwr2-derror+0d802h
+	pop	af
+	out	(c),a
+	call	09fh
+	ld	hl,22*80+2
+	call	setwr2-derror+0d802h
+	ld	hl,dertx2-derror+0d802h
+	ld	b,60
+	otir
+	pop	af
+	ret
+
+
+dertx2:	db	"                                                             "
+instxt:	db	"Insert disk for drive  : and press any key when ready...     ",0
+
+setwr2:	ld	a,(0007)
+	di
+	inc	a
+	ld	c,a
+	ld	a,h
+	and	0c0h
+	rlca
+	rlca
+	out	(c),a
+	ld	a,08eh
+	out	(c),a
+	ld	a,h
+	out	(c),l
+	and	03fh
+	or	040h
+	out	(c),a
+	dec	c
+	ret
+
+einde:	end
+
+
+
+                                                                                                               

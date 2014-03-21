@@ -1,0 +1,261 @@
+*U+,Q-,S 6
+
+         DB    0FEh
+         DW    START,EINDE,START
+         ORG   0C000H
+
+BDOS     EQU 0F37Dh
+SETDMA   EQU 26
+READ     EQU 39
+OPEN     EQU 15
+CLOSE    EQU 16
+
+
+START:
+
+;---------------- check aanwezige soundchips ---------------
+;
+;Uitvoer = CHIPS bevat 0,1 of 2. (msx-audio,msx-music,both)
+;
+
+SRCCHP:  XOR   A
+         LD    (CHIPS),A
+         CALL  SRCFMP
+         CALL  SRCAUD
+         LD    A,(CHIPS)
+         OR    A
+         RET   Z
+         DEC   A
+         LD    (CHIPS),A
+         RET
+
+;----- zoek msx-music -----
+
+SRCFMP:  LD    HL,0FCCAh
+         XOR   A
+         LD    B,4
+FMLP2:   PUSH  BC
+         LD    B,4
+FMLP1:   PUSH  BC
+         PUSH  AF
+         PUSH  HL
+         SET   7,A
+         LD    H,040h
+         CALL  024h
+         POP   HL
+         PUSH  HL
+         LD    A,(HL)
+         CP    020h
+         CALL  Z,FMTEST
+         JP    Z,FMFND
+         POP   HL
+         POP   AF
+         ADD   A,4
+         AND   0Fh
+         INC   HL
+         INC   HL
+         INC   HL
+         INC   HL
+         POP   BC
+         DJNZ  FMLP1
+         ADD   A,1
+         AND   03h
+         POP   BC
+         DJNZ  FMLP2
+         JP    SETBAS
+FMTEST:  LD    HL,04018h
+         LD    B,8
+         CALL  FMLP
+         JR    Z,FM2
+         LD    HL,0401Ch
+         LD    DE,FMTEXT
+         LD    B,4
+FMLP:    LD    A,(DE)
+         CP    (HL)
+         RET   NZ
+         INC   HL
+         INC   DE
+         DJNZ  FMLP
+         CP    A
+         RET
+FM2:     LD    A,(CHIPS)
+         SET   2,A
+         LD    (CHIPS),A
+         RET
+FMFND:   POP   HL
+         POP   AF
+         POP   BC
+         POP   BC
+         LD    A,(CHIPS)
+         BIT   2,A
+         RES   2,A
+         SET   1,A
+         LD    (CHIPS),A
+         JR    NZ,SETBAS
+         LD    A,(07FF6h)
+         OR    1
+         LD    (07FF6h),A
+SETBAS:  DI
+         LD    A,(0FCC1h)
+         LD    H,040h
+         CALL  024h
+         EI
+         RET
+FM2TXT:  DB    "APRL"
+FMTEXT:  DB    "OPLL"
+
+;---- zoek msx-audio ----
+
+SRCAUD:  IN    A,(0C0h)
+         CP    0FFh
+         RET   Z
+         LD    A,(CHIPS)
+         SET   0,A
+         LD    (CHIPS),A
+         RET
+
+
+;------------------- laad MoonBlaster song ----------------
+;
+; Opm: - Zorg ervoor dat voor aanroep de juiste naam in het
+;        FCB is gezet!
+;      - Let erop dat alleen User files ingeladen worden!
+
+MBLOAD:  CALL  OPENF
+         LD    HL,(BLENG)
+         CALL  LOADF
+         JP    CLOSEF
+
+
+;------------------- laad MoonBlaster samplekit -----------
+;
+; Opm: - De R800 mag niet aanstaan bij aanroep!
+;
+
+MKLOAD:  CALL  OPENF
+         LD    DE,08000H
+         LD    HL,56
+         CALL  LOADF
+         LD    HL,08000H
+         LD    DE,SMPADR
+         LD    BC,56
+         LDIR
+         LD    A,1
+         LD    (SAMPDT),A
+         LD    HL,04000H
+         LD    DE,08000H
+         CALL  LOADF
+         CALL  MOVSMP
+         LD    HL,04000h
+         LD    DE,08000H
+         CALL  LOADF
+         CALL  MOVSMP
+         JP    CLOSEF
+
+;------ disk access routines ------
+
+OPENF:   LD    DE,FCB
+         LD    C,OPEN
+         CALL  BDOS
+         LD    HL,1
+         LD    (GROOT),HL
+         DEC   HL
+         LD    (BLOK),HL
+         LD    (BLOK+2),HL
+         RET
+LOADF:   PUSH  HL
+         LD    C,SETDMA
+         CALL  BDOS
+         LD    DE,FCB
+         POP   HL
+         LD    C,READ
+         JP    BDOS
+CLOSEF:  LD    DE,FCB
+         LD    C,CLOSE
+         JP    BDOS
+
+;------- zet de samplekit in de audio-ram ------
+
+SAMPDT:  DB    1
+MOVSMP:  LD    A,(SAMPDT)
+         XOR   1
+         LD    (SAMPDT),A
+         OR    A
+         EX    AF,AF'
+         CALL  Z,MOVSM2
+         EX    AF,AF'
+         CALL  NZ,MOVSM3
+         DI
+         LD    A,4
+         OUT   (0C0h),A
+         LD    A,060h
+         OUT   (0C1h),A
+         LD    BC,04000h
+         LD    HL,08000h
+MOVSM6:  LD    A,0Fh
+         OUT   (0C0h),A
+         LD    A,(HL)
+         OUT   (0C1h),A
+         LD    A,4
+         OUT   (0C0h),A
+         LD    A,080h
+         OUT   (0C1h),A
+         INC   HL
+         DEC   BC
+         LD    A,B
+         OR    C
+         JR    Z,MOVSM4
+MOVSM5:  IN    A,(0C0h)
+         BIT   3,A
+         JR    Z,MOVSM5
+         JR    MOVSM6
+MOVSM4:  LD    A,4
+         OUT   (0C0h),A
+         LD    A,078h
+         OUT   (0C1h),A
+         LD    A,080h
+         OUT   (0C1h),A
+         LD    A,7
+         OUT   (0C0h),A
+         LD    A,1
+         OUT   (0C1h),A
+         EI
+         RET
+MOVSM3:  LD    HL,SAMPD3
+         JR    MOVSM7
+MOVSM2:  LD    HL,SAMPD2
+MOVSM7:  LD    B,10
+MOVSM8:  LD    A,(HL)
+         OUT   (0C0h),A
+         INC   HL
+         LD    A,(HL)
+         OUT   (0C1h),A
+         INC   HL
+         DJNZ  MOVSM8
+         RET
+SAMPD2:  DB    004h,078h,004h,080h,007h,001h,007h,060h,008h,000h
+         DB    009h,000h,00ah,000h,00bh,0ffh,00ch,00fh,010h,0f0h
+SAMPD3:  DB    004h,078h,004h,080h,007h,001h,007h,060h,008h,000h
+         DB    009h,000h,00ah,010h,00bh,0ffh,00ch,01fh,010h,0f0h
+
+
+;----------- FCB -----------
+
+FCB:     DB    0,"???????????"
+         DW    0
+GROOT:   DW    0
+BLENG:   DW    0
+         DB    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+BLOK:    DW    0
+         DW    0
+
+;------- overige labels (staan ook in mbplay.src!) -------
+
+CHIPS:   DB    0
+SMPADR:  DS    56
+
+EINDE:  END
+
+
+
+
