@@ -1,0 +1,4 @@
+%M_CMD%
+SET M_CMD =
+PAUSE
+M
