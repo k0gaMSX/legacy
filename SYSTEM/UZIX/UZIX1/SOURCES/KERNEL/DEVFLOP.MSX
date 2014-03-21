@@ -1,0 +1,298 @@
+/*
+ * UZIX - UNIX Implementation for MSX
+ * (c) 1997-2001 Arcady Schekochikhin
+ *		 Adriano C. R. da Cunha
+ *
+ * UZIX is based on UZI (UNIX Zilog Implementation)
+ * UZI is a UNIX kernel clone written for Z-80 systems.
+ * All code is public domain, not being based on any AT&T code.
+ *
+ * The author, Douglas Braun, can be reached at:
+ *	7696 West Zayante Rd.
+ *	Felton, CA 95018
+ *	oliveb!intelca!mipos3!cadev4!dbraun
+ *
+ * This program is under GNU GPL, read COPYING for details
+ *
+ */
+
+/**********************************************************
+ MSX floppy disk device driver version
+**********************************************************/
+
+/* If the __ONFILE if defined then we use the 
+ * conventional DOS file with the floppy image
+ */
+
+#ifdef __ONFILE
+#ifdef Z80MU
+
+#define SECTSIZE	512
+#define CPMDTASIZE	128
+
+struct tagFCB {
+	char	drive;
+	char	name[11];
+	uint	blkno;
+	uint	recsize;
+	long	filesize;
+	uint	date;
+	char	resrv[10];
+	char	seqrecno;
+	long	recno;
+} FCB;
+
+uchar xbdos(uint de, uchar c) {
+#asm
+	push	bc
+	push	de
+	call	0FEFEh
+	ld	l,a
+	pop	de
+	pop	bc
+#endasm
+}
+
+int fdop(uchar op) {
+	uint l, p = (uint)fbuf;
+	uchar i;
+
+	l = firstblk*(SECTSIZE/CPMDTASIZE);
+	FCB.blkno = (l/CPMDTASIZE);
+	FCB.seqrecno = (l%CPMDTASIZE);
+	for (i = 0; i < SECTSIZE/CPMDTASIZE; ++i) {
+		xbdos(p, 0x1A); 	/* set DTA */
+		if (xbdos((uint)&FCB, op))
+			return 1;
+		p += CPMDTASIZE;
+	}
+	return 0;
+}
+
+/* low-level onfile floppy read procedure */
+/* !! ONLY existent sectors must be mentioned */
+int dskread(VOID) {
+#if DEBUG > 3
+	kprintf("Read Sect:%d, FBUF: %x\n",
+		firstblk, fbuf);
+#endif
+	return fdop(0x14);	/* read seq */
+}
+
+/* low-level onfile floppy write procedure */
+/* !! ONLY existens sectors must be mentioned */
+int dskwrite(VOID) {
+#if DEBUG > 3
+	kprintf("Write Sect:%d, FBUF: %x\n",
+		firstblk, fbuf);
+#endif
+	return fdop(0x15);	/* write seq */
+}
+
+/* low-level onfile floppy close procedure */
+int closeonfile(VOID) {
+	return xbdos((uint)&FCB, 0x10); /* close */
+}
+
+/* file open procedure - separated because machine depended 
+ * Returns the file length in BUFSIZE or -1 if error
+ */
+int openonfile(char *name, int minor) {
+	int i = 0;
+
+	fdinfo[minor].mediaid = -1;
+	xbdos(0, 0x0D); 		/* norm */
+	bzero(&FCB, sizeof(FCB));
+	bfill(FCB.name, ' ', sizeof(FCB.name));
+	while (*name != 0)
+		FCB.name[i++] = *name++;
+	FCB.blkno = 0;
+	/* this program can't process two or more floppies */
+	if (xbdos((uint)&FCB, 0x0F))
+		return 1;
+	fdinfo[minor].mediaid = minor;	/* only one floppy!!! */
+	fdinfo[minor].size = 1440;
+	return 0;
+}
+#else	/* Z80MU */
+error Non acceptable under MSX-DOS!
+#endif
+#else /* __ONFILE */
+
+static uchar diskio_status;
+
+#asm
+	psect	text
+_diskio:
+	push	af
+	ld	hl,_inint
+	inc	(hl)			; ++inint
+	pop	af
+	push	ix
+	push	iy
+	ld	de,(_firstblk)		; sector
+	ld	a,(_fmediaid)
+	ld	c,a			; media id byte
+	ld	a,(_fdrive)		; drive number
+	ld	hl,TEMPDBUF
+	ld	b,1			; number of sectors	
+#endasm
+#ifdef Z80MU
+#asm
+	or	a			; C=0
+#endasm
+#else
+#asm
+	ld	ix,4010h
+	call	BDOS			; read sector into temporary buffer
+#endasm
+#endif
+#asm
+	pop	iy
+	pop	ix
+	jp	c,1f
+	ld	a,255
+1:	inc	a			; error 0: write-protect
+					; now write-protect is err 1
+	ld	(_diskio_status),a	; flag C if error
+	ret
+#endasm
+
+/* low-level floppy read procedure for MSX - only one sector per time */
+/* !! ONLY existent sectors must be mentioned */
+STATIC int dskread(VOID) {
+#if DEBUG > 3
+	kprintf("\nRead Sect:%d, FBUF: %x, DiskID: %x ",
+		firstblk, fbuf, fmediaid);
+#endif
+#asm
+	global _inint
+	or	a			; CF=0 - operation: read
+	call	_diskio
+	jp	c,1f
+	ld	hl,TEMPDBUF
+	ld	de,(_fbuf)
+	ld	bc,BUFSIZE
+	ldir				; transfer sector to right place
+1:
+	ld	hl,_inint
+	dec	(hl)			; --inint
+#endasm
+#if DEBUG > 3
+	if (diskio_status)
+		kprintf("Err: %d\n", diskio_status);
+#endif
+	return diskio_status;		/* 0=operation ok */
+}
+
+/* low-level floppy write procedure - only one sector per time */
+/* !! ONLY existent sectors must be mentioned */
+STATIC int dskwrite(VOID) {
+#if DEBUG > 3
+	kprintf("\nWrite Sect:%d, FBUF: %x, DiskID: %x ",
+		firstblk, fbuf, fmediaid);
+#endif
+#asm
+	global _inint
+	ld	de,TEMPDBUF
+	ld	hl,(_fbuf)
+	ld	bc,BUFSIZE
+	ldir				; transfer data to temporary buffer
+	scf				; CF=1 - operation: write
+	call	_diskio
+	ld	hl,_inint
+	dec	(hl)			; --inint
+#endasm
+#if DEBUG > 3
+	if (diskio_status)
+		kprintf("Err: %d\n",diskio_status);
+#endif
+	return diskio_status;
+}
+
+/* low-level floppy reset procedure */
+#ifdef Z80MU
+#asm
+	psect	text
+_reset:
+	ret
+#endasm
+#else
+#asm
+	psect	text
+_reset:
+	push	ix
+	push	iy
+	ld	ix,4029h		; stop drive
+	call	BDOS
+	pop	iy
+	pop	ix
+	ret
+#endasm
+
+#asm
+	psect	text
+
+; put the corresponding DiskROM slot of drive in _fdrive on MAINDRV
+
+_chkfdrive:
+	ld	a,(_fdrive)
+	ld	hl,0FB21h	; diskrom table
+	ld	b,4
+1:	sub	(hl)
+	jr	c,2f
+	inc	l
+	inc	l
+	djnz	1b
+	ld	a,0FFh
+	ld	(_fdrive),a
+	ret
+2:	add	a,(hl)
+	ld	(_fdrive),a	; fdrive=local drivenumber of diskrom
+	inc	l
+	ld	a,(hl)
+	ld	(MAINDRV),a	; set diskrom as the default one
+	ret
+#endasm
+
+#ifdef __KERNEL__
+#asm
+_bdosaddr:
+	defw	BDOSADDR
+
+; call the address in _bdosaddr
+; used to change the call from default DiskROM caller to the special
+; MSX Turbo-R DiskROM caller (_bdostr)
+	
+_bdospatch:
+	push	hl
+	ld	hl,(_bdosaddr)
+	ex	(sp),hl
+	ret
+
+; change MSX Turbo-R DiskROM from DOS2 to DOS1 and call the routine at IX
+
+_bdostr:
+	ld	(2f),ix		; save call
+	ld	ix,1f
+	jp	BDOSADDR	; select DiskROM and call us
+1:	push	af
+	ld	a,3
+	ld	(07ff0h),a	; change TR diskrom to DOS1
+	pop	af
+	ld	ix,3f
+	push	ix
+	defb	0ddh, 021h	; LD IX,
+2:	defw	0		; [original address to call]
+	jp	(ix)
+3:	push	af
+	xor	a
+	ld	(07ff0h),a	; restore TR diskrom to DOS2
+	pop	af
+	ret
+#endasm
+#endif
+
+#endif
+#endif /* __ONFILE */
+

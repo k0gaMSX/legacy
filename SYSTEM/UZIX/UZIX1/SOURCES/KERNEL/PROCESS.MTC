@@ -1,0 +1,78 @@
+/*
+ * UZIX - UNIX Implementation for MSX
+ * (c) 1997-2001 Arcady Schekochikhin
+ *		 Adriano C. R. da Cunha
+ *
+ * UZIX is based on UZI (UNIX Zilog Implementation)
+ * UZI is a UNIX kernel clone written for Z-80 systems.
+ * All code is public domain, not being based on any AT&T code.
+ *
+ * The author, Douglas Braun, can be reached at:
+ *	7696 West Zayante Rd.
+ *	Felton, CA 95018
+ *	oliveb!intelca!mipos3!cadev4!dbraun
+ *
+ * This program is under GNU GPL, read COPYING for details
+ *
+ */
+
+/**********************************************************
+ PC machine dependent subroutines for processes management
+**********************************************************/
+
+#ifdef __SAVEALL
+	_AX = 1;	/* ret status */
+	__emit__(0x50); /* push ax */
+	__emit__(0x56); /* push si */
+	__emit__(0x57); /* push di */
+	__emit__(0x55); /* push bp */
+	_stkptr = (void *)_SP;
+#undef __SAVEALL
+#endif
+
+#ifdef __SAVENEWID
+	_AX = _newid;
+	__emit__(0x50); /* push ax */
+	__emit__(0x56); /* push si */
+	__emit__(0x57); /* push di */
+	__emit__(0x55); /* push bp */
+	_stkptr = (void *)_SP;
+#undef __SAVENEWID
+#endif
+
+#ifdef __RESTFRAME
+	_SP = (uint)_stkptr;
+	__emit__(0x5D); /* pop bp */
+	__emit__(0x5F); /* pop di */
+	__emit__(0x5E); /* pop si */
+#undef __RESTFRAME
+#endif
+
+#ifdef __RETFROM
+	__emit__(0x58); 	/* pop ax */
+#ifndef LOC_UDATA
+	__emit__(0x89,0xEC);	/* mov sp,bp */ /* !!! */
+	__emit__(0x5D); 	/* pop bp */	/* !!! */
+#endif
+	__emit__(0xC3); 	/* ret */
+#undef __RETFROM
+#endif
+
+#ifdef __DROPSTACK
+	__emit__(0x58); /* pop ax */
+	__emit__(0x58); /* pop ax */
+	__emit__(0x58); /* pop ax */
+	__emit__(0x58); /* pop ax */
+#undef __DROPSTACK
+#endif
+
+#ifdef __SAVESTACK
+	_stkbkp = (void *)_SP;
+#undef __SAVESTACK
+#endif
+
+#ifdef __RESTSTACK
+	_SP = (uint)_stkbkp;
+#undef __RESTSTACK
+#endif
+

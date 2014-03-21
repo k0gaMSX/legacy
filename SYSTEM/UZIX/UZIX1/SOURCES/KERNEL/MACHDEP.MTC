@@ -1,0 +1,234 @@
+/*
+ * UZIX - UNIX Implementation for MSX
+ * (c) 1997-2001 Arcady Schekochikhin
+ *		 Adriano C. R. da Cunha
+ *
+ * UZIX is based on UZI (UNIX Zilog Implementation)
+ * UZI is a UNIX kernel clone written for Z-80 systems.
+ * All code is public domain, not being based on any AT&T code.
+ *
+ * The author, Douglas Braun, can be reached at:
+ *	7696 West Zayante Rd.
+ *	Felton, CA 95018
+ *	oliveb!intelca!mipos3!cadev4!dbraun
+ *
+ * This program is under GNU GPL, read COPYING for details
+ *
+ */
+
+/**********************************************************
+ PC additional machine dependent subroutines for kernel
+**********************************************************/
+
+#ifdef __KERNEL__
+
+#define ARCH_INIT
+
+static void interrupt (*old8)(void);
+
+unsigned _stklen = 1024;
+unsigned _heaplen = 1;
+
+static void interrupt (far* getvect(int intr))() {
+	_AL = intr;
+	_AH = 0x35;
+	geninterrupt(0x21);
+#pragma warn -sus
+	return (char _es *) _BX;
+#pragma warn .sus
+}
+
+static void setvect(int intr, void interrupt (far* func)()) {
+	__emit__(0x1E); /* push ds */
+	_DS = FP_SEG(func);
+	_DX = FP_OFF(func);
+	_AL = intr;
+	_AH = 0x25;
+	geninterrupt(0x21);
+	__emit__(0x1F); /* pop ds */
+}
+
+/* Initialize system dependend parts */
+GBL void initsys(VOID) {
+	extern void interrupt service();
+
+	/* initialize interrupt vectors */
+	old8 = getvect(0x8);
+/*	setvect(0x8,service);	/**/
+	/* initialize other stuffs */
+	TICKSPERSEC = 18;
+}
+
+/* Initialize system call's vectors */
+GBL void setvectors(VOID) {
+	/* system exit vector */
+	*(char *)0 = 0xE9;	/* jmp near */
+	*(uint *)1 = (uint)exit0 - 3;
+	/* system call vector */
+	*(char *)5 = 0xE9;	/* jmp near */
+	*(uint *)6 = (uint)unix - 8;
+}
+
+/* doexec() starts program execution from addr PROGBASE */
+GBL void doexec(sp)
+	uint sp;
+{
+	UDATA(u_insys) = 0;	/* not in kernel */
+	setvectors();
+	_SP = sp;		/* set up new stack */
+	_ES = _DS = _SS;
+#pragma warn -pro
+	UDATA(u_argn1) = ((int (*)())PROGBASE)();
+#pragma wanr .pro
+	sys_exit();		/* program exited by RET */
+	/* NORETURN */
+}
+
+/* This interrupt device routine calls the service routine of each device
+ * that could have interrupted.
+ */
+GBL void interrupt service(void) {	/* ??? */
+	if (inint++ > 0) {
+		old8();
+		--inint;
+		return;
+	}
+	old8();
+	tty_poll();
+	clk_int();
+	/* Deal with a pending caught signal, if any */
+	if (--inint == 0 && !UDATA(u_insys))
+		calltrap();
+	/* IRET */
+}
+
+/* return syscall retval
+ * set carry flag if system call report error
+ */
+LCL long unixret(VOID) {
+	_BX = UDATA(u_error);
+	return *(long *)&(UDATA(u_retval));	/* +BX=errno */
+}
+
+#endif	/* __KERNEL__ */
+
+void bcopy(void *src, void *dst, uint n) {
+	if ((_CX = n) != 0) {
+		_ES = _DS;
+		_DI = (unsigned)dst;
+		_SI = (unsigned)src;
+		__emit__(0xF3,0xA4);	/* rep movsb */
+	}
+}
+
+void bfill(void *addr, uchar val, uint len) {
+	if ((_CX = len) != 0) {
+		_ES = _DS;
+		_DI = (unsigned)addr;
+		_AL = val;
+		__emit__(0xF3,0xAA);	/* rep stosb */
+	}
+}
+
+void bzero(void *addr, uint len) {
+	bfill(addr, 0, len);
+}
+
+#define tread(n)	(10 * (((n) >> 4) & 0x0f) + ((n) & 0x0f))
+
+/* Update global time of day */
+GBL void rdtod(VOID) {
+	uchar h, m, s, d, y, c;
+	int year;
+
+	_AH = 2; geninterrupt(0x1A);	/* PC-AT time */
+	h = _CH; m = _CL; s = _DH;
+	tod.t_time = (tread(s) >> 1) |
+		     (tread(m) << 5) |
+		     (tread(h) << 11);
+
+	_AH = 4; geninterrupt(0x1A);	/* PC-AT date */
+	d = _DL; m = _DH; y = _CL; c = _CH;
+	y = tread(y); c = tread(c);
+	year = (y + 100*c) - 1980;	/* year relative to 1980 */
+	tod.t_date = (tread(d)) |
+		     (tread(m) << 5) |
+		     (year << 9);
+}
+
+#define twrite(n)	(((n/10) << 4) & 0xf0) + ((n%10) & 0x0f)
+
+GBL void wrtod(time_t *pt) {
+	uchar n1, n2, n3;
+
+	n1 = twrite((pt->t_time & 31) * 2);
+	n2 = twrite((pt->t_time >> 5) & 63);
+	n3 = twrite((pt->t_time >> 11) & 31);
+	_AH = 2; geninterrupt(0x1A);	/* PC-AT time - obtain _DL */
+	_CH = n3; _CL = n2; _DH = n1;
+	_AH = 3; geninterrupt(0x1A);	/* PC-AT time */
+
+	n1 = twrite(pt->t_date & 31);
+	n2 = twrite((pt->t_date >> 5) & 15);
+	n3 = (pt->t_date >> 9) & 127;
+	if (n3 > 19) {
+		_CH = 0x20;
+		_CL = twrite(n3 - 20);
+	} else {
+		_CH = 0x19;
+		_CL = twrite(n3 + 80);
+	}
+	_DH = n2; _DL = n1;
+	_AH = 5; geninterrupt(0x1A);	/* PC-AT date */
+}
+
+#ifndef di
+/* Disable interrupts */
+GBL void di(VOID) {
+	__cli__();
+}
+#endif /* di */
+
+#ifndef ei
+/* Enable interrupts if we are not in service routine */
+void ei(VOID) {
+	if (!inint)
+		__sti__();
+}
+#endif /* ei */
+
+/* aborting - may be rebooting */
+void _abort(int status) {
+#ifdef __KERNEL__
+	if (old8 != NULL)
+		setvect(0x8,old8);
+#endif /* __KERNEL__ */
+	_AX = 0x4C00+(uchar)status;
+	geninterrupt(0x21);
+}
+
+/* Valaddr() checks to see if a user-supplied address is legitimate
+ */
+#ifndef __KERNEL__
+GBL int valadr(base, size)
+	void *base;
+	uint size;
+{
+	NOTUSED(base);
+	NOTUSED(size);
+}
+#else
+GBL int valadr(base, size)
+	void *base;
+	uint size;
+{
+	register uint i = base + size;
+	if (i < (uint)base ||
+	    i >= UZIXBASE) {	/* kernel data problem */
+		UDATA(u_error) = EFAULT;
+		return 0;
+	}
+	return 1;
+}
+#endif
+

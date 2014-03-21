@@ -1,0 +1,756 @@
+/*
+ * UZIX - UNIX Implementation for MSX
+ * (c) 1997-2001 Arcady Schekochikhin
+ *		 Adriano C. R. da Cunha
+ *
+ * UZIX is based on UZI (UNIX Zilog Implementation)
+ * UZI is a UNIX kernel clone written for Z-80 systems.
+ * All code is public domain, not being based on any AT&T code.
+ *
+ * The author, Douglas Braun, can be reached at:
+ *	7696 West Zayante Rd.
+ *	Felton, CA 95018
+ *	oliveb!intelca!mipos3!cadev4!dbraun
+ *
+ * This program is under GNU GPL, read COPYING for details
+ *
+ */
+
+/**********************************************************
+ MSX additional machine dependent subroutines for kernel
+**********************************************************/
+
+#define ARCH_INIT
+
+#define JP      ((uchar)0xC3)
+
+#ifndef NO_RTC
+static uchar f12 = 0xFF;
+#endif
+
+#ifdef NO_RTC
+static uchar tod_sec;
+#endif
+
+#ifdef __KERNEL__
+/* This interrupt device routine calls the service routine of each device
+ * that could have interrupted.
+ * Executed with the interrupts disabled and ++inint!
+ *
+ * ! can't be executed with SP=ISTK. SP must be user stack, to have
+ * ! registers and return address swapped with the process
+ */
+GBL void service(VOID) {
+	tty_poll();
+	clk_int();
+	/* Deal with a pending caught signal, if any */
+	if (inint == 1 && !UDATA(u_insys))
+		calltrap();     /* already inint == 0 ? */
+}
+#endif  /* __ KERNEL__ */
+
+#ifdef __KERNEL__
+/* interrupt service wrapper */
+#asm
+	psect   text
+	global  __service
+	global  _inint
+__service:      ; GBL void _service()
+	di
+	push    af
+	push    bc
+	push    de
+	push    hl
+	push    ix
+	push    iy
+	ex af,af'
+	exx
+	push    af
+	push    bc
+	push    de
+	push    hl
+#ifdef INT_DEBUG
+	ld      a,31h
+	out     (98h),a
+#endif  
+	ld      hl,_inint
+	ld      a,(hl)
+	inc     (hl)            ; ++inint
+	or      a
+	push    af
+	ld      ix,38h          ; [has own stack]
+	call    CALROM          ; call ROM interrupt routine and return in DI mode
+#ifdef INT_DEBUG
+	ld      a,32h
+	out     (98h),a
+#endif
+	ld	a,(0fda0h)      ; stopdrive countdown routine DiskROM slot
+	bit	6,a		; invalid DiskROM countdown routine slot?
+	jr	nz,1f		; so skip calling countdown routine
+	ex	af,af'
+	ld      a,(0f348h)      ; save previous DiskROM slot
+	push    af
+	ex	af,af'
+	ld      (0f348h),a      ; set DiskROM slot for BDOS caller
+	ld      ix,(0fda1h)     ; stopdrive countdown routine address
+	call    BDOS
+#ifdef INT_DEBUG
+	ld      a,33h
+	out     (98h),a
+#endif
+	pop     af
+	ld      (0f348h),a      ; restore previous DiskROM slot
+1:	pop     af
+	call    z,_service      ; Executed with the interrupts disabled!
+	ld      hl,_inint
+	dec     (hl)            ; --inint	
+	pop     hl
+	pop     de
+	pop     bc
+	pop     af
+	exx
+	ex af,af'
+	pop     iy
+	pop     ix
+	pop     hl
+	pop     de
+	pop     bc
+#ifdef INT_DEBUG
+	ld      a,34h
+	out     (98h),a
+#endif
+	pop     af
+	ei
+	reti
+
+; Reboot DiskROM
+
+_bootdskrom:
+	ld	hl,(04002h)
+	ld	de,576fh	; disk drive diskrom?
+	or	a
+	sbc	hl,de
+	ret	nz		; no, so return
+	jp	576fh
+
+#endasm
+#endif  /* __ KERNEL__ */
+
+extern void _service __P((void));
+
+/* Initialize system dependent parts */
+GBL void initsys(VOID) {
+#ifdef __KERNEL__
+	/* initialize interrupt vectors */
+	_di();
+	/* IM 2 vector */
+	*(uchar *)(IM2ADDR) = JP;
+	*(uint *)(IM2ADDR+1) = (uint)_service;
+#ifndef NO_RTC
+#ifdef NO_ASM
+	f12 = rtod2(1,10); /* block 1, 12/24h flag: 1=24h */
+#else
+	NOTUSED(f12);
+#asm
+	global	rtod2
+	
+	ld	bc,010Ah; block 1, 12/24h flag: 1=24h
+	call	rtod2
+	ld	(_f12),a
+#endasm
+#endif
+#endif
+	if (*(uchar *)CNFGBYTE & 16) {	/* disable stopdrive countdown */
+		goto nocntd;
+	}
+	if (*(uchar *)CNFGBYTE & 8) {	/* TR internal diskrom */
+#asm
+		ld	hl,_bdostr		/* set new BDOS routine */
+		ld	(_bdosaddr),hl
+#endasm	
+nocntd:		*(uchar *)0xFDA0 = 0xC9;	/* disable stopdrive countdown */
+	}
+	if (*(uchar *)CNFGBYTE & 4) {	/* reboot diskrom */
+#asm
+		ld	hl,0fb22h
+1:		ld	a,l
+		cp	32h		; reached FB32h?
+		jr	z,3f		; so, end
+		ld	a,(hl)		; for each diskrom on system
+		or	a
+		jr	z,2f
+		ld	(0f348h),a
+		push	hl
+		ld	ix,_bootdskrom
+		call	BDOS		; try rebooting
+		pop	hl
+2:		inc	hl
+		inc	hl
+		jr	1b
+3:
+#endasm
+	}
+#endif  /* __ KERNEL__ */
+	/* initialize other MSX specific variables */
+	TICKSPERSEC = *(uchar *)TICKADDR;
+}
+
+#ifdef __KERNEL__
+/* Initialize system call's vectors */
+GBL void setvectors(VOID) {
+	/* system exit vector */
+	*(uchar *)(EXITADDR) = JP;
+	*(uint *)(EXITADDR+1) = (uint)exit0;
+	/* system call vector */
+	*(uchar *)(SYSCADDR) = JP;
+	*(uint *)(SYSCADDR+1) = (uint)unix;
+}
+#endif
+
+#ifdef __KERNEL__
+/* doexec() starts program execution from addr PROGBASE */
+GBL void doexec(sp)
+	uint sp;        /* argument in DE */
+{
+	asm("	ex de,hl");
+	asm("	ld sp,hl");
+	/* user stack ! */
+	setvectors();
+	UDATA(u_insys) = 0;     /* not in kernel */
+	UDATA(u_argn1) = ((int (*)())PROGBASE)();
+	sys_exit();             /* program exited by RET */
+	/* NORETURN */
+}
+#endif  /* __KERNEL__ */
+
+#ifndef _di
+/* Totally disable interrupts */
+GBL void _di(VOID) {
+	asm("	di");
+}
+
+/* Enable interrupts if we are not in service routine */
+void _ei(VOID) {
+	if (!inint)
+		asm ("	ei");
+}
+#endif
+
+/* Copy memory block */
+#asm
+	psect   text
+	global  _bcopy
+	signat  _bcopy, 12344 ; src=DE, dst=BC, count=@sp
+
+			;       need:    HL   DE   BC
+_bcopy:                 ; GBL void bcopy(src, dst, count)
+	pop     hl      ; retaddr
+	ex      (sp),hl ;                DE   BC   HL
+	ex      de,hl   ;                HL   BC   DE
+	ld      a,d
+	ld      d,b
+	ld      b,a
+	ld      a,e
+	ld      e,c
+	ld      c,a     ;                HL   DE   BC
+	or      b
+	jp      z,1f
+	ldir
+1:
+	ret
+#endasm
+
+/* Zeroing the memory area */
+void bzero(ptr, count)
+	void *ptr;
+	uint count;
+{
+#ifdef NO_ASM
+	bfill(ptr, 0, count);
+#else
+#asm
+	push	bc	; count
+	ld	c,0
+	call	_bfill
+	pop	bc
+#endasm	
+#endif
+}
+
+/* Filling the memory area */
+void bfill(ptr, val, count)
+	void *ptr;
+	uchar val;
+	uint count;
+{
+#ifdef NO_ASM
+	if (count) {
+		--count;
+		*((uchar *)ptr) = val;
+		bcopy(ptr, ((uchar *)ptr)+1, count);
+	}
+#else
+#asm
+	ld	ix,0
+	add	ix,sp
+	ld	l,(ix+4)
+	ld	h,(ix+5); counter
+	pop	ix
+	ld	a,h
+	or	l
+	ret	z
+	dec	hl
+	push	hl
+	ld	h,d
+	ld	l,e	; HL=DE=ptr
+	inc	de
+	ld	(hl),c
+	pop	bc
+	ldir
+	ret
+#endasm
+#endif
+}
+
+#ifdef __KERNEL__
+
+static int ret_err;     /* for error reloading */
+
+/* return syscall retval
+ * set carry flag if system call reports error
+ */
+LCL long unixret(VOID) {
+	if (0 != (ret_err = UDATA(u_error))) {
+		asm("	ld bc,(_ret_err)");
+		asm("	scf");
+	}
+	return *(long *)&(UDATA(u_retval));
+}
+
+#endif	/* __KERNEL__ */
+
+/* aborting - delay 5 seconds & reboot MSX */
+void _abort(status) {
+#ifdef __KERNEL__
+#ifdef Z80MU
+	asm("	jp	0FF00h");
+#else
+#ifdef NO_RTC
+	/* disable _service() */
+	*(uchar *)(IM2ADDR) = 0xFB;	/* EI */
+	*(uchar *)(IM2ADDR+1) = 0xC9;	/* RET */
+#asm
+	ld	bc,60*5
+1:	ei
+	halt		; wait 5 seconds (about 5*60 interrupts)
+	dec	bc
+	ld	a,b
+	or	c
+	jr	nz,1b	
+#endasm
+#else
+#asm
+	ld	bc,0
+	call	rtod1
+	ld	l,e
+1:	ld	bc,0
+	call	rtod1
+	ld	a,e
+	sbc	a,l
+	cp	5
+	jr	c,1b
+	ld      ix,0
+	jp      CALROM          ; reboot
+#endasm
+#endif
+#endif
+#else
+	asm("	jp	0");   /* reload MSXDOS */
+#endif
+}
+
+#ifdef Z80MU
+
+GBL void rdtod(VOID) {
+	tod.t_time = 0;
+	tod.t_date = 0;
+}
+
+GBL void wrtod(time_t *pt) {
+}
+
+#else
+
+#ifndef NO_RTC
+static uchar port c1 @ 0xB4;
+static uchar port c2 @ 0xB5;
+
+#ifdef NO_ASM
+/* read IC clock register C, block B */
+uchar rtod2(uchar B, uchar C) {
+	c1 = 0xD;               /* select register 13 (mode register) */
+	c2 = (c2 & 0xC) | B;    /* select ony TE and AE bits of register and block B */
+	c1 = C;
+	return c2 & 0xF;        /* data is only 4 bits */
+}
+
+/* read a byte at registers (C) and (C)+1 from IC clock block (B)
+ * result in numerical format
+ */
+uchar rtod1(uchar B, uchar C) {
+	uchar lb, hb;
+
+	lb = rtod2(B, C);
+	++C;
+	hb = rtod2(B, C);
+	return lb+(hb*10);
+}
+
+#endif	/* NO_ASM */
+#endif	/* NO_RTC */
+
+void rdtod(VOID) {
+#ifndef NO_RTC
+#ifdef NO_ASM
+	uchar n1, n2, n3;
+
+	n1 = rtod1(0,0);        /* sec */
+	n2 = rtod1(0,2);        /* min */
+	n3 = rtod1(0,4);        /* hours */
+	if (!f12) {
+		/* if clock in 12h format, bit 1 of hour 2nd digit is
+		   0 for a.m. and 1 for p.m.
+		   hour: 00*YXXXX -> Y=hour 2n digit, XXXX=hour 1st digiy
+				     *=am/pm flag
+			 if clock is 12h and hour>13, it's pm, so subtract
+			 20 to add 12 to 12h format and convert to 24h format
+		 */
+		 if (n3 > 12)
+			n3 -= 20;
+	}
+	/* HHHHHmmm.mmmSSSSS */
+	tod.t_time = (((int)n3 << 8) << 3) |    /* hours in 24h format */
+		     ((int)n2 << 5) |           /* min */
+		     (n1 >> 1);                 /* sec/2 */
+
+	n1 = rtod1(0, 7);       /* day */
+	n2 = rtod1(0, 9);       /* mon */
+	n3 = rtod1(0,11);       /* year relative to 1980 */
+	/* YYYYYYYm.mmmDDDDD */
+	tod.t_date = (((int)n3 << 8) << 1) |    /* year relative to 1980 */
+		     ((int)n2 << 5) |           /* mon */
+		     n1;                        /* day */
+#else	/* NO_ASM */
+#asm
+	ld	bc,0
+	call	rtod4		; read time
+	ld	a,(_f12)
+	or	a
+	jr	nz,3f
+	pop	af
+	cp	12
+	jr	c,2f
+	sub	20		; if AM/PM, convert to 24h format
+2:	push	af
+3:	pop	af		; 000HHHHH
+	rlca
+	rlca
+	rlca
+	ld	h,a		; H=HHHHH000
+	call	rtod3
+	ld	(_tod),hl
+	ld	bc,7
+	call	rtod4		; read date
+	pop	hl		; H=year
+	pop	de		; D=month
+	pop	af		; A=day
+	rla			; day=day*2 (rtod3 divides by 2 for seconds)
+	push	af
+	push	de
+	ld	a,h		; H=0YYYYYYY
+	rlca
+	ld	h,a		; H=YYYYYYY0
+	call	rtod3
+	ld	(_tod+2),hl
+	ret
+
+; modify AF, DE, C
+rtod1:	call	rtod2
+	inc	c
+	ld	e,a	; HL
+	call	rtod2
+	add	a,a	; HB*2
+	ld	d,a
+	add	a,a	; HB*4
+	add	a,a	; HB*8
+	add	a,d	; HB*10
+	add	a,e	; HB+HL
+	ret
+
+; modify AF
+rtod2:	ld	a,0x0dh
+	out	(0b4h),a
+	in	a,(0b5h)
+	and	0x0ch
+	or	b
+	out	(0b5h),a
+	ld	a,c
+	out	(0b4h),a
+	in	a,(0b5h)
+	and	0fh
+	ret
+
+rtod3:	pop	bc		; return address
+	pop	af		; 00mmmmmm (min) or 0000mmmm (month)
+	ld	d,a
+	srl	a
+	srl	a
+	srl	a		; 00000mmm (min) or 0000000m (month)
+	or	h
+	ld	h,a		; H=HHHHHmmm (min) or YYYYYYYm (month)
+	ld	a,d
+	and	7		; 00000mmm
+	rla
+	rla
+	rla
+	rla
+	rla			; mmm00000
+	ld	l,a
+	pop	af		; 00SSSSSS (secs) or 00DDDDD0 (day)
+	srl	a		; 000SSSSS (secs) or 000DDDDD (day)
+	or	l
+	ld	l,a		; L=mmmSSSSS (secs) or mmmDDDDD (day)
+	push	bc
+	ret
+
+rtod4:	pop	hl
+	call	rtod1		; sec or day
+	push	af
+	inc	c
+	call	rtod1		; min or month
+	push	af
+	inc	c
+	call	rtod1		; hour or year
+	push	af
+	jp	(hl)
+#endasm
+#endif	/* NO_ASM */
+#endif	/* NO_RTC */
+}
+
+#ifndef NO_RTC
+#ifdef NO_ASM
+/* write data A in IC clock register C, block B */
+void wtod2(uchar B, uchar C, uchar A) {
+	c1 = 0xD;               /* select register 13 (mode register) */
+	c2 = (c2 & 0xC) | B;    /* select ony TE and AE bits of register and block B */
+	c1 = C;                 /* select register */
+	c2 = (A & 0xF);         /* write data */
+}
+
+/* write a 2-digit number at registers (C) and (C)+1 from IC clock block (B) */
+void wtod1(uchar B, uchar C, uchar A) {
+	wtod2(B, C, A%10);
+	++C;
+	wtod2(B, C, A/10);
+}
+#endif	/* NO_ASM */
+#endif	/* NO_RTC */
+
+void wrtod(time_t *pt) {
+#ifdef NO_RTC
+	tod.t_time=pt->t_time;
+	tod.t_date=pt->t_date;
+	tod_sec = (pt->t_time & 31) * 2;
+#else
+#ifdef __KERNEL__
+#ifdef NO_ASM
+	uchar n1, n2, n3;
+	
+	n1 = (pt->t_time & 31) * 2;
+	n2 = ((pt->t_time >> 5) & 63);
+	n3 = ((pt->t_time >> 11) & 31);
+	if (!f12) {
+		/* if clock in 12h format, bit 1 of hour 2nd digit is
+		   0 for a.m. and 1 for p.m.
+		   hour: 00*YXXXX -> Y=hour 2n digit, XXXX=hour 1st digit
+				     *=am/pm flag
+			 if clock is 12h and hour>13, it's pm, so subtract
+			 12 to convert to 12h format and add 32 to set pm
+		 */
+		if (n3 > 12)
+			n3 = (n3 - 12) + 32;
+	}
+	wtod1(0,0,n1);
+	wtod1(0,2,n2);
+	wtod1(0,4,n3);
+
+	n1 = (pt->t_date & 31);
+	n2 = ((pt->t_date >> 5) & 15);
+	n3 = ((pt->t_date >> 9) & 127);
+	wtod1(0,7,n1);
+	wtod1(0,9,n2);
+	wtod1(0,11,n3);
+#else	/* NO_ASM */
+#asm
+	; DE = *pt
+	ex 	de,hl
+	ld 	e,(hl)
+	inc 	hl
+	ld 	d,(hl)
+	inc 	hl
+	push	hl
+	ld	a,d
+	and	11111000B
+	rrca
+	rrca
+	rrca
+	ld	b,a	; 000HHHHH
+	ld	a,(_f12)
+	or	a
+	jr	nz,1f
+	ld	a,b
+	cp	12
+	jr	c,1f
+	sub	20
+	ld	b,a
+1:	push	bc	; 000HHHHH in stack
+        ld      a,d
+        and     00000111B
+        call    wtod5   ; A=00000mmm
+	rlc 	a
+        ld      bc,0
+        call    wtod1   ; write to clock IC
+	pop	hl
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ld	a,d
+	srl	a
+	push	af	; 0YYYYYYY in stack
+	ld	a,d
+        and     1       ; A=0000000m
+        call    wtod5
+	ld	bc,07
+        call    wtod1   ; write to clock IC
+	ret		
+wtod1:  pop     hl      ; return address
+        ld      d,a     ; 00SSSSS0 (secs) or 000DDDDD (day)
+	call	wtod4
+	pop	de
+	call	wtod4
+	pop	de
+	call	wtod4
+        jp      (hl)
+	
+wtod2:  push    af      ; write nibble in clock IC, block B, register C
+	ld	a,0dh
+	out	(0b4h),a
+	in	a,(0b5h)
+	and	0ch
+	or	b
+	out	(0b5h),a
+	ld	a,c
+	out	(0b4h),a
+	pop	af
+	and	15
+	out	(0b5h),a
+	ret
+	
+; input: D=number; output: D=E/10, E=E%10; modify AF, DE
+wtod3:	ld	a,d
+	ld 	d,-1
+1:	inc	d
+	sub	10
+	jr	nc,1b
+	add	a,10
+	ld	e,a
+	ret	
+
+wtod4:	call	wtod3
+	ld	a,e
+	call	wtod2
+	inc	c
+	ld	a,d
+	call	wtod2
+	inc	c
+	ret
+
+wtod5:  pop     hl      ; return address
+        rlc     a
+	rlc	a
+	rlc	a
+        ld      b,a     ; 0000m000 (month) or 00mmm000 (min)
+	ld	a,e
+	and	11100000B
+	rrca
+	rrca
+	rrca
+	rrca
+	rrca
+	or	b
+        push    af      ; 0000mmmm (month) or 00mmmmmm (min) in stack
+	ld	a,e
+	and	31
+        jp      (hl)
+#endasm
+#endif	/* NO_ASM */
+#endif	/* __KERNEL__ */
+#endif	/* NO_RTC */
+}
+
+#endif /* Z80MU */
+
+/* Valaddr() checks to see if a user-supplied address is legitimate
+ */
+#ifndef __KERNEL__
+GBL int valadr(base, size)
+	void *base;
+	uint size;
+{
+	NOTUSED(base);
+	NOTUSED(size);
+}
+#else
+#ifdef NO_ASM
+GBL int valadr(base, size)
+	void *base;
+	uint size;
+{
+	register uint i = base + size;
+	if (i < (uint)base ||
+	    i >= UZIXBASE) {	/* kernel data problem */
+		UDATA(u_error) = EFAULT;
+		return 0;
+	}
+	return 1;
+}
+#else
+#asm
+	global	_valadr
+	signat	_valadr,8250
+	
+_valadr:
+	ld	h,d		; HL=DE=base
+	ld	l,e
+	add	hl,bc		; HL=base+size
+	or	a
+	ld	b,h
+	ld	c,l
+	sbc	hl,de		; base+size < base?
+	jr	c,1f
+	ld	h,b
+	ld	l,c
+	ld	bc,_UZIXBASE
+	or	a
+	sbc	hl,bc		; base+size >= UZIXBASE?
+	jr	c,2f
+1:	ld	a,0eh
+	ld	(022h),a	; UDATA(u_error)=EFAULT
+	ld	hl,0
+	ret
+2:	ld	hl,1
+	ret
+#endasm
+#endif	/* NO_ASM */
+#endif  /* __KERNEL__ */

@@ -1,0 +1,209 @@
+/*
+ * UZIX - UNIX Implementation for MSX
+ * (c) 1997-2001 Arcady Schekochikhin
+ *		 Adriano C. R. da Cunha
+ *
+ * UZIX is based on UZI (UNIX Zilog Implementation)
+ * UZI is a UNIX kernel clone written for Z-80 systems.
+ * All code is public domain, not being based on any AT&T code.
+ *
+ * The author, Douglas Braun, can be reached at:
+ *	7696 West Zayante Rd.
+ *	Felton, CA 95018
+ *	oliveb!intelca!mipos3!cadev4!dbraun
+ *
+ * This program is under GNU GPL, read COPYING for details
+ *
+ */
+
+/**********************************************************
+ PC memory swapper
+**********************************************************/
+
+static page_t mmlist[MAXSWAP/16]; /* # of page if this page available */
+static uint swapmem;		/* swap memory para addr */
+
+static int allocmem(unsigned size, unsigned *segp) {
+	_BX = size;
+	_AH = 0x48;
+	geninterrupt(0x21);
+	size = _AX;
+	if (_FLAGS & 1)
+		return _BX;
+	*segp = size;
+	return -1;
+}
+
+static int freemem(unsigned segx) {
+	_ES = segx;
+	_AH = 0x49;
+	geninterrupt(0x21);
+	return _FLAGS & 1;
+}
+
+static void movedata(unsigned srcseg, unsigned srcoff,
+	      unsigned dstseg, unsigned dstoff, size_t n) {
+	if ((_CX = n) != 0) {
+		__emit__(0x1E); /* push ds */
+		_DI = dstoff;
+		_ES = dstseg;
+		_SI = srcoff;
+		_DS = srcseg;
+		__emit__(0xFC); 	/* cld */
+		__emit__(0xF3,0xA4);	/* rep movsb */
+		__emit__(0x1F); 	/* pop ds */
+	}
+}
+
+static int rw(void *addr, uint offset, uint cnt, page_t page, bool_t wr) {
+	uint smem = swapmem+((page - 1) << 10);
+
+	offset &= ((1 << 14)-1);
+	if (wr)
+		movedata(_DS,(unsigned)addr,smem,offset,cnt);
+	else	movedata(smem,offset,_DS,(unsigned)addr,cnt);
+	return 0;
+}
+
+/* open device */
+GBL int swap_open() {
+	if (total == 0) {
+		uint blks = (allocmem(-1, &swapmem) >> 6); /* Kbytes */
+
+		total = blks/16;	/* pages */
+		if (total < 2*2)
+			panic("No memory for swap area (only %dK)", blks);
+		allocmem((total << (14-4)), &swapmem);
+		for (blks = 1; blks <= total; ++blks)
+			mmlist[blks-1] = blks;
+#if DEBUG > 4
+		kprintf("Total swap RAM: %dkb (%d processes)\n",total*16, total/2);
+#endif
+	}
+	return 0;
+}
+
+/* close device */
+GBL int swap_close() {
+	if (total)
+		freemem(swapmem);
+	total = 0;
+	return 0;
+}
+
+/* swapper read */
+GBL int swap_read(mm)
+	uchar *mm;
+{
+	page_t p1 = mm[0];
+	page_t p2 = mm[1];
+
+#if DEBUG > 4
+	kprintf("Swapin  %d/%d\n", p1, p2);
+#endif
+	if (p1 == 0 || p2 == 0 || p1 > total || p2 > total)
+		panic("swap pages");
+	if (rw((void *)0x0000, 0, 0x4000, p1, 0) ||
+	    rw((void *)0x4000, 0, 0x4000, p2, 0))
+		return -1;
+	return 0;
+}
+
+/* swapper write */
+GBL int swap_write(mm)
+	page_t *mm;
+{
+	page_t p1 = mm[0];
+	page_t p2 = mm[1];
+
+#if DEBUG > 4
+	kprintf("Swapout %d/%d\n", p1, p2);
+#endif
+	if (p1 == 0 || p2 == 0 || p1 > total || p2 > total)
+		panic("swap pages");
+	if (rw((void *)0x0000, 0, 0x4000, p1, 1) ||
+	    rw((void *)0x4000, 0, 0x4000, p2, 1))
+		return -1;
+	return 0;
+}
+
+/* allocate swapper pages */
+GBL int swap_alloc(mm)
+	page_t *mm;
+{
+	page_t p1 = 0, *p = mmlist;
+	uint i;
+	
+	for (i = 1; i <= total; ++i, ++p) {
+		if (*p != 0) {			/* free page */
+			if (p1 == 0)
+				p1 = i;		/* first page found */
+			else {			/* two pages found */
+				/* store allocated pages */
+				mm[0] = mmlist[p1-1];
+				mm[1] = *p;
+				*p = 0;		/* zero entryes */
+				mmlist[p1-1] = 0;
+#if DEBUG > 4
+				kprintf("Swapadd %d/%d\n", mm[0], mm[1]);
+#endif
+				return 0;
+			}
+		}
+	}
+	return -1;	/* no room */
+}
+
+/* deallocate swapper pages */
+GBL int swap_dealloc(mm)
+	page_t *mm;
+{
+	page_t p1 = mm[0];
+	page_t p2 = mm[1];
+	page_t *p = mmlist;
+	uint i;
+
+#if DEBUG > 4
+	kprintf("Swapdel %d/%d\n", p1, p2);
+#endif
+	if (p1 == 0 && p2 == 0)
+		return 0;
+	*(int *)mm = 0;		/* zeroing context */
+	if (p1 == 0 || p2 == 0 || p1 > total || p2 > total)
+		panic("swap pages");
+	for (i = total; --i >= 0; ++p) {
+		if (*p == 0) {			/* free slot */
+			if (p1) {
+				*p = p1;	/* free first page */
+				p1 = 0;
+			}
+			else {
+				*p = p2;	/* free second page */
+				return 0;
+			}
+		}
+	}
+	return -1;
+}
+
+/* */
+GBL int swap_mmread(rp)
+	struct swap_mmread *rp;
+{
+	page_t p1 = rp->mm[0];
+	page_t p2 = rp->mm[1];
+	uint i = rp->offset;
+	uint sz = rp->size;
+
+	if (i > 0x8000 || i+sz > 0x8000)
+		return -1;
+	if (i < 0x4000 && i+sz < 0x4000)
+		return rw(rp->buf, i, sz, p1, 0);
+	if (i >= 0x4000)
+		return rw(rp->buf, i-0x4000, sz, p2, 0);
+	if (rw(rp->buf, i, 0x4000-i, p1, 0) ||
+	    rw(rp->buf, 0x4000, sz-0x4000+i, p2, 0))
+		return -1;
+	return 0;
+}
+

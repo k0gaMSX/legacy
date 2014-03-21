@@ -1,0 +1,164 @@
+UZIX-targeted Hitech-C compiler
+===============================
+Document written by Adriano C. R. da Cunha
+Last update: 23/08/2001
+	
+	These package contains all the header files, libraries and
+compiler executable files needed to compile a C application for the UZIX
+operating system. Also, the Hitech-C manual is included.
+	Check the UZIX site for info about cross-compiling UZIX
+applications under MSXDOS, MSDOS, Linux or other operating system.
+	The executable files in this package are the CP/M version of the
+Hitech-C compiler, vr. 3.09, that is released for free (and also its
+manual) by the producer, Hitech, on its website (www.hitech.com.au).
+
+UZIX 1.0 memory map
+-------------------
+
+        0000h   +----------------------------------+
+                |       system call vectors        |
+                |       process kernel data        |
+        0100h   +----------------------------------+
+                |         application code         |
+                \                                  \
+                |      application static data     |
+                \                                  \
+                |     |         heap          |    |
+                |     v                       v    |
+                \                                  \
+                |     ^   application stack   ^    |
+                |     | application arguments |    |
+                |       environment variables      |
+        8000h   +----------------------------------+
+                |            UZIX kernel           |
+        F100h   +----------------------------------+
+                |       MSX system variables       |
+        FFFFh   +----------------------------------+
+                
+UZIX 2.0 memory map
+-------------------
+                
+        0000h   +----------------------------------+
+                |       system call vectors        |
+                |     application kernel data      |
+        0100h   +----------------------------------+
+                |         application code         |
+                \                                  \
+                |      application static data     |
+                \                                  \
+                |     |         heap          |    |
+                |     v                       v    |
+                \                                  \
+                |     ^   application stack   ^    |
+                |     | application arguments |    |
+                |       environment variables      |
+        C000h   +----------------------------------+
+                |     UZIX kernel resident part    |
+        F100h   +----------------------------------+
+                |       MSX system variables       |
+        FFFFh   +----------------------------------+
+		
+General procedure for writing UZIX applications
+-----------------------------------------------
+
+	Not much advices here. In general, do the following:
+
+	- write your application in ANSI C;
+	- if your target is UZIX 1.0, your application can't be greater
+than 32kb, including code, data and stack. For UZIX 2.0 your application
+can't be greater than 48kb (also including code, data and stack). After
+successfully compiling your application, look its map file and check the
+address of __Hbss. If it's too near the end of application space (7FFFh
+for UZIX 1.0 and BFFFh for UZIX 2.0), try reducing the code size. Another
+important information: stack, environment variables and application
+arguments are put in the top of application space. If __Hbss is too near
+them your stack and data can be mixed. The result is a system crash (or,
+in the better case, application crash). As a general rule, don't let
+__Hbss be greater than 7A00h (for UZIX 1.0) or BA00h (for UZIX 2.0). Doing
+this you will avoid many stack problems;
+	- avoid creating big local variables (such as 'char buffer[512]'),
+cause it makes stack going too deep. Declare them as static. You will
+waste memory on application space, but will avoid stack going too down and
+(maybe) corrupting dinamic data (specially in case of a big program);
+	- NEVER use Z80 instructions DI and EI;
+	- NEVER use direct access to MSX hardware;
+	- NEVER access data below 100h or above application space or you
+will probably crash the system;
+
+Tips for using Hitech-C compiler
+--------------------------------
+
+	Hitech-C compiler is not perfect and has some annoyng
+characteristics. Here are some tips about using it to compile UZIX
+applications (and also applications for other operating systems). Other
+tips (and error solutions) are explained in Hitech-C manual.
+
+* 'Out of memory' error during pass 1
+
+	If you get this error on a function or procedure call, probably it
+uses too much parameters (5, 6 or even more). Try reducing the number of
+parameters passed: use a structure or even put some parameters in global
+variables.
+
+	If you get the 'Out of memory' error on an 'if' command, probably
+you have many conditions to test. Try breaking the 'if' in two or more
+concatenated 'if'. For example, change
+
+	if (foo == 1 && bar == NULL && foobar != 0 && foofoo == 's' )
+
+	into
+
+	if (foo == 1 && bar == NULL) if (foobar != 0 && foofoo == 's')
+
+	If you get the 'Out of memory' error in other place of your code,
+maybe it's too big for Hitech-C. Try breaking the code in two
+parts. Compile each part and link them together.
+
+* 'Out of memory' error during optimization
+
+	There isn't much to do here. If your code has a big function, try
+breaking it into smaller functions. If you really can't use a workaround
+for the memory problem, forget about optimization.
+
+* Optimizer hangs
+
+	If you're using direct assembly code in your source, probably
+Hitech-C optimizer will not like it and will hang. Try rewriting your code
+(avoid use of JR and RET codes).
+	If you don't know which instruction(s) is(are) hanging the
+optimizer, try isolating the problem using '#if 0' constructions in your
+code. Once you discovered what is the problem, try rewriting the code.
+	If you really can't use a workaround for this problem, forget
+about optimization.
+
+* 'undefined symbols' during linking
+
+	If you get this error for symbols that you're sure that exists in
+the library, two things could happened:
+
+	- you forgot to specify the library during linking
+
+	- the library needs to be relinked
+
+	The first case is simple, and don't deserve comments.
+	The second case is more complicated. CP/M Hitech-C has a severe
+requirement for libraries: all the modules inside them must be ordered.
+All the references of a symbol must come BEFORE the definition of that
+symbol. For example, in the standard library, fopen.obj must come before
+open.obj, because fopen.obj calls open.obj. If the library was linked with
+the reverse order, when linking your application that uses fopen() you
+will get a 'undefined symbol: _open' error message. What to do then? Get
+the library sources relink it in the right order (but, first, find the
+problem!). If the problem is in the standard UZIX libraries, send your
+application source to adrcunha@yahoo.com.br. I'll compile it, find the
+problem and fix the library order.
+
+Critics, additions, bugs, doubts, comments, corrections, questions
+------------------------------------------------------------------
+
+        Any comments, additions or bug reports will be welcome. Also, if I
+wrote something wrong, corrections are also welcome. Please, write to
+adrcunha@yahoo.com.br.
+
+        Official UZIX Home Page:
+        http://uzix.msx.org

@@ -1,0 +1,93 @@
+/*
+ * UZIX - UNIX Implementation for MSX
+ * (c) 1997-2001 Arcady Schekochikhin
+ *		 Adriano C. R. da Cunha
+ *
+ * UZIX is based on UZI (UNIX Zilog Implementation)
+ * UZI is a UNIX kernel clone written for Z-80 systems.
+ * All code is public domain, not being based on any AT&T code.
+ *
+ * The author, Douglas Braun, can be reached at:
+ *	7696 West Zayante Rd.
+ *	Felton, CA 95018
+ *	oliveb!intelca!mipos3!cadev4!dbraun
+ *
+ * This program is under GNU GPL, read COPYING for details
+ *
+ */
+
+/**********************************************************
+ PC TTY driver
+**********************************************************/
+
+#ifndef __KERNEL__
+extern int bdos(int, uint, uint);
+
+uchar _xbdos(de, c)
+	uint de;
+	uchar c;
+{
+	return bdos(c, de, 0);
+}
+#endif	/* __KERNEL__ */
+
+GBL void _putc(c)
+	uchar c;
+{
+	static int opos = 0;	/* current output position
+				 * not correct for ESC-sequences
+				 */
+	if (c == '\33') {	/* ESC sequence */
+	}
+	else if (c == '\r')	/* CR - go to line start */
+		opos = 0;
+	else if (c == '\b') {	/* BS - go to prev pos */
+		if (opos > 0)
+			--opos;
+	}
+	else if (c == '\t') {	/* TAB - go to next tabstop */
+		do {
+			_putc(' ');
+		} while (opos & 7);
+		return;
+	}
+	else if (c == '\n')	/* LF - do CR/LF */
+		_putc('\r');
+	else if (c >= ' ')	/* printable char */
+		++opos;
+	_BL = 0;
+	_AL = c;
+	_AH = 0xE;
+	geninterrupt(0x10);
+}
+
+#ifdef __KERNEL__
+static uint _getc(VOID) {
+	uint c;
+
+	_AH = 0x11;
+	geninterrupt(0x16);
+	if ((_FLAGS & 0x40) != 0)	/* input queue is empty */
+		return 0;
+	_AH = 0x10;
+	geninterrupt(0x16);		/* get char */
+	c = _AX;
+#if DEBUG > 0
+	if (c == 0x2C00) {		/* ALT-Z */
+		idump();		/* For debugging */
+		return 0;
+	}
+	if (c == 0x1400) {		/* ALT-T */
+		traceon = !traceon;	/* For debugging */
+		return 0;
+	}
+	if (c == 0x7100) {		/* ALT-F10 */
+		idump();
+		sys_sync();
+		panic("STOP");		/* For debugging */
+	}
+#endif /* DEBUG */
+	return c;
+}
+#endif /* __KERNEL__ */
+

@@ -1,0 +1,117 @@
+/*
+ * UZIX - UNIX Implementation for MSX
+ * (c) 1997-2001 Arcady Schekochikhin
+ *		 Adriano C. R. da Cunha
+ *
+ * UZIX is based on UZI (UNIX Zilog Implementation)
+ * UZI is a UNIX kernel clone written for Z-80 systems.
+ * All code is public domain, not being based on any AT&T code.
+ *
+ * The author, Douglas Braun, can be reached at:
+ *	7696 West Zayante Rd.
+ *	Felton, CA 95018
+ *	oliveb!intelca!mipos3!cadev4!dbraun
+ *
+ * This program is under GNU GPL, read COPYING for details
+ *
+ */
+
+/**********************************************************
+ MSX machine dependent subroutines for processes management
+**********************************************************/
+
+NOTUSED(i);		/* trick. if removed, __SAVEALL is not included
+			   in process.c (HTC is crazy...) */
+
+#ifdef __SAVEALL
+#asm
+__SAVEALL:
+	ld	iy,1	;this will return 1 if swapped
+	push	iy	;will be return value
+	push	af
+	push	bc
+	push	de
+	push	hl
+	push	ix
+	;push	iy	;IY already pushed in beginning of swapout()
+	ld	(__stkptr),sp	; store SP
+#endasm
+#undef __SAVEALL
+#endif
+
+#ifdef __RESTFRAME
+#asm
+__RESTFRAME:
+	ld	sp,(__stkptr)
+	;pop	ix	; IX/HL/DE/BC are destroyed after RESTFRAME
+	;pop	hl	; so, they are recovered by RETFROM
+	;pop	de
+	;pop	bc
+	;pop	af
+#endasm
+#undef __RESTFRAME
+#endif
+
+#ifdef __RETFROM
+#asm
+__RETFROM:
+	pop	ix
+	pop	hl
+	pop	de
+	pop	bc
+	pop	af
+	pop	iy		; if IY=0, set flag Z
+	db	0fdh,07ch	; LD A,IYh
+	db	0fdh,0b5h	; OR IYl
+	pop	iy		; the real IY (pushed in beginning of swapout/dofork)
+	ret
+#endasm
+#undef __RETFROM
+#endif
+
+#ifdef __SAVENEWID
+#asm
+__SAVENEWID:
+	ld	iy,(__newid)
+	push	iy
+	push	af
+	push	bc
+	push	de
+	push	hl
+	push	ix
+	;push	iy	;IY already pushed in beginning of dofork()
+	ld	(__stkptr),sp
+#endasm
+#undef __SAVENEWID
+#endif
+
+#ifdef __DROPSTACK
+#asm
+__DROPSTACK:
+	pop	hl
+	pop	hl
+	pop	hl
+	pop	hl
+	pop	hl
+	pop	hl
+#endasm
+#undef __DROPSTACK
+#endif
+
+#ifdef __SAVESTACK
+#asm
+__SAVESTACK:
+	global	_stkbkp
+	ld	(_stkbkp),sp
+#endasm
+#undef __SAVESTACK
+#endif
+
+#ifdef __RESTSTACK
+#asm
+__RESTSTACK:
+	global	_stkbkp
+	ld	sp,(_stkbkp)
+#endasm
+#undef __RESTSTACK
+#endif

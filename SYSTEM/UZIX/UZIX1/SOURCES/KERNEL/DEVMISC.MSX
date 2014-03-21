@@ -1,0 +1,52 @@
+/*
+ * UZIX - UNIX Implementation for MSX
+ * (c) 1997-2001 Arcady Schekochikhin
+ *		 Adriano C. R. da Cunha
+ *
+ * UZIX is based on UZI (UNIX Zilog Implementation)
+ * UZI is a UNIX kernel clone written for Z-80 systems.
+ * All code is public domain, not being based on any AT&T code.
+ *
+ * The author, Douglas Braun, can be reached at:
+ *	7696 West Zayante Rd.
+ *	Felton, CA 95018
+ *	oliveb!intelca!mipos3!cadev4!dbraun
+ *
+ * This program is under GNU GPL, read COPYING for details
+ *
+ */
+
+/**********************************************************
+ MSX memory/printer/null device drivers
+**********************************************************/
+
+/* write one char to line printer */
+#asm
+	psect	text
+	signat	_lpout,4153	; ch=E
+_lpout: /* MSX doesn't have more than 1 printer! */
+	push	ix
+	push	iy
+#endasm
+#ifdef Z80MU
+#asm
+	ld	c,e
+	call	0FF00h+3*05h
+#endasm
+#else
+#asm
+	ld	a,e
+	ld	ix,0A5h ; LPTOUT
+	call	CALROM
+#endasm
+#endif
+#asm
+	pop	iy
+	pop	ix
+	ld	a,0
+	adc	a,0
+	ld	l,a
+	ld	h,0
+	ret
+#endasm
+

@@ -1,0 +1,160 @@
+/*
+ * UZIX - UNIX Implementation for MSX
+ * (c) 1997-2001 Arcady Schekochikhin
+ *		 Adriano C. R. da Cunha
+ *
+ * UZIX is based on UZI (UNIX Zilog Implementation)
+ * UZI is a UNIX kernel clone written for Z-80 systems.
+ * All code is public domain, not being based on any AT&T code.
+ *
+ * The author, Douglas Braun, can be reached at:
+ *	7696 West Zayante Rd.
+ *	Felton, CA 95018
+ *	oliveb!intelca!mipos3!cadev4!dbraun
+ *
+ * This program is under GNU GPL, read COPYING for details
+ *
+ */
+
+/**********************************************************
+ MSX TTY driver
+**********************************************************/
+
+/* an output to the VDP would be very fast, but we would need to
+ * control the cursor position and do the scroll ourselves
+ */
+
+#ifndef __KERNEL__
+#ifdef _MSX_DOS
+#ifdef Z80MU
+#define BDOSADDR	0FEFEh
+#else
+#define BDOSADDR	00005h
+#endif
+
+uchar _xbdos(uint de, uchar c) { /* avoid conflict with UTILDOS xxbdos */
+	asm("	push bc");
+	asm("	call " __str1(BDOSADDR));
+	asm("	ld l,a");
+	asm("	pop bc");
+}
+#endif	/* _MSX_DOS */
+#endif	/* __KERNEL__ */
+
+#ifdef __KERNEL__
+#asm
+	psect text
+	global	__putc
+	signat	__putc,4152
+
+__putc: 	; GBL void _putc(uchar c)
+#endasm
+#ifdef Z80MU
+#asm
+	push	ix
+	push	iy
+	ld	c,13
+	ld	a,e
+	cp	10		; if ouputting LF, output CR first
+	call	z,0FF00h+3*04h
+	ld	c,e	; ch
+	call	0FF00h+3*04h
+	pop	iy
+	pop	ix
+	ret
+#endasm
+#else
+#asm
+	push	ix
+	ld	ix,1f
+	call	CALROM
+	pop	ix
+	ret
+1:	ld	a,e	; ch
+	cp	10
+	ld	a,13	; if outputting LF, output CR first
+	call	z,00A2h	; VT-52 terminal
+	ld	a,e	; ch
+	jp	00A2h	
+#endasm
+#endif
+
+#asm
+	psect text
+	global	__erasecursor
+	global	__displaycursor
+__displaycursor:
+	ld	b,'y'
+	jr	__cursor	; display cursor in VT-52 terminal
+__erasecursor:
+	ld	b,'x'		; erase cursor in VT-52 terminal
+__cursor:
+	ld	a,(0FCA7h)	; save CHPUT ESC counter
+	ex	af,af'
+	xor	a
+	ld	(0FCA7h),a	; disable previous ESC mode (if enabled)
+	ld	a,b
+	push	ix
+	
+	ld	ix,1f
+	call	CALROM		; send ESC sequence to display or erase cursor  
+				; don't remove this line or "pop iy" will be
+				; concatenated with the comments... (HTC crazyness)
+	pop	ix
+	ex	af,af'
+	ld	(0FCA7h),a	; restore CHPUT ESC counter
+	ret
+1:	push	af	; send VT-52 command: turn cursor on/off
+	ld	a,27
+	call	00A2h	; ESC
+	pop	af
+	call	00A2h	; x / y
+	ld	a,'5'
+	jp	00A2h	; 5
+	
+	psect text
+	global 	__getc
+	signat	__getc,26
+
+__getc: 	; GBL uint _getc(VOID)
+#endasm
+#ifdef Z80MU
+#asm
+	push	ix
+	push	iy
+	call	0FF00h+3*02h
+	ld	hl,0
+	or	a
+	jr	z,1f		; input queue is empty
+	call	0FF00h+3*03h	; get key
+	ld	l, a
+	ld	h, 0
+#endasm
+#else
+#asm
+	push	ix
+	ld	hl,(0f3fah)	; keyboard queue head
+	ld	a,(0f3f8h)	; keyboard queue tail
+	sub	l		; input queue is empty?
+	jr	z,1f
+	ld	ix,009Fh	; if not, get key
+	call	CALROM
+1:	ld	l,a
+	ld	h,0
+#endasm
+#endif
+#if DEBUG > 0
+#asm
+	global	_idump
+	push	hl
+	cp	26		; Control-Z
+	call	z,_idump	; for debugging
+	pop	hl
+#endasm
+#endif
+#asm
+	pop	ix
+	ret
+#endasm
+#endif	/* __KERNEL__ */
+

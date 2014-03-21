@@ -1,0 +1,216 @@
+UZIX - UNIX Implementation for MSX
+(c) 1997-2001 Arcady Schekochikhin
+	      Adriano C. R. da Cunha
+						      http://uzix.msx.org
+
+What is the UZIX?
+
+	UZIX: UNIX IMPLEMENTATION FOR MSX based on UZI written by Douglas
+Braun and ported to MS-DOS / MSX by Arcady Schekochikhin and Adriano
+Rodrigues da Cunha.
+	UZIX is an implementation of the UNIX kernel written for a MSX/PC
+computer. It implements almost all 7th Edition AT&T UNIX kernel
+functionality. UZIX was written to run on PC (under MS DOS) or MSX2/2+/TR.
+The source code is written mostly in C, and was compiled with Turbo-C (PC)
+or Hitech-C (MSX). UZIX's code was based on public domain Doug Braun's
+UZI, which was written from scratch, and contains no AT&T code, so it is
+not subject to any of AT&T's copyright or licensing restrictions.
+	UZIX implements almost all of the 7th Edition functionality. All
+file I/O, directories, mountable file systems, user and group IDs, pipes,
+and applicable device I/O are supported. The number of processes is
+limited only by the swap space available, with a maximum of 31 processes
+(total of 1024k memory). UZIX implements UNIX well enough to run the
+Bourne Shell in its full functionality.
+	UZIX is very small. The code size of the kernel is less than 30Kb
+(in fact, it's 25.8Kb). I think it is the smallest UNIX 7th Edition-like
+implementation you can get.
+	Due to the limitation of a 64Kb linear addressing space of 
+Z80, UZIX supports only applications with a maximum size of 32Kb.
+
+Features:
+
+* UZIX is running on any MSX system (MSX2, MSX2+, TR and even emulators);
+* Full working multitask environment;
+* Full working multiuser environment;
+* Stable filesystem, almost bugless;
+* Very stable kernel, shell and environment;
+* System shell and utilities running with no errors;
+* Module support (only used by TCP/IP Stack now); 
+* Harddisk support (ESE MegaSCSI and Sunrise IDE); 
+
+How it works:
+
+	UZIX uses MSX2 memory mapper to achieve multiprocessing. On PC
+UZIX use additional PC memory for swapping. In both cases UZIX use 64K of
+virtual address space (full Z80 space or one full segment on PC).
+	UZIX itself occupies the upper 32K of address space, and the
+currently running process occupies the lower 32K.
+	UZIX does need some additional hardware support. First, UZIX uses
+system clock that provide a periodic interrupt. Also, the current
+implementation uses an additional real-time clock to get the time for file
+timestamps, etc. The current TTY driver assumes an polling-driven buffered
+keyboard, which should exist on most systems.
+
+How UZIX is different than real UNIX:
+
+	UZIX implements almost all of the 7th Edition AT&T UNIX
+functionality. All file I/O, directories, mountable file systems, user and
+group IDs, pipes, and applicable device I/O are supported. Process control
+(fork(), execve(), signal(), kill(), pause(), alarm(), and wait()) are
+fully supported. The number of processes is limited only by the swap space
+available, with a maximum of 31 processes (total of 1024k memory). As
+mentioned, UZIX implements UNIX well enough to run the Bourne Shell in its
+full functionality. The only changes made to the shell's source code were
+to satisfy the limitations of the C compiler.
+	Here is a (possibly incomplete) list of missing features and
+limitations:
+
+* The debugger- and profiler-related system calls do not exist.
+* The supplied TTY driver is bare-bones. It supports only one port.
+* Inode numbers are only 16-bit, so filesystems are 32MB or less. 
+* File dates are not in the standard format. Instead they look like those
+  used by MS-DOS.
+* The 4.2BSD execve() was implemented. Additional flavors of exec() are
+  supported by the library. 
+* The necessary semaphores and locking mechanisms to implement reentrant
+  disk I/O are not there. This would make it harder to implement
+  interrupt-driven disk I/O without busy-waiting. 
+
+Developer notes:
+
+	MSX UZIX can be compiled with any ANSI-compatible C compilers. The
+only true one for MSX is Hitech-C (CP/M version) and MS-DOS Hitech-C
+(cross-compiler). MSX UZIX was written using Hitech-C. You'll find many
+constructions and functions not supported (and also limitations) by other
+MSX C compilers if you try compiling UZIX with them. Of course UZIX can be
+compiled using other compiler, but it will requires a lot of changes in
+the source code.  Initially, MSX UZIX couldn't be compiled for running on
+a MSX1, since it uses Memory Mapper for multitasking, system real-time
+clock for file timestamps, and 80-column screen.
+	Of course, is possible doing a "light" MSX UZIX for MSX1, with a
+fake real-time clock (software emulated by the kernel), using a 40-column
+display and other memory device (such as MegaRAM) for multitasking, but
+it's not the target of this release.
+	But, just for fun (and as a curiousity), there is a version of MSX
+UZIX for MSX1. It emulates the system real-time clock and uses the
+brazilian MegaRAM for multitasking. The system overall performance is
+lower than using Memory Mapper, since due to switching restrictions of
+MegaRAM (due to UZIX design, MegaRAM pages can be switched only on memory
+page 1), some memory block copies are needed for context switching. Also,
+the user must input the actual date and time when system boots. The
+40-column display doesn't represent a serious restriction, but some
+applications (like top, ps or banner) will display bad formatted texts on
+screen.
+	This release of MSX UZIX can handle a maximum of 31 processes
+(limited to the size of available RAM). It could handle up to 127
+processes (4Mb RAM), but it's nonsense a single user running so many
+processes at a time. That's why this limit of 31 concurrent processes.
+
+Known bugs and missing features:
+
+* Some DiskROMs doesn't work well with UZIX. MSX Turbo-R DiskROM also have
+  this problem, and it's related to stopping the drive. If the drive stops
+  spinning, the next access to it returns a 'not ready' error after a long
+  delay. It can be solved with the appropriate settings on 'Advanced
+  settings' in UZIX installation program or pressing the space bar while
+  ZILO is loading. By an unknown reason, the  drive returns`not ready`
+  error for a disk access after stop spinning. The load of init/login
+  access disk  continuously, so everything works. During the time UZIX
+  presents `login:` and you enter the login name, disk stops spinning.
+  The disk access after entering login generates the `not ready` error. The
+  solution found is: after each  disk  block  read  access, a reset() is
+  done. This is also done in ZILO (via call to 4029h) before loading UZIX
+  kernel. The bad side is that this practice slows down disk access a lot
+  on MSX machines that aren't Turbo-R.
+
+* Disk access is slowed down since disk buffers were decreased to
+  accomodate module functions in kernel. Also, the number of simultaneous
+  opened files is less than previous versions (0.1.5 and below);
+
+* TABs are not correctly erased by BS key. DEVTTY backs 8 chars in screen,
+  clearing them. It's  not  perfect,  cause the TAB could not  jumped 8
+  chars, but less, so we erase chars that are still in stdin queue;
+
+* If lpd can print all the docs, the daemon is fini shed (init  executes
+  the  wait()  and  the  daemon exits).If not, the process become zombie
+  until SASH exits(init executes the wait() for SASH and lpd). It seems to
+  occur only with RuMSX emulator  (sorry, I don't have a printer attached
+  to my MSX to test this...).
+
+* UZIX doesn't have the concept of background/foreground applications
+  controlled by user; 
+
+* Only ESE MegaSCSI and Sunrise IDE harddisk controllers were tested;
+  Novaxis SCSI interfaces return error when system tries to access a
+  disk; UZIX should run on other interfaces (Bert, Gouda, etc) but
+  some fine tunning is necessary; 
+
+* With ESE MegaSCSI, stopdrive countdown during interrupt must be
+  disabled. If enabled, UZIX can't mount root filesystem. If disabled,
+  when accessing  disk-drives, the disk remains spinning forever.
+
+* On UCP, if you have an existing directory (for example, /usr) and want
+  to create another dir under this one (for example, /usr/bin), doing:
+  cd /,mkdir usr/bin on UCP causes an inconsistent inode count (check
+  with fsck). You must do: cd /usr, mkdir bin.
+
+* FILESYS.C sometimes mark fs as bad if no room for writing a file (UCP).
+
+* reset() in DEVFLOP.MSX is a bad procedure. It stops ALL diskdrives
+  connected to MSX. A perfect  reset() should stop only the drive given by
+  fdrive.
+
+* In passwd.c, getpwuid gets the first password entry that has the given
+  UID. It DOESN'T look for GID, so entries with different GIDs and equal
+  UIDs will be treated as the same.
+
+Things that would be nice to do:
+
+* Create the man-pages of:
+  aal
+  chat
+  clock
+  clone
+  cr
+  diskusag
+  dosdel
+  dosemu
+  dtree
+  find
+  finger
+  ftp
+  gres
+  ic
+  inodes
+  key
+  keybstat
+  lpd
+  lpr
+  mailf
+  ncheck
+  ncr
+  netstat
+  nslookup
+  od
+  pathchk
+  ping
+  pppd
+  renice
+  roff
+  setclock
+  setchar
+  slattach
+  uuencode
+  uudecode
+* Implement TTY support on curses library. Now all references on code
+  were supressed.
+* Create a dosformat utility.
+* Put a "see also" section on UZIX man-pages.
+* Better pipe handling in sash (it only supports two commands now).
+* Implement options -c, -l and -s in cmp.
+* Create fsck/mkfs/mkboot for UZIX.
+
+Copy license:
+
+	All the UZIX source (kernel, utilities and related sources) is
+released under the GNU GPL license. Read the COPYING file for details.

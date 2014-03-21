@@ -1,0 +1,142 @@
+/*
+ * UZIX - UNIX Implementation for MSX
+ * (c) 1997-2001 Arcady Schekochikhin
+ *		 Adriano C. R. da Cunha
+ *
+ * UZIX is based on UZI (UNIX Zilog Implementation)
+ * UZI is a UNIX kernel clone written for Z-80 systems.
+ * All code is public domain, not being based on any AT&T code.
+ *
+ * The author, Douglas Braun, can be reached at:
+ *	7696 West Zayante Rd.
+ *	Felton, CA 95018
+ *	oliveb!intelca!mipos3!cadev4!dbraun
+ *
+ * This program is under GNU GPL, read COPYING for details
+ *
+ */
+
+/**********************************************************
+ PC floppy disk device driver
+**********************************************************/
+
+/* If the __ONFILE is defined then we use the 
+ * conventional DOS file with the floppy image
+ */
+#ifdef __ONFILE
+/* low-level onfile floppy seek procedure */
+/* !! ONLY existent sectors must be mentioned */
+static int seek(VOID) {
+	long dist = (long)firstblk << BUFSIZELOG;
+	uint dh = (uint)(dist >> 16), dl = (uint)dist;
+
+	_BX = fdrive;
+	_CX = dh; _DX = dl;
+	_AX = 0x4200;
+	geninterrupt(0x21);
+	return _FLAGS & 1;
+}
+
+/* low-level onfile floppy read procedure */
+/* !! ONLY existens sectors must be mentioned */
+static int dskread(VOID) {
+	if (seek())
+		return -1;
+	_BX = fdrive;
+	_CX = nbytes;
+	_DX = (uint)fbuf;
+	_AX = 0x3F00;
+	geninterrupt(0x21);
+	return _FLAGS & 1;
+}
+
+/* low-level onfile floppy write procedure */
+/* !! ONLY existent sectors must be mentioned */
+static int dskwrite(VOID) {
+	if (seek())
+		return -1;
+	_BX = fdrive;
+	_CX = nbytes;
+	_DX = (uint)fbuf;
+	_AX = 0x4000;
+	geninterrupt(0x21);
+	return _FLAGS & 1;
+}
+
+/* low-level onfile floppy close procedure */
+static int closeonfile(VOID) {
+	_BX = fdrive;
+	_AX = 0x3E00;
+	geninterrupt(0x21);
+	return _FLAGS & 1;
+}
+
+/* file open procedure - separated because machine dependent
+ * This function returns the file size in BUFSIZE or -1 if error
+ */
+static int openonfile(char *name, int minor) {
+	unsigned int fd;
+	unsigned long lsize;
+	
+	fdinfo[minor].mediaid = -1;
+	_DX = (unsigned)name;
+	_AX = 0x3D02;		/* open file */
+	geninterrupt(0x21);
+	_DX = _AX;
+	if (_FLAGS & 1)
+		return -1;
+	fd = _BX = _DX;		/* DOS file descriptor */
+	_CX = _DX = 0;
+	_AX = 0x4202;		/* lseek to end */
+	geninterrupt(0x21);
+	if (_FLAGS & 1)
+		return -1;
+	((int *)&lsize)[0] = _AX;
+	((int *)&lsize)[1] = _DX;
+	fdinfo[minor].size = (uint)(lsize >> BUFSIZELOG);
+	fdinfo[minor].mediaid = fd;
+	return 0;
+}
+
+#else	/* __ONFILE */
+
+#define FLOP(fn)	_DL = fdrive, _AH = fn; geninterrupt(0x13)
+
+/* low-level floppy read procedure - only one sector per time */
+/* !! ONLY existent sectors must be mentioned */
+static int dskread(VOID) {
+	uchar err;
+
+	_ES = _DS;
+	_BX = (unsigned)fbuf;
+	_CH = ftrack;
+	_CL = ((ftrack >> 2) & 0xC0) | fsector;
+	_DH = fhead;
+	_AL = 1;	/* 1 sector */
+	FLOP(2);
+	err = _AH;
+	return _FLAGS & 1 ? err | 0x8000 : 0;
+}
+
+/* low-level floppy write procedure - only one sector per time */
+/* !! ONLY existent sectors must be mentioned */
+static int dskwrite(VOID) {
+	uchar err;
+
+	_ES = _DS;
+	_BX = (unsigned)fbuf;
+	_CH = ftrack;
+	_CL = ((ftrack >> 2) & 0xC0) | fsector;
+	_DH = fhead;
+	_AL = 1;	/* 1 sector */
+	FLOP(3);
+	err = _AH;
+	return _FLAGS & 1 ? err | 0x8000 : 0;
+}
+
+/* low-level floppy reset procedure */
+static void reset(VOID) {
+	FLOP(0);
+}
+#endif	/* __ONFILE */
+

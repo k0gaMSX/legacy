@@ -1,0 +1,561 @@
+UZIX TCP/IP Connection Guide
+============================
+Written by Adriano C. R. da Cunha
+Last update: 24/08/2001
+
+
+Introduction
+------------
+
+	In this text is described how you can connect your MSX to the
+Internet using a serial connection and a host computer via the SLIP or PPP
+protocols. The host computer can run UNIX (any Linux distribution or even
+a SparcStation or Alpha Station, etc.) or Windows/DOS- box. Even if you
+doesn't have connection to the Internet, you can still feel the flavor of
+networking (the problem is that you will communicate only with your host
+computer - and it's the only option using Windows/DOS (check 'Frequently
+Asked Questions')).
+
+
+What is needed
+--------------
+
+	So, that's what you need:
+        . a MSX running UZIX with TCP/IP module and network applications;
+	. a MSX RS232 - it must be a standard interface with ROMBIOS in
+	  case you're running UZIX 1.0;
+	. a RS232 reverse serial cable;
+	. a UNIX-box near your MSX capable of SLIP or PPP supporting;
+	  or
+	  a WinDOS-box near your MSX;
+	. if you're using WinDOS as server, you need NOS (Networking
+	  Operating System). This document describes the connection using
+	  JNOS 1.11e, that can be found at:
+	  http://www.gb7iph.demon.co.uk/software
+	  ftp://pc.usl.edu/pub/ham/jnos
+
+	Optional:
+	. your MSX being a Turbo-R;
+	. your MSX having harddisk with UZIX installed;
+	. your UNIX-box having connection to the Internet;
+
+
+System configuration
+--------------------
+
+	0. Setting up the hardware
+	--------------------------
+
+	That's simple. Just connect the RS232 interface on your MSX, put
+the reverse RS232 cable linking your MSX and your UNIX/WinDOS machine.
+Be sure what serial port of your UNIX/WinDOS machine you are using.
+
+	1. Configuring your MSX
+	-----------------------
+
+	1.1 If your are using the SLIP protocol or a WinDOS-box as server
+
+	If you're connecting your MSX and a WinDOS-box or UNIX-box via the
+SLIP protocol, or you must assign a static IP for your MSX and for your
+UNIX/WinDOS-box.
+	Boot UZIX on your MSX, logon as root and go to the shell prompt.
+	First, you must create a '/etc/hosts' file. In this file you
+define the IP (and an alias) of your MSX. You can also include names,
+alias and IPs of other hosts (like your UNIX/WinDOS-box).
+	If you don't know what IP to assign to your MSX or UNIX/WinDOS-box
+and your host computer is not connected to the Internet, try anyone
+(except those beginning with 127!). Or, better, try any IP beginning with
+10 (the non routeable class of IPs). For example, I use 10.0.0.2 for my MSX
+and 10.0.0.1 for my PC running Linux/Windows, since my PC is not connected
+to the Internet.
+	The format of each line in '/etc/hosts' file is:
+
+	x.y.z.w      alias      name
+
+	Your '/etc/hosts' file should have at least two lines: one with IP
+127.0.0.1 and alias 'localhost' (no host name) and other with MSX IP,
+alias and (optionally) hostname. More lines can be added with other
+IPs/hostnames. These entries will be checked when you specify a hostname
+(or alias) in a network application. If the hostname or alias exists in
+'/etc/hosts' file, MSX will not need to contact a DNS server to get the
+host IP.
+	For example, my '/etc/hosts' file defines the IP of my MSX and
+my PC this way:
+
+	127.0.0.1       localhost
+	10.0.0.1        linux           linux.alsoft.com
+	10.0.0.1        win95           win95.alsoft.com
+	10.0.0.2        msx             msx.alsoft.com
+
+	Do a 'cat /etc/hosts' to check the hosts that are configured.
+	To create a new '/etc/hosts' file, just do a 'rm /etc/hosts' and a
+'tee /etc/hosts'. Type the lines (they will be repeated after you press
+RETURN, don't mind) and hit CONTROL+D to save the file. 
+	Now you must create a '/etc/HOSTNAME' file, containing the
+hostname of your MSX. Create it as you created the '/etc/hosts' file. The
+hostname (hostname, not alias) must be the same as in '/etc/hosts'.
+	So, here is the contents of my '/etc/HOSTNAME' file:
+
+	msx.alsoft.com
+
+	Finally, create a '/etc/resolv.conf' file. This file must contain
+at least one line: the one with the domain where your MSX is connected. It
+would be nice if it contains a line with a valid DNS server, so your MSX
+will be capable of looking up hostnames. For example, my '/etc/resolv.conf'
+file is: 
+
+	nameserver      10.0.0.1
+	domain          alsoft.com
+
+	The 'nameserver' line specifies the IP of a valid DNS server (as
+you can see, my own PC, that is configured as DNS server). UZIX TCP/IP
+will use the services of this host to translate hostnames into IPs when a
+given hostname is not found in '/etc/hosts' file. You can specify more
+than one nameserver (you don't need to specify more than two - they
+will be ignored): just add more lines with different IPs. 
+	The 'domain' line specifies the domain where MSX is connected.
+It's used for DNS queries. It also allows you to only specify a machine
+name of your domain - for example, only 'spectrum' instead of
+'spectrum.alsoft.com'.
+	All done, reboot your MSX (type 'reboot' at the prompt).
+
+	1.2 If your are using the PPP protocol (only for UNIX-box as server)
+
+	If you're connecting your MSX and your UNIX-box via the PPP
+protocol, UZIX don't need to know what IP will be assigned to it. The IP
+address will be chosen when you start the PPP server on your UNIX-box.
+	Boot UZIX on your MSX, logon as root and go to the shell prompt.
+	You should create a '/etc/hosts' file. In this file you define the
+IP (and an alias) of your MSX if you're using the SLIP protocol - this
+information is irrelevant if you're using the PPP protocol. But you can
+also define names, alias and IPs of other hosts (like your UNIX-box).
+	The format of each line in '/etc/hosts' file is:
+
+	x.y.z.w      alias      name
+
+	It's recommended to create the '/etc/hosts' file for compatibility
+purposes. It should have at least one line: with IP 127.0.0.1 and alias
+'localhost' (no host name). More lines can be added with other
+IPs/hostnames. These entries will be checked when you specify a hostname
+(or alias) in a network application. If the hostname or alias exists in
+'/etc/hosts', MSX will not need to contact a DNS server to get the host
+IP.
+	For example, here is my '/etc/hosts' file:
+
+	127.0.0.1       localhost
+	10.0.0.1        linux           linux.alsoft.com
+
+	Do a 'cat /etc/hosts' to check the hosts that are configured.
+	To create a new '/etc/hosts' file, just do a 'rm /etc/hosts' and a
+'tee /etc/hosts'. Type the lines (they will be repeated after you press
+RETURN, don't mind) and hit CONTROL+D to save the file.
+	If you had read section 1.1, about SLIP configuration, you noticed
+that the only difference between the '/etc/hosts' file for both protocols
+is the line with IP/alias/hostname of your MSX. The files '/etc/HOSTNAME'
+and '/etc/resolv.conf' are irrelevant to the PPP daemon.
+	Now you should create a secrets file. This file stores the
+passwords used to authenticate the user when connecting to your
+UNIX-box. If you will not use authentication on your UNIX-box, you can
+skip this step.
+	There are two files were the secrets are stored:
+'/etc/ppp/pap-secrets' and '/etc/ppp/chap-secrets'. By now, UZIX does not
+recognize the difference between them. So, create one file and make the
+other just a link to the first.
+	The format of each line in the secrets file is:
+
+	user	server	secret	IP
+
+	The fields 'server' and 'IP' are ignored by UZIX, so you just need
+to fill the 'user' and 'secret' fields, leaving the others as '*'.
+	For example, here is my '/etc/ppp/pap-secrets' file:
+
+	# Secrets for authentication using PAP/CHAP
+	# client        server  secret                  IP addresses
+	fudeba		*	foobar			*
+	adrcunha	*	msxrules		*
+
+	To create a new '/etc/ppp/pap-secrets' file, just do 'mkdir
+/etc/ppp' and 'tee /etc/ppp/pap-secrets'. Type the lines (they will
+be repeated after you press RETURN, don't mind) and hit CONTROL+D to save
+the file. Finally, do a 'ln -s /etc/ppp/pap-secrets /etc/ppp/chap-secrets'.
+	For security reasons, also do a 'chmod 0700 /etc/ppp/pap-secrets'
+and a 'chmod 0700 /etc/ppp' to prevent that other user than root have
+access to the secrets files.
+	All done, reboot your MSX (type 'reboot' at the prompt).
+
+	2. Configuring your UNIX-box
+	----------------------------
+
+	2.1 If you are using the SLIP protocol
+
+	Logon as root on your UNIX-box. Be sure your UNIX-box is network
+capable.
+	Edit your '/etc/hosts' file and add the line
+
+	x.y.z.w         msx     msx.domain
+
+in it, substituting 'x.y.z.w' by the IP of your MSX, 'msx' by any alias
+you want to call your pretty MSX and 'msx.domain' by the hostname of your 
+MSX. If your MSX doesn't have a domain (or your UNIX-box is not connected
+to the Internet), forget about this and put only the IP and alias.
+	Remember that the IP and hostname of your MSX must be equal to
+those specified in UZIX.
+
+	2.2 If you are using the PPP protocol
+
+	You don't need to do nothing (cool, huh?).
+
+	3. Configuring your Windows/DOS-box
+	-----------------------------------
+
+	The connection between your MSX and your WinDOS-box is made
+by a program called NOS (Network Operating System), since neither Windows or
+DOS know the concept of attaching a SLIP link in the RS232 serial port.
+	NOS is a program written for "Ham-radio" community. It was used to
+connect remote computers over radio interfaces. Over radio channels it is
+needed to encapsulate TCP/IP packets in AX.25 frames. However, it can handle
+pure SLIP connection via RS232 port, and this is what we want from it.
+	NOS includes several services, such as TELNET, FTP, HTTP, NNTP, SMTP,
+DNS servers, and a full-service BBS.
+	We will set up only TELNET, FINGER, PING, DNS and FTP servers.
+	Unpack JNOS in a directory in any harddisk of your computer. For
+example, C:\NOS. Create PUBLIC and FINGER directories under it.
+	Create a file 'ftpusers' in your JNOS directory. It will contain
+the users that are allowed to login in your system. The format of this
+file is
+
+	user    password        directory       permission
+
+	Using '*' as password means that password is not required. The field
+'directory' is the path for FTP access. The field 'permission' is a numeric
+field, and it's the sum of the following permissions:
+
+	01 - read files
+	02 - write files
+	03 - overwrite existing files
+	04 - gateway to AX.25 port allowed (useless for us)
+	16 - telnet allowed from BBS
+	32 - gateway to NET/ROM nodes allowed (useless for us)
+	64 - remote sysop
+
+	The permission 64 allows user to digit the special character '@' at
+the prompt of BBS and access the JNOS prompt from remote consoles.
+	For example, my 'ftpusers' file is:
+
+        anonymous * /nos/public 1
+        adrcunha alsoft /nos/public 127
+
+	It means that all allowed users access the files under
+C:\NOS\PUBLIC directory; user 'anonymous' has only read permission and no
+password is required; user 'adrcunha' has password 'alsoft' and root
+permission.
+	Create a text-file for each user (the file name is the user name)
+under the directory FINGER. These files are a brief description of the
+user, and are the output of a 'finger' command sent to JNOS.
+	Now, create a file 'domain.txt' in your JNOS directory. This file
+is the DNS resolver for JNOS. The format of this file is
+
+	host    IN      A       [x.y.z.w]
+
+	where 'host' is the hostname and 'x.y.z.w' is the IP of your
+WinDOS machine running JNOS. This file should have, at least, two lines:
+one with your MSX-box domain and one with your WinDOS-box domain. For
+example, my 'domain.txt' file is:
+
+	msx.alsoft.com     IN      A       [10.0.0.1]
+	windows.alsoft.com IN      A       [10.0.0.1]
+
+	Attention to the field separation: they are TAB characters, and not
+space characters.
+	Finally, create a 'autoexec.nos' file for initializing JNOS. Use
+the following template, substituting '<a.b.c.d>' by your WinDOS-box IP,
+'<x.y.z.w>' by your MSX-box IP, '<baseaddress>' and '<irq>' by the ones of
+the serial port you're using and '<speed>' by the selected speed of your
+serial link (use a low speed, like 2400bps or 4800bps - 9600bps causes a
+high reception error rate on MSX, specially with Z80 3.5MHz).
+	Remember that the IP and hostname of your MSX must be equal to
+those specified in UZIX.
+
+	ip addr [<a.b.c.d>]
+	isat on
+	domain trace on
+	domain translate off
+	attach asy <baseaddress> <irq> slip msx 1024 250 <speed>
+	tcp ti linear
+	tcp mss 1024
+	attended off
+	mbox max 8
+	route add <x.y.z.w> msx
+	echo refuse
+	smtp gate <x.y.z.w>
+	domain add <a.b.c.d>
+	domain dns on
+	start telnet
+	start ftp
+	start finger
+
+	For COM1, use 0x3f8 as base address and 4 as IRQ. For COM2, use
+0x2f8 as base address and 3 as IRQ. More info can be found in the
+BIOS Setup of your computer or with any system-info program.
+	Complete info about the commands above can be found in JNOS commands
+documentation.
+
+	4. Starting the server on UNIX-box
+	----------------------------------
+
+	4.1 If you are using the SLIP protocol
+
+	Set the serial port you're using to a low speed (2400bps or
+4800bps - 9600bps causes a high reception error rate on MSX, specially
+with Z80 3.5MHz), 8 bits, 1 stopbit. Set the terminal to VT52. The usual
+way of doing it is by 'setserial' and 'getty'. The syntax and commands may
+change from UNIX to UNIX (like 'agetty' and 'mgetty', for example). For
+example:
+
+	setserial /dev/ttyS1 spd_normal
+	getty -h /dev/ttyS1 2400 vt52
+
+	Note that the above lives set the second serial port (ttyS1).
+	Now start the serial line using 'slattach'. Some Linux
+distributions (like RedHat) seems not to have 'slattach' by default. My
+RH5.1 doesn't have, but my Slackware distribution, yes. If your UNIX-box
+doesn't have 'slattach', just search for the source in the Internet and
+compile it. If you don't know how to do it, ask a UNIX-guru near you.
+	So, an example of running 'slattach':
+
+	slattach -v -m -s 2400 -p slip /dev/ttyS1 &
+
+	Attention! Use SLIP connection, not CSLIP (Compressed SLIP)!
+	Now configure your SLIP interface for your UNIX-box with
+'ifconfig'. For example,
+
+	ifconfig sl0 up mtu 250 10.0.0.1
+
+will create interface 'sl0' and start it. The maximum transfer unit (mtu)
+is 250 bytes (use this value or lower to not overload MSX). The IP given
+is the IP of your UNIX-box. 
+	Finally, add a route to the interfaces, using 'route'. Remember to
+add routes to local and serial interfaces. For example:
+
+	route add 10.0.0.2 sl0
+	route add 10.0.0.1 lo
+
+	It's done! If you want to see the TCP packets from/to MSX and your
+UNIX-box, use 'tcpdump'. For example:
+
+	tcpdump -i sl0 -v -vv
+
+	4.2 If you are using the PPP protocol
+
+	Set the serial port you're using to a low speed (2400bps or
+4800bps - 9600bps causes a high reception error rate on MSX, specially
+with Z80 3.5MHz), 8 bits, 1 stopbit. Set the terminal to VT52. The usual
+way of doing it is by 'setserial' and 'getty'. The syntax and commands may
+change from UNIX to UNIX (like 'agetty' and 'mgetty', for example). For
+example:
+
+	setserial /dev/ttyS1 spd_normal
+	getty -h /dev/ttyS1 2400 vt52
+
+	Note that the above lives set the second serial port (ttyS1).
+	Now start the PPP daemon using 'pppd'. An example of running
+'pppd' is:
+
+	pppd local /dev/ttyS1 2400
+
+	The 'local' parameter is necessary, or 'pppd' will use modem
+control lines. If your MSX is not a Turbo-R or has a 3.5MHz clock, you
+must also use the parameters 'lcp-restart 10' and 'ipcp-restart 10' to set
+the default timeout for re-sending messages from 3 seconds to 10 seconds,
+or 'pppd' will flood MSX and will not connect.
+	If your UNIX-box doesn't have an assigned IP, you must supply one
+to 'pppd' using the parameter 'a.b.c.d:', where 'a.b.c.d' is the desired
+IP for you UNIX-box.
+	You can also specify a DNS server IP to be passed to MSX with the
+parameter 'ms-dns x.y.z.w', where 'x.y.z.w' is the IP of the DNS server.
+Without this, MSX will not be capable of name lookup.
+	Another good option is 'silent', that will cause the UNIX-box to
+wait MSX asking for a PPP connection (don't use this option if you're
+starting MSX TCP/IP module in passive mode (see below) or both computers
+will wait forever for a connection request!).
+	If you want to specify an IP for your MSX, use the parameter
+':x.y.z.w', where 'x.y.z.w' is the desired IP for MSX (to specify both
+the IPs of your UNIX-box and your MSX, use 'a.b.c.d:x.y.z.w').
+	A complete example of using all these options is:
+
+	pppd silent local ms-dns 10.0.0.1 lcp-restart 10 ipcp-restart
+10 10.0.0.1:10.0.0.2 /dev/ttyS1 2400
+
+	If you want to see the TCP packets from/to MSX and your UNIX-box,
+use 'tcpdump'. For example: 
+
+	tcpdump -i ppp0 -v -vv
+
+	Also, you can use the 'debug' parameter on 'pppd' command line. It
+will cause the packets being exchanged between MSX and your UNIX-box be
+logged using syslog.
+
+	5. Starting the server on Windows/DOS-box
+	-----------------------------------------
+
+	Execute JNOS, using the option '-d' followed by the directory where
+it is installed. The path must be in UNIX style (i.e., using slash, and not
+backslash to separate names). For example:
+
+	jn111els -d c:/nos
+
+	You should see the prompt 'jnos>' without any error message.
+
+	6. Starting TCP/IP on MSX
+	-------------------------
+
+	6.1 If you are using the SLIP protocol or a WinDOS-box as server
+
+	To start the TCP/IP module using SLIP protocol in your MSX, run
+'slattach' at the shell prompt. The syntax is
+
+	slattach <speed>
+
+	The parameter <speed> must be the same you set on your
+UNIX/WinDOS-box!
+
+	6.2 If you are using the PPP protocol
+
+	To start the TCP/IP module using PPP protocol in your MSX, run
+'pppd' at the shell prompt. The syntax is
+
+	pppd <speed> [<options>] [user <username>] [connect <dialer>]
+
+	The parameter <speed> must be the same you set on your UNIX-box!
+	The available options are:
+
+	. passive - causes UZIX to not start the PPP connection itself,
+but to wait for a connection request from the server.
+	. novj - disable Van Jacobson style TCP/IP header compression on
+both the transmit and the receive direction.
+	. user <username> - this option must be used only if you want to
+authenticate on your UNIX-box as another user than the current one.
+	. connect <dialer> - spawns a dialer program, that will use a
+modem connected to your serial interface to dial to an ISP. Check 'Dial-up
+Connection Using UZIX' guide for further information.
+
+	7. Stopping TCP/IP on MSX
+	-------------------------
+
+	To stop 'slattach' or 'pppd' on UZIX, send a SIGHUP signal to the
+process. Check the process number with the command 'ps'.
+	For example:
+
+	kill -SIGHUP 5
+
+	This will cause the TCP/IP module to de-register itself and close
+the connection (if you're using a PPP connection).
+	Don't send a KILL signal, or the connection will be shut down, the
+module will not be de-registered and you will cannot start again
+'slattach' or 'pppd' unless you reboot MSX.
+
+
+Troubleshooting
+---------------
+
+	- The UZIX SLIP or PPP module fails during initialization.
+	If you're running UZIX 1.0, be sure your MSX RS232 is standard and
+that it has a ROMBIOS. Standard interfaces with ROMBIOS add many new calls
+in BASIC: CALL COMINI, CALL COMSTAT, CALL COMTERM, etc. If you're running
+UZIX 2.0, check startup messages to see if UZIX detects you RS232;
+
+	- The UZIX TCP/IP module fails during initialization.
+	Be sure you configured UZIX for network as described in this
+document.
+	Be sure your user has access to your UNIX-box if you're using
+authentication.
+
+	- UNIX-box 'slattach' refuses to work.
+	Be sure your UNIX-box supports SLIP connection in the kernel. Be
+sure what serial port you're using.
+
+	- UZIX boots ok, but no communication between MSX and my
+UNIX/WinDOS-box.
+	Be sure which serial port you're setting in your UNIX/WinDOS-box is
+the same your MSX is connected. To test if your MSX and your
+UNIX/WinDOS-box are communicating, follow these steps: on MSX, go to BASIC
+and type 'CALL COMINI("8N1NNNNN", <speed>)' (where <speed> is the selected
+serial speed on your UNIX/WinDOS-box) and 'CALL COMTERM'; on UNIX-box, do
+a 'cat somefile.txt > /dev/ttyS0' and check if MSX receives the file ok;
+on Windows/DOS, do a 'copy somefile.txt com1:'; try a text file - it's
+easier to check if MSX received the file ok just reading the text); on
+UNIX-box, do a 'cat < /dev/ttyS0'; on Windows/DOS, do a 'copy com1: con:';
+hit some keys on your MSX and you should see the pressed keys on
+UNIX/WinDOS-box screen. If your RS232 interface doesn't recognize 'CALL
+COMTERM', use this BASIC program (remember changing <speed> at line 10 by
+the value you selected for your serial interface on your
+UNIX/WinDOS-box):
+	10 _COMINI("8N1NNNNN", <speed>)
+	20 PRINT"Input test. Press a key for output test."
+	30 OPEN"COM:" FOR INPUT AS 1
+	40 IF INKEY$<>"" THEN 60
+	50 A$=INPUT$(1,1):PRINT A$;:GOTO 40
+	60 CLOSE:PRINT:PRINT"Output test. Press any key. ESC exits."
+	70 OPEN"COM:" FOR OUPUT AS 1
+	80 A$=INPUT$(1):IF A$=CHR$(27) THEN CLS:CLOSE:END
+	90 PRINT#1,A$;:GOTO 80
+
+	- I set the serial line using stty/getty but still no communication.
+	Try using 'minicom' comm program. Configure the modem to 8N1 and
+the desired speed and exit program without resetting the modem (using
+alt-Q).
+
+	- The 'finger' command doesn't work with my UNIX-box.
+	Be sure that your UNIX-box has this service enabled in 'inetd'
+super-daemon. Check the '/etc/inetd.conf' file in your UNIX-box.
+
+	- The 'finger' command doesn't work with my WinDOS-box.
+	Be sure that you created the FINGER directory under JNOS directory
+and that you created the text-files for each user that is in the
+'ftpusers' file.
+
+	- The 'telnet' command doesn't work with my UNIX-box.
+	Be sure that your UNIX-box has this service enabled in 'inetd'
+super-daemon. Check the '/etc/inetd.conf' file in your UNIX-box.
+
+	- 'nslookup' can't resolve queries.
+	If you're using SLIP protocol, check if '/etc/resolv.conf' is
+configured ok. Also check if your DNS server is ok (test the server with
+your UNIX/WinDOS-box). If you're using PPP protocol,be sure MSX is receiving
+at least one DNS server IP (check with 'netstat -s'); be sure 'pppd' is
+sending the DNS server IP(s).
+
+
+Frequently Asked Questions
+--------------------------
+
+	- How to setup my UNIX-box as a DNS server for MSX?
+	If you're using Linux, read the DNS-HOWTO document. If not, ask
+your UNIX local guru.
+
+	- How to setup my UNIX-box as a gateway and allow my MSX
+transparently access the Internet?
+	If you're using Linux, you should read the 'IP-Masquerade
+Mini-Howto'. Quickly, you should set IP masquerade as follows:
+	ipfwadm -F -p deny
+	ipfwadm -F -a m -S w.x.y.z/8 -D 0.0.0.0/0
+	Where 'w.x.y.z' is the IP of your MSX.
+	If this doesn't work for you, ask your UNIX local guru.
+
+	- How to setup my Windows/DOS-box as a gateway and allow my MSX
+transparently access the Internet?
+	Using advanced configuration of JNOS and a Virtual Packet Driver
+(such as NDIS3PKT, available as demo at http://www.danlan.com), it's
+possible. If you want to do it, study the documents of both programs. And, if
+you have success, send the info to the author of this document. :)
+
+
+Critics, bugs, doubts, comments, corrections, questions
+-------------------------------------------------------
+
+	Any comments, help or bug reports will be welcome. Also, if I
+wrote something wrong, corrections are also welcome. Please, write to
+adrcunha@yahoo.com.br.
+
+	Official UZIX Home Page:
+	http://uzix.msx.org
