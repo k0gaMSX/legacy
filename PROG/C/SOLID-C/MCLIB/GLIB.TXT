@@ -1,0 +1,185 @@
+MSX-C Library下位互換ライブラリ MSX-Graphic function library
+By Tatsuhiko Syoji(Tatsu) 1999-2000
+
+[本ライブラリについて]
+　本ライブラリはMSX-C Libraryのうちグラフィックライブラリと互換性を持っ
+たライブラリです。
+　ソースコードは完全に自由に使える事が確認されているソースコードで構成し
+ています。
+　実装が面倒なくせに余り使わない関数は実装していないので。
+
+[構成ファイル]
+*   .ASM  本ライブラリのソースファイルです。
+GLIB.TXT  このファイルです。
+GLIB.H    本ライブラリのヘッダファイルです。
+
+[アセンブル]
+　MKGLIB.BATを実行すると本ライブラリのソースをコンパイルすることができます。
+　ライブラリファイルはMLIB.IRLというファイル名で生成されます。
+　あとはヘッダファイルのあるディレクトリにGLIB.Hを、ライブラリのあるディレクトリにライブラリファイルをコピーすればOKです。
+
+[関数リファレンス]
+void ginit(void);
+　グラフィックライブラリを初期化します。
+　以下の関数を使う前に1回コールする必要があります。
+
+void interlace(char mode);
+　画面をインターレースモードにするかどうか設定します。
+　modeの値は次のようになっています。
+0:ノンインターレース
+1:インターレース
+2:ノンインターレースで奇数ページと偶数ページを交互に表示
+3:インターレースで奇数ページと偶数ページを合成表示
+　2,3を使う場合、表示ページは奇数ページに設定して下さい。
+
+void setrd(unsigned addr);
+　VDPを読みこみモードに設定し、I/Oポートを利用してVRAMのaddr番地から読み
+込みを行えるようにします。
+　実際の読みこみはinvdp()関数で行います。
+
+char invdp(void);
+　setrd()関数で設定したアドレスのVRAMからI/Oポートを利用して1バイト読み
+こみます。
+　読みこんだ後はアドレスカウンタがオートインクリメントされるので、連続し
+て呼び出すことで、連続した範囲のVRAMの内容を読み込むことができます。
+
+void setwrt(unsigned addr);
+　VDPを書きこみモードに設定し、I/Oポートを利用してVRAMのaddr番地から書き
+込みを行えるようにします。
+　実際の書きこみはoutvdp()関数で行います。
+
+void outvdp(unsigned char ch);
+　setwrt()関数で設定したアドレスのVRAMからI/Oポートを利用して1バイトchを
+書きこみます。
+　書きこんだ後はアドレスカウンタがオートインクリメントされるので、連続し
+て呼び出すことで、連続した範囲のVRAMに書き込むことができます。
+
+unsigned char vpeek(unsigned int addr);
+　VRAMのアドレスaddrから1バイト読みこみます。
+　次のバイトからはinvdp()関数を利用して読み込むことができます。
+
+void vpoke(unsigned int addr,unsigned char ch);
+　VRAMのアドレスaddrに1バイトchを書きこみます。
+　次のバイトからはoutvdp()関数を利用して書き込むことができます。
+
+void wrtvdp(char no,unsigned char val)
+　VDPのno番レジスタに値valを書きこみます。
+　SOLID Cのslib.irlとの互換性維持の為にvdpという関数名でも同じ関数を呼び
+出すことができます。
+
+unsigned char rdvdp(char no)
+　VDPのコントロールレジスタレジスタno番の値を読み出します。
+　VDPのコントロールレジスタ書きこみ時にワークエリアに保存した値を返すだけです。
+
+unsigned char rdvsts(char no)
+　VDPのステータスレジスタno番の値を読み出します。
+　SOLID Cのslib.irlとの互換性維持の為にvdpstatという関数名でも同じ関数を
+呼び出すことができます。
+
+void color(char fg,char bg,char bd);
+　前景色をfgに、背景色をbgに、周辺色をbdに設定します。
+　指定した値はそれぞれc_fore,c_back,c_bordに保存されます。
+
+void iniplt(void);
+　パレットを初期化します。
+　VRAMにはパレットデータを保存しません。
+
+void setplt(char no,unsigned int dat);
+　パレット番号noのパレットを設定します。
+　パレットはdatで設定します。
+bit 10-8が緑、bit 7-4が赤、bit 3-0が青の濃度になります。
+
+void inispr(char mode);
+　スプライトをmode番のモードで初期化します。
+　modeは次のものがあります。
+0:8 * 8拡大なし
+1:8 * 8拡大あり
+2:16 * 16拡大なし
+3:16 * 16拡大あり
+4:スプライト表示禁止(VDPコマンドの実行速度が上がります。)
+
+unsigned int calpat(char num);
+　num番のスプライトジェネレータテーブルのアドレスを返します。
+
+unsigned int calatr(char plane);
+　plane番のスプライトプレーンのスプライトアトリビュートテーブルのアドレ
+スを返します。
+
+void sprite(char no,void *data);
+　no番のスプライトパターンをdataで指定します。
+
+void colspr(char plane,void *data);
+　plane番のプレーンに表示されるスプライトの表示色を指定します。
+　Screen 4以降で有効です。
+
+void putspr(char plane,int x,int y,char color,char pat);
+　plane番のプレーンの座標(x,y)にpat番のパターンのスプライトを表示します。
+　Screen 1-3ではcolorで表示色を指定します。
+
+　スプライト関連関数のスプライト番号はBIOSやMSX-BASICと同様にスプライト
+サイズによる影響を受けません。
+
+void totext(void);
+　画面モードを直前のテキスト画面に戻します。
+　グラフィックモードのまま終了するとDOSの文字出力が画面に出ないので、グ
+ラフィックモードを利用したプログラムを終了する際は必ず呼び出してください。
+
+void grpprt(char ch,char logop);
+　グラフィック画面に文字chを表示します。
+　screen 5以降ではlogopでロジカルオペレーションを指定できます。
+
+void glocate(int x,int y);
+　grpprt()関数で文字を表示する座標を指定します。
+
+void setpg(char dp,char ap);
+　screen 5以降で表示ページを設定します。
+　dpには表示ページ番号、apにはアクティブページ(実際に描画を行うページ)番
+号を指定します。
+
+void fsetrd(char bit16,unsigned int bitf0);
+　setrd()関数とは異なり、setpg()関数の指定を無視してVDPを読みこみモード
+に設定し、I/Oポートを利用して読み込みを行えるようにします。
+　アドレス指定は、bit16をbit16で、bit15-0はbitf0で指定します。
+　実際の読みこみはinvdp()関数で行います。
+　本関数はMSX-C Libraryには存在しません。
+
+void fsetwt(char bit16,unsigned int bitf0);
+　setwrt()関数とは異なり、setpg()関数の指定を無視してVDPを書きこみモード
+に設定し、I/Oポートを利用して書き込みを行えるようにします。
+　アドレス指定は、bit16をbit16で、bit15-0はbitf0で指定します。
+　実際の読みこみはoutvdp()関数で行います。
+　本関数はMSX-C Libraryには存在しません。
+
+void vdpcom(void *dat);
+　dat以降のメモリ内容をVDPレジスタ#32-#46の内容とみなしてVDPコマンドを実
+行します。
+　本関数はMSX-C Libraryには存在しません。
+　転送元のサイズが固定されている時に威力を発揮します。
+
+;Copyright (c) 1999-2000 Tatsuhiko Syoji, Japan . All rights reserved.
+;
+;Redistribution and use in source and binary forms, with or without 
+;modification, are permitted provided that the following conditions are 
+;met:
+;
+;1 Redistributions of source code must retain the above copyright notice,
+; this list of conditions and the following disclaimer as the first lines
+; of this file unmodified.
+;
+;2 Redistributions in binary form must reproduce the above copyright 
+;notice, this list of conditions and the following disclaimer in the 
+;documentation and/or other materials provided with the distribution.
+;
+;THIS SOFTWARE IS PROVIDED BY Tatsuhiko Syoji ``AS IS'' AND ANY EXPRESS 
+;ORIMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+; WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+; DISCLAIMED. IN NO EVENT SHALL Tatsuhiko Syoji BE LIABLE FOR ANY DIRECT,
+; INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
+;(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+;SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) 
+;HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, 
+;STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
+;IN
+; ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+;POSSIBILITY OF SUCH DAMAGE.
+
