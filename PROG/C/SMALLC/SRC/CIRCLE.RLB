@@ -1,0 +1,457 @@
+*R+, Q-, G 0
+; ^^^^^^ This first line is to instruct GEN80 to compile this as a .REL
+; file, with no .ERR file and no .SYM file
+
+;   THIS LIBRARY NEEDS TO BE COMPILED BEFORE USE ! IT CANNOT BE 'INCLUDED'
+
+;   CIRCLE2.RLB  Extended library for MSX2 machines for C--
+
+;   Public domain source, by Onno ten Brinke
+;   Based on an idea by Frank H. Druyff, see MSX Club Magazine 36, page 7
+;   This is a C program, completely rewritten to pure assembly language,
+;   which gives a speed inprovement of about 25%
+;   I've left the original C-- source in between the assembly, so it's
+;   easy to follow the working of this algorithm.
+
+;   REL Version 0.0    15 February 1993
+
+;   Draws circle on screen 5-8.
+
+;   Needs C--RUN, GRAPH2
+
+;   circle  Draws circle :
+
+;       circle(x,y,hor radius,vert radius,step,begin,end,col,logopr)
+
+;       x       between 0 and 511
+;       y       between 0 and 211
+;       hradius between 0 and 511
+;       vradius between 0 and 211
+;       step    the speed of the drawing of the circle. This can
+;               be calculated with step=1800/(2*maxradius)
+;               maxradius is equal to either hradius or vradius,
+;               depending on whichever of them is larger. This formula
+;               will give you an indication, though it may not be the
+;               ideal value. In order to let the routine be as fast as
+;               possible the actual step is depending on which part of
+;               the circle is drawn at that moment.
+;       begin   beginning of circle in degrees (0-359)
+;       end     end of circle in degrees (0-359)
+;       col     color
+;       logopr  logical operation (see MSXCONIO.RLB)
+
+        PUBLIC  circle
+
+        EXTRN   nline, ccdiv, ccmult
+
+sintab  DEFB 0,1,2,3,3,4,5,6,7,8,9,10,10,11,12,13,14,15,16,17
+        DEFB 17,18,19,20,21,22,22,23,24,25,26,27,28,28,29,30,31,32,33,33
+        DEFB 34,35,36,37,37,38,39,40,41,41,42,43,44,45,45,46,47,48,48,49
+        DEFB 50,51,52,52,53,54,54,55,56,57,57,58,59,59,60,61,62,62,63,64
+        DEFB 65,66,66,67,68,68,69,69,70,71,71,72,73,73,74,74,75,75,76,77
+        DEFB 77,78,78,79,79,80,80,81,81,82,82,83,83,84,84,85,85,86,86,87
+        DEFB 87,87,88,88,89,89,89,90,90,91,91,92,92,93,93,93,94,94,94,95
+        DEFB 95,95,95,96,96,96,96,97,97,97,97,97,98,98,98,98,98,98,99,99
+        DEFB 99,99,99,99,99,99,100,100,100,100,100,100,100,100,100,100
+        DEFB 100,100,100,100
+;circle(horz,vert,hradius,vradius,step,begin,end,col,logopr)
+STORECR DEFW 0
+HORZ    DEFW 0
+VERT    DEFW 0
+HRADIUS DEFW 0
+VRADIUS DEFW 0
+BEGIN   DEFW 0
+END     DEFW 0
+STEP    DEFW 0
+CIRCOL  DEFB 0
+CIRLOG  DEFB 0
+TELLER  DEFW 0
+X       DEFW 0
+Y       DEFW 0
+OFFSET  DEFW 0
+DEG     DEFW 0
+XOLD    DEFW 0
+YOLD    DEFW 0
+FLAG    DEFB 0
+
+circle  POP DE
+    LD (STORECR),DE
+    POP HL
+    LD A,L
+    LD (CIRLOG),A
+    POP HL
+    LD A,L
+    LD (CIRCOL),A
+    POP HL
+    LD (END),HL
+    POP HL
+    LD (BEGIN),HL
+    POP HL
+    LD (STEP),HL
+    POP HL
+    LD (VRADIUS),HL
+    POP HL
+    LD (HRADIUS),HL
+    POP HL
+    LD (VERT),HL
+    POP HL
+    LD (HORZ),HL
+
+;   pointer=sintab;       /* pointers are not necessary in ML */
+;   pointer2=sintab+179;  /* So no instructions for these statements */
+
+;   offset=0;
+    LD HL,0
+    LD (OFFSET),HL
+    XOR A
+    LD (STEP+1),A
+;   if (step<1) {step=2;}
+    LD A,(STEP)
+    CP 2
+    JR NC,circle0
+    LD A,2
+    LD (STEP),A
+;   step=step*4;    /* increase step when drawing top of circle */
+circle0 LD HL,(STEP)
+    ADD HL,HL
+    ADD HL,HL
+    LD (STEP),HL
+;   flag=0;
+    XOR A
+    LD (FLAG),A
+;   for (teller=1; teller<1800; teller=teller+step)
+circle1 LD HL,1
+    LD (TELLER),HL
+circle3 LD DE,1800
+    SBC HL,DE
+    JP NC,circle4
+    JP circle6
+circle5 LD HL,(TELLER)
+    LD DE,(STEP)
+    ADD HL,DE
+    LD (TELLER),HL
+    JP circle3
+;   {
+;       offset=teller/10;
+circle6 LD HL,(TELLER)
+    LD DE,10
+    EX DE,HL
+    CALL ccdiv
+    LD (OFFSET),HL
+;       sin=*(pointer+offset);
+    LD DE,sintab
+    ADD HL,DE
+    LD A,(HL)
+;       x=(hradius*sin)/100;
+    LD HL,(HRADIUS)
+    LD E,A
+    LD D,0
+    CALL ccmult
+    LD DE,100
+    EX DE,HL
+    CALL ccdiv
+    LD (X),HL
+;       cos=*(pointer2-offset);
+    LD HL,sintab+179
+    LD DE,(OFFSET)
+    AND A
+    SBC HL,DE
+    LD A,(HL)
+;       y=(vradius*cos)/100;
+    LD HL,(VRADIUS)
+    LD E,A
+    LD D,0
+    CALL ccmult
+    LD DE,100
+    EX DE,HL
+    CALL ccdiv
+    LD (Y),HL
+;       if (flag==0) {xold=x;yold=y;flag=1}
+    LD A,(FLAG)
+    OR A
+    JR NZ,circle7
+    INC A
+    LD (FLAG),A
+    LD HL,(X)
+    LD (XOLD),HL
+    LD HL,(Y)
+    LD (YOLD),HL
+;       deg=teller/20;
+circle7 LD HL,(TELLER)
+    AND A
+    RR H
+    RR L
+    LD DE,10
+    EX DE,HL
+    CALL ccdiv
+    LD (DEG),HL
+;       if ((begin<90) & (deg>=begin) & (deg<=end))
+    LD HL,(BEGIN)
+    LD DE,90
+    AND A
+    SBC HL,DE
+    JR NC,circle8
+    LD HL,(DEG)
+    LD DE,(BEGIN)
+    AND A
+    SBC HL,DE
+    JR C,circle8
+    LD HL,(DEG)
+    LD DE,(END)
+    AND A
+    EX DE,HL
+    SBC HL,DE
+    JR C,circle8
+;       {
+;           nline(horz+xold,vert-yold,horz+x,vert-y,col,logopr);
+    LD HL,(HORZ)
+    LD DE,(XOLD)
+    ADD HL,DE
+    PUSH HL
+    LD HL,(VERT)
+    LD DE,(YOLD)
+    AND A
+    SBC HL,DE
+    PUSH HL
+    LD HL,(HORZ)
+    LD DE,(X)
+    ADD HL,DE
+    PUSH HL
+    LD HL,(VERT)
+    LD DE,(Y)
+    AND A
+    SBC HL,DE
+    PUSH HL
+    LD HL,(CIRCOL)
+    LD H,0
+    PUSH HL
+    LD HL,(CIRLOG)
+    LD H,0
+    PUSH HL
+    CALL nline
+    EX DE,HL
+    LD HL,12
+    ADD HL,SP
+    LD SP,HL
+;       }
+;       if ((begin<180) & ((deg+90)>=begin) & ((deg+90)<=end))
+circle8 LD HL,(BEGIN)
+    LD DE,180
+    AND A
+    SBC HL,DE
+    JR NC,circle9
+    LD HL,(DEG)
+    LD DE,90
+    ADD HL,DE
+    LD DE,(BEGIN)
+    AND A
+    SBC HL,DE
+    JR C,circle9
+    LD HL,(DEG)
+    LD DE,90
+    ADD HL,DE
+    LD DE,(END)
+    AND A
+    EX DE,HL
+    SBC HL,DE
+    JR C,circle9
+;       {
+;           nline(horz-x,vert-y,horz-xold,vert-yold,col,logopr);
+    LD HL,(HORZ)
+    LD DE,(X)
+    AND A
+    SBC HL,DE
+    PUSH HL
+    LD HL,(VERT)
+    LD DE,(Y)
+    AND A
+    SBC HL,DE
+    PUSH HL
+    LD HL,(HORZ)
+    LD DE,(XOLD)
+    AND A
+    SBC HL,DE
+    PUSH HL
+    LD HL,(VERT)
+    LD DE,(YOLD)
+    AND A
+    SBC HL,DE
+    PUSH HL
+    LD HL,(CIRCOL)
+    LD H,0
+    PUSH HL
+    LD HL,(CIRLOG)
+    LD H,0
+    PUSH HL
+    CALL nline
+    EX DE,HL
+    LD HL,12
+    ADD HL,SP
+    LD SP,HL
+;       }
+;       if ((begin<270) & ((deg+180)>=begin) & ((deg+180)<=end))
+circle9 LD HL,(BEGIN)
+    LD DE,270
+    AND A
+    SBC HL,DE
+    JR NC,circle10
+    LD HL,(DEG)
+    LD DE,180
+    ADD HL,DE
+    LD DE,(BEGIN)
+    AND A
+    SBC HL,DE
+    JR C,circle10
+    LD HL,(DEG)
+    LD DE,180
+    ADD HL,DE
+    LD DE,(END)
+    AND A
+    EX DE,HL
+    SBC HL,DE
+    JR C,circle10
+
+;       {
+;           nline(horz-x,vert+y,horz-xold,vert+yold,col,logopr);
+    LD HL,(HORZ)
+    LD DE,(X)
+    AND A
+    SBC HL,DE
+    PUSH HL
+    LD HL,(VERT)
+    LD DE,(Y)
+    ADD HL,DE
+    PUSH HL
+    LD HL,(HORZ)
+    LD DE,(XOLD)
+    AND A
+    SBC HL,DE
+    PUSH HL
+    LD HL,(VERT)
+    LD DE,(YOLD)
+    ADD HL,DE
+    PUSH HL
+    LD HL,(CIRCOL)
+    LD H,0
+    PUSH HL
+    LD HL,(CIRLOG)
+    LD H,0
+    PUSH HL
+    CALL nline
+    EX DE,HL
+    LD HL,12
+    ADD HL,SP
+    LD SP,HL
+;       }
+;       if ((begin<360) & ((deg+270)>=begin) & ((deg+270)<=end))
+circle10 LD HL,(BEGIN)
+    LD DE,360
+    AND A
+    SBC HL,DE
+    JR NC,circle11
+    LD HL,(DEG)
+    LD DE,270
+    ADD HL,DE
+    LD DE,(BEGIN)
+    AND A
+    SBC HL,DE
+    JR C,circle11
+    LD HL,(DEG)
+    LD DE,270
+    ADD HL,DE
+    LD DE,(END)
+    EX DE,HL
+    AND A
+    SBC HL,DE
+    JR C,circle11
+
+;       {
+;           nline(horz+xold,vert+yold,horz+x,vert+y,col,logopr);
+    LD HL,(HORZ)
+    LD DE,(XOLD)
+    ADD HL,DE
+    PUSH HL
+    LD HL,(VERT)
+    LD DE,(YOLD)
+    ADD HL,DE
+    PUSH HL
+    LD HL,(HORZ)
+    LD DE,(X)
+    ADD HL,DE
+    PUSH HL
+    LD HL,(VERT)
+    LD DE,(Y)
+    ADD HL,DE
+    PUSH HL
+    LD HL,(CIRCOL)
+    LD H,0
+    PUSH HL
+    LD HL,(CIRLOG)
+    LD H,0
+    PUSH HL
+    CALL nline
+    EX DE,HL
+    LD HL,12
+    ADD HL,SP
+    LD SP,HL
+;       }
+;       xold=x;
+circle11    LD HL,(X)
+    LD (XOLD),HL
+;       yold=y;
+    LD HL,(Y)
+    LD (YOLD),HL
+    LD A,(FLAG)
+    CP 3
+    JP Z,circle5    ; no sense checking any more
+;   if ((teller>600) & (flag==1)) {flag=2; step=step/2}
+;   /* increase accuracy when needed (more to the sides of the circle) */
+    LD HL,(TELLER)
+    LD DE,600
+    AND A
+    SBC HL,DE
+    JP C,circle12
+    LD A,(FLAG)
+    CP 1
+    JP NZ,circle12
+    INC A
+    LD (FLAG),A
+    LD HL,(STEP)
+    AND A
+    RR H
+    RR L
+    LD (STEP),HL
+;   if ((teller>1200) & (flag==2)) {flag=3; step=step/2}
+;   /* increase accuracy further */
+circle12   LD HL,(TELLER)
+    LD DE,1200
+    AND A
+    SBC HL,DE
+    JP C,circle5
+    LD A,(FLAG)
+    CP 2
+    JP NZ,circle5
+    INC A
+    LD (FLAG),A
+    LD HL,(STEP)
+    AND A
+    RR H
+    RR L
+    LD (STEP),HL
+;   }
+    JP circle5
+
+circle4 LD DE,(STORECR)
+    PUSH HL
+    PUSH HL
+    PUSH HL
+    PUSH HL
+    PUSH HL
+    PUSH HL
+    PUSH HL
+    PUSH HL
+    PUSH HL
+    PUSH DE
+    RET
+
+                      

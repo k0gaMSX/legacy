@@ -1,0 +1,2369 @@
+*R+, Q-, G 0
+; ^^^^^^ This first line is to instruct GEN80 to compile this as a .REL
+; file, with no .ERR file and no .SYM file
+
+;   THIS LIBRARY NEEDS TO BE COMPILED BEFORE USE ! IT CANNOT BE 'INCLUDED'
+;   When assembled as a REL module, it can only be used with MSXCRUN.REL
+;   and a compiled and assembled to a .REL file Small C program.
+
+;   FORMAT.RLB      REL version 0.0, 30 July 1993
+;                   Is a module in STDLIB
+
+;   This is nothing more or less than a compiled text of FORMAT.C !
+
+;   These routines may be modified for your own use, and are public
+;   domain.
+
+;   If you find any bugs, or have suggestions, contact me please :
+
+;   Onno ten Brinke
+;   Tesselschadelaan 22
+;   1399 VP Muiderberg
+;   The Netherlands
+
+;   Onno ten Brinke, 30 July 1993
+
+;   Needs C--RUN
+
+
+;Small C Compiler
+;#asm
+    PUBLIC scanf, printf, fprintf, sprintf, sscanf, fscanf, fputs
+    PUBLIC sputs, fgets
+
+    EXTRN  ccgchar, ccsxt, ccgint, ccpchar, ccpint, ccor, ccxor
+    EXTRN  ccand, cceq, ccne, ccgt, ccle, ccge, cclt, cccmp, ccuge
+    EXTRN  ccult, ccugt, ccule, ccucmp, ccasr, ccasl, ccsub, ccneg
+    EXTRN  cccom, ccmult, ccdiv, ccdeneg, ccbcneg, cccbcde, ccmdbuf
+    EXTRN  putchar, getchar, cpm, gets, puts, crlf, lston, lstoff, getkbd
+    EXTRN  ccFENDF, atoi, hextoi, fputdec, fputhex, puthex, putdec
+    EXTRN  ccnum, cchex, ccpdec, ccnbuff, ccphex, putc, getc, eof
+    EXTRN  ccspflg, ccpchr, ccswtch
+;/* Formatted I/O for Small-C plus various other I/O functions */
+;/*
+;    The printf,fprintf,sprintf,scanf,fscanf and sscanf function names are
+;recognised by the compiler and it gives them an extra argument after the
+;others which equals the number of actual arguments that occured in the 
+;function call. This allows variable numbers of arguments.
+;printf(format,args...) %d,%x,%s,%c supported with optional fields
+;sprintf(pointer,format,args...)    .. ditto ..
+;fprintf(chan,format,args...)       .. ditto ..
+;scanf(format,&args..) only %d and %x supported
+;sscanf(pointer,format,&args...)  .. .. ..
+;fscanf(chan,format,&args...)    .. .. ..
+;fputs(pointer,chan) send string to file 
+;sputs(source_pointer,dest_pointer) move string to new destination
+;fputdec(number,chan)   send dec no. to file
+;fputhex(number,chan)   send 4 digit hex no to file
+;fgets(pointer,chan)    get string from file to buffer until 0,EOF or CR
+;           Sets EOF flag used by eof() if EOF is encountered.
+;*/
+;/*
+;Flag for scanf and printf function family and their supporting functions
+;to mark the type of I/O:  Value =  0 for CON:,1 for file, 2 for memory 
+;*/
+;char ccspflg;
+;#asm
+scanf: LD A,0
+ LD (ccspflg),A
+ JP ccscan  
+fscanf: LD A,1
+ LD (ccspflg),A
+ JP ccscan
+sscanf: LD A,2
+ LD (ccspflg),A
+ JP ccscan
+;/*
+;Core routine for "scanf" function family
+;*/ 
+;ccscan(nargs)
+ccscan:
+;int nargs;
+;{int *argptr,argno,argin,*iptr,iochan;
+    PUSH BC
+    PUSH BC
+    PUSH BC
+    PUSH BC
+    PUSH BC
+; char *fptr,chvalue,*bptr,*mptr,ibuf[80];
+    PUSH BC
+    DEC SP
+    PUSH BC
+    PUSH BC
+    EX DE,HL
+    LD HL,0-80
+    ADD HL,SP
+    LD SP,HL
+    EX DE,HL
+; argno=nargs;
+    LD HL,93
+    ADD HL,SP
+    PUSH HL
+    LD HL,101
+    ADD HL,SP
+    CALL ccgint
+    POP DE
+    CALL ccpint
+; argin=0;
+    LD HL,91
+    ADD HL,SP
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL ccpint
+; argptr=&nargs;
+    LD HL,95
+    ADD HL,SP
+    PUSH HL
+    LD HL,101
+    ADD HL,SP
+    POP DE
+    CALL ccpint
+;/* Search stack for actual args */
+; while(argno--)argptr++;
+cc2:
+    LD HL,93
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    LD A,H
+    OR L
+    JP Z,cc3
+    LD HL,95
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    DEC HL
+    JP cc2
+cc3:
+; if(ccspflg)mptr=*argptr--; /*Extra arg for sscanf & fscanf*/
+    LD A,(ccspflg)
+    CALL ccsxt
+    LD A,H
+    OR L
+    JP Z,cc4
+    LD HL,80
+    ADD HL,SP
+    PUSH HL
+    LD HL,97
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    INC HL
+    CALL ccgint
+    POP DE
+    CALL ccpint
+; fptr=*argptr--;
+cc4:
+    LD HL,85
+    ADD HL,SP
+    PUSH HL
+    LD HL,97
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    INC HL
+    CALL ccgint
+    POP DE
+    CALL ccpint
+; switch(ccspflg)
+    LD A,(ccspflg)
+    CALL ccsxt
+    PUSH HL
+; {case 0:gets(ibuf);bptr=ibuf;break;
+    JP cc6
+cc7:
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    CALL gets
+    POP BC
+    LD HL,82
+    ADD HL,SP
+    PUSH HL
+    LD HL,2
+    ADD HL,SP
+    POP DE
+    CALL ccpint
+    JP cc5
+;  case 1:iochan=mptr;fgets(ibuf,iochan);bptr=ibuf;break;
+cc8:
+    LD HL,87
+    ADD HL,SP
+    PUSH HL
+    LD HL,82
+    ADD HL,SP
+    CALL ccgint
+    POP DE
+    CALL ccpint
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,89
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL fgets
+    POP BC
+    POP BC
+    LD HL,82
+    ADD HL,SP
+    PUSH HL
+    LD HL,2
+    ADD HL,SP
+    POP DE
+    CALL ccpint
+    JP cc5
+;  case 2:bptr=mptr;
+cc9:
+    LD HL,82
+  ADD HL,SP
+    PUSH HL
+    LD HL,82
+    ADD HL,SP
+    CALL ccgint
+    POP DE
+    CALL ccpint
+; }
+    JP cc5
+cc6:
+    LD DE,cc10
+    LD HL,cc5
+    LD B,3
+    JP ccswtch
+cc10:
+    DEFW 0,cc7
+    DEFW 1,cc8
+    DEFW 2,cc9
+cc5:
+; while(*fptr)
+cc11:
+    LD HL,85
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    LD A,H
+    OR L
+    JP Z,cc12
+;   {iptr=*argptr;
+    LD HL,89
+    ADD HL,SP
+    PUSH HL
+    LD HL,97
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgint
+    POP DE
+    CALL ccpint
+;    while(*fptr!='%')fptr++;fptr++;
+cc13:
+    LD HL,85
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,37
+    POP DE
+    CALL ccne
+    LD A,H
+    OR L
+    JP Z,cc14
+    LD HL,85
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    JP cc13
+cc14:
+    LD HL,85
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+;        while(*bptr==' ')bptr++;
+cc15:
+    LD HL,82
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,32
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc16
+    LD HL,82
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    JP cc15
+cc16:
+;    if((*bptr==0)|(*bptr==0x0d))break;
+    LD HL,82
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL cceq
+    PUSH HL
+    LD HL,84
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,13
+    POP DE
+    CALL cceq
+    POP DE
+    CALL ccor
+    LD A,H
+    OR L
+    JP Z,cc17
+    JP cc12
+;    switch(chvalue=*fptr++)
+cc17:
+    LD HL,84
+    ADD HL,SP
+    PUSH HL
+    LD HL,87
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    CALL ccgchar
+    POP DE
+    CALL ccpchar
+    PUSH HL
+;    {case 'd':
+    JP cc19
+cc20:
+;     while((ccnum(bptr)==-1)&(*bptr!='-'))
+cc21:
+    LD HL,82
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL ccnum
+    POP BC
+    PUSH HL
+    LD HL,1
+    CALL ccneg
+    POP DE
+    CALL cceq
+    PUSH HL
+    LD HL,84
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,45
+    POP DE
+    CALL ccne
+    POP DE
+    CALL ccand
+    LD A,H
+    OR L
+    JP Z,cc22
+;       {if((*bptr==0x0d)|(*bptr==0))break;bptr++;}
+    LD HL,82
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,13
+    POP DE
+    CALL cceq
+    PUSH HL
+    LD HL,84
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL cceq
+    POP DE
+    CALL ccor
+    LD A,H
+    OR L
+    JP Z,cc23
+    JP cc22
+cc23:
+    LD HL,82
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    JP cc21
+cc22:
+;           *iptr=atoi(bptr);
+    LD HL,89
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,84
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL atoi
+    POP BC
+    POP DE
+    CALL ccpint
+;           if(*bptr=='-')bptr++;
+    LD HL,82
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,45
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc24
+    LD HL,82
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+;           argptr--;
+cc24:
+    LD HL,95
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    INC HL
+;           argin++;
+    LD HL,91
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+;           while(ccnum(bptr)!=-1)bptr++;
+cc25:
+    LD HL,82
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL ccnum
+    POP BC
+    PUSH HL
+    LD HL,1
+    CALL ccneg
+    POP DE
+    CALL ccne
+    LD A,H
+    OR L
+    JP Z,cc26
+    LD HL,82
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    JP cc25
+cc26:
+;           break;
+    JP cc18
+;     case 'x':
+cc27:
+;     while(cchex(bptr)==-1)
+cc28:
+    LD HL,82
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL cchex
+    POP BC
+    PUSH HL
+    LD HL,1
+    CALL ccneg
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc29
+;       {if((*bptr==0x0d)|(*bptr==0))break;bptr++;}
+    LD HL,82
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,13
+    POP DE
+    CALL cceq
+    PUSH HL
+    LD HL,84
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL cceq
+    POP DE
+    CALL ccor
+    LD A,H
+    OR L
+    JP Z,cc30
+    JP cc29
+cc30:
+    LD HL,82
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    JP cc28
+cc29:
+;       if(*bptr=='0'){bptr++; /* Skip 0x leaders */
+    LD HL,82
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,48
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc31
+    LD HL,82
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+;       if((*bptr=='x')|(*bptr=='X'))bptr++;else bptr--;}   
+    LD HL,82
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,120
+    POP DE
+    CALL cceq
+    PUSH HL
+    LD HL,84
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,88
+    POP DE
+    CALL cceq
+    POP DE
+    CALL ccor
+    LD A,H
+    OR L
+    JP Z,cc32
+    LD HL,82
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    JP cc33
+cc32:
+    LD HL,82
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+cc33:
+;       *iptr=hextoi(bptr);
+cc31:
+    LD HL,89
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,84
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL hextoi
+    POP BC
+    POP DE
+    CALL ccpint
+;           argptr--;
+    LD HL,95
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    INC HL
+;           argin++;
+    LD HL,91
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+;           while(cchex(bptr)!=-1)bptr++;
+cc34:
+    LD HL,82
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL cchex
+    POP BC
+    PUSH HL
+    LD HL,1
+    CALL ccneg
+    POP DE
+    CALL ccne
+    LD A,H
+    OR L
+    JP Z,cc35
+    LD HL,82
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    JP cc34
+cc35:
+;           break;
+    JP cc18
+;    }
+    JP cc18
+cc19:
+    LD DE,cc36
+    LD HL,cc18
+    LD B,2
+    JP ccswtch
+cc36:
+    DEFW 100,cc20
+    DEFW 120,cc27
+cc18:
+;    }
+    JP cc11
+cc12:
+;return argin;
+    LD HL,91
+    ADD HL,SP
+    CALL ccgint
+    EX DE,HL
+    LD HL,97
+    ADD HL,SP
+    LD SP,HL
+    EX DE,HL
+    RET
+;}
+;#asm
+printf: XOR A
+ LD (ccspflg),A
+ JP ccpf
+fprintf: LD A,1
+ LD (ccspflg),A
+ JP ccpf
+sprintf: LD A,2
+ LD (ccspflg),A
+ JP ccpf 
+;/*
+;Core routine for printf family
+;Supports %d,%x,%c,%s with optional fields
+;*/
+;ccpf(nargs)
+ccpf:
+;int nargs;
+;{int *argptr,ivalue,argno,field,xtrarg;
+    PUSH BC
+    PUSH BC
+    PUSH BC
+    PUSH BC
+    PUSH BC
+; char *fptr,*sptr,chvalue;
+    PUSH BC
+    PUSH BC
+    DEC SP
+; argno=nargs;
+    LD HL,9
+    ADD HL,SP
+    PUSH HL
+    LD HL,19
+    ADD HL,SP
+    CALL ccgint
+    POP DE
+    CALL ccpint
+; argptr=&nargs;
+    LD HL,13
+    ADD HL,SP
+    PUSH HL
+    LD HL,19
+    ADD HL,SP
+    POP DE
+    CALL ccpint
+;/* Find actual args */
+; while(argno--)argptr++;
+cc37:
+    LD HL,9
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    LD A,H
+    OR L
+    JP Z,cc38
+    LD HL,13
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    DEC HL
+    JP cc37
+cc38:
+; xtrarg=0;
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL ccpint
+; if(ccspflg==1)xtrarg= *argptr--;/*Extra arg for sprintf & fprintf*/
+    LD A,(ccspflg)
+    CALL ccsxt
+    PUSH HL
+    LD HL,1
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc39
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    LD HL,15
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    INC HL
+    CALL ccgint
+    POP DE
+    CALL ccpint
+; if(ccspflg==2)xtrarg=argptr--;
+cc39:
+    LD A,(ccspflg)
+    CALL ccsxt
+    PUSH HL
+    LD HL,2
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc40
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    LD HL,15
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    INC HL
+    POP DE
+    CALL ccpint
+; fptr=*argptr--;
+cc40:
+    LD HL,3
+    ADD HL,SP
+    PUSH HL
+    LD HL,15
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    INC HL
+    CALL ccgint
+    POP DE
+    CALL ccpint
+; while(*fptr)
+cc41:
+    LD HL,3
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    LD A,H
+    OR L
+    JP Z,cc42
+;   { switch(chvalue=*fptr++)
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    CALL ccgchar
+    POP DE
+    CALL ccpchar
+    PUSH HL
+;      {    case 92: switch(*fptr)
+    JP cc44
+cc45:
+  LD HL,3
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+;               {   case 'n' : ccpchr(xtrarg,0x0d);ccpchr(xtrarg,0x0a);break;
+    JP cc47
+cc48:
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,13
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,10
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+    JP cc46
+;               case 't' : ccpchr(xtrarg,'\t');break;
+cc49:
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,9
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+    JP cc46
+;               case 'f' : ccpchr(xtrarg,'\f');break;
+cc50:
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,12
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+    JP cc46
+;               case 'b' : ccpchr(xtrarg,'\b');break;
+cc51:
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,8
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+    JP cc46
+;               case '0' : ccpchr(xtrarg,0);break;
+cc52:
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,0
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+    JP cc46
+;               case 'r' : ccpchr(xtrarg,'\r');break;
+cc53:
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,13
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+    JP cc46
+;               default : ccpchr(xtrarg,*fptr);
+cc54:
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+;               }fptr++;break;
+    JP cc46
+cc47:
+    LD DE,cc55
+    LD HL,cc54
+    LD B,6
+    JP ccswtch
+cc55:
+    DEFW 110,cc48
+    DEFW 116,cc49
+    DEFW 102,cc50
+    DEFW 98,cc51
+    DEFW 48,cc52
+    DEFW 114,cc53
+cc46:
+    LD HL,3
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    JP cc43
+;       case '%' : field=ccgetfw(&fptr);
+cc56:
+    LD HL,7
+    ADD HL,SP
+    PUSH HL
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    CALL ccgetfw
+    POP BC
+    POP DE
+    CALL ccpint
+;           if(*fptr=='d')
+    LD HL,3
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,100
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc57
+;           {fptr++;ivalue=*argptr--;ccfdec(xtrarg,ivalue,field);break;}
+    LD HL,3
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    LD HL,11
+    ADD HL,SP
+    PUSH HL
+    LD HL,15
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    INC HL
+    CALL ccgint
+    POP DE
+    CALL ccpint
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,13
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,11
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL ccfdec
+    POP BC
+    POP BC
+    POP BC
+    JP cc43
+;           if(*fptr=='x')
+cc57:
+    LD HL,3
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,120
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc58
+;           {fptr++;ivalue=*argptr--;form0x(xtrarg,ivalue,field);break;}
+    LD HL,3
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    LD HL,11
+    ADD HL,SP
+    PUSH HL
+    LD HL,15
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    INC HL
+    CALL ccgint
+    POP DE
+    CALL ccpint
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,13
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,11
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL form0x
+    POP BC
+    POP BC
+    POP BC
+    JP cc43
+;           if(*fptr=='c')
+cc58:
+    LD HL,3
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,99
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc59
+;           {fptr++;chvalue=*argptr--;formch(xtrarg,chvalue,field);break;}
+    LD HL,3
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,15
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    INC HL
+    CALL ccgint
+    POP DE
+    CALL ccpchar
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,2
+    ADD HL,SP
+    CALL ccgchar
+    PUSH HL
+    LD HL,11
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL formch
+    POP BC
+    POP BC
+    POP BC
+    JP cc43
+;           if(*fptr=='s')
+cc59:
+    LD HL,3
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgchar
+    PUSH HL
+    LD HL,115
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc60
+;           {fptr++;formstg(xtrarg,*argptr--,field);break;}
+  LD HL,3
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,15
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    INC HL
+    CALL ccgint
+    PUSH HL
+    LD HL,11
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL formstg
+    POP BC
+    POP BC
+    POP BC
+    JP cc43
+;       default:ccpchr(xtrarg,chvalue);
+cc60:
+cc61:
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,2
+    ADD HL,SP
+    CALL ccgchar
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+;      }
+    JP cc43
+cc44:
+    LD DE,cc62
+    LD HL,cc61
+    LD B,2
+    JP ccswtch
+cc62:
+    DEFW 92,cc45
+    DEFW 37,cc56
+cc43:
+;   }
+    JP cc41
+cc42:
+;}
+    EX DE,HL
+    LD HL,15
+    ADD HL,SP
+    LD SP,HL
+    EX DE,HL
+    RET
+;/* Get a field width and update pointer to char after width */
+;ccgetfw(ptbuff)
+ccgetfw:
+;int *ptbuff;/* Actually a pointer to a char pointer */
+;{char *bptr;
+    PUSH BC
+; int fval;
+    PUSH BC
+; bptr=*ptbuff;
+    LD HL,2
+    ADD HL,SP
+    PUSH HL
+    LD HL,8
+    ADD HL,SP
+    CALL ccgint
+    CALL ccgint
+    POP DE
+    CALL ccpint
+; fval=0;
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL ccpint
+; while(ccnum(bptr)!= -1){fval=fval*10+ccnum(bptr++);}
+cc63:
+    LD HL,2
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL ccnum
+    POP BC
+    PUSH HL
+    LD HL,1
+    CALL ccneg
+    POP DE
+    CALL ccne
+    LD A,H
+    OR L
+    JP Z,cc64
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,2
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,10
+    POP DE
+    CALL ccmult
+    PUSH HL
+    LD HL,6
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    PUSH HL
+    CALL ccnum
+    POP BC
+    POP DE
+    ADD HL,DE
+    POP DE
+    CALL ccpint
+    JP cc63
+cc64:
+; *ptbuff=bptr;
+    LD HL,6
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,4
+    ADD HL,SP
+    CALL ccgint
+    POP DE
+    CALL ccpint
+; return fval;
+    LD HL,0
+    ADD HL,SP
+    CALL ccgint
+    POP BC
+    POP BC
+    RET
+;}
+;/* Output decimal number in field of specified width*/
+;ccfdec(och,n,fwidth)
+ccfdec:
+;int och,n,fwidth;
+;{char *ptr,sign;
+    PUSH BC
+    DEC SP
+;int i,n1;
+    PUSH BC
+    PUSH BC
+;n1=n;
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,13
+    ADD HL,SP
+    CALL ccgint
+    POP DE
+    CALL ccpint
+;if(fwidth<=0){ccpdec(och,n);return;}
+    LD HL,9
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL ccle
+    LD A,H
+    OR L
+    JP Z,cc65
+    LD HL,13
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,13
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL ccpdec
+    POP BC
+    POP BC
+    EX DE,HL
+    LD HL,7
+    ADD HL,SP
+    LD SP,HL
+    EX DE,HL
+    RET
+;sign=' ';
+cc65:
+    LD HL,4
+    ADD HL,SP
+    PUSH HL
+    LD HL,32
+    POP DE
+    CALL ccpchar
+;if(n<0){n=-n;sign='-';}
+    LD HL,11
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL cclt
+    LD A,H
+    OR L
+    JP Z,cc66
+    LD HL,11
+    ADD HL,SP
+    PUSH HL
+    LD HL,13
+    ADD HL,SP
+    CALL ccgint
+    CALL ccneg
+    POP DE
+    CALL ccpint
+    LD HL,4
+    ADD HL,SP
+    PUSH HL
+    LD HL,45
+    POP DE
+    CALL ccpchar
+;while(fwidth>8){fwidth--;ccpchr(och,' ');}
+cc66:
+cc67:
+    LD HL,9
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,8
+    POP DE
+    CALL ccgt
+    LD A,H
+    OR L
+    JP Z,cc68
+    LD HL,9
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    LD HL,13
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,32
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+    JP cc67
+cc68:
+;ptr=ccnbuff;
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    LD HL,ccnbuff
+    POP DE
+    CALL ccpint
+;i=fwidth;
+    LD HL,2
+    ADD HL,SP
+    PUSH HL
+    LD HL,11
+    ADD HL,SP
+    CALL ccgint
+    POP DE
+    CALL ccpint
+;while(fwidth--)*ptr++=' ';
+cc69:
+    LD HL,9
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    LD A,H
+    OR L
+    JP Z,cc70
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    PUSH HL
+    LD HL,32
+    POP DE
+    CALL ccpchar
+    JP cc69
+cc70:
+;*ptr-- =0;
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL ccpchar
+;if(n==0){*ptr-- ='0';fwidth++;}
+    LD HL,11
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL cceq
+    LD A,H
+  OR L
+    JP Z,cc71
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    PUSH HL
+    LD HL,48
+    POP DE
+    CALL ccpchar
+    LD HL,9
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+;while((i>=fwidth++)&(n>0)){if(ptr==ccnbuff){ccpdec(och,n1);return;}
+cc71:
+cc72:
+    LD HL,2
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,11
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    POP DE
+    CALL ccge
+    PUSH HL
+    LD HL,13
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL ccgt
+    POP DE
+    CALL ccand
+    LD A,H
+    OR L
+    JP Z,cc73
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,ccnbuff
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc74
+    LD HL,13
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,2
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL ccpdec
+    POP BC
+    POP BC
+    EX DE,HL
+    LD HL,7
+    ADD HL,SP
+    LD SP,HL
+    EX DE,HL
+    RET
+;                *ptr-- =n%10+'0';n=n/10;}
+cc74:
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    PUSH HL
+    LD HL,13
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,10
+    POP DE
+    CALL ccdiv
+    EX DE,HL
+    PUSH HL
+    LD HL,48
+    POP DE
+    ADD HL,DE
+    POP DE
+    CALL ccpchar
+    LD HL,11
+    ADD HL,SP
+    PUSH HL
+    LD HL,13
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,10
+    POP DE
+    CALL ccdiv
+    POP DE
+    CALL ccpint
+    JP cc72
+cc73:
+;*ptr=sign;
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,6
+    ADD HL,SP
+    CALL ccgchar
+    POP DE
+    CALL ccpchar
+;ccputs(ccnbuff,och);
+    LD HL,ccnbuff
+    PUSH HL
+    LD HL,15
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL ccputs
+    POP BC
+    POP BC
+;}
+    EX DE,HL
+    LD HL,7
+    ADD HL,SP
+    LD SP,HL
+    EX DE,HL
+    RET
+;/* Output a 4 digit hex number preceded by '0x' */
+;form0x(och,n,fwidth)
+form0x:
+;int och,n,fwidth;
+;{while(fwidth>6){fwidth--;ccpchr(och,' ');}
+cc75:
+    LD HL,2
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,6
+    POP DE
+    CALL ccgt
+    LD A,H
+    OR L
+    JP Z,cc76
+    LD HL,2
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    LD HL,6
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,32
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+    JP cc75
+cc76:
+; ccputs("0x",och);
+    LD HL,cc1+0
+    PUSH HL
+    LD HL,8
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL ccputs
+    POP BC
+    POP BC
+; ccphex(och,n);
+    LD HL,6
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,6
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL ccphex
+    POP BC
+    POP BC
+; }
+    RET
+;/*Output char in field (no check for control chars)*/
+;formch(och,ch,fwidth)
+formch:
+;char ch;
+;int och,fwidth;
+;{ if(fwidth<=0)fwidth=1;
+    LD HL,2
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL ccle
+    LD A,H
+    OR L
+    JP Z,cc77
+    LD HL,2
+    ADD HL,SP
+    PUSH HL
+    LD HL,1
+    POP DE
+    CALL ccpint
+;  while(--fwidth)ccpchr(och,' ');
+cc77:
+cc78:
+    LD HL,2
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    POP DE
+    CALL ccpint
+    LD A,H
+    OR L
+    JP Z,cc79
+    LD HL,6
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,32
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+    JP cc78
+cc79:
+;  ccpchr(och,ch);
+    LD HL,6
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,6
+    ADD HL,SP
+    CALL ccgchar
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+;}
+    RET
+;/*
+;Output string in field. Backslash chars will mess up field calculation
+;*/
+;formstg(och,strptr,fwidth)
+formstg:
+;char *strptr;
+;int och,fwidth;
+;{
+;int len;
+    PUSH BC
+;char *chptr;
+    PUSH BC
+;chptr=strptr;
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,10
+    ADD HL,SP
+    CALL ccgint
+    POP DE
+    CALL ccpint
+;len=0;
+    LD HL,2
+    ADD HL,SP
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL ccpint
+;while(*chptr++)len++;
+cc80:
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    CALL ccgchar
+    LD A,H
+    OR L
+    JP Z,cc81
+    LD HL,2
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    JP cc80
+cc81:
+;len=fwidth-len;
+    LD HL,2
+    ADD HL,SP
+    PUSH HL
+    LD HL,8
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,6
+    ADD HL,SP
+    CALL ccgint
+    POP DE
+    CALL ccsub
+    POP DE
+    CALL ccpint
+;if(len<0)len=0;
+    LD HL,2
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL cclt
+    LD A,H
+    OR L
+    JP Z,cc82
+    LD HL,2
+    ADD HL,SP
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL ccpint
+;while(len--)ccpchr(och,' ');
+cc82:
+cc83:
+    LD HL,2
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    DEC HL
+    POP DE
+    CALL ccpint
+    INC HL
+    LD A,H
+    OR L
+    JP Z,cc84
+    LD HL,10
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,32
+    PUSH HL
+    CALL ccpchr
+    POP BC
+    POP BC
+    JP cc83
+cc84:
+;ccputs(strptr,och);
+    LD HL,8
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,12
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL ccputs
+    POP BC
+    POP BC
+;}
+    POP BC
+    POP BC
+    RET
+;/*fputs(pointer,chan) No termination of string in file
+;  but expects NULL at end of pointed string*/
+; 
+;fputs(ptr,och)
+fputs:
+;int och;
+;char *ptr;
+;{char ch;
+    DEC SP
+;while(ch= *ptr++){if(ch==0x0d){putc(ch,och);ch=0x0a;}
+cc91:
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,7
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    CALL ccgchar
+    POP DE
+    CALL ccpchar
+    LD A,H
+    OR L
+    JP Z,cc92
+    LD HL,0
+    ADD HL,SP
+    CALL ccgchar
+    PUSH HL
+    LD HL,13
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc93
+    LD HL,0
+    ADD HL,SP
+    CALL ccgchar
+    PUSH HL
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL putc
+    POP BC
+    POP BC
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,10
+    POP DE
+    CALL ccpchar
+;if(ch==92){ch=*ptr++;
+cc93:
+    LD HL,0
+    ADD HL,SP
+    CALL ccgchar
+    PUSH HL
+    LD HL,92
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc94
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,7
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    CALL ccgchar
+    POP DE
+    CALL ccpchar
+;switch(ch)
+    LD HL,0
+    ADD HL,SP
+    CALL ccgchar
+    PUSH HL
+;{case 'n': putc(0x0d,och);ch=0x0a;
+    JP cc96
+cc97:
+    LD HL,13
+    PUSH HL
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL putc
+    POP BC
+    POP BC
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,10
+    POP DE
+    CALL ccpchar
+; case 't': ch='\t';
+cc98:
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,9
+    POP DE
+    CALL ccpchar
+; case 'r': ch='\r';
+cc99:
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,13
+    POP DE
+    CALL ccpchar
+; case 'f': ch='\f';
+cc100:
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,12
+    POP DE
+    CALL ccpchar
+; case '0': ch=0;
+cc101:
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL ccpchar
+;}}
+    JP cc95
+cc96:
+    LD DE,cc102
+    LD HL,cc95
+    LD B,5
+    JP ccswtch
+cc102:
+    DEFW 110,cc97
+    DEFW 116,cc98
+    DEFW 114,cc99
+    DEFW 102,cc100
+    DEFW 48,cc101
+cc95:
+;putc(ch,och);}
+cc94:
+    LD HL,0
+    ADD HL,SP
+    CALL ccgchar
+    PUSH HL
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL putc
+    POP BC
+    POP BC
+    JP cc91
+cc92:
+;}
+    INC SP
+    RET
+;/*
+;Similar routine for sending string to memory
+;sputs(source_ptr,target_ptr) NULLs on both strings
+;*/
+;sputs(ptr,tptr)
+sputs:
+;char *ptr,*tptr;
+;{while(*tptr++ = *ptr++);*tptr=0;
+cc103:
+    LD HL,2
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    PUSH HL
+    LD HL,6
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    CALL ccgchar
+    POP DE
+    CALL ccpchar
+    LD A,H
+    OR L
+    JP Z,cc104
+    JP cc103
+cc104:
+    LD HL,2
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL ccpchar
+;}
+    RET
+;ccputs(ptr,och)
+ccputs:
+;char *ptr;
+;int och;
+;{
+; switch(ccspflg)
+    LD A,(ccspflg)
+    CALL ccsxt
+    PUSH HL
+; {case 0:puts(ptr);return;
+    JP cc106
+cc107:
+    LD HL,4
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL puts
+    POP BC
+    RET
+;  case 1:fputs(ptr,och);return;
+cc108:
+    LD HL,4
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,4
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL fputs
+    POP BC
+    POP BC
+    RET
+;  case 2:sputs(ptr,och);return;}
+cc109:
+    LD HL,4
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,4
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL sputs
+    POP BC
+    POP BC
+    RET
+    JP cc105
+cc106:
+    LD DE,cc110
+    LD HL,cc105
+    LD B,3
+    JP ccswtch
+cc110:
+    DEFW 0,cc107
+    DEFW 1,cc108
+    DEFW 2,cc109
+cc105:
+;}
+    RET
+;/* 
+;   Not very like the UNIX version.
+;   fgets(ptr,chan) gets string from file until NULL, EOF or CR 
+;   Next byte also read in and assumed to be LF if CR
+;   Returns last character in string, (CR,NULL or EOF).
+;   Marks EOF flag in FILE2.LIB if EOF encountered.
+;*/
+;fgets(ptr,och)
+fgets:
+;char *ptr;
+;int och;
+;{char ch;
+    DEC SP
+;if(eof()){*ptr=0;return 0x1a;}
+    CALL eof
+    LD A,H
+    OR L
+    JP Z,cc111
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL ccpchar
+    LD HL,26
+    INC SP
+    RET
+;while(ch=getc(och))
+cc111:
+cc112:
+    LD HL,0
+    ADD HL,SP
+    PUSH HL
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL getc
+    POP BC
+    POP DE
+    CALL ccpchar
+    LD A,H
+    OR L
+    JP Z,cc113
+;  {if(ch==0x0d){getc(och);*ptr++ = ch;*ptr++ =0x0a;break;}
+    LD HL,0
+    ADD HL,SP
+    CALL ccgchar
+    PUSH HL
+    LD HL,13
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc114
+    LD HL,3
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    CALL getc
+    POP BC
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    PUSH HL
+    LD HL,2
+    ADD HL,SP
+    CALL ccgchar
+    POP DE
+    CALL ccpchar
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    PUSH HL
+    LD HL,10
+    POP DE
+    CALL ccpchar
+    JP cc113
+;   if(ch==0x1a)break;
+cc114:
+    LD HL,0
+    ADD HL,SP
+    CALL ccgchar
+    PUSH HL
+    LD HL,26
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc115
+    JP cc113
+;   *ptr++ = ch; 
+cc115:
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    CALL ccgint
+    INC HL
+    POP DE
+    CALL ccpint
+    DEC HL
+    PUSH HL
+    LD HL,2
+    ADD HL,SP
+    CALL ccgchar
+    POP DE
+    CALL ccpchar
+;  }
+    JP cc112
+cc113:
+;*ptr=0;
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,0
+    POP DE
+    CALL ccpchar
+;if(ch==0x1a){ptr=ccFENDF;*ptr=1;} /* Mark EOF */
+    LD HL,0
+    ADD HL,SP
+    CALL ccgchar
+    PUSH HL
+    LD HL,26
+    POP DE
+    CALL cceq
+    LD A,H
+    OR L
+    JP Z,cc116
+    LD HL,5
+    ADD HL,SP
+    PUSH HL
+    LD HL,ccFENDF
+    POP DE
+    CALL ccpint
+    LD HL,5
+    ADD HL,SP
+    CALL ccgint
+    PUSH HL
+    LD HL,1
+    POP DE
+    CALL ccpchar
+;return ch;
+cc116:
+    LD HL,0
+    ADD HL,SP
+    CALL ccgchar
+    INC SP
+    RET
+;}
+cc1:    DEFB 48,120,0
+
+;0 errors in compilation.
+    END
+                                                                                                               

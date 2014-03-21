@@ -1,0 +1,481 @@
+*R+, Q-, G 0
+; ^^^^^^ This first line is to instruct GEN80 to compile this as a .REL
+; file, with no .ERR file and no .SYM file
+
+;   THIS LIBRARY NEEDS TO BE COMPILED BEFORE USE ! IT CANNOT BE 'INCLUDED'
+;   When assembled as a REL module, it can only be used with MSXCRUN.REL
+;   and a compiled and assembled to a .REL file Small C program.
+
+;   GRAPH2.RLB      REL version 0.0, 15 September 1992
+;   Needs C--RUN
+
+;   These routines may be modified for your own use, but are NOT public
+;   domain !
+
+;   If you find any bugs, or have suggestions, contact me please :
+
+;   Onno ten Brinke
+;   Tesselschadelaan 22
+;   1399 VP Muiderberg
+;   The Netherlands
+
+;   Onno ten Brinke, 15 September 1992
+
+;   Graphic routines using MSX2 video options
+;   All routines are designed for screen 5,6,7,8
+;   With these routines the direct access to the VDP is used as much
+;   as possible, which means that these routines are very fast. Most
+;   will be quicker than the original BIOS routines. The routines use
+;   the values for the VDP port addresses given in ROM. These values
+;   are collected from ROM by C--RUN before any other operation is
+;   done.
+
+;   setcol  Changes pallette color, setcol (col,r,g,b)
+;   colnew  Resets pallette to normal, colnew()
+;   colrst  Gets colors from VRAM and installs these in pallette
+;   colins  Install a new color pallette, colins(pointer)
+;   setpag  Sets VDP pages, setpag  (display page,active page). If
+;           either value=255 (or -1) then the recent page is used.
+;           E.g. setpag (1,-1) is equivalent to setpag 1
+;           setpag (-1,3) is equivalent to setpag ,3
+;           setpag (0,3) is equivalent to setpag 0,3
+;   npset   Sets pixel, pset (x,y,color,logop)
+;   nline   Draws line, nline (x1,y1,x2,y2,col,logop)
+;   nboxf   Draws filled box, nboxf (x1,y1,x2,y2,col,logop)
+;   nbox    Draws a lined box, nbox (x1,y1,x2,y2,col,logop)
+;   copy    Copies block of VRAM to dictated coordinates,
+;           copy (x1,y1,dx,dy,page,x2,y2,page,logop)
+;           dx = number of pixels in x-direction, dy in y-direction
+;   bloads  Identical to the BASIC command BLOAD"FILENAME.EXT",S
+;           bloads(page,"FILENAME.EXT"). A buffer of 256 bytes is used,
+;           so the load routine is not that fast. It is, however, easy
+;           to modify this.
+
+;   Values for logop :
+;                                     BASIC        C--
+
+;                      0 - move bytes -            BYTE
+;                      1 - move dots, PSET         PST
+;                      2 - move dots, AND          PAND
+;                      3 -  ''   ''   OR           POR
+;                      4 -            XOR          PXOR
+;                      5 -  ''   ''   NOT          PNOT
+;                      6 -            TPSET        TPST
+;                      7 -  ''   ''   TAND         TAND
+;                      8 -            TOR          TOR
+;                      9 -  ''   ''   TXOR         TXOR
+;                      10 -           TNOT         TNOT
+
+;   P.S.  Move bytes is fastest. This works only with the copy statement. Moves
+;         whole bytes, so in screen 5, 6 & 7 you always move blocks in steps of
+;         2 dots (pixels). No logical operation is possible in addition.
+
+;   P.S.2 For information about the use of the logical operator, check
+;         your computer manual.
+
+        PUBLIC  setpag, copy, setcol, colnew, colrst, npset, nline, nbox
+        PUBLIC  nboxf, bloads, ccSETP, colins
+
+        EXTRN   VDPWP, VDPRP, ccCLSB, ccLDMV, ccLDVM, ccVDPR,ccBDOS, BUFF
+        EXTRN   ccSETW, ccsxt
+
+setpag  POP HL
+ POP DE
+ LD A,E
+ CP 255
+ JR Z,setpag1
+ LD (0FAF6H),A
+setpag1 POP DE
+ PUSH DE
+ PUSH DE
+ PUSH HL
+ LD A,E
+ CP 255
+ JR Z,ccSETP
+ LD (0FAF5H),A
+ccSETP  LD IX,13DH
+ CALL ccCLSB
+ RET
+
+colnew  LD HL,COLTAB
+colins  PUSH HL
+ LD A,(VDPWP)
+ LD C,A
+ INC C
+ DI
+ LD A,1
+ OUT (C),A
+ LD A,90H
+ OUT (C),A
+ INC C
+ INC C
+ LD B,16*2
+ OTIR
+ LD HL,7680H
+ LD A,(0FCAFH)
+ CP 7
+ JR C,colins1
+ LD DE,8400H
+ ADD HL,DE
+colins1 EX DE,HL
+ POP HL
+ LD BC,16*2
+ CALL ccLDVM
+ EI
+ RET
+
+colrst  LD HL,7680H
+ LD A,(0FCAFH)
+ CP 7
+ JR C,colrst1
+ LD DE,8400H
+ ADD HL,DE
+colrst1 LD DE,BUFF
+ LD BC,32
+ CALL ccLDMV
+ LD HL,BUFF
+ JR colins
+
+setcol  POP DE
+ POP HL
+ LD A,(VDPWP)
+ INC A
+ LD C,A
+ LD D,L
+ POP HL
+ LD E,L
+ POP HL
+ LD A,L
+ SLA A
+ SLA A
+ SLA A
+ SLA A
+ ADD A,D
+ LD D,A
+ POP HL
+ OUT (C),L
+ LD A,90H
+ OUT (C),A
+ NOP
+ INC C
+ OUT (C),D
+ OUT (C),E
+ PUSH IX
+ RET
+
+CLVTAB  LD HL,SOURCEX
+ LD B,15
+CLVTA1  LD (HL),0
+ INC HL
+ DJNZ CLVTA1
+ RET
+
+npset   POP IX      ; set pixel
+ CALL CLVTAB
+ LD B,50H
+ POP HL
+ LD A,L
+ CALL CALCLOG
+ POP HL
+ LD A,L
+ LD (COLSEL),A
+ POP HL
+ LD A,(0FAF6H)
+ LD H,A
+ LD (DESTY),HL
+ POP HL
+ LD (DESTX),HL
+ PUSH IX
+ CALL VDPCMD
+ RET
+
+nbox    POP HL
+ LD (STACK),HL
+ POP HL
+ LD A,L
+ DEC A
+ LD (0FB02H),A  ;logop
+ POP HL
+ LD A,L
+ LD (0F3F2H),A  ;col
+ POP HL
+ LD (0FCB5H),HL ;y2
+ POP HL
+ LD (0FCB3H),HL ;x2
+ POP DE     ;y1
+ POP BC     ;x1
+ LD IX,0C9H
+ CALL ccCLSB
+ LD HL,(STACK)
+ PUSH HL
+ PUSH HL
+ PUSH HL
+ PUSH HL
+ PUSH HL
+ PUSH HL
+ PUSH HL
+ RET
+
+nboxf   POP IX      ; draw filled box
+ LD B,80H
+ JR linbox
+
+nline   POP IX      ; draw line
+ LD B,70H
+linbox PUSH BC
+ CALL CLVTAB
+ POP BC
+ POP HL
+
+ LD A,L
+ CP 0
+ JR NZ,nline1
+ INC A
+nline1  CALL CALCLOG
+ POP HL
+ LD A,L
+ LD (COLSEL),A
+ POP HL
+ LD A,(0FAF5H)
+ LD H,A
+ LD (SOURCEY),HL
+ POP HL
+ LD (SOURCEX),HL
+ POP HL
+ LD A,(0FAF6H)
+ LD H,A
+ LD (DESTY),HL
+ POP HL
+ LD (DESTX),HL
+ LD DE,(SOURCEX)
+ EX DE,HL
+ AND A
+ SBC HL,DE
+ JR NC,nline2
+ LD HL,(DESTX)
+ EX DE,HL
+ AND A
+ SBC HL,DE
+ LD A,(VDPSYS)  ; if X2 < X1, switch draw direction
+ XOR 4
+ LD (VDPSYS),A
+nline2  LD (DELTAX),HL
+ LD DE,(DESTY)
+ LD HL,(SOURCEY)
+ AND A
+ SBC HL,DE
+ JR NC,nline3
+ LD A,(VDPSYS)  ; if Y2 < Y1, switch draw direction
+ XOR 8
+ LD (VDPSYS),A
+ LD HL,(SOURCEY)
+ EX DE,HL
+ AND A
+ SBC HL,DE
+nline3  LD (DELTAY),HL
+ PUSH HL
+ PUSH HL
+ PUSH HL
+ PUSH HL
+ PUSH HL
+ PUSH HL
+ PUSH IX
+ CALL VDPCMD
+ RET
+
+CALCLOG CP 0
+ JR NZ,LOGOP1
+ LD A,0D0H  ; move byte
+ JR LOGOP2
+LOGOP1  DEC A
+ CP 5
+ JR C,LOGOP3
+ ADD A,3
+LOGOP3  ADD A,B
+LOGOP2  LD (COMLOG),A
+ RET
+
+copy    POP HL
+ CALL CLVTAB
+ POP DE
+ LD A,E     ; which operation
+ LD B,90H
+ CALL CALCLOG
+ EX DE,HL
+ LD (STACK),SP
+ POP HL
+ LD A,L     ; page
+ POP HL
+ LD H,A
+ LD (DESTY),HL
+ POP HL
+ LD (DESTX),HL
+ POP HL
+ LD A,L
+ POP HL
+ LD (DELTAY),HL
+ POP HL
+ LD (DELTAX),HL
+ POP HL
+ LD H,A
+ LD (SOURCEY),HL
+ POP HL
+ LD (SOURCEX),HL
+ LD SP,(STACK)
+ PUSH DE
+ PUSH DE
+
+VDPCMD  CALL WAIT
+ LD A,(VDPWP)     ; give VDP command
+ INC A
+ LD C,A
+ DI
+ LD A,20H
+ OUT (C),A
+ LD A,91H
+ OUT (C),A
+ INC C
+ INC C
+ LD HL,SOURCEX
+ LD B,15
+ OTIR
+ EI
+ RET
+
+WAIT    LD A,2      ; check if VDP is ready yet
+ CALL ccVDPR     ; or : is CE bit 0 ?
+ BIT 0,A
+ JR NZ,WAIT
+ RET
+
+bloads  POP DE
+ LD (STORE10),DE
+ LD DE,BUFF
+ LD C,1AH
+ CALL ccBDOS
+ LD HL,FCB
+ LD DE,FILNAM
+ LD (HL),0
+ LD BC,37
+ LDIR
+ POP HL
+ LD DE,FILNAM
+ LD BC,11
+ LDIR
+ POP HL
+ LD A,(0FAF6H)
+ LD (DUMMY),A
+ LD A,L
+ LD (0FAF6H),A
+ LD C,0FH
+ LD DE,FCB
+ CALL ccBDOS
+ INC A
+ PUSH AF
+ LD HL,1
+ LD (RECSIZ),HL
+ LD HL,7
+ LD DE,FCB
+ LD C,27H
+ CALL ccBDOS
+ LD DE,BUFF
+ INC DE
+ LD A,(DE)
+ LD L,A
+ INC DE
+ LD A,(DE)
+ LD H,A
+ INC DE
+ PUSH DE
+ PUSH HL
+ CALL ccSETW
+ POP BC
+ POP DE
+ LD A,(DE)
+ LD L,A
+ INC DE
+ LD A,(DE)
+ LD H,A
+ PUSH BC
+ POP DE
+ AND A
+ SBC HL,DE
+ LD (SIZE),HL
+
+bloads1 LD BC,(SIZE)
+ LD A,B
+ CP 0
+ JR Z,bloads2
+ DEC B
+ LD (SIZE),BC
+ LD A,255
+ CALL bloads3
+ JR bloads1
+bloads2 LD A,C
+ CALL bloads3
+ LD A,(DUMMY)
+ LD (0FAF6H),A
+ POP AF
+ LD HL,(STORE10)
+ PUSH HL
+ PUSH HL
+ PUSH HL
+ JP ccsxt
+
+bloads3 PUSH AF
+ LD L,A
+ LD H,0
+ LD DE,FCB
+ LD C,27H
+ CALL ccBDOS
+ LD HL,BUFF
+ POP AF
+ LD B,A
+ LD A,(VDPWP)
+ LD C,A
+ DI
+ OTIR
+ EI
+ RET
+
+SIZE    DEFW 0
+
+FCB DEFB 0
+FILNAM  DEFM "        "
+FILEXT  DEFM "   "
+CURBLK  DEFW 0
+RECSIZ  DEFW 0
+FILSIZ  DEFW 0
+FILDAT  DEFW 0
+FILTIM  DEFW 0
+DEVID   DEFB 0
+DIRLOC  DEFB 0
+FIRCLS  DEFW 0
+LASCLS  DEFW 0
+LASCLR  DEFW 0
+CURREC  DEFB 0
+RNDREC  DEFS 4
+
+FILDRV  EQU FCB
+
+
+    ; table for standard colors, format : RBh,G
+
+COLTAB  DEFB 00H,0,00H,0,11H,6,33H,7,17H,1,27H,3,51H,1,27H,6,71H,1
+        DEFB 73H,3,61H,6,64H,6,11H,4,65H,2,55H,5,77H,7
+
+DUMMY   DEFB 0
+SOURCEX DEFW 0
+SOURCEY DEFW 0
+DESTX   DEFW 0
+DESTY   DEFW 0
+DELTAX  DEFW 0
+DELTAY  DEFW 0
+COLSEL  DEFB 0
+VDPSYS  DEFB 0
+COMLOG  DEFB 0
+
+STACK   DEFW 0
+STORE10 DEFW 0
+
+                                        

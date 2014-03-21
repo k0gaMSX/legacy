@@ -1,0 +1,863 @@
+*R+, Q-, G 0
+; ^^^^^^ This first line is to instruct GEN80 to compile this as a .REL
+; file, with no .ERR file and no .SYM file
+
+;   THIS LIBRARY NEEDS TO BE COMPILED BEFORE USE ! IT CANNOT BE 'INCLUDED'
+;   When assembled as a REL module, it can only be used with MSXCRUN.REL
+;   and a compiled and assembled to a .REL file Small C program.
+
+;   GRAPH1.RLB      REL version    0.0, 15 September 1992
+;                                  0.1,  9 February  1993
+
+;   These routines may be modified for your own use, and are public domain.
+
+;   If you find any bugs, or have suggestions, contact me please :
+
+;   Onno ten Brinke
+;   Tesselschadelaan 22
+;   1399 VP Muiderberg
+;   The Netherlands
+
+;   Onno ten Brinke, 30 July 1993
+
+
+;   All routines can be used for screen 2-4
+;   Although there's no obvious reason they shouldn't work on other graphic
+;   screens, they don't yet.
+
+;   Needs C--RUN
+;   Since the BIOS routines are used for all routines, they
+;   are not very fast.
+
+;   pset    Set pixel, pset (x,y,color)
+;   point   Reads color of pixel, point(x,y)
+;   line    Draws line, line(x1,y1,x2,y2,col)
+;   box     Draws a outlined box on screen, box(x1,y1,x2,y2,col)
+;   boxf    Draws a filled box, boxf(x1,y1,x2,y2,col)
+;   paint   Fills a shape with a desired color,
+;           paint(x,y,color,border)     *NOT WORKING IN THIS VERSION*
+;   draw    Equivalent of DRAW statement, draw(str1), also for screen 5-8
+;           Supports all DRAW commands, except 'X ident;'
+;   glocat  Locates cursor to print string with gprint, glocat(x,y), also 5-8
+;   gprint  Prints string to graphic screen, gprint(str1,logopr), also 5-8
+;           or gprint(pointer,logopr). If this command is used in screen2
+;           or screen3, where logopr has no effect, then use 0
+
+    PUBLIC  pset, point, line, box, boxf, paint, draw, glocat, gprint
+
+    EXTRN   clbios, calsub, ccsxt, ccmult, ccdiv, cceq, ccCLAC
+
+ATRBYT  EQU 0F3F2H
+CLOC    EQU 0F92AH
+CMASK   EQU 0F92CH
+CSAVEA  EQU 0F942H
+CSAVEM  EQU 0F944H
+DRWFLG  EQU 0FCBBH
+DRWSCL  EQU 0FCBCH
+DRWANG  EQU 0FCBDH
+
+CNVCOOR CALL SCALXY ; check coordinates (BC=X, DE=Y) and adjust them
+ CALL MAPXYC        ; convert coordinates to byte & mask CLOC & CMASK
+ RET
+
+SCALXY  LD IX,10EH
+ LD A,(0FCAFH)
+ CP 5
+ JR C,SCALX1
+ LD IX,8DH
+SCALX2   PUSH IX
+ CALL calsub
+ POP IX
+ RET
+SCALX1   PUSH IX
+ CALL clbios
+ POP IX
+ RET
+MAPXYC  LD IX,111H
+ LD A,(0FCAFH)
+ CP 5
+ JR C,SCALX1
+ LD IX,91H
+ JR SCALX2
+RIGHTC  LD IX,0FCH
+ LD A,(0FCAFH)
+ CP 5
+ JR C,SCALX1
+ LD IX,0A1H
+ JR SCALX2
+LEFTC  LD IX,0FFH
+ LD A,(0FCAFH)
+ CP 5
+ JP C,SCALX1
+ LD IX,0A9H
+ JP SCALX2
+SETC    LD IX,0120H
+ LD A,(0FCAFH)
+ CP 5
+ JP C,SCALX1
+ LD IX,9DH
+ JP SCALX2
+DOWNC   LD IX,108H
+ LD A,(0FCAFH)
+ CP 5
+ JP C,SCALX1
+ LD IX,0B1H
+ JP SCALX2
+UPC LD IX,102H
+ LD A,(0FCAFH)
+ CP 5
+ JP C,SCALX1
+ LD IX,0B9H
+ JP SCALX2
+NSETCX  LD IX,123H
+ LD A,(0FCAFH)
+ CP 5
+ JP C,SCALX1
+ PUSH HL
+ POP BC
+NSETCX1 PUSH BC
+ CALL RIGHTC
+ CALL SETC
+ POP BC
+ DEC BC
+ LD A,C
+ OR B
+ JR NZ,NSETCX1
+ RET
+
+PNTINI  LD IX,129H
+ JP SCALX1
+SCANR   LD IX,12CH
+ LD A,(0FCAFH)
+ CP 5
+ JP C,SCALX1
+ LD IX,0C1H
+ JP SCALX2
+SCANL   LD IX,12FH
+ LD A,(0FCAFH)
+ CP 5
+ JP C,SCALX1
+ LD IX,0C5H
+ JP SCALX2
+READC   LD IX,11DH
+ LD A,(0FCAFH)
+ CP 5
+ JP C,SCALX1
+ LD IX,95H
+ JP SCALX2
+
+pset    POP HL
+ POP DE
+ LD A,E
+ LD (ATRBYT),A
+ POP DE
+ POP BC
+ PUSH BC
+ PUSH DE
+ PUSH DE
+ PUSH HL
+ CALL CNVCOOR
+ CALL SETC
+ RET
+
+point   POP HL
+ POP BC
+ POP DE
+ PUSH DE
+ PUSH BC
+ PUSH HL
+ CALL CNVCOOR
+ CALL READC
+ JP ccsxt
+
+line    POP DE
+ XOR A
+ LD (FLAG),A
+ LD HL,0
+ LD (D2X),HL
+ LD (D2Y),HL
+ POP HL
+ LD A,L
+ LD (ATRBYT),A
+ POP HL
+ LD (Y2),HL
+ POP HL
+ LD (X2),HL
+ POP HL
+ LD (Y1),HL
+ POP HL
+ LD (X1),HL
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ PUSH DE
+LINEC XOR A
+ LD (0FB02H),A
+ LD HL,(X1)  ; draw ANY line
+ LD DE,(X2)
+ CALL cceq
+ DEC HL
+ JP Z,VERLINE
+ LD HL,(Y1)
+ LD DE,(Y2)
+ CALL cceq
+ DEC HL
+ JP Z,HORLINE
+ CALL CHKX1X2
+ CALL CHKY1Y2
+ LD A,(FLAG)
+ CP 0
+ JR Z,LINE
+ CP 1
+ JR NZ,line3
+ JR LINE
+line3   CP 2
+ JR NZ,line1
+ LD A,1
+line2   LD (FLAG),A
+ JR LINE
+line1   XOR A
+ JR Z,line2
+        ; This next routine was taken from the book
+        ; 'MSX - Programmeren in machinetaal'
+        ; ('MSX - Programming in machinelanguage')
+        ; by M.B. Immerzeel, published by 'De Muiderkring'
+        ; The routine draws a line, and assumes X1 < X2, Y1 < Y2
+        ; and therefore can only draw a line from left top to
+        ; right bottom
+
+        ; Modified by me to draw line with X1 < X2, Y2 < Y1, and
+        ; switches coordinates to draw any line. For vertical lines
+        ; a faster routine is used, and for horizontal lines a very
+        ; fast routine (just 2 BIOS calls) is used.
+
+LINE    LD B,2
+ LD IX,X1
+DISCR   LD A,(IX+4) ; determinate DX & DY
+ SUB (IX+0)
+ LD (IX+8),A
+ INC IX
+ INC IX
+ DJNZ DISCR
+ LD A,(FLAG)    ; Y2 < Y1 ?
+ BIT 0,A
+ JR Z,LINE1
+ LD HL,(X1) ; then swap X1 and X2 (draw from right to left)
+ LD DE,(X2)
+ LD (X1),DE
+ LD (X2),HL
+LINE1   LD HL,(D2X)    ; determinate number of steps
+ EX DE,HL
+ LD HL,(D2Y)
+ ADD HL,DE
+ LD (SN),HL
+ LD HL,(D2Y)    ; calculate 2 * D2Y
+ ADD HL,HL
+ LD (D2Y),HL
+ AND A      ; calculate SY
+ LD DE,(D2X)
+ SBC HL,DE
+ PUSH HL
+ EX DE,HL   ; calc. 2 * D2X
+ ADD HL,HL
+ LD (D2X),HL
+ LD BC,(X1) ; set cursor
+ LD DE,(Y1)
+ CALL CNVCOOR
+ LD BC,(SN) ; draw line
+ POP HL     ; SY
+DRWLIN  PUSH HL
+ PUSH BC
+ CALL SETC
+XJMP  LD A,(FLAG)   ; Y2 < Y1 ?
+ BIT 0,A
+ JR NZ,LINE2
+ CALL RIGHTC     ; cursor to right
+ JR LINE3
+LINE2   CALL LEFTC  ; cursor to left
+LINE3   POP BC
+ POP HL
+ LD A,B
+ OR C
+ RET Z
+ DEC BC
+ LD A,H     ; determinate sign of SY
+ AND A
+ JP M,YJMP1
+YJMP    PUSH BC
+ PUSH HL
+ CALL DOWNC  ; cursor down
+ POP HL
+ POP BC
+ DEC BC
+ AND A      ; calc. SY-2DX
+ LD DE,(D2X)
+ SBC HL,DE
+YJMP1   LD DE,(D2Y) ; calc SY+D2Y
+ ADD HL,DE
+ JR DRWLIN
+ RET
+
+CHKX1X2 LD DE,(X1)
+ LD HL,(X2)
+ AND A
+ SBC HL,DE
+ JP NC,CHKX
+ LD HL,(X2)
+ LD (X1),HL
+ LD (X2),DE
+ LD A,1
+ LD (FLAG),A
+CHKX RET
+
+CHKY1Y2 LD HL,(Y2)
+ LD DE,(Y1)
+ AND A
+ SBC HL,DE
+ JP NC,CHKY
+ LD HL,(Y2)
+ LD (Y1),HL
+ LD (Y2),DE
+ LD A,(FLAG)
+ SET 1,A
+ LD (FLAG),A
+CHKY RET
+
+VERLINE CALL CHKY1Y2
+ LD HL,(Y2)
+ LD DE,(Y1)
+ AND A
+ SBC HL,DE
+ INC HL
+VERLIN1 LD B,L
+ LD A,B
+ CP 0
+ JR NZ,VERLIN3
+ INC B
+VERLIN3 PUSH BC
+ LD BC,(X1)
+ LD DE,(Y1)
+ CALL MAPXYC
+ POP BC
+VERLIN2 PUSH BC
+ CALL SETC
+ CALL DOWNC
+ POP BC
+ DJNZ VERLIN2
+ RET
+
+HORLINE CALL CHKX1X2
+ LD HL,(X2)
+ LD DE,(X1)
+ AND A
+ SBC HL,DE
+ INC HL
+HORLIN1 PUSH HL
+ LD BC,(X1)
+ LD DE,(Y1)
+ CALL CNVCOOR
+ POP HL
+ CALL NSETCX
+ RET
+
+box POP DE
+ POP HL
+ LD A,L
+ LD (ATRBYT),A
+ POP HL
+ LD (Y2C),HL
+ POP HL
+ LD (X2C),HL
+ POP HL
+ LD (Y1C),HL
+ POP HL
+ LD (X1C),HL
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ PUSH DE
+BOX   LD HL,(X1C)
+ LD (X1),HL
+ LD (X2),HL
+ LD HL,(Y1C)
+ LD (Y1),HL
+ LD HL,(Y2C)
+ LD (Y2),HL
+ CALL VERLINE
+ LD HL,(X2C)
+ LD (X1),HL
+ LD (X2),HL
+ CALL VERLINE
+ LD HL,(X1C)
+ LD (X1),HL
+ LD HL,(Y1C)
+ LD (Y1),HL
+ LD (Y2),HL
+ CALL HORLINE
+ LD HL,(Y2C)
+ LD (Y1),HL
+ LD (Y2),HL
+ CALL HORLINE
+ RET
+
+boxf    POP DE
+ POP HL
+ LD A,L
+ LD (ATRBYT),A
+ POP HL
+ LD (Y2),HL
+ POP HL
+ LD (X2),HL
+ POP HL
+ LD (Y1),HL
+ POP HL
+ LD (X1),HL
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ PUSH DE
+BOXF  CALL CHKY1Y2
+ LD HL,(Y2)
+ LD DE,(Y1)
+ AND A
+ SBC HL,DE
+ LD B,L
+ LD A,B
+ CP 0
+ RET Z
+BOXF1   PUSH BC
+ CALL HORLINE
+ LD HL,(Y1)
+ INC HL
+ LD (Y1),HL
+ LD (Y2),HL
+ POP BC
+ DJNZ BOXF1
+ RET
+
+paint   POP DE
+ POP HL
+ LD B,L
+ POP HL
+ LD A,L
+ LD (ATRBYT),A
+ LD A,B
+ POP HL
+ LD (X1C),HL
+ POP HL
+ LD (Y1C),HL
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ CALL PNTINI
+ RET C
+ LD DE,(Y1)
+ LD BC,(X1)
+ CALL CNVCOOR
+ LD HL,(CLOC)
+ LD A,(CMASK)
+ LD (LASTA),HL
+ LD (LASTM),A
+ LD HL,256
+ LD DE,(X1C)
+ LD (X1),DE
+ AND A
+ SBC HL,DE
+ LD (D2X),HL
+ LD HL,192
+ LD DE,(Y1C)
+ LD (Y1),DE
+ AND A
+ SBC HL,DE
+ LD (D2Y),HL
+PNTLPD  LD DE,(Y1)
+ LD BC,(X1)
+ CALL CNVCOOR
+ LD B,0
+ LD DE,(D2X)
+ CALL SCANR
+ LD A,H
+ OR L
+ RET Z
+;JR Z,PNTLPD1
+PNTLPD4 LD DE,(Y1)
+ LD BC,(X1)
+ CALL CNVCOOR
+ POP DE
+ LD B,1
+ CALL SCANR
+ LD HL,(CLOC)
+ LD (LASTA),HL
+ LD A,(CMASK)
+ LD (LASTM),A
+; LD A,1
+;PNTLPD1 LD HL,(X1C)
+; LD (X1),HL
+; LD HL,(Y1C)
+; LD (Y1),HL
+; LD C,A
+; PUSH BC
+; LD DE,(Y1)
+; LD BC,(X1)
+; CALL CNVCOOR
+; LD DE,(X1C)
+; LD B,0
+; CALL SCANL
+; POP BC
+; LD A,H
+; OR L
+; JR NZ,PNTLPD3
+; CP C
+; JR NZ,PNTLPU
+;PNTLPD3 PUSH HL
+; LD DE,(Y1)
+; LD BC,(X1)
+; CALL CNVCOOR
+; POP DE
+; LD B,1
+; CALL SCANL
+ LD HL,(Y1)
+ INC HL
+ LD A,L
+ CP 192
+ RET NC
+; JR NC,PNTLPU
+ LD (Y1),HL
+ JR PNTLPD
+PNTLPU  LD HL,(X1C)
+ LD (X1),HL
+ LD HL,(Y1C)
+ DEC HL
+ LD (Y1),HL
+PNTLPU1 PUSH BC
+ LD DE,(Y1)
+ LD BC,(X1)
+ CALL CNVCOOR
+ LD B,0
+ LD DE,(D2X)
+ CALL SCANR
+ LD A,H
+ OR L
+ JR Z,PNTLPU2
+ PUSH HL
+ LD DE,(Y1)
+ LD BC,(X1)
+ CALL CNVCOOR
+ POP DE
+ LD B,1
+ CALL SCANR
+ LD A,1
+PNTLPU2 LD HL,(X1C)
+ LD (X1),HL
+ LD HL,(Y1C)
+ LD (Y1),HL
+ LD C,A
+ PUSH BC
+ LD DE,(Y1)
+ LD BC,(X1)
+ CALL CNVCOOR
+ LD B,0
+ LD DE,(D2X)
+ CALL SCANL
+ POP BC
+ LD A,H
+ OR L
+ JR NZ,PNTLPU3
+ CP C
+ JR Z,PNTRET
+PNTLPU3 PUSH HL
+ LD DE,(Y1)
+ LD BC,(X1)
+ CALL CNVCOOR
+ POP DE
+ LD B,1
+ CALL SCANL
+ LD HL,(Y1)
+ DEC HL
+ RET C
+ LD (Y1),HL
+ DJNZ PNTLPU1
+
+PNTRET  POP BC
+ RET
+
+glocat  POP DE
+ POP HL
+ LD (TEXTY),HL
+ POP HL
+ LD (TEXTX),HL
+ PUSH HL
+ PUSH HL
+ PUSH DE
+ RET
+
+gprint  POP DE
+ POP BC
+ POP HL
+ LD A,C
+ DEC A
+ JR C,gprint1
+ LD (0FB02H),A
+gprint1 LD A,(HL)
+ OR A
+ RET Z
+ LD DE,(TEXTX)
+ LD (0FCB3H),DE
+ LD DE,(TEXTY)
+ LD (0FCB5H),DE
+ PUSH HL
+ CALL GRPPUT
+ LD HL,(0FCB3H)
+ LD (TEXTX),HL
+ LD HL,(0FCB5H)
+ LD (TEXTY),HL
+ POP HL
+ INC HL
+ JR gprint1
+
+GRPPUT  LD HL,8DH
+ JP ccCLAC
+
+draw    POP DE
+ POP HL
+ PUSH HL
+ PUSH DE
+ LD (DRWPTR),HL
+
+DRAW1   LD HL,(DRWPTR)
+ LD A,(HL)
+ OR A
+ RET Z
+ INC HL
+ LD (DRWPTR),HL
+ CP 'A'
+ JP Z,DRAWAN
+ CP 'B'
+ JP Z,DRAWBL
+ CP 'C'
+ JP Z,DRAWCO
+ CP 'N'
+ JP Z,DRAWN
+ CP 'M'
+ JP Z,DRAWMO
+ CP 'S'
+ JP Z,DRAWSC
+
+ LD HL,DRAWCOM
+ LD BC,8
+ CPIR
+ JP NZ,DRAW1
+ LD HL,DRAWDIR+7
+ AND A
+ SBC HL,BC
+ LD A,(DRWANG)
+ LD B,A
+ OR A
+ JR Z,DRAW2
+ LD DE,8
+
+DRAW3   ADD HL,DE
+ DJNZ DRAW3
+DRAW2   LD A,(HL)
+
+DRAWLN  PUSH AF
+ CALL DRAWNM
+ LD A,(DRWFLG)
+ BIT 6,A
+ JR Z,DRAWLN1
+ LD HL,(CLOC)
+ LD (CSAVEA),HL
+ LD A,(CMASK)
+ LD (CSAVEM),A
+ LD HL,(0FCB3H)
+ LD (X1C),HL
+ LD HL,(0FCB5H)
+ LD (Y1C),HL
+DRAWLN1 LD A,(DRWFLG)
+ BIT 7,A
+ CALL Z,SETC
+ POP AF
+ PUSH BC
+ BIT 0,A
+ PUSH AF
+ CALL NZ,UPC
+ POP AF
+ BIT 1,A
+ PUSH AF
+ CALL NZ,LEFTC
+ POP AF
+ BIT 2,A
+ PUSH AF
+ CALL NZ,DOWNC
+ POP AF
+ PUSH AF
+ BIT 3,A
+ CALL NZ,RIGHTC
+ POP AF
+ POP BC
+ DEC BC
+ PUSH AF
+ LD A,C
+ OR B
+ JR NZ,DRAWLN1
+ POP AF
+ LD A,(DRWFLG)
+ BIT 6,A
+ JR Z,DRAWLN3
+ LD HL,(CSAVEA)
+ LD (CLOC),HL
+ LD A,(CSAVEM)
+ LD (CMASK),A
+ LD HL,(X1C)
+ LD (0FCB3H),HL
+ LD HL,(Y1C)
+ LD (0FCB5H),HL
+DRAWLN3 XOR A
+ LD (DRWFLG),A
+ JP DRAW1
+
+;   get number of steps
+
+DRAWNM  CALL DRAWDIG
+ LD A,(DRWSCL)
+ OR A
+ JR NZ,DRAWN1
+ LD A,4
+DRAWN1  LD E,A
+ LD D,0
+ CALL ccmult
+ EX DE,HL
+ LD HL,4
+ CALL ccdiv
+ PUSH HL
+ POP BC
+ RET
+
+; B(lank Move)
+
+DRAWBL  LD A,(DRWFLG)
+ SET 7,A
+ LD (DRWFLG),A
+ JP DRAW1
+
+; N(o move)
+
+DRAWN   LD A,(DRWFLG)
+ SET 6,A
+ LD (DRWFLG),A
+ JP DRAW1
+
+; C(olor)
+
+DRAWCO  CALL DRAWDIG
+ LD A,L
+ LD (ATRBYT),A
+ JP DRAW1
+
+; S(cale)
+
+DRAWSC  CALL DRAWDIG
+ LD A,L
+ OR A
+ JR NZ,DRAWS1
+ LD A,4
+DRAWS1  LD (DRWSCL),A
+ JP DRAW1
+
+; A(ngle)
+
+DRAWAN  LD HL,(DRWPTR)
+ LD A,(HL)
+ CP '4'
+ JP NC,DRAW1
+ CP '0'
+ JP C,DRAW1
+ INC HL
+ LD (DRWPTR),HL
+ SUB '0'
+ LD (DRWANG),A
+ JP DRAW1
+
+DRAWMO  CALL DRAWDIG
+ LD (X2),HL
+ LD HL,(DRWPTR)
+ INC HL     ; for ','
+ LD (DRWPTR),HL
+ CALL DRAWDIG
+ LD (Y2),HL
+ LD A,(DRWFLG)
+ BIT 7,A
+ JR NZ,DRAWM1
+ LD HL,(0FCB3H)
+ LD (X1),HL
+ LD HL,(0FCB5H)
+ LD (Y1),HL
+ CALL LINEC
+ JP DRAW1
+DRAWM1  XOR A
+ LD (DRWFLG),A
+ LD BC,(X2)
+ LD (0FCB3H),BC
+ LD DE,(Y2)
+ LD (0FCB5H),DE
+ CALL CNVCOOR
+ JP DRAW1
+
+DRAWDIG LD DE,0
+ LD HL,(DRWPTR)
+DRAWDI1 LD A,(HL)
+ CP '0'
+ JR C,DRAWDI2
+ CP '9'+1
+ JR NC,DRAWDI2
+ PUSH HL
+ SUB '0'
+ PUSH AF
+ LD HL,10
+ CALL ccmult
+ POP AF
+ LD E,A
+ LD D,0
+ ADD HL,DE
+ EX DE,HL
+ POP HL
+ INC HL
+ JP DRAWDI1
+DRAWDI2 LD (DRWPTR),HL
+ EX DE,HL
+ RET
+
+DRAWCOM DEFM "DEFGHLRU"
+DRAWDIR DEFB 4,8+1,8+4,2+4,2+1,2,8,1     ;0 deg
+ DEFB 8,2+1,8+1,8+4,2+4,4,1,2    ;90 deg
+ DEFB 1,2+4,2+1,8+1,8+4,8,2,4    ;180 deg
+ DEFB 2,8+4,2+4,2+1,8+1,1,4,8    ;270 deg
+
+STOREG1 DEFW 0
+X1  DEFW 0
+Y1  DEFW 0
+X2  DEFW 0
+Y2  DEFW 0
+D2X DEFW 0
+D2Y DEFW 0
+SN  DEFW 0
+X1C DEFW 0
+Y1C DEFW 0
+X2C DEFW 0
+Y2C DEFW 0
+LASTA   DEFW 0
+LASTM   DEFB 0
+FLAG    DEFB 0
+TEXTX   DEFW 0
+TEXTY   DEFW 0
+DRWPTR  DEFW 0
+
+                                                                                                                              

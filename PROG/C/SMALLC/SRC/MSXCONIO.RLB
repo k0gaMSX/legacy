@@ -1,0 +1,1056 @@
+*R+, Q-, G 0
+; ^^^^^^ This first line is to instruct GEN80 to compile this as a .REL
+; file, with no .ERR file and no .SYM file
+
+;   THIS LIBRARY NEEDS TO BE COMPILED BEFORE USE ! IT CANNOT BE 'INCLUDED'
+;   When assembled as a REL module, it can only be used with MSXCRUN.REL
+;   and a compiled and assembled to a .REL file Small C program.
+
+;   MSXCONIO.RLB   REL version 0.0, 29 August   1992
+;                      version 0.1, 15 September 1992
+;   Needs MSXCRUN.REL
+
+;   MSXCONIO and MSXCRUN together form C--RUN
+
+;   These routines may be modified for your own use, and are public
+;   domain !
+
+;   If you find any bugs, or have suggestions, contact me please :
+
+;   Onno ten Brinke
+;   Tesselschadelaan 22
+;   1399 VP Muiderberg
+;   The Netherlands
+
+;   Onno ten Brinke, 15 September 1992
+
+;   MSX specific routines :
+
+;   clbios  Call to BIOS, IX on stack, e.g. clbios (0x00C0) makes beep
+;           Be careful ! If clbios is called by Small C, the argument
+;           will be in HL, as well as on the stack, so you can't give a
+;           value of HL to the BIOS routine using this method. If this is
+;           required, you'll have to write an assembler routine.
+;   calsub  calls subrom (MSX2), works like clbios
+;   screen  Init screenmode, screen (x), with x ranging from 0 to 8
+;   color   Set colors, color (1,15,1)
+;   width   Set screen width, width (w), 0 < w < 81
+;   lines   Set screen heigth, lines (l), 0 < l < 25
+;   setwr   Set VDP to writing mode, setwr (VRAMadr), V9918, 9938 & 9958
+;   setrd   Set VDP to read mode, setrd (VRAMadr)
+;   ldirmv  Copy VRAM to RAM, ldirmv (RAMadr,VRAMadr,size)
+;   ldirvm  Copy RAM to VRAM, ldirvm (VRAMadr,RAMadr,size)
+;           N.B. VRAMadr may excede 4000H.
+;   vputch  Put char to VRAM, raw print (FAST!), vputch(c)
+;           N.B. No check at all !!!!
+
+;   The next 4 routines aubide the standard MSX cursor restraints, i.e.
+;   although they are not sophisticated, the routines check for line
+;   width, screen height, etc. The X & Y coordinates are stored in the
+;   official places, 0xF3DD & 0xF3DC. The only supported operators are
+;   \n (CR/LF), \f (FF(=CLS)), \c (CR), \l (LF) and \t (TAB). If you
+;   want all MSX control chars to be valid, use putchar(c) or
+;   puts(string). If inverse(on) is used (see TEXT.LIB) \i will (re)set
+;   the inverse mode.
+
+;   locate  Set cursor, locate (x,y)
+;   cursor  Display cursor, cursor(on/off)
+;   vprint  Print string to screen, vprint ("string"), FAST!
+;           No check for controlchars. Checks screen border conditions.
+;           Doesn't recognise any variables (only 1 argument allowed)
+;   scroll  Moves textscreen 1 line up. Subroutine of vprint, scroll()
+
+;   filvrm  Fills VRAM with byte, filvrm (VRAMadr,size,byte)
+;   cls     Wipes screen, cls()
+;   beep    Gives beep, beep()
+;   wrtvrm  Writes byte to VRAM, wrtvrm (VRAMadr,data)
+;   rdvrm   Reads byte from VRAM, rdvrm (VRAMadr)
+;   vdpwr   Writes data to VDP, vdpwr (register,data)
+;           NOTE: the commands are not stored in memory, so if you alter
+;           non-readable registers, e.g. the sprite table address, the
+;           routines using those registers (such as putspr etc.) won't be
+;           able to find the correct memory place. Please use the vdpw
+;           command instead.
+;   vdprd   Reads one of the statusregisters of the VDP, vdprd(register)
+;   vdpw    Writes a vdp register according to the BASIC
+;           standard, vdp(register,data), with 0 <= register <= 47, but
+;           not 8
+;           Equal to VDP(register)=DATA from BASIC
+;   vdpr    Reads a vdp register,result=vdpr(register),
+;           -7 <= register <=24
+;           Equal to A=VDP(register) from BASIC. Result :-1 if register
+;           not allowed
+;   dispscr Switch screen display on or off, dispscr(on/ON/off/OFF)
+;   killbuf Kill keyboard buffer, killbuf()
+
+
+;   Non-specific routines, but not in original Small C
+
+;   abs     Gives absolute value of an integer, abs(n)
+
+
+;   Small C routines (original CONIO2.LIB), * means modified for MSX
+
+;   putchar Prints character (including control chars). Is a complete
+;           emulation of MSX BIOS character handling, putchar(c);
+;   getchar Gets char from keyboard, getchar()           (*)
+;   cpm     General BDOS entry ,cpm(DE_value,C_value)
+;   gets    Get null terminated string into buffer, gets(buffer)
+;   puts    Output string to console, puts (buffer)
+;   crlf    Output cr/lf
+;   lston   Turn on LST:
+;   lstoff  Turn off LST:
+;   getkbd  Get char from kbd without echo
+
+;   LABELS
+
+    PUBLIC  BUFF, putchar, getchar, cpm, gets, puts, crlf, lston, lstoff
+    PUBLIC  abs, clbios, ccCLBI, calsub, ccCLSB, screen, color, width, getkbd
+    PUBLIC  lines, setwr, ccSETW, setrd, ccSETR, ldirvm, ccLDVM, ldirmv
+    PUBLIC  ccLDMV, vputch, locate, cursor, vprint, scroll, filvrm
+    PUBLIC  ccFILV, cls, ccVDPR, vdpr, vdpw, ccCLCM, ccCLAC, ccLSTFG
+    PUBLIC  wrtvrm, ccWRTV, rdvrm, ccRDVR, vdpwr, ccVDPW, vdprd,ccATOV
+    PUBLIC  dispscr, killbuf, NAMBAS, ATRBAS, PATBAS, CGPBAS, SCALE, ccBDOS
+
+    EXTRN   ccsxt, ccmult, ccdiv, ccrdel, ccasl, VDPWP, VDPRP
+
+NAMBAS  EQU 0F922H
+CGPBAS  EQU NAMBAS+2
+PATBAS  EQU CGPBAS+2
+ATRBAS  EQU PATBAS+2
+BUFF    EQU 0F41FH  ; use BASIC buffers for operations (available :
+            ; 0F41FH to 0F660H (578 bytes)
+
+clbios  LD (STORE),HL
+ POP HL   ; return
+ POP IX
+ PUSH IX
+ PUSH HL
+ PUSH IY
+ LD HL,(STORE)
+calbio1 LD IY,(0FCC0H)
+ CALL 1CH
+ POP IY
+ EI
+ RET
+ccCLBI PUSH IY
+ JR calbio1
+
+STORE DEFW 0
+
+calsub  LD (STORE),HL
+ POP HL   ; return
+ POP IX
+ PUSH IX
+ PUSH HL
+ PUSH IY
+ LD HL,(STORE)
+calsu1  LD IY,(0FAF7H)
+ CALL 1CH
+ POP IY
+ EI
+ RET
+ccCLSB  PUSH IY
+ JR calsu1
+
+screen  POP HL
+ POP DE
+ PUSH DE
+ PUSH HL
+ LD A,E
+ LD IX,5FH
+ CALL ccCLBI
+ CALL SCALE
+ RET
+
+width   POP HL
+ POP DE
+ PUSH HL
+ LD A,E
+ LD (0F3AEH),A
+ LD (0F3AFH),A
+ LD A,(0FCAFH)
+ LD L,A
+ LD H,0
+ PUSH HL
+ CALL screen
+ POP HL
+ RET
+
+lines   POP DE
+ POP HL
+ LD A,L
+ LD (0F3B1H),A
+ PUSH HL
+ PUSH DE
+ RET
+
+color   POP DE
+ POP HL
+ LD A,L
+ LD (0F3EBH),A
+ POP HL
+ LD A,L
+ LD (0F3EAH),A
+ POP HL
+ LD A,L
+ LD (0F3E9H),A
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ LD HL,62H
+ CALL ccCLCM
+ RET
+
+vdpwr   POP HL
+ POP DE
+ LD C,E
+ POP DE
+ LD B,E
+ CALL ccVDPW
+ PUSH HL
+ PUSH HL
+ PUSH HL
+ RET
+
+ccVDPW   LD A,C
+ EX AF,AF'
+ LD A,(VDPWP)
+ INC A
+ LD C,A
+ LD A,B
+ DI
+ OUT (C),A
+ EX AF,AF'
+ OR 80H
+ OUT (C),A
+ EI
+ RET
+
+vdprd   POP HL
+ POP DE
+ LD A,E
+ PUSH HL
+ PUSH HL
+ CALL ccVDPR
+ JP ccsxt
+
+ccVDPR   LD HL,(VDPRP)
+ INC H
+ INC L
+ LD C,H
+ DI
+ OUT (C),A
+ LD A,8FH
+ OUT (C),A
+ LD C,L
+ IN A,(C)
+ PUSH AF
+ XOR A
+ LD C,H
+ OUT (C),A
+ LD A,8FH
+ OUT (C),A
+ EI
+ POP AF
+ RET
+
+vdpw    POP HL
+ LD (STORE),HL
+ POP DE
+ POP HL
+ LD A,L
+ CP 48
+ JR NC,vdpw1
+ CP 8
+ JR Z,vdpw1
+ LD C,A
+ CP 9
+ JR NC,vdpw2
+ LD HL,0F3DFH
+ JR vdpw3
+vdpw2   SUB 9
+ LD HL,0FFE7H
+vdpw3   PUSH DE
+ LD E,A
+ LD D,0
+ ADD HL,DE
+ POP DE
+ LD (HL),E
+ LD B,E
+ LD A,C
+ CP 9
+ JR C,vdpw4
+ DEC C
+vdpw4   CALL ccVDPW
+vdpw1 LD HL,(STORE)
+ PUSH HL
+ PUSH HL
+ PUSH HL
+ RET
+
+vdpr    POP HL
+ LD (STORE),HL
+ POP HL
+ LD A,L
+ LD HL,0F3DFH
+ CP 8
+ JR Z,vdpr2
+ JR C,vdpr1
+ BIT 7,A
+ JR NZ,vdpr2
+ CP 25
+ JR NC,vdpr3
+ SUB 9
+ LD HL,0FFE7H
+ LD E,A
+ LD D,0
+ ADD HL,DE
+vdpr1   LD A,(HL)
+vdpr4   LD HL,(STORE)
+ PUSH HL
+ PUSH HL
+ JP ccsxt
+vdpr3   LD A,-1 ;wrong reg
+ JR vdpr4
+vdpr2   CP 8    ;status regs
+ JR NZ,vdpr5
+ SUB 8
+ JR vdpr6
+vdpr5   CPL ;neg--->pos
+ INC A
+vdpr6   CALL ccVDPR
+ JR vdpr4
+
+setrd   POP DE
+ POP HL
+ CALL ccSETR
+ PUSH HL
+ PUSH DE
+ RET
+
+ccSETR   LD A,(VDPWP)
+ DI
+ INC A
+ LD C,A
+ LD A,(0FCAFH)
+ CP 7
+ JR NC,ccSETR1
+ LD A,(0FAF6H)
+ BIT 0,A
+ JR Z,ccSETR2
+ LD A,80H
+ ADD A,H
+ LD H,A
+ccSETR2   LD A,(0FAF6H)
+ AND A
+ RRA
+ LD (0FAF6H),A
+ccSETR1   LD A,(0FAF6H)
+ LD B,A
+ LD A,H
+ AND 0C0H
+ OR B
+ RLCA
+ RLCA
+ OUT (C),A
+ LD A,8EH
+ OUT (C),A
+ LD A,H
+ OUT (C),L
+ AND 3FH
+ OUT (C),A
+ DEC C
+ EI
+ RET
+
+setwr   POP DE
+ POP HL
+ CALL ccSETW
+ PUSH HL
+ PUSH DE
+ RET
+
+ccSETW   LD A,(VDPWP)
+ DI
+ INC A
+ LD C,A
+ LD A,(0FCAFH)  ;pages of 64K?
+ CP 7
+ JR NC,ccSETW1   ;yes
+ LD A,(0FAF6H)
+ BIT 0,A    ;page 1 or 3?
+ JR Z,ccSETW2
+ LD A,80H   ;-->hl+8000h
+ ADD A,H
+ LD H,A
+ccSETW2  LD A,(0FAF6H)
+ AND A
+ RRA        ;which memory block (<64K or <128K)
+ LD (0FAF6H),A
+ccSETW1  LD A,(0FAF6H)
+ LD B,A     ;put memory block in B
+ LD A,H
+ AND 0C0H
+ OR B
+ RLCA
+ RLCA
+ OUT (C),A  ;send 3 highest bits
+ LD A,8EH
+ OUT (C),A
+ LD A,H
+ OUT (C),L
+ AND 3FH
+ OR 40H
+ OUT (C),A
+ DEC C
+ EI
+ RET
+
+rdvrm   POP HL
+ LD (STORE),HL
+ POP HL
+ CALL ccSETR
+ IN A,(C)
+ LD HL,(STORE)
+ PUSH HL
+ PUSH HL
+ JP ccsxt       ;result from A to HL
+ccRDVR   CALL ccSETR
+ IN A,(C)
+ RET
+
+wrtvrm  POP HL
+ LD (STORE),HL
+ POP HL
+ LD A,L
+ POP HL
+ PUSH AF
+ CALL ccSETW
+ POP AF
+ OUT (C),A
+ LD HL,(STORE)
+ PUSH HL
+ PUSH HL
+ PUSH HL
+ RET
+ccWRTV  PUSH AF
+ CALL ccSETW
+ POP AF
+ OUT (C),A
+ RET
+
+CALCSCR LD A,(0F3E1H)
+ AND 3FH
+ LD D,A
+ LD E,0
+ CALL ccrdel
+ EX DE,HL
+ RET
+
+CALCCOL LD A,(0F3E2H)
+ LD L,A
+ LD A,(0FCAFH)
+ LD H,0
+ CP 4
+ JR C,CALCCO1
+ LD A,(0FFE9H)
+ LD H,A
+CALCCO1 EX DE,HL
+ LD HL,5
+ CALL ccasl
+ RET
+
+CALCMAT LD A,(0F3E3H)
+ AND 1FH
+ LD D,A
+ LD E,0
+ CALL ccrdel
+ CALL ccrdel
+ EX DE,HL
+ RET
+
+ldirmv  POP HL
+ LD (STORE),HL
+ POP BC
+ POP HL
+ CALL ccSETR
+ POP DE
+ PUSH DE
+ PUSH HL
+ PUSH BC
+ LD HL,(STORE)
+ PUSH HL    ;return
+ EX DE,HL
+ldirm1  LD A,B
+ OR A
+ JR Z,ldirm2
+ DEC B
+ PUSH BC
+ DI
+ LD B,255
+ LD A,(VDPRP)
+ LD C,A
+ INIR
+ EI
+ POP BC
+ JR ldirm1
+ldirm2  LD B,C
+ DI
+ LD A,(VDPRP)
+ LD C,A
+ INIR
+ EI
+ RET
+ccLDMV  PUSH HL
+ PUSH BC
+ PUSH DE
+ CALL ccSETR
+ POP HL
+ POP BC
+ POP DE
+ JR ldirm1
+
+ldirvm  POP HL  ;return     1
+ LD (STORE),HL
+ POP BC     ;size       2
+ POP DE     ;RAM        3
+ POP HL     ;VRAM       4
+ PUSH BC
+ CALL ccSETW
+ POP BC     ;size       4
+ PUSH DE
+ PUSH HL
+ PUSH BC    ;size       1
+ LD HL,(STORE)
+ PUSH HL    ;return     0
+ EX DE,HL   ;RAM-->HL
+ldirv1  LD A,B
+ OR A
+ JR Z,ldirv2
+ DEC B
+ PUSH BC
+ LD B,255
+ LD A,(VDPWP)
+ LD C,A
+ DI
+ OTIR
+ EI
+ POP BC
+ JR ldirv1
+ldirv2  LD B,C
+ LD A,(VDPWP)
+ LD C,A
+ DI
+ OTIR
+ EI
+ RET
+ccLDVM  PUSH HL
+ PUSH DE
+ PUSH BC
+ CALL ccSETW
+ POP BC
+ POP HL
+ POP DE
+ JR ldirv1
+
+vputch  POP HL
+ POP DE
+ LD A,(VDPWP)
+ LD C,A
+ LD A,E
+ DI
+ OUT (C),A
+ EI
+ PUSH DE
+ PUSH HL
+ RET
+
+vprint  CALL VRAMAD
+ POP DE
+ POP HL
+ PUSH HL
+ PUSH DE
+ LD A,(VDPWP)
+ LD C,A
+
+vprin1  LD A,(HL)
+ OR A
+ RET Z
+ CP 8
+ JR Z,vprin8
+ CP 12
+ JR Z,vprin7
+ CP 10
+ JR Z,vprin2
+ CP 13
+ JR Z,vprin4
+ CP '\'
+ JR NZ,vprin6
+ INC HL
+ LD A,(HL)
+ CP 'c'
+ JR Z,vprin9
+ CP 'l'
+ JR Z,vprin2
+ CP 'n'
+ JR Z,vprin4
+ CP 'f'
+ JR Z,vprin7
+ CP 't'
+ JR Z,vprin8
+vprin6  DI
+ OUT (C),A
+ EI
+ LD A,(0F3B0H)
+ LD B,A
+ LD A,(0F3DDH)
+ INC A
+ CP B
+ JR Z,vprin4
+ LD (0F3DDH),A
+ INC HL
+ JR vprin1
+vprin9  XOR A
+ LD (0F3DDH),A
+ JR vprin1
+vprin4  XOR A
+ LD (0F3DDH),A
+vprin2 LD A,(0F3B1H)
+ LD B,A
+ LD A,(0F3DCH)
+ CP B
+ JR NZ,vprin3
+ PUSH HL
+ PUSH BC
+ CALL scroll
+ POP BC
+ POP HL
+ JR vprin5
+vprin3  INC A
+ LD (0F3DCH),A
+vprin5  PUSH HL
+ PUSH BC
+ CALL VRAMAD
+ POP BC
+ POP HL
+ INC HL
+ JR vprin1
+vprin8  LD B,8
+ PUSH HL
+ LD HL,BUFF
+ PUSH HL
+vprin10 LD (HL),' '
+ INC HL
+ DJNZ vprin10
+ LD (HL),0
+ POP HL
+ CALL vprin1
+ POP HL
+ INC HL
+ JP vprin1
+vprin7
+ PUSH BC
+ PUSH HL
+ CALL cls
+ POP HL
+ POP BC
+ INC HL
+ JP vprin1
+
+OFFST   DEFB 0
+MAXLNW  DEFB 0
+
+SCALE   LD A,(0FCAFH)
+ CP 1
+ JR Z,SCAL0
+ LD A,(0F3B0H)
+ CP 41
+ JR C,SCAL2
+ LD B,80
+  JR SCAL3
+SCAL2   LD B,40
+ JR SCAL3
+SCAL0   LD A,(0F3B0H)
+ LD B,32
+SCAL3   LD C,A
+ LD A,B
+ LD (MAXLNW),A
+ SUB C
+ SRL A
+ LD (OFFST),A
+ RET
+
+scroll  LD A,(OFFST)
+ LD L,A
+ LD H,0
+ LD A,(MAXLNW)
+ LD C,A
+ LD DE,(NAMBAS)
+ ADD HL,DE
+ LD E,C
+ LD D,0
+ ADD HL,DE
+ LD A,(0F3B1H)
+ DEC A
+ OR A
+ JR Z,scrol2
+ LD B,A
+scrol1  PUSH BC  ;B=count,C=size
+ LD B,0
+ LD DE,BUFF
+ PUSH HL    ;VRAM
+ PUSH BC
+ CALL ccLDMV
+ POP DE
+ POP HL
+ PUSH HL
+ PUSH DE
+ AND A
+ SBC HL,DE
+ LD DE,BUFF
+ EX DE,HL
+ CALL ccLDVM
+ POP DE
+ POP HL     ;VRAM
+ ADD HL,DE  ;VRAM=VRAM+size
+ POP BC     ;B=count,C=size
+ DJNZ scrol1
+
+scrol2  LD A,(0F3B1H)
+ LD L,A
+ LD H,0
+ LD A,(MAXLNW)
+ LD B,A
+ LD E,A
+ LD D,0
+ PUSH BC
+ CALL ccmult
+ CALL ccSETW
+ POP BC
+ LD A,(ccVDPW)
+ LD C,A
+ XOR A
+scrol3  OUT (C),A
+ DJNZ scrol3
+ RET
+
+;   buffer for file and screen operations
+
+filvrm  POP DE
+ POP HL
+ LD A,L
+ POP BC
+ POP HL
+ PUSH AF
+ PUSH BC
+ CALL ccSETW
+ POP BC
+ POP AF
+ PUSH DE
+ PUSH DE
+ PUSH DE
+ PUSH DE
+filvr1  PUSH AF
+ DI
+ LD A,(VDPWP)
+ LD E,A
+ POP AF
+ LD D,A
+filvr2  PUSH BC
+ LD C,E
+ LD A,D
+ OUT (C),A
+ POP BC
+ DEC BC
+ LD A,B
+ OR C
+ JR NZ,filvr2
+ EI
+ RET
+
+ccFILV  PUSH AF
+ PUSH BC
+ CALL ccSETW
+ POP BC
+ POP AF
+ JR filvr1
+
+VRAMAD  LD A,(0F3DCH)
+ LD HL,0
+ DEC A
+ JR Z,VRAMA1
+ LD B,A
+ LD DE,80
+VRAMA2  ADD HL,DE
+ DJNZ VRAMA2
+VRAMA1  LD A,(0F3DDH)
+ LD E,A
+ DEC E
+ LD A,(OFFST)
+ ADD A,E
+ LD E,A
+ LD D,0
+ ADD HL,DE
+ CALL ccSETW
+ RET
+
+locate  POP HL
+ POP DE
+ INC E
+ LD A,E
+ LD (0F3DCH),A
+ POP DE
+ INC E
+ LD A,E
+ LD (0F3DDH),A
+ PUSH DE
+ PUSH DE
+ PUSH HL
+ CALL VRAMAD
+ RET
+
+cursor  POP DE
+ POP HL
+ LD A,L
+ LD (0FCA9H),A
+ PUSH HL
+ PUSH DE
+ RET
+
+dispscr POP DE
+ POP HL
+ LD A,L
+ OR A
+ JR Z,dispsof
+ LD A,(0F3E0H)
+ SET 6,A
+ JR dispsc1
+dispsof LD A,(0F3E0H)
+ RES 6,A
+dispsc1 LD (0F3E0H),A
+ LD B,A
+ LD C,1
+ CALL ccVDPW
+ PUSH DE
+ PUSH HL
+ RET
+
+cls XOR A
+ LD HL,0C3H
+ JR ccCLCM
+
+killbuf  LD HL,156h
+ JR ccCLCM
+
+beep    LD HL,0C0H
+ccCLCM  PUSH HL     ; calls function with no parameter on stack
+ CALL clbios
+ POP HL
+ RET
+
+CHPUT   LD IX,0A2H
+ JP ccCLBI
+
+putchar LD HL,0A2H
+ccCLAC  POP DE      ; calls function with value for A on stack
+ POP BC
+ LD A,C
+ PUSH BC
+ PUSH DE
+ JR ccCLCM
+
+getchar LD HL,9FH
+ CALL ccCLCM
+ JP ccsxt
+
+abs POP DE
+ POP HL
+ RES 7,H
+ PUSH HL
+ PUSH DE
+ RET
+
+;  From here onwards the original Small C routines are placed.
+;
+;  DEFINITIONS
+;
+CR EQU 0DH
+LF EQU 0AH
+BS EQU 08
+TAB EQU 09
+DEL EQU 7FH
+CZ EQU 1AH
+ESC EQU 1BH
+ccBDOS EQU 5
+;
+; Entry to CP/M routines
+; Function format: cpm(DE value,C value);
+;
+cpm: POP HL ;Save return
+ POP BC
+ POP DE ; Get DE or E value
+ PUSH DE ; Restore stack
+ PUSH BC
+ PUSH HL
+ CALL ccBDOS ; Call CP/M BDOS
+ JP ccsxt ;Sign extend A into HL and return
+
+gets: EX DE,HL ; Pointer to I/P buffer
+ CALL ccINLN ;Get I/P into buffer
+ EX DE,HL ;Exit with HL pointing to start of buffer
+ RET
+
+puts: PUSH HL ;Save pointer for return
+ccPUTS1: LD A,(HL) ;O/P loop till null.
+ OR A
+ JP Z,ccPUTS5
+ CP '\'
+ JP NZ,ccPUTS3
+ INC HL
+ LD A,(HL)
+ CP 'b'
+ JP NZ,ccPUTS2
+ LD A,BS
+ JP ccPUTS3
+ccPUTS2: CP 'n'
+ CALL Z,crlf
+ JP Z,ccPUTS4
+ CP 't'
+ JP NZ,ccPUTS3
+ LD A,TAB
+ccPUTS3: CALL ccATOV
+ccPUTS4: INC HL
+ JP ccPUTS1
+ccPUTS5: POP HL ;String done
+ RET
+;
+; Subroutine to o/p A to console
+; All regs saved
+; 
+ccATOV: PUSH AF
+ PUSH HL
+ PUSH DE
+ PUSH BC
+ CALL putchar
+ POP BC
+ POP DE
+ POP HL
+ POP AF
+ RET
+
+;
+; O/P CRLF - Uses 'ccATOV'
+;
+crlf: PUSH AF
+ LD A,CR
+ CALL ccATOV
+ LD A,LF
+ CALL ccATOV
+ POP AF
+ RET
+;
+;  Functions to turn LST: on or off
+;  Function formats: lston() and lstoff()
+;
+lston: LD A,1 ;Mark flag and return
+ccLSTN1 LD (ccLSTFG),A
+ RET
+lstoff: XOR A
+ JP ccLSTN1
+
+ccLSTFG DEFB 0
+;
+; Get char from VDU
+; Everything saved except AF
+; ^C gives warm start
+;
+ccVTOA: PUSH HL
+ PUSH DE
+ PUSH BC
+ LD C,1
+ CALL ccBDOS
+ccVTA1: POP BC
+ POP DE
+ POP HL
+ PUSH AF
+ CP 3 ;^C?
+ JP Z,0    ;WARM START WITH ^C
+ POP AF
+ RET
+;
+; Get keyboard char without echo. Not CP/M 1.4 
+;
+getkbd: LD C,6
+ LD E,0FFH
+ CALL ccBDOS
+ JP ccsxt
+;
+; Get input char without echo
+;
+ccCIN: PUSH HL
+ PUSH DE
+ PUSH BC
+ LD HL,(1)
+ LD DE,6
+ ADD HL,DE
+ LD DE,ccCIN1
+ PUSH DE
+ JP (HL)
+ccCIN1: JP ccVTA1
+;
+; Get input line into buffer
+; Enter with DE pointing to start of buffer.
+; Exit with DE pointing to start of line terminated by null.
+; 78 chars. maximum.
+; Uses: 'ccATOV','ccCIN','crlf'
+;
+ccINLN: PUSH HL
+ PUSH DE
+ PUSH BC
+ LD B,0 ; Zero char. counter
+ EX DE,HL   ;Point to I/P buffer
+ccINLN1: CALL ccCIN
+ CP CR
+ JP Z,ccINLN3
+ CP BS ; Handle BS or DEL
+ JP Z,ccINLN2
+ CP DEL
+ JP Z,ccINLN2
+ PUSH AF
+ LD A,4EH ;max allowed
+ CP B ;End of I/P buff?
+ JP Z,ccINLN4
+ POP AF
+ LD (HL),A
+ CALL ccATOV
+ INC HL
+ INC B
+ JP ccINLN1
+ccINLN2: XOR A
+ CP B ;Don't BS past start
+ JP Z,ccINLN1
+ LD A,BS
+ CALL ccATOV
+ DEC HL
+ DEC B
+ JP ccINLN1
+ccINLN3: CALL crlf   ;CR/LF
+ XOR A ;Mark end of input
+ LD (HL),A
+ POP BC ;Recover regs.
+ POP DE 
+ POP HL
+ RET
+ccINLN4: LD A,BS ;Handle overflow
+ CALL ccATOV  ;Del. prev. char.
+ POP AF
+ DEC HL
+ DEC B
+ CALL ccATOV
+ LD (HL),A
+ INC HL
+ INC B
+ JP ccINLN1
+    

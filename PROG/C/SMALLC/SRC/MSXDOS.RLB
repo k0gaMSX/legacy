@@ -1,0 +1,435 @@
+*R+, Q-, G 0
+; ^^^^^^ This first line is to instruct GEN80 to compile this as a .REL
+; file, with no .ERR file and no .SYM file
+
+;   THIS LIBRARY NEEDS TO BE COMPILED BEFORE USE ! IT CANNOT BE 'INCLUDED'
+;   When assembled as a REL module, it can only be used with MSXCRUN.REL
+;   and a compiled and assembled to a .REL file Small C program.
+
+;   MSXDOS.RLB      REL version 0.0, 15 September 1992
+
+;   These routines may be modified for your own use, and are public
+;   domain.
+
+;   If you find any bugs, or have suggestions, contact me please :
+
+;   Onno ten Brinke
+;   Tesselschadelaan 22
+;   1399 VP Muiderberg
+;   The Netherlands
+
+;   Onno ten Brinke, 15 September 1992
+
+
+;   Extra routines for disk handling
+;   Needs C--RUN
+
+;   Variable names : drive      0 =default, 'A' - 'I' or 1 - 9
+;                   if drivename is invalid, the default
+;                   drive is used
+;                   "FILENAME.EXT" Normal name, or wildcards, possible
+;                   with drive name : "A:M?.EXT"
+;                                     "BM*.BIN"
+;   Errors: If any action is unsuccesful the value TRUE is returned
+
+;   NOT ALL OF THE FUNCTIONS BELOW ARE IMPLEMENTED YET (SEE PUBLIC STATEMENTS)
+
+;   del     Removes filenames, wildcards are accepted, del("FILENAME.EXT")
+;   find    Seaches filename in directory, beginning at the first entry,
+;           returns TRUE or FALSE. If found, the directory entry is copied
+;           to DMA, find("FILENAME.EXT")
+;   fndnxt  See find, but searches for file from last found file
+;   rename  Renames filenames, ren("FILENAME.EXT","FILENAME.EXT")
+;   getdir  Gets directory from disk to memory (at DMA, see below)
+;           getdir("FILENAME.EXT")
+;   dir     Gets directory from disk and prints it, dir("FILENAME.EXT")
+;   dirw    See above, but prints only filenames, dirw("FILENAME.EXT")
+;           P.S. When using the dir command, the DMA should be above the
+;           memory used by your program, e.g. setdma(0x8000)
+;   setdma  Sets DMA address for diskfunctions (normally 0x80)
+;   getdma  Returns DMA address, DMA=getdma()
+;   setdef  Installes new drive as default drive, setdef(drive)
+;   getdef  Gets default drive name, default=getdef()
+;   getdrv  Gets number of available drives, drives=getdrv()
+;   getalc  Reads disk information into array of 11 chars,
+;           getalc(drive,pointer). The array reads like this :
+;           array[0]    sectors per cluster
+;           array[1+2]  bytes per sector
+;           array[3+4]  clusters in total
+;           array[5+6]  free clusters
+;           array[7+8]  DPB address
+;           array[9+10] FAT address
+;   setver  Set verify flag on or off, setver(on/off)
+;   readsc  Reads sectors to transferaddress (DMA),
+;           readsc(drive,begin,number of secs)
+;   writsc  Writes sectors from DMA, writesec(drive, begin, sectors)
+;   ondskg  With this function you can create own disk error handling
+;           routine. To do this, use DISKERR.C as a guideline. This
+;           considerably improves your programmes, especially if you
+;           use graphics. Usage :
+;           #asm
+;           LD HL,function label
+;           LD (DSKJMP),HL
+;           #endasm
+;           ondskg (on);
+;           When returning to DOS, use ondskg (off).
+;   onrstg  Resets the jump at address 0. This means that when the
+;           diskroutines abort, they do not go to DOS, but to a desired
+;           function. This means that a ^C in CP/M functions does not
+;           mean that the program is aborted and 'A' with diskerrors does
+;           not mean you return to DOS. This means that if you use
+;           exit() (from FILE2.RLB), you won't return to DOS.
+;           Usage: identical to ondskg , but use RSTJMP.
+;           Again, when returning to DOS, use onrstg (off) !
+
+    PUBLIC  ondskg, onrstg, writsc, readsc
+    PUBLIC  fndnxt, getdrv, find, rename, setdef, getdef, setdma, getdma
+    PUBLIC  DMA
+
+    EXTRN   ccsxt
+
+SYSTEM  EQU 5
+DSKJMP  DEFW 0
+RSTJMP  DEFW 0
+ERRPTR  DEFW 0
+OLRSTH  DEFW 0
+OLDSK1  DEFW 0
+OLDSK2  DEFW 0
+STORE12 DEFW 0
+STORE   DEFW 0
+
+onrstg  POP DE
+ POP HL
+ LD A,L
+ CP 1
+ JR Z,onrston
+ LD HL,(OLRSTH)
+ LD (1),HL
+ JR onrstrt
+onrston LD HL,(1)
+ LD (OLRSTH),HL
+ LD HL,(RSTJMP)
+ LD (1),HL
+onrstrt PUSH DE
+ PUSH HL
+ RET
+
+ondskg  POP DE
+ POP HL
+ PUSH HL
+ PUSH DE
+ LD A,L
+ CP 1
+ JR Z,ondskon
+ LD HL,(OLDSK1)
+ LD (0F323H),HL
+ EX DE,HL
+ LD HL,(OLDSK2)
+ LD A,L
+ LD (DE),A
+ INC DE
+ LD A,H
+ LD (DE),A
+ RET
+ondskon LD HL,(0F323H)
+ LD (OLDSK1),HL
+ EX DE,HL
+ LD A,(DE)
+ LD L,A
+ INC DE
+ LD A,(DE)
+ LD H,A
+ LD (OLDSK2),HL
+ LD HL,ERRPTR
+ LD (0F323H),HL
+ LD HL,DSKERR
+ LD (ERRPTR),HL
+ RET
+
+DSKERR  PUSH AF
+ PUSH BC
+ PUSH DE
+ PUSH HL
+ PUSH IX
+ PUSH IY
+ PUSH BC
+ POP BC
+ LD B,1
+ LD A,C
+ BIT 7,A
+ JP NZ,DSKER8       ;FAT error
+ CP #0A
+ JP Z,DSKER2
+ LD C,A
+ AND #FE
+ JP Z,DSKER3
+ LD A,C
+ BIT 1,A
+ JP NZ,DSKER4
+ BIT 0,A
+ JP NZ,DSKER5
+ JP Z,DSKER6
+ JP DSKER7
+DSKER2  INC B       ;wrong disk
+ JP DSKER8
+DSKER3  INC B       ;write protect
+ INC B
+ JP DSKER8
+DSKER4  LD B,4      ;not ready
+ JP DSKER8
+DSKER5  LD B,5      ;write error
+ JP DSKER8
+DSKER6  LD B,6      ;read error
+ JP DSKER8
+DSKER7  LD B,7      ;disk error
+DSKER8  LD L,B
+ LD H,0
+ PUSH HL
+ LD HL,DSKER9
+ PUSH HL
+ LD HL,(DSKJMP)
+ JP (HL)
+DSKER9  POP DE
+ LD A,L
+ POP IY
+ POP IX
+ POP HL
+ POP DE
+ POP BC
+ LD C,A
+ POP AF
+ RET
+
+setdma  POP HL
+ POP DE
+ PUSH DE
+ LD (DMA),DE
+ PUSH HL
+ LD C,1AH
+ JP SYSTEM
+
+DMA DEFW 80H
+
+getdma  POP DE
+ POP HL
+ LD HL,(DMA)
+ PUSH DE
+ PUSH HL
+ RET
+
+readsc  LD IY,2FH
+ JR SEC
+
+writsc  LD IY,30H
+SEC POP IX
+ POP BC
+ POP DE
+ POP HL
+ LD A,L
+ CALL DRIV
+ LD L,A
+ LD H,C
+ PUSH HL
+ PUSH DE
+ PUSH BC
+ PUSH IY
+ POP BC
+ JP SYSTEM
+
+DRIV    CP 'A'
+ JR C,DRIV1
+ SUB 'A'-1
+ CP 7
+ RET C
+DRIV1   XOR A
+ RET
+
+delete  CALL GETFCB
+ LD C,13H
+ JP SYSTEM
+
+find    CALL GETFCB
+ LD C,11H
+ JP SYSTEM
+
+fndnxt CALL GETFCB
+ LD C,12H
+ JP SYSTEM
+
+rename  POP BC
+ POP DE
+ POP HL
+ PUSH DE
+ LD DE,FCB1
+ CALL NAM2FCB
+ POP HL
+ LD DE,FCB1+16
+ CALL NAM2FCB
+ PUSH HL
+ PUSH HL
+ PUSH BC
+ LD DE,FCB1
+ LD C,17H
+ JP SYSTEM
+
+getdef  LD C,19
+ CALL SYSTEM
+ JP ccsxt
+
+setdef  POP BC
+ POP HL
+ PUSH HL
+ PUSH BC
+ LD A,L
+ CALL DRIV
+setde1  LD E,A
+ DEC E
+ LD C,0EH
+ JP SYSTEM
+
+getdrv  XOR A
+ CALL setde1
+ JP ccsxt
+
+getalc POP BC
+ POP IX
+ POP HL
+ LD A,L
+ CALL DRIV
+ PUSH HL
+ PUSH IX
+ PUSH BC
+ LD C,1BH
+ LD E,A
+ PUSH IX
+ CALL SYSTEM
+ LD (STORE),IX
+ POP IX
+ LD (IX+0),A
+ LD (IX+1),C
+ LD (IX+2),B
+ LD (IX+3),E
+ LD (IX+4),D
+ LD (IX+5),L
+ LD (IX+6),H
+ LD HL,(STORE)
+ LD (IX+7),L
+ LD (IX+8),H
+ PUSH IY
+ POP HL
+ LD (IX+9),L
+ LD (IX+10),H
+ RET
+
+setver  LD E,L
+ LD C,2EH
+ JP SYSTEM
+
+GETFCB  POP DE
+ POP BC
+ POP HL
+ PUSH HL
+ PUSH BC
+ PUSH DE
+ LD DE,FCB1
+ PUSH DE
+ CALL NAM2FCB
+ POP DE
+ RET
+
+NAM2FCB PUSH AF
+ PUSH HL
+ PUSH DE
+ CALL CLRFCB ;Pad out FCB with 20H and set NR and EXT to 0
+ POP DE ;FCB
+ POP HL ;Name
+ LD (FILNAM),HL
+ PUSH DE ;Still save FCB
+NAM2FC1 LD A,(HL) ;Skip blanks
+ CP 20H
+ INC HL
+ JP Z,NAM2FC1
+ LD A,(HL)
+ CP ':' ;Drive given?
+ DEC HL
+ JP NZ,NAM2FC2 ;Use default
+ LD A,(HL)
+ CALL CAPST
+ SUB '@'
+ LD (DE),A
+ INC HL
+ INC HL ;Point to name
+ JP NAM2FC3
+NAM2FC2 XOR A ;Use default drive
+ LD (DE),A
+NAM2FC3 INC DE
+ LD B,8
+NAM2FC4 LD A,(HL) ;Move filename to FCB
+ CALL CAPST ; -> U/C
+ CP '.'
+ JP Z,NAM2FC5
+ CP 0 ; End?
+ JP Z,NAM2FC7
+ LD (DE),A
+ INC HL
+ INC DE
+ DEC B
+ JP NZ,NAM2FC4 ;Keep looping until '.'
+NAM2FC5 LD A,(HL)
+ CP 0 ;End of string?
+ JP Z,NAM2FC7 ;Exit
+ CP 20H
+ JP Z,NAM2FC7
+ CP '.'
+ INC HL
+ JP NZ,NAM2FC5 ;Keep looping if name not done
+ LD B,3
+ POP DE ;Get FCB start
+ PUSH DE
+ PUSH HL ;Save pointer to type
+ LD HL,9
+ ADD HL,DE
+ EX DE,HL ;Point DE to type in FCB
+ POP HL
+NAM2FC6 LD A,(HL)
+ CALL CAPST
+ CP 0
+ JP Z,NAM2FC7
+ LD (DE),A
+ INC HL
+ INC DE
+ DEC B
+ JP NZ,NAM2FC6
+NAM2FC7 POP DE ;Exit. DE->FCB
+ POP AF
+ RET
+;
+; CLEAR OUT FCB WITH BLANKS & 0's IN NR & EX
+;
+CLRFCB PUSH DE
+ POP HL
+ LD (HL),0 ;Set default drive
+ INC HL
+ LD A,20H
+ LD B,11
+CLRFCB1 LD (HL),A
+ INC HL
+ DEC B
+ JP NZ,CLRFCB1
+ XOR A
+ LD (HL),A ;EX
+ LD HL,20H ;Point to NR
+ ADD HL,DE
+ LD (HL),A
+ RET
+CAPST CP 61H ;'a'
+ RET C
+ CP 7BH ;'z'+1
+ RET NC
+ SUB 20H
+ RET
+
+FILNAM  DEFW 0
+FCB1    DEFS 34
+FCB2    DEFS 34
+                                                                                                        
