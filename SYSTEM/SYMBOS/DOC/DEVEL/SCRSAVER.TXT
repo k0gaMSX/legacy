@@ -1,0 +1,126 @@
+S Y M B O S   D E V E L O P E R   D O C U M E N T A T I O N
+Author: Prodatron / Symbiosis
+Date:   02.03.2007
+===============================================================================
+
+S C R E E N S A V E R   A P P L I C A T I O N S
+
+The SymbOS desktop manager supports the handling of screensaver applications.
+These are special programs, which are loaded automatically during the booting
+process and go into sleep mode. If the user is idle for a given time periode
+(no mouse and no keyboard activity), the desktop manager sends a message to the
+screensaver application. It can now start its screensaver activity until a key
+is pressed or the mouse is moved again.
+This chapter describes the implementation of a screensaver application and the
+messages used for the communication between the system and the screensaver.
+
+===============================================================================
+OPERATIONAL SEQUENCE
+
+A screensaver application can run in three different ways:
+- Operation mode: The desktop manager loads and initialise the screensaver. It
+  goes into sleep mode, until the desktop manager sends a "start" messages,
+  because of user idleness.
+- Configuration mode: The control panel loads the screensaver temporarily and
+  sends "start" messages for testing or "config" messages for configuration
+  purposes.
+- Demo mode: The screensaver is loaded manually by the user. In this case it
+  starts its animation directly. When a key has been pressed or the mouse has
+  been moved the screensaver quits itself.
+
+To fullfull these requests the screensaver should do the following operational
+sequence:
+
+0.  screensaver application start
+1.  wait for initial message
+2.  if no message could be received
+    - start animation phase
+    - wait for key or mouse
+    - goto 5.
+3.  check received message:
+    A. if "init" command message (see MSC_SAV_INIT) has been received
+       - receive configuration data
+       - if data is not valid, use default configuration data instead
+       - initialise screensaver
+    B. if "config" command message (see MSC_SAV_CONFIG) has been received
+       - open config window
+       - let the user do his setting modifications
+       - send "config" response message (see MSR_SAV_CONFIG) with the updated
+         configuration data to the process, which sent the MSC_SAV_INIT before
+    C. if "start" command message (see MSC_SAV_START) has been received
+       - start animation phase
+       - wait for key or mouse
+    D. if "quit" message (0) has been received
+       - goto 5.
+4.  wait for next message while beeing in sleep mode, then goto 3.
+5.  quit application
+-------------------------------------------------------------------------------
+
+===============================================================================
+SCREENSAVER COMMANDS AND RESPONSES
+
+This is a list of commands, which will be sent to the screen saver application.
+Usually they will be sent by the desktop manager or by the control panel. The
+screensaver must be able to handle these commands and one additional response
+message for a proper interaction.
+-------------------------------------------------------------------------------
+ID:             001 (MSC_SAV_INIT)
+Name:           ScreenSaver_Init_Command
+Library:        ScrSav_MAIN
+Message:        00  1B  001
+                01  1B  config data (64 byte) ram bank (0-7)
+                02  1W  config data (64 byte) address
+Description:    The caller process, which has started the screensaver (usually
+                the desktop manager or the control panel) has sent an
+                initialisation command. The screensaver now should store the
+                sender process ID to be able to send a configuration response
+                message later (see MSR_SAV_CONFIG).
+                Then it has to copy the configuration data into its own memory
+                area. This data can have a size of up to 64 bytes and is stored
+                in the SYMBOS.INI file together with the other system settings.
+                If the screensaver requires more than 64 bytes for its
+                configuration it has to manage its own config file.
+                Please note, that the user can choose different screensavers,
+                which all have their different configurations. Because of this,
+                the first few bytes of the data should be used as an
+                identifier. Only if the identifier is correct, the config data
+                can be seen as valid. Otherwise the screensaver should load a
+                default configuration.
+                As an example the first 4 bytes of the "Starfield Simulation"
+                screensaver configuration contain the text "3DSF".
+Response:       [no response from the screensaver expected]
+-------------------------------------------------------------------------------
+ID:             002 (MSC_SAV_START)
+Name:           ScreenSaver_Start_Command
+Library:        ScrSav_MAIN
+Message:        00  1B  002
+Description:    The caller process asks the screensaver to start its animation.
+                The animation should be shown as long as no key has been
+                pressed and the mouse hasn't been moved.
+Response:       [no response from the screensaver expected]
+-------------------------------------------------------------------------------
+ID:             003 (MSC_SAV_CONFIG)
+Name:           ScreenSaver_Config_Command
+Library:        ScrSav_MAIN
+Message:        00  1B  003
+Description:    The caller process asks the screensaver to open a configuration
+                dialogue. In such a window the user has the possibility to
+                modify the screensaver settings. If there is nothing to
+                configure at all, the screensaver can ignore this command or
+                just open an info window.
+Response:       See MSR_SAV_CONFIG
+-------------------------------------------------------------------------------
+ID:             004 (MSR_SAV_CONFIG)
+Name:           ScreenSaver_Config_Response
+Library:        ScrSav_CFGSAV
+Message:        00  1B  001
+                01  1B  config data (64 byte) ram bank (0-7)
+                02  1W  config data (64 byte) address
+Description:    The user has finished modifying the settings and clicked on the
+                "Ok" button of the configuration dialogue. The screensaver now
+                should send back the updated data to the caller process, so
+                that they can be written back later into the SYMBOS.INI file.
+                To send them back the screensaver has to use this response
+                message, in which it tells the caller process the address of
+                the updated data.
+-------------------------------------------------------------------------------

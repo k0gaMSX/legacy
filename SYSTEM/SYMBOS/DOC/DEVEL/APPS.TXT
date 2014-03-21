@@ -1,0 +1,243 @@
+S Y M B O S   D E V E L O P E R   D O C U M E N T A T I O N
+Author: Prodatron / Symbiosis
+Date:   01.11.2005
+===============================================================================
+
+A P P L I C A T I O N S
+
+General
+
+Applications are executable programs, which can be started in the multitasking
+environment of the SymbOS operating system.
+
+There are two types of applications for SymbOS. The first ones are GUI-based
+applications (*.EXE), which uses the desktop manager as the interface to the
+user. The second ones are text terminal based applications (*.COM), which needs
+the SymShell as an interface to the user.
+
+The structure of both types is identic, and the only difference is, that shell
+applications additionally can use the SymShell terminal for text input and
+output. For more information about the specialities of this type see the
+"SymShell" chapter.
+
+
+Memory area types
+
+Before we start with the description of the application structure you need to
+know about the three memory types which are existing in SymbOS.
+
+As the Z80 cpus address bus has a width of 16 bit, the cpu can address not more
+than 64K (65536 bytes) at the same time. To be able to work with more than 64K
+the CPC needs to do the so-called bankswitching methode, which means, that
+parts of the memory will be visible inside the Z80s 64K address space, while
+other parts will be hidden. The CPCs bankswitching possibilities are quite
+powerful compared to other 8bit computers, but they still have some
+limitations. The ram is divided into 64K parts, which are called "banks". Each
+bank is devided into four 16K parts called "blocks". There are four different
+bank switching modes. Three of them are used by SymbOS.
+
+SymbOS consists of several modules called "managers". Most parts of the
+operating system are placed in the first 64K ram bank of the CPC, where also
+the video ram is located. Applications are always running inside a secondary
+64K ram bank, which will be completely activated, while the application is
+running.
+
+To be able to access the applications memory, the operating system has to
+switch parts of its ram to the visible 64K. As the bank switching possibilities
+are limitated, not all managers can access every part of the application
+memory:
+
+A.) The kernel is able to access all parts of the memory. The same is true for
+the system manager, which only uses the kernel to access application memory.
+That means, that all functions and data of an application, which are in touch
+with the kernel or the system manager, can be placed anywhere in the memory.
+Such kind of memory is called the "code area". It's just a name and does not
+mean, that it only can contain code. In general the code area part of an
+application contains all its routines, but also additional data, which don't
+need to be placed in one of the two other memory areas.
+
+B.) The screen manager is also able to access all parts of the memory, but only
+one 16K block at the same time. Its job is to draw texts, graphics, lines and
+boxes on the screen and some more things. It does all low level jobs for the
+desktop manager. Because of performance reasons one single text line or one
+single graphic needs to be placed inside a 16K block, so that the screen
+manager can access it in one piece. Such kind of memory is called the "data
+area", as it contains all the application data which is accessed by the screen
+manager.
+
+C.) Because of its position in memory and the limitations of the bank
+switching possibilities the desktop manager can only access the last 16K
+(#C000-#FFFF) of each ram bank. All application data, which needs to be
+accessed directly by the desktop manager, must be placed here. These are the
+window data records and the control data records and also some more things
+like the text of a text input control. Also the stack and the message buffer
+must be placed here, as the RST #28 function (BNKFCL) can only be used with
+such a stack position. This memory type is called the "transfer area", as it is
+the only part, whose data can be transfered to the desktop manager and to the
+kernels message module with the fast use of bank switching.
+
+Here is a summary of the three different memory types:
+
+A.) Code area: The code area can be placed anywhere in the memory. Because of
+this flexibility it is most easy for the operating system to allocate memory of
+this type. Here you should place everything, which does not need to be in one
+of the other areas.
+
+B.) Data area: The data area needs to be placed inside a 16K block. All texts
+and graphics, which are plottet on the screen, must be placed here.
+
+C.) Transfer area: The transfer area needs to be placed in the last 16K block
+(#C000-#FFFF). The stack, the message buffer and all window data records,
+control data records and control variables (radio button status, text input
+line strings etc.) must be placed here.
+
+Please note, that the application itself does not need to take care about the
+correct position of a memory area. This is done by the system manager, when it
+allocates memory while loading the application, and by the kernel, when the
+application wants to allocate additional memory of one of the three types.
+
+See the chapter "memory map" for some graphical overviews of the memory usage
+in SymbOS.
+
+
+Application structure
+
+Every application is subdivided into four parts. The first three are the main
+parts according to the three different memory types. The fourth one contains
+the relocator table and won't be kept in memory after the initialisation process.
+
+The code area part of the application always starts with a 256 byte header,
+which contains all necessary information the system manager needs to know when
+loading, initialising and starting the application. The data structure of the
+header is described below. After the application has been initialised, the
+system manager writes some useful information in the header like the ram bank
+number and the process ID.
+
+The transfer area part of an application must always start with the stack. The
+length of the stack needs to be noted in the application header. With this
+information the system manager knows, where the stack ends and can tell the
+kernel to start the applications main process correctly.
+
+All three parts of an application must be placed and assembled directly after
+each other. The system manager will split them and places each of them at a
+free area in memory.
+
+The fourth part contains the relocator table. The relocator table is a list of
+pointer (words), which points to the addresses, where a reference needs to be
+modified, so that the application code can be relocated. The relocator table
+will be loaded only temporary and removed after the relocation process.
+
+
+Application header
+
+This is the definition, how the header of an application is built, before it
+will be started.
+-------------------------------------------------------------------------------
+000   1W    Length of the code area
+002   1W    Length of the data area
+004   1W    Length of the transfer area
+006   1W    Original origin of the assembler code
+008   1W    Number of entries in the relocator table
+010   1W    Length of the stack in bytes
+012   1W    Length of crunched data      (*NOT YET SUPPORTED*)
+014   1B    Cruncher type (0=uncrunched) (*NOT YET SUPPORTED*)
+015  32B    Application name. The end of the string must be filled with 0.
+047   1B    0-terminator
+048   8B    "SymExe10" SymbOS executable file identification
+056   1W    Length of additional reserved code area memory
+058   1W    Length of additional reserved data area memory
+060   1W    Length of additional reserved transfer area memory
+062  26B    *RESERVED*
+088   2B    minimum required OS version (minor release, major release)
+090  19B    Application icon (small version), 8x8 pixel, SymbOS graphic format
+109 147B    Application icon (big version), 24x24 pixel, SymbOS graphic format
+-------------------------------------------------------------------------------
+The words 0, 2 and 4 contain the length of the static memory parts. If you need
+more memory in the ram bank in which the application is running, it should be
+allocated during the loading process. Otherwise you can't be sure, if you will
+be able to get memory later in the same ram bank. Instead of adding buffer
+space in the program code itself, which would waste memory on the disc, you can
+extend the code, data and transfer memory area of the application with the
+words 56, 58 and 60. When the application will be loaded, the static memory
+parts will be extended by the values in these words. The new memory will be
+directly behind the static memory parts. Please be careful when accessing the
+extended memory. You can't use pointers, who are directly pointing to this
+extended memory, because in this case the relocator would think, you want to
+access memory in another memory area, as the pointer is outside the static part
+of the area. You will need to calculate the address first inside the code.
+
+After the application has been initialized and started, some parts of the
+header have been replaced by new data.
+-------------------------------------------------------------------------------
+006   1W    Address of the data area
+008   1W    Address of the transfer area
+010   4B    Additional sub process or timer IDs; 4 process/timer IDs can be
+            registered here
+014   1B    Ram bank number (1-15), where the application is located
+048  40B    Additional memory areas; 8 memory areas can be registered here,
+            each entry consists of 5 bytes:
+            00  1B  Ram bank number (1-15; if 0, the entry will be ignored)
+            01  1W  Address
+            03  1W  Length
+088   1B    Application ID
+089   1B    Main process ID
+-------------------------------------------------------------------------------
+You will need the process ID of the application, when you want to send messages
+to other processes. The application ID is needed at least, when the application
+wants to quit itself. The ram bank number is needed for all kind of system
+calls, where a memory pointer is needed.
+
+The bytes at 10 and 48 should be used for registering additionally allocated
+memory areas and IDs of sub processes and timers. Only if the application
+writes these information in the header, the system manager will release the
+memory and/or stop the sub processes and/or timers automatically by itself,
+when it closes the application. An application may do it by itself, before it
+asks the system manager to quit. But if an application should be killed by the
+task manager, the unregistered system resources wouldn't be released.
+
+
+Path and appended parameters
+
+When the system managers loads an application, it appends 256 bytes directly
+behind the end of the static code area. Here you find the complete command
+line, with which the application has been started, including path, filename
+and maybe additionally parameters behind the filename. This could look like
+this:
+B:\symbos\apps\symsee.exe A:\pics\mycat.scr -full
+This information could be very usefull, as the application can find out where
+it is placed and could load as an example its config file from the same place.
+Also you are able to append parameters like the path and name of a document,
+when calling the application.
+
+
+CPU register usage
+
+Every process is allowed to use the primary register set and the two index
+registers (AF,BC,DE,HL,IX,IY). The secondary register set is used by the
+multitasking management, and the I-register is used to store the current
+banking configuration. You are not allowed to modify these registers. If you
+really need to use them temporarily, you have to lock the interrupts, save the
+old content and restore it, before you unlock the interrupts again. Usually a
+process shouldn't lock the interrupts at all, as it will disturb the
+multitasking behaviour.
+
+
+Application templates
+
+[...]
+
+
+SymStudio system library
+
+As a consequence of the multitasking environment most functions of the
+operating system can only be accessed via process messages. Compared to the
+usual Z80 "CALL" instruction this may be not trivial. To make accessing the
+operating system functions as easy as possible there are special libraries
+included in SymStudio, which make it possible to use the operating system
+functions just with easy CALLs. In this documentations for every function you
+will find a reference to the library, if the function can be accessed by it.
+
+You could also use them without SymStudio, but SymStudio offers the advantage,
+that it only assembles these parts, which are really used, so the code stays as
+short as possible. If you don't want to use the library, it's still useful to
+have examples how to access the different operating system functions.

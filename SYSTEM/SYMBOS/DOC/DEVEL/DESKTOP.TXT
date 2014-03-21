@@ -1,0 +1,543 @@
+S Y M B O S   D E V E L O P E R   D O C U M E N T A T I O N
+Author: Prodatron / Symbiosis
+Date:   25.08.2007
+===============================================================================
+
+D E S K T O P   M A N A G E R
+
+The desktop manager is responsible for all actions, which are taking place on
+the video screen. Especially the handling of the application windows is done by
+the desktop manager.
+Desktop manager commands are triggered via a message, which has to be sent with
+RST #10 (MSGSND) to the desktop manager process. The desktop manager process
+always has the ID 2.
+
+
+===============================================================================
+DESKTOP MANAGER COMMANDS
+
+The desktop manager usually does not send responses after processing a
+command. There are exceptions for MSC_DSK_WINOPN and MSC_DSK_DSKSRV.
+-------------------------------------------------------------------------------
+ID:             032 (MSC_DSK_WINOPN)
+Name:           Window_Open_Command
+Library:        SyDesktop_WINOPN
+Message:        00  1B  032
+                01  1B  Window data record ram bank (0-8)
+                02  1W  Window data record address (#C000-#FFFF)
+Description:    Opens a new window. Its data record must be placed in the
+                transfer ram area (between #c000 and #ffff).
+                For more information about the window data record see the
+                chapter "desktop manager data records".
+                For more information about the transfer ram memory types see
+                the "applications" chapter.
+Response:       See MSR_DSK_WOPNER and MSR_DSK_WOPNOK
+-------------------------------------------------------------------------------
+ID:             033 (MSC_DSK_WINMEN)
+Name:           Window_Redraw_Menu_Command
+Library:        SyDesktop_WINMEN
+Message:        00  1B  033
+                01  1B  Window ID
+Limitation:     works only, if window has focus
+Description:    Redraws the menu bar of a window. If you changed your menus you
+                should call this command to update the screen display.
+-------------------------------------------------------------------------------
+ID:             034 (MSC_DSK_WININH)
+Name:           Window_Redraw_Content_Command
+Library:        SyDesktop_WININH
+Message:        00  1B  034
+                01  1B  Window ID
+                02  1B  -1, control ID or negative number of controls
+                        000 - 239 -> the control with the specified ID will be
+                                     redrawed.
+                        240 - 254 -> redraws -P2 controls, starting from
+                                     control P3. As an example, if P2 is -3
+                                     (253) and P3 is 5, the controls 5, 6 and 7
+                                     will be redrawed.
+                        255       -> redraws all controls inside the window
+                                     content.
+                - if P2 is between 240 and 254:
+                03  1B  ID of the first control, which should be redrawed.
+Limitation:     works only, if window has focus
+Description:    Redraws one, all or a specified number of controls inside the
+                window content. This command is very important, if you make
+                changes and want to display them.
+                This command is identical with MSC_DSK_WINDIN with the
+                exception, that it only works, if the window has focus. Because
+                of this, it is a little bit faster, as the desktop manager
+                doesn't need to take care about other windows, which could hide
+                some parts of the window.
+-------------------------------------------------------------------------------
+ID:             035 (MSC_DSK_WINTOL)
+Name:           Window_Redraw_Toolbar_Command
+Library:        SyDesktop_WINTOL
+Message:        00  1B  035
+                01  1B  Window ID
+                02  1B  -1, control ID or negative number of controls
+                        000 - 239 -> the control with the specified ID will be
+                                     redrawed.
+                        240 - 254 -> redraws -P2 controls, starting from
+                                     control P3. As an example, if P2 is -3
+                                     (253) and P3 is 5, the controls 5, 6 and 7
+                                     will be redrawed.
+                        255       -> redraws all controls inside the window
+                                     toolbar.
+                - if P2 is between 240 and 254:
+                03  1B  ID of the first control, which should be redrawed.
+Limitation:     works only, if window has focus
+Description:    Redraws one, all or a specified number of controls inside the
+                window toolbar. Use this command to update the screen display,
+                if you made changes in the toolbar.
+-------------------------------------------------------------------------------
+ID:             036 (MSC_DSK_WINTIT)
+Name:           Window_Redraw_Title_Command
+Library:        SyDesktop_WINTIT
+Message:        00  1B  036
+                01  1B  Window ID
+Limitation:     works only, if window has focus
+Description:    Redraws the title bar of a window. Use this command to update
+                the screen display, if you changed the text of the window
+                title.
+-------------------------------------------------------------------------------
+ID:             037 (MSC_DSK_WINSTA)
+Name:           Window_Redraw_Statusbar_Command
+Library:        SyDesktop_WINSTA
+Message:        00  1B  037
+                01  1B  Window ID
+Limitation:     works only, if window has focus
+Description:    Redraws the status bar of a window. Use this command to update
+                the screen display, if you changed the text of the status bar.
+-------------------------------------------------------------------------------
+ID:             038 (MSC_DSK_WINMVX)
+Name:           Window_Set_ContentX_Command
+Library:        SyDesktop_WINMVX
+Message:        00  1B  038
+                01  1B  Window ID
+                02  1W  new X offset of the visible window content
+Limitation:     works only, if window has focus
+Description:    If the size of the window content is larger than the visible
+                part, you can scroll its X offset with this command. The
+                command works also, if the window is not resizeable by the
+                user.
+-------------------------------------------------------------------------------
+ID:             039 (MSC_DSK_WINMVY)
+Name:           Window_Set_ContentY_Command
+Library:        SyDesktop_WINMVY
+Message:        00  1B  039
+                01  1B  Window ID
+                02  1W  new Y offset of the visible window content
+Limitation:     works only, if window has focus
+Description:    If the size of the window content is larger than the visible
+                part, you can scroll its Y offset with this command. The
+                command works also, if the window is not resizeable by the
+                user.
+-------------------------------------------------------------------------------
+ID:             040 (MSC_DSK_WINTOP)
+Name:           Window_Focus_Command
+Library:        SyDesktop_WINTOP
+Message:        00  1B  040
+                01  1B  Window ID
+Limitation:     works always
+Description:    Takes the window to the front position on the screen.
+-------------------------------------------------------------------------------
+ID:             041 (MSC_DSK_WINMAX)
+Name:           Window_Size_Maximize_Command
+Library:        SyDesktop_WINMAX
+Message:        00  1B  041
+                01  1B  Window ID
+Limitation:     works only, if the window is minimized or restored
+Description:    Maximizes a window. A maximized window has a special status,
+                where it can't be moved to another screen position.
+-------------------------------------------------------------------------------
+ID:             042 (MSC_DSK_WINMIN)
+Name:           Window_Size_Minimize_Command
+Library:        SyDesktop_WINMIN
+Message:        00  1B  042
+                01  1B  Window ID
+Limitation:     works only, if the window is maximized or restored
+Description:    Minimizes a window. It will disappear from the screen and can
+                only be accessed by the user via the task bar.
+-------------------------------------------------------------------------------
+ID:             043 (MSC_DSK_WINMID)
+Name:           Window_Size_Restore_Command
+Library:        SyDesktop_WINMID
+Message:        00  1B  043
+                01  1B  Window ID
+Limitation:     works only, if the window is maximized or minimized
+Description:    Restores the window or the size of the window, if it was
+                minimized or maximized before.
+-------------------------------------------------------------------------------
+ID:             044 (MSC_DSK_WINMOV)
+Name:           Window_Set_Position_Command
+Library:        SyDesktop_WINMOV
+Message:        00  1B  044
+                01  1B  Window ID
+                02  1W  new X window position
+                04  1W  new Y window position
+Limitation:     works only, if the window is not maximized
+Description:    Moves the window to another position on the screen. This will
+                not work, if the window is maximized.
+-------------------------------------------------------------------------------
+ID:             045 (MSC_DSK_WINSIZ)
+Name:           Window_Set_Size_Command
+Library:        SyDesktop_WINSIZ
+Message:        00  1B  045
+                01  1B  Window ID
+                02  1W  new window width
+                04  1W  new window height
+Limitation:     works always
+Description:    Resizes a window. This command will always work, even if the
+                window is not resizeable by the user.
+                Please note, that the size always refers to the visible content
+                of the window, not to the whole window including the control
+                elements. So with title bar, scroll bars etc. a window can have
+                a bigger size on the screen.
+-------------------------------------------------------------------------------
+ID:             046 (MSC_DSK_WINCLS)
+Name:           Window_Close_Command
+Library:        SyDesktop_WINCLS
+Message:        00  1B  046
+                01  1B  Window ID
+Limitation:     works always
+Description:    Closes the window. The desktop manager will remove it from the
+                screen.
+-------------------------------------------------------------------------------
+ID:             047 (MSC_DSK_WINDIN)
+Name:           Window_Redraw_ContentExtended_Command
+Library:        SyDesktop_WINDIN
+Message:        00  1B  047
+                01  1B  Window ID
+                02  1B  control ID, -1 (all) or negative number of controls
+                        000 - 239 -> the control with the specified ID will be
+                                     redrawed.
+                        240 - 254 -> redraws -P2 controls, starting from
+                                     control P3. As an example, if P2 is -3
+                                     (253) and P3 is 5, the controls 5, 6 and 7
+                                     will be redrawed.
+                        255       -> redraws all controls inside the window
+                                     content.
+                - if P2 is between 240 and 254:
+                03  1B  ID of the first control, which should be redrawed.
+Limitation:     works always
+Description:    Redraws one, all or a specified number of controls inside the
+                window content. This command is identical with MSC_DSK_WININH
+                with the exception, that it always works but with less speed.
+                For more information see MSC_DSK_WININH.
+-------------------------------------------------------------------------------
+ID:             048 (MSC_DSK_DSKSRV)
+Name:           Desktop_Service_Command
+Library:        see DESKTOP MANAGER SERVICES
+Message:        00  1B  048
+                01  1B  Service ID
+                02 - 05 see desktop manager service description below
+Description:    Please read the desktop manager service description below for
+                more information.
+Response:       See MSR_DSK_DSKSRV
+-------------------------------------------------------------------------------
+ID:             049 (MSC_DSK_WINSLD)
+Name:           Window_Redraw_Slider_Command
+Library:        SyDesktop_WINSLD
+Message:        00  1B  049
+                01  1B  Window ID
+Limitation:     works only, if window has focus
+Description:    Redraws the two slider of the window, with which the user can
+                scroll the content. Sliders will only be displayed, if the
+                window is resizeable.
+                Usally you should use MSC_DSK_WINMVX and MSC_DSK_WINMVY to
+                scroll the content of the window. These commands will update
+                the sliders by themself.
+                If you manipulate the content position in the window data
+                record by yourself, you can use this command to update the
+                screen display.
+-------------------------------------------------------------------------------
+ID:             050 (MSC_DSK_WINPIN)
+Name:           Window_Redraw_ContentArea_Command
+Library:        SyDesktop_WINPIN
+Message:        00  1B  050
+                01  1B  Window ID
+                02  1B  control ID, -1 (all) or negative number of controls
+                        000 - 239 -> the control with the specified ID will be
+                                     redrawed.
+                        240 - 254 -> redraws -P2 controls, starting from
+                                     control P3. As an example, if P2 is -3
+                                     (253) and P3 is 5, the controls 5, 6 and 7
+                                     will be redrawed.
+                        255       -> redraws all controls inside the window
+                                     content.
+                04  1W  Area X begin inside the window content
+                06  1W  Area Y begin
+                08  1W  Area X length
+                10  1W  Area Y length
+                - if P2 is between 240 and 254:
+                03  1B  ID of the first control, which should be redrawed.
+Limitation:     works always
+Description:    This command works like MSC_DSK_WINDIN, but it updates only a
+                specified area inside the window content. Changes outside the
+                area won't be updated. This command is especially useful for
+                updating large graphics, if only a part of the graphic should
+                be updated, and you don't want to loose performance with
+                updating the other parts of it, too.
+                For more information see MSC_DSK_WINDIN and MSC_DSK_WININH.
+-------------------------------------------------------------------------------
+ID:             051 (MSC_DSK_WINSIN)
+Name:           Window_Redraw_SubControl_Command
+Library:        SyDesktop_WINSIN
+Message:        00  1B  051
+                01  1B  Window ID
+                02  1B  control collection ID
+                03  1B  ID of the sub control inside the control collection
+Limitation:     works always
+Description:    This command works like MSC_DSK_WINDIN, but it updates only one
+                sub control inside a control collection. This command currently
+                doesn't support the redrawing of multiple sub controls.
+                For additional information see also MSC_DSK_WINDIN.
+-------------------------------------------------------------------------------
+
+===============================================================================
+DESKTOP MANAGER RESPONSES
+-------------------------------------------------------------------------------
+ID:             160 (MSR_DSK_WOPNER)
+Name:           Window_OpenError_Response
+Message:        00  1B  160
+Description:    The window couldn't be opened, because the maximum number of
+                windows (32) has already been reached.
+-------------------------------------------------------------------------------
+ID:             161 (MSR_DSK_WOPNOK)
+Name:           Window_OpenOK_Response
+Message:        00  1B  161
+                04  1B  Window ID
+Description:    The window has been opened. The desktop manager sends back its
+                ID. For all following commands regarding the new window you
+                will need this ID.
+-------------------------------------------------------------------------------
+ID:             162 (MSR_DSK_WCLICK)
+Name:           Window_UserAction_Response
+Message:        00  1B  162
+                01  1B  Window ID
+                02  1B  Action type
+                        05 = close button has been clicked or ALT+F4 has been
+                             pressed (DSK_ACT_CLOSE).
+                        06 = menu entry has been clicked (DSK_ACT_MENU).
+                             P8 will contain the menu entry value.
+                        14 = a control of the window content has been clicked
+                             and/or modified with the keyboard
+                             (DSK_ACT_CONTENT).
+                             P8 will contain the control value, P4/6 the mouse
+                             position, if the user used the mouse.
+                        15 = a control of the window toolbar has been clicked
+                             and/or modified with the keyboard
+                             (DSK_ACT_TOOLBAR).
+                             P8 will contain the control value, P4/6 the mouse
+                             position, if the user used the mouse.
+                        16 = user has pressed a key without modifying any
+                             control (DSK_ACT_KEY).
+                             P4 will contain the ASCII code.
+                - if P2 is 14 or 15:
+                03  1B  Action sub specification
+                        00 = left mousebutton clicked (DSK_SUB_MLCLICK)
+                        01 = right mousebutton clicked (DSK_SUB_MRCLICK)
+                        02 = left mousebutton double clicked (DSK_SUB_MDCLICK)
+                        03 = middle mousebutton clicked (DSK_SUB_MMCLICK)
+                        07 = key has been pressed (DSK_SUB_KEY)
+                - if P2 is 14 or 15 and P3 is between 0 and 3:
+                04  1W  Mouse X position (inside the window content/toolbar)
+                06  1W  Mouse Y position
+                - if P2 is 14 or 15 and P3 is 7, or if P2 is 16:
+                04  1B  ASCII code of the pressed key.
+                        For information about extended ASCII codes, see the
+                        chapter "device manager", EXTENDED ASCII CODES.
+                - if P2 is 6, 14 or 15:
+                08  1W  Menu entry value or control value
+Description:    The desktop manager is sending this message to the application,
+                if the user has done an interaction with the window or the
+                controls inside the window.
+-------------------------------------------------------------------------------
+ID:             163 (MSR_DSK_DSKSRV)
+Name:           Desktop_Service_Response
+Message:        00  1B  163
+                01  1B  Service ID
+                02 - 05 see desktop manager service description below
+Description:    Please read the desktop manager service description below for
+                more information.
+-------------------------------------------------------------------------------
+ID:             164 (MSR_DSK_WFOCUS)
+Name:           Window_Focus_Response
+Message:        00  1B  164
+                01  1B  Window ID
+                02  1B  Status
+                        0 = window lost focus position
+                        1 = window received focus position
+Description:    The desktop manager is sending this message to the application,
+                if the focus status of a window changed.
+-------------------------------------------------------------------------------
+ID:             165 (MSR_DSK_CFOCUS)
+Name:           Control_Focus_Response
+Message:        00  1B  165
+                01  1B  Window ID
+                02  1B  ID of the new focus control (starting with 1)
+                03  1B  Reason for focus change
+                        0 = user clicked the control via mouse or used the mouse
+                            wheel
+                        1 = user pressed the tab key
+Description:    The desktop manager is sending this message to the application,
+                if another control inside a window got the focus. Please note,
+                that the control ID is not the value of the control but its
+                number inside the control group (starting with 1).
+-------------------------------------------------------------------------------
+ID:             166 (MSR_DSK_WRESIZ)
+Name:           Window_Resize_Response
+Message:        00  1B  166
+                01  1B  Window ID
+Description:    The desktop manager is sending this message to the application,
+                if the user resized the window. This may happen when it has
+                been maximized, restored or resized by keyboard or mouse.
+                Please note, that this message will also be sent, if the user
+                maximizes or restores a window, which was minimized before.
+                That means, that even after receiving this message it is
+                possible, that the real window size didn't change, so the
+                application should first compare the new and the old one to be
+                sure.
+-------------------------------------------------------------------------------
+ID:             167 (MSR_DSK_WSCROL)
+Name:           Window_Scroll_Response
+Message:        00  1B  167
+                01  1B  Window ID
+Description:    The desktop manager is sending this message to the application,
+                if the user scrolled the content of the window. This may happen
+                with the scrollbars, the arrow buttons or the mouse wheel. The
+                application can now check the new offset values of the window
+                content to find out in which direction the scrolling has been
+                done.
+-------------------------------------------------------------------------------
+
+===============================================================================
+DESKTOP MANAGER SERVICES
+
+Most parts of the device manager can't be accessed by an application directly.
+All video screen related things will be handled by the desktop manager. Because
+of this there are the desktop services, which allow an application to change
+some video screen parameters. Also some more services are offered.
+-------------------------------------------------------------------------------
+ID:             001 (DSK_SRV_MODGET)
+Name:           DesktopService_ScreenModeGet
+Library:        SyDesktop_MODGET
+Message:        00  1B  048
+                01  1B  001
+Response:       00  1B  163
+                01  1B  001
+                02  1B  Screen mode
+                        0 = 160 x 200, 16 colours
+                        1 = 320 x 200,  4 colours (standard mode)
+                        2 = 640 x 200,  2 colours
+Description:    Returns the current screen resolution and number of possible
+                colours.
+-------------------------------------------------------------------------------
+ID:             002 (DSK_SRV_MODSET)
+Name:           DesktopService_ScreenModeSet
+Library:        SyDesktop_MODSET
+Message:        00  1B  048
+                01  1B  002
+                02  1B  Screen mode
+                        0 = 160 x 200, 16 colours
+                        1 = 320 x 200,  4 colours (standard mode)
+                        2 = 640 x 200,  2 colours
+Response:       [the desktop manager does not send a response message]
+Description:    Sets the screen resolution and number of possible colours.
+-------------------------------------------------------------------------------
+ID:             003 (DSK_SRV_COLGET)
+Name:           DesktopService_ColourGet
+Library:        SyDesktop_COLGET
+Message:        00  1B  048
+                01  1B  003
+                02  1B  Colour number (0-15)
+Response:       00  1B  163
+                01  1B  003
+                02  1B  Colour number (0-15)
+                03  1B  Bit[0-3] blue  component (0-15)
+                        Bit[4-7] green component (0-15)
+                04  1B  Bit[0-3] red   component (0-15)
+Description:    Returns the definition of a colours. Please note, that you
+                always have a range of 4096, even if the computer is not a CPC
+                PLUS, as the system recalculates the colour for standard CPCs
+                (factor 5,33 for each component).
+-------------------------------------------------------------------------------
+ID:             004 (DSK_SRV_COLSET)
+Name:           DesktopService_ColourSet
+Library:        SyDesktop_COLSET
+Message:        00  1B  048
+                01  1B  004
+                02  1B  Colour number (0-15)
+                03  1B  Bit[0-3] blue  component (0-15)
+                        Bit[4-7] green component (0-15)
+                04  1B  Bit[0-3] red   component (0-15)
+Response:       [the desktop manager does not send a response message]
+Description:    Defines one colour. Please note, that you always have a range
+                of 4096, even if the computer is not a CPC PLUS, as the system
+                recalculates the colour for standard CPCs (factor 5,33 for each
+                component).
+-------------------------------------------------------------------------------
+ID:             008 (DSK_SRV_DSKBGR)
+Name:           DesktopService_RedrawBackground
+Library:        SyDesktop_DSKBGR
+Message:        00  1B  048
+                01  1B  008
+Response:       [the desktop manager does not send a response message]
+Description:    Redraws the desktop background.
+-------------------------------------------------------------------------------
+ID:             009 (DSK_SRV_DSKPLT)
+Name:           DesktopService_RedrawComplete
+Library:        SyDesktop_DSKPLT
+Message:        00  1B  048
+                01  1B  009
+Response:       [the desktop manager does not send a response message]
+Description:    Redraws the complete screen. The background, the task bar and
+                all windows will be updated.
+-------------------------------------------------------------------------------
+
+===============================================================================
+DESKTOP MANAGER FUNCTIONS
+
+The desktop manager functions have to be called with RST #20 (BNKSCL).
+-------------------------------------------------------------------------------
+Address:        #814E (BUFPUT)
+Name:           Clipboard_Put
+How to call:    rst #20:dw #814e
+Input:          IX   = Source data address
+                A    = Source data ram bank (0-8)
+                BC   = Length of source data
+                D    = Type of source data
+                       1 = Text
+                       2 = Graphic (*format not yet defined*)
+                       3 = Item list (*format not yet defined*)
+                       4 = Binary (user defined data)
+Output:         CF   = Error state (0 = ok, 1 = memory full)
+Destroyed:      AF,BC,DE,HL
+Description:    Copies data into the clipboard. If the clipboard already
+                contained data, it will be deleted first.
+-------------------------------------------------------------------------------
+Address:        #8151 (BUFGET)
+Name:           Clipboard_Get
+How to call:    rst #20:dw #8151
+Input:          IX   = Destination address
+                A    = Destination ram bank (0-8)
+                BC   = Maximum length of destination area
+                D    = Type of required data
+Output:         CF   = Error state
+                       0 = ok; BC = length of copied data
+                       1 = error; A = type (0 = clipboard is empty, 1 = wrong
+                           data type, 2 = data is too large)
+Destroyed:      AF,BC,DE,HL
+Description:    Copies data from the clipboard to the destination memory area.
+                This will only be done, if the clipboard contains data of the
+                requested type and if the data inside the clipboard is not
+                larger than the destination area.
+-------------------------------------------------------------------------------
+Address:        #8154 (BUFSTA)
+Name:           Clipboard_Status
+How to call:    rst #20:dw #8154
+Input:          -
+Output:         A    = Data type (0 = clipboard is empty)
+                BC   = Data length
+Destroyed:      -
+Description:    Reads the status of the clipboard (data type and length).
+-------------------------------------------------------------------------------

@@ -1,0 +1,158 @@
+S Y M B O S   D E V E L O P E R   D O C U M E N T A T I O N
+Author: Prodatron / Symbiosis
+Date:   25.08.2007
+===============================================================================
+
+D E V I C E   M A N A G E R
+
+The device manager controls all parts of the hardware. In general the
+applications do not communicate with the device manager directly, as other
+parts of the operating system are between the device manager and the
+application, like the system manager and the desktop manager.
+So there are only a few functions of the device manager, which can be called
+and used directly.
+
+
+===============================================================================
+DEVICE MANAGER FUNCTIONS
+
+The device manager functions have to be called with RST #20 (BNKSCL).
+-------------------------------------------------------------------------------
+Address:        #810C (TIMGET)
+Name:           Device_TimeGet
+How to call:    rst #20:dw #810c
+Input:          -
+Output:         A    = Second (0 - 59)
+                B    = Minute (0 - 59)
+                C    = Hour (0 - 23)
+                D    = Day (1 - 31)
+                E    = Month (1 - 12)
+                HL   = Year (1900 - 2100)
+                IXL  = Timezone (-12 - +13)
+Destroyed:      F,IY
+Description:    Returns the current time.
+-------------------------------------------------------------------------------
+Address:        #810F (TIMSET)
+Name:           Device_TimeSet
+How to call:    rst #20:dw #810f
+Input:          A    = Second (0 - 59)
+                B    = Minute (0 - 59)
+                C    = Hour (0 - 23)
+                D    = Day (1 - 31)
+                E    = Month (1 - 12)
+                HL   = Year (1900 - 2100)
+                IXL  = Timezone (-12 - +13)
+Output:         -
+Destroyed:      AF,BC,DE,HL,IY
+Description:    Sets the current time.
+-------------------------------------------------------------------------------
+Address:        #8139 (SCRGET)
+Name:           Device_ScreenMode
+How to call:    ld hl,#8139:rst #28
+Input:          -
+Output:         E    = screen mode (1,2=CPC, 5,6,7=MSX, 0=PCW)
+                D    = number of colours (2-16)
+                IX   = X resolution
+                IY   = Y resolution
+Destroyed:      -
+Description:    Returns the current screen mode, colour depth and resolution.
+-------------------------------------------------------------------------------
+Address:        #813C (MOSGET)
+Name:           Device_MousePosition
+How to call:    rst #20:dw #813C
+Input:          -
+Output:         DE   = X position
+                HL   = Y position
+Destroyed:      -
+Description:    Returns the current position of the mouse pointer.
+-------------------------------------------------------------------------------
+Address:        #813F (MOSKEY)
+Name:           Device_MouseKeyStatus
+How to call:    rst #20:dw #813F
+Input:          -
+Output:         A    = Key Status
+                       Bit 0 = 1 -> left mouse button is pressed
+                       Bit 1 = 1 -> right mouse button is pressed
+Destroyed:      F
+Description:    Returns the current position of the mouse pointer.
+-------------------------------------------------------------------------------
+Address:        #8145 (KEYTST)
+Name:           Device_KeyTest
+How to call:    ld hl,#8145:rst #28
+Input:          E    = Keyboard scan code
+Output:         E    = Key status
+                       0 = key is currently not pressed
+                       1 = key is currently pressed
+Destroyed:      AF,BC,D,HL,IX,IY
+Description:    Returns the current status of a key. For the scan codes see
+                KEYBOARD SCAN CODES.
+-------------------------------------------------------------------------------
+Address:        #8148 (KEYSTA)
+Name:           Device_KeyStatus
+How to call:    ld hl,#8148:rst #28
+Input:          -
+Output:         E  = [Bit0] Shift     (1=pressed)
+                     [Bit1] Control   (1=pressed)
+                     [Bit2] Alt       (1=pressed)
+                D  = Caps lock status (1=locked)
+Destroyed:      AF,BC,HL,IX,IY
+Description:    Returns the status of the shift/control/alt/capslock keys.
+-------------------------------------------------------------------------------
+Address:        #814B (KEYPUT)
+Name:           Device_KeyPut
+How to call:    rst #20:dw #814b
+Input:          A  = Char (ASCII code)
+Output:         CF = Status (1=keyboard buffer full)
+Destroyed:      AF,BC,HL
+Description:    Puts a char back into the keyboard buffer.
+-------------------------------------------------------------------------------
+
+===============================================================================
+EXTENDED ASCII CODES
+-------------------------------------------------------------------------------
+136 = cursor up         154 = Alt + C           172 = Alt + U
+137 = cursor down       155 = Alt + D           173 = Alt + V
+138 = cursor left       156 = Alt + E           174 = Alt + W
+139 = cursor right      157 = Alt + F           175 = Alt + X
+140 = F0                158 = Alt + G           176 = Alt + Y
+141 = F1                159 = Alt + H           177 = Alt + Z
+142 = F2                160 = Alt + I           178 = Alt + 0
+143 = F3                161 = Alt + J           179 = Alt + 1
+144 = F4                162 = Alt + K           180 = Alt + 2
+145 = F5                163 = Alt + L           181 = Alt + 3
+146 = F6                164 = Alt + M           182 = Alt + 4
+147 = F7                165 = Alt + N           183 = Alt + 5
+148 = F8                166 = Alt + O           184 = Alt + 6
+149 = F9                167 = Alt + P           185 = Alt + 7
+150 = F.                168 = Alt + Q           186 = Alt + 8
+151 = Alt + @           169 = Alt + R           187 = Alt + 9
+152 = Alt + A           170 = Alt + S
+153 = Alt + B           171 = Alt + T
+-------------------------------------------------------------------------------
+
+===============================================================================
+KEYBOARD SCAN CODES
+The scan code are used in the "Device_KeyTest" function. Please note, that they
+are equal on all supported platforms.
+-------------------------------------------------------------------------------
+00 = Cursor Up      20 = F4            40 = 8             60 = S
+01 = Cursor Right   21 = Shift         41 = 7             61 = D
+02 = Cursor Down    22 = \             42 = U             62 = C
+03 = F9             23 = Control       43 = Y             63 = X
+04 = F6             24 = ^             44 = H             64 = 1
+05 = F3             25 = -             45 = J             65 = 2
+06 = Enter          26 = @             46 = N             66 = Esc
+07 = F.             27 = P             47 = Space         67 = Q
+08 = Cursor Left    28 = ;             48 = 6             68 = Tab
+09 = Alt            29 = :             49 = 5             69 = A
+10 = F7             30 = /             50 = R             70 = Capslock
+11 = F8             31 = .             51 = T             71 = Z
+12 = F5             32 = 0             52 = G             72 = Joystick Up
+13 = F1             33 = 9             53 = F             73 = Joystick Down
+14 = F2             34 = O             54 = B             74 = Joystick Left
+15 = F0             35 = I             55 = V             75 = Joystick Right
+16 = Clr            36 = L             56 = 4             76 = Fire 2
+17 = [              37 = K             57 = 3             77 = Fire 1
+18 = Return         38 = M             58 = E             78 = [not used]
+19 = ]              39 = ,             59 = W             79 = Del
+-------------------------------------------------------------------------------

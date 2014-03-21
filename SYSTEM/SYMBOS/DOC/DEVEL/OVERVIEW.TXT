@@ -1,0 +1,373 @@
+S Y M B O S   D E V E L O P E R   D O C U M E N T A T I O N
+Author: Prodatron / Symbiosis
+Date:   26.08.2007
+===============================================================================
+
+O V E R V I E W
+
+ 1.) APPLICATIONS
+ 2.) KERNEL
+ 3.) DESKTOP MANAGER
+ 4.) DESKTOP MANAGER DATA RECORDS
+ 5.) SYSTEM MANAGER
+ 6.) FILE MANAGER
+ 7.) DEVICE MANAGER
+ 8.) SYMSHELL TEXT TERMINAL
+ 9.) SYSTEM CONFIGURATION
+10.) SCREENSAVER APPLICATIONS
+11.) MEMORY MAP
+
+
+===============================================================================
+1.) APPLICATIONS
+see: SymbOS-Applications.txt
+
+This chapter describes, how to write applications for SymbOS.
+-------------------------------------------------------------------------------
+General
+Memory area types
+Application structure
+Application header
+Path and appended parameters
+CPU register usage
+Application templates
+SymStudio system library
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+2.) KERNEL
+see: SymbOS-Kernel.txt
+
+The kernel contains the functions for sending and receiving messages to and
+from other processes, the process handling functions (multitasking) and the
+memory and banking functions.
+-------------------------------------------------------------------------------
+KERNEL RESTARTS
+Message_Sleep_And_Receive                       RST #08 (MSGSLP)
+Message_Send                                    RST #10 (MSGSND)
+Message_Receive                                 RST #18 (MSGGET)
+Banking_SlowCall                                RST #20 (BNKSCL)
+Banking_FastCall                                RST #28 (BNKFCL)
+Multitasking_SoftInterrupt                      RST #30 (MTSOFT)
+Multitasking_HardInterrupt                      RST #30 (MTHARD)
+
+KERNEL COMMANDS (MULTITASKING MANAGEMENT)
+Multitasking_Add_Process_Command                001 (MSC_KRL_MTADDP)
+Multitasking_Delete_Process_Command             002 (MSC_KRL_MTDELP)
+Multitasking_Add_Timer_Command                  003 (MSC_KRL_MTADDT)
+Multitasking_Delete_Timer_Command               004 (MSC_KRL_MTDELT)
+Multitasking_Sleep_Process_Command              005 (MSC_KRL_MTSLPP)
+Multitasking_WakeUp_Process_Command             006 (MSC_KRL_MTWAKP)
+Timer_Add_Counter_Command                       007 (MSC_KRL_MTADDT)
+Timer_Delete_Counter_Command                    008 (MSC_KRL_MTDELT)
+Timer_Delete_AllProcessCounters_Command         009 (MSC_KRL_MTDELP)
+
+KERNEL RESPONSES (MULTITASKING MANAGEMENT)
+Multitasking_Add_Process_Response               129 (MSR_KRL_MTADDP)
+Multitasking_Delete_Process_Response            130 (MSR_KRL_MTDELP)
+Multitasking_Add_Timer_Response                 131 (MSR_KRL_MTADDT)
+Multitasking_Delete_Timer_Response              132 (MSR_KRL_MTDELT)
+Multitasking_Sleep_Process_Response             133 (MSR_KRL_MTSLPP)
+Multitasking_WakeUp_Process_Response            134 (MSR_KRL_MTWAKP)
+Timer_Add_Counter_Response                      135 (MSC_KRL_MTADDT)
+Timer_Delete_Counter_Response                   136 (MSC_KRL_MTDELT)
+Timer_Delete_AllProcessCounters_Response        137 (MSC_KRL_MTDELP)
+
+KERNEL FUNCTIONS (MEMORY MANAGEMENT)
+Memory_Summary                                  #8100 (MEMSUM)
+Memory_Information                              #8121 (MEMINF)
+Memory_Get                                      #8118 (MEMGET)
+Memory_Free                                     #811B (MEMFRE)
+Memory_Resize                                   #811E (MEMSIZ)
+
+KERNEL FUNCTIONS (BANKING MANAGEMENT)
+Banking_ReadWord                                #8124 (BNKRWD)
+Banking_WriteWord                               #8127 (BNKWWD)
+Banking_ReadByte                                #812A (BNKRBT)
+Banking_WriteByte                               #812D (BNKWBT)
+Banking_Copy                                    #8130 (BNKCOP)
+Banking_GetBank                                 #8133 (BNKGET)
+Banking_Call_Application16KRoutine              #8142 (BNK16C)
+
+KERNEL FUNCTIONS (MISCELLANEOUS)
+Multitasking_GetCounter                         #8109 (MTGCNT)
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+3.) DESKTOP MANAGER
+see: SymbOS-Desktop.txt
+
+The desktop manager contains all functions to open and manage windows, to
+manage the controls inside a window and to interact with the user.
+-------------------------------------------------------------------------------
+DESKTOP MANAGER COMMANDS
+Window_Open_Command                             032 (MSC_DSK_WINOPN)
+Window_Redraw_Menu_Command                      033 (MSC_DSK_WINMEN)
+Window_Redraw_Content_Command                   034 (MSC_DSK_WININH)
+Window_Redraw_Toolbar_Command                   035 (MSC_DSK_WINTOL)
+Window_Redraw_Title_Command                     036 (MSC_DSK_WINTIT)
+Window_Redraw_Statusbar_Command                 037 (MSC_DSK_WINSTA)
+Window_Set_ContentX_Command                     038 (MSC_DSK_WINMVX)
+Window_Set_ContentY_Command                     039 (MSC_DSK_WINMVY)
+Window_Focus_Command                            040 (MSC_DSK_WINTOP)
+Window_Size_Maximize_Command                    041 (MSC_DSK_WINMAX)
+Window_Size_Minimize_Command                    042 (MSC_DSK_WINMIN)
+Window_Size_Restore_Command                     043 (MSC_DSK_WINMID)
+Window_Set_Position_Command                     044 (MSC_DSK_WINMOV)
+Window_Set_Size_Command                         045 (MSC_DSK_WINSIZ)
+Window_Close_Command                            046 (MSC_DSK_WINCLS)
+Window_Redraw_ContentExtended_Command           047 (MSC_DSK_WINDIN)
+Desktop_Service_Command                         048 (MSC_DSK_DSKSRV)
+Window_Redraw_Slider_Command                    049 (MSC_DSK_WINSLD)
+Window_Redraw_ContentArea_Command               050 (MSC_DSK_WINPIN)
+Window_Redraw_SubControl_Command                051 (MSC_DSK_WINSIN)
+
+DESKTOP MANAGER RESPONSES
+Window_OpenError_Response                       160 (MSR_DSK_WOPNER)
+Window_OpenOK_Response                          161 (MSR_DSK_WOPNOK)
+Window_UserAction_Response                      162 (MSR_DSK_WCLICK)
+Desktop_Service_Response                        163 (MSR_DSK_DSKSRV)
+Window_Focus_Response                           164 (MSR_DSK_WFOCUS)
+Control_Focus_Response                          165 (MSR_DSK_CFOCUS)
+Window_Resize_Response                          166 (MSR_DSK_WRESIZ)
+Window_Scroll_Response                          167 (MSR_DSK_WSCROL)
+
+DESKTOP MANAGER SERVICES
+DesktopService_ScreenModeGet                    001 (DSK_SRV_MODGET)
+DesktopService_ScreenModeSet                    002 (DSK_SRV_MODSET)
+DesktopService_ColourGet                        003 (DSK_SRV_COLGET)
+DesktopService_ColourSet                        004 (DSK_SRV_COLSET)
+DesktopService_RedrawBackground                 005 (DSK_SRV_DSKBGR)
+DesktopService_RedrawComplete                   006 (DSK_SRV_DSKPLT)
+
+DESKTOP MANAGER FUNCTIONS
+Clipboard_Put                                   #814E (BUFPUT)
+Clipboard_Get                                   #8151 (BUFGET)
+Clipboard_Status                                #8154 (BUFSTA)
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+4.) DESKTOP MANAGER DATA RECORDS
+see: SymbOS-DesktopDataRecords.txt
+
+This chapter describes the data structure of all records which are used in the
+desktop manager.
+-------------------------------------------------------------------------------
+Window Data Record
+Control Group Data Record
+Control Data Record
+Calculation Rule Data Record
+Control Types
+Pulldown Menus
+Graphics
+Fonts
+
+CONTROL TYPES
+paint_area                                      00 (PLF)
+paint_text                                      01 (PLT)
+paint_frame                                     02 (PLR)
+paint_frame_with_title                          03 (PLX)
+paint_progress                                  04 (PLP)
+paint_text_with_alternative_font                05 (PLA)
+paint_text_with_control_codes                   06 (PLC)
+graphic_simple                                  08 (ICN)
+graphic_with_text                               09 (ICT)
+graphic_extended                                10 (ICX)
+button_simple                                   16 (BTN)
+button_check                                    17 (BTC)
+button_radio                                    18 (BTR)
+button_hidden                                   19 (BTP)
+button_tabs                                     20 (BTT)
+slider_simple                                   24 (SLD)
+control_collection                              25 (SUP)
+textinput_line                                  32 (TXL)
+textinput_box                                   33 (TXB)
+list_title                                      40 (LST)
+list_content                                    41 (LSI)
+list_dropdown                                   42 (LSP)
+list_complete                                   43 (LSC)
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+5.) SYSTEM MANAGER
+see: SymbOS-System.txt
+
+The system manager contains the functions to start and end applications, to
+open special dialogues and some more services.
+-------------------------------------------------------------------------------
+SYSTEM MANAGER COMMANDS AND RESPONSES (APPLICATION MANAGEMENT)
+Program_Run_Command                             016 (MSC_SYS_PRGRUN)
+Program_Run_Response                            144 (MSR_SYS_PRGRUN)
+Program_End_Command                             017 (MSC_SYS_PRGEND)
+Program_Run_Dialogue_Command                    020 (MSC_SYS_PRGSTA)
+Program_Run_ControlPanel_Command                024 (MSC_SYS_PRGSET)
+Program_Run_TaskManager_Command                 025 (MSC_SYS_PRGTSK)
+Program_SharedService_Command                   030 (MSC_SYS_PRGSRV)
+Program_SharedService_Response                  158 (MSR_SYS_PRGSRV)
+
+SYSTEM MANAGER COMMANDS (SYSTEM MANAGEMENT)
+System_Dialogue_NextWindow_Command              018 (MSC_SYS_SYSNXT)
+System_Dialogue_PreviousWindow_Command          019 (MSC_SYS_SYSPRV)
+System_Dialogue_SystemSecurity_Command          021 (MSC_SYS_SYSSEC)
+System_Dialogue_ShutDown_Command                022 (MSC_SYS_SYSQIT)
+System_ShutDown_Command                         023 (MSC_SYS_SYSOFF)
+System_Configuration_Command                    028 (MSC_SYS_SYSCFG)
+
+SYSTEM MANAGER COMMANDS AND RESPONSES (FILE MANAGEMENT)
+System_Filemanager_Command                      026 (MSC_SYS_SYSFIL)
+System_Filemanager_Response                     154 (MSR_SYS_SYSFIL)
+
+SYSTEM MANAGER COMMANDS AND RESPONSES (DIALOGUE SERVICES)
+Dialogue_Infobox_Command                        029 (MSC_SYS_SYSWRN)
+Dialogue_Infobox_Response                       157 (MSR_SYS_SYSWRN)
+Dialogue_FileSelector_Command                   031 (MSC_SYS_SELOPN)
+Dialogue_FileSelector_Response                  159 (MSR_SYS_SELOPN)
+
+SYSTEM MANAGER FUNCTIONS
+System_Information                              #8103 (SYSINF)
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+6.) FILE MANAGER
+see: SymbOS-File.txt
+
+The file manager contains all functions for reading from files and writing to
+files and to manage the content of directories.
+-------------------------------------------------------------------------------
+MASS STORAGE DEVICE FUNCTIONS
+Storage_Init                                    000 (STOINI)
+Storage_New                                     001 (STONEW)
+Storage_Reload                                  002 (STORLD)
+Storage_Delete                                  003 (STODEL)
+Storage_ReadSector                              004 (STOINP)
+Storage_WriteSector                             005 (STOOUT)
+Storage_Activate                                006 (STOACT)
+Storage_Information                             007 (STOINF)
+
+FILE MANAGEMENT FUNCTIONS
+File_Init                                       016 (FILINI)
+File_New                                        017 (FILNEW)
+File_Open                                       018 (FILOPN)
+File_Close                                      019 (FILCLO)
+File_Input                                      020 (FILINP)
+File_Output                                     021 (FILOUT)
+File_Pointer                                    022 (FILPOI)
+File_Decode_Timestamp                           023 (FILF2T)
+File_Encode_Timestamp                           024 (FILT2F)
+File_LineInput                                  025 (FILLIN)
+
+DIRECTORY MANAGEMENT FUNCTIONS
+Directory_Device                                032 (DIRDEV)
+Directory_Path                                  033 (DIRPTH)
+Directory_Property_Set                          034 (DIRPRS)
+Directory_Property_Get                          035 (DIRPRR)
+Directory_Rename                                036 (DIRREN)
+Directory_New                                   037 (DIRNEW)
+Directory_Input                                 038 (DIRINP)
+Directory_DeleteFile                            039 (DIRDEL)
+Directory_DeleteDirectory                       040 (DIRRMD)
+Directory_Move                                  041 (DIRMOV)
+Directory_DriveInformation                      042 (DIRINF)
+Directory_Input_Extended                        013 (DEVDIR)
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+7.) DEVICE MANAGER
+see: SymbOS-Device.txt
+
+The device manager controls all parts of the computer hardware. As in generel
+the desktop manage and the file manager is between the application and the
+device manager, only a few functions of the device manager are available for
+the application directly.
+-------------------------------------------------------------------------------
+DEVICE MANAGER FUNCTIONS
+Device_TimeGet                                  #810C (TIMGET)
+Device_TimeSet                                  #810F (TIMSET)
+Device_ScreenMode                               #8139 (SCRGET)
+Device_MousePosition                            #813C (MOSGET)
+Device_MouseKeyStatus                           #813F (MOSKEY)
+Device_KeyTest                                  #8145 (KEYTST)
+Device_KeyStatus                                #8148 (KEYSTA)
+Device_KeyPut                                   #814B (KEYPUT)
+
+EXTENDED ASCII CODES
+KEYBOARD SCAN CODES
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+8.) SYMSHELL TEXT TERMINAL
+see: SymbOS-SymShell.txt
+
+SymShell provides a program environment with a text terminal. The input and
+output can be redirected from and to different sources and destinations.
+-------------------------------------------------------------------------------
+SYMSHELL COMMAND LINE INFORMATION
+
+SYMSHELL COMMANDS AND RESPONSES
+SymShell_CharInput_Command                      064 (MSC_SHL_CHRINP)
+SymShell_CharInput_Response                     192 (MSR_SHL_CHRINP)
+SymShell_StringInput_Command                    065 (MSC_SHL_STRINP)
+SymShell_StringInput_Response                   193 (MSR_SHL_STRINP)
+SymShell_CharOutput_Command                     066 (MSC_SHL_CHROUT)
+SymShell_CharOutput_Response                    194 (MSR_SHL_CHROUT)
+SymShell_StringOutput_Command                   067 (MSC_SHL_STROUT)
+SymShell_StringOutput_Response                  195 (MSR_SHL_STROUT)
+SymShell_Exit_Command                           068 (MSC_SHL_EXIT)
+
+SYMSHELL TEXT TERMINAL CONTROL CODES
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+9.) SYSTEM CONFIGURATION
+see: SymbOS-Config.txt
+
+This chapter describes the content of the system configuration and the
+functions, with which you can access and manipulate the settings.
+-------------------------------------------------------------------------------
+Header
+Core Area Part
+Data Area Part
+Transfer Area Part
+Font
+Configuration Handling Function
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+10.) SCREENSAVER APPLICATIONS
+see: SymbOS-ScreenSaver.txt
+
+This chapter describes the implementation of a screensaver application and the
+messages used for the communication between the system and the screensaver.
+-------------------------------------------------------------------------------
+OPERATIONAL SEQUENCE
+
+SCREENSAVER COMMANDS AND RESPONSES
+ScreenSaver_Init_Command                        001 (MSC_SAV_INIT)
+ScreenSaver_Start_Command                       002 (MSC_SAV_START)
+ScreenSaver_Config_Command                      003 (MSC_SAV_CONFIG)
+ScreenSaver_Config_Response                     004 (MSR_SAV_CONFIG)
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+11.) MEMORY MAP
+see: SymbOS-MemoryMap-CPC.txt
+     SymbOS-MemoryMap-MSX.txt
+     SymbOS-MemoryMap-PCW.txt
+
+Here you have an overview of the memory usage in SymbOS on the Amstrad CPC, the
+MSX and the Amstrad PCW.
+-------------------------------------------------------------------------------
+General Memory Usage
+Application Memory Usage
+Memory Configurations
+-------------------------------------------------------------------------------

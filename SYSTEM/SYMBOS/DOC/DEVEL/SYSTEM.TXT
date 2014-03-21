@@ -1,0 +1,450 @@
+S Y M B O S   D E V E L O P E R   D O C U M E N T A T I O N
+Author: Prodatron / Symbiosis
+Date:   26.08.2007
+===============================================================================
+
+S Y S T E M   M A N A G E R
+
+The system manager is responsible for starting and stopping applications and
+for general system jobs. It provides several dialogue services and it owns the
+file manager, which can only be accessed via the system manager process (for
+more information see the "file manager" chapter).
+System manager commands are triggered via a message, which has to be sent with
+RST #10 (MSGSND) to the system manager process. The system manager process
+always has the ID 3.
+
+
+===============================================================================
+SYSTEM MANAGER COMMANDS AND RESPONSES (APPLICATION MANAGEMENT)
+-------------------------------------------------------------------------------
+ID:             016 (MSC_SYS_PRGRUN)
+Name:           Program_Run_Command
+Library:        SySystem_PRGRUN
+Message:        00  1B  016
+                01  1W  File path and name address
+                03  1B  [Bit0-3] File path and name ram bank (0-15)
+                        [Bit7  ] Flag, if system error message should be
+                                 suppressed
+Description:    Loads and starts an application or opens a document with a
+                known type by loading the associated application first.
+                If Bit7 of P3 is not set, the system will open a message box,
+                if an error occurs during the loading process.
+Response:       See MSR_SYS_PRGRUN
+-------------------------------------------------------------------------------
+ID:             144 (MSR_SYS_PRGRUN)
+Name:           Program_Run_Response
+Message:        00  1B  144
+                01  1B  Success status
+                        0 = OK
+                        1 = File does not exist
+                        2 = File is not an executable and its type is not
+                            associated with an application
+                        3 = Error while loading (see P8 for error code)
+                        4 = Memory full
+                - If success status is 0:
+                08  1B  Application ID
+                09  1B  Process ID (the applications main process)
+                - If success status is 3:
+                08  1B  File manager error code
+Description:    The system manager sends this message after trying to load an
+                application or after opening an associated document. If the
+                operation was successful, you will find the application ID and
+                the process ID in P8 and P9. If it failed because of loading
+                problems P8 contains the file manager error code.
+-------------------------------------------------------------------------------
+ID:             017 (MSC_SYS_PRGEND)
+Name:           Program_End_Command
+Library:        SySystem_PRGEND
+Message:        00  1B  017
+                01  1B  Application ID
+Description:    Stops an application and releases all its used system
+                resources. This command first stops all processes of the
+                application. After this all open windows will be closed and the
+                reserved memory will be released.
+                Please note, that this command can't release memory, stop
+                processes and timers or close windows, which are not registered
+                for the application. Such resources first have to be released
+                by the application itself.
+Response:       [the system manager does not send a response message]
+-------------------------------------------------------------------------------
+ID:             020 (MSC_SYS_PRGSTA)
+Name:           Program_Run_Dialogue_Command
+Message:        00  1B  020
+Description:    Opens the "run" dialogue. The user then can select an
+                application or a document.
+Response:       [the system manager does not send a response message]
+-------------------------------------------------------------------------------
+ID:             024 (MSC_SYS_PRGSET)
+Name:           Program_Run_ControlPanel_Command
+Message:        00  1B  024
+                01  1B  Control panel sub module
+                        0 = Main window
+                        1 = Display settings
+                        2 = time and date settings
+Description:    Starts the control panel application or one of its two sub
+                modules.
+Response:       [the system manager does not send a response message]
+-------------------------------------------------------------------------------
+ID:             025 (MSC_SYS_PRGTSK)
+Name:           Program_Run_TaskManager_Command
+Message:        00  1B  025
+Description:    Starts the task manager application.
+Response:       [the system manager does not send a response message]
+-------------------------------------------------------------------------------
+ID:             030 (MSC_SYS_PRGSRV)
+Name:           Program_SharedService_Command
+Message:        00  1B  030
+                04  1B  Command type
+                        0 = search application or shared service
+                        1 = search, start and use shared service
+                        2 = release shared service
+                - if P4 is 0 or 1:
+                01  1W  Address of the 12byte application ID string
+                - if P4 is 0 or 1:
+                03  1B  Ram bank (0-15) of the 12byte application ID string
+                - if P4 is 2:
+                03  1B  Application ID
+Description:    [General]
+                In SymbOS "shared service" is the name for a special kind of
+                program, which provides a collection of functions for any other
+                application.
+                Regarding the structure, a shared service itself is nothing
+                else than an usual application. The difference is, that it
+                mostly runs in the background without beeing visible and has an
+                unique identifier with which it can be found or even started by
+                any other application with the help of this function.
+                A shared service should be able to provide its function to
+                multiple applications at the same time. One example for a
+                shared service is a network "demon", which supports existing
+                network hardware like ethernet or RS232 cards and provides
+                different network functions. Another example would be a
+                graphic library. In general any access to additional hardware
+                components, which is not directly supported in the SymbOS core,
+                should be handled via shared services.
+                This function can be used to find, start and release shared
+                services. It can also be used to find any other application via
+                the first 12 chars of its name. This makes it possible to
+                prevent the execution of multiple instances of the same
+                application: The second one will first search for itself and
+                quits itself at once, if it's already running.
+                This function also supports the handling of platform specific
+                shared services. Depending on the computer type, there will
+                probably be different types of hardware extensions, but they
+                all provide the same functionality. So as an example, the MSX
+                requires a different "network demon" shared service than the
+                CPC. But as the applications doesn't need to know about the
+                current platform, SymbOS will load the correct shared service
+                automatically.
+                [Usage]
+                There are three command types for handling shared services and
+                searching for applications.
+                A.) For type 0 (search) and 1 (search, start and use) you have
+                to specify the identifier string of the application (P1, P3).
+                This identifier string is nothing else than the first 12 bytes
+                of its name (inside the 256 byte header, please see the
+                "Application" chapter). SymbOS will search for such an
+                application and return the applications and process ID, if
+                found.
+                B.) Type 1 (search, start and use) will not only search for a
+                shared service. If it can't be found, it will try to start it
+                from the system path. Because of this, the shared service ID
+                always have to be the first 12 chars of its filename
+                ("%NNNNNNNN.EE"; please use exactly this format, fill the "N"s
+                and "E"s and use always 8 chars for the main filename and 2
+                chars for the extension). SymbOS will add a platform specific
+                letter as the 13.char. This letter is...
+                - "C" for the CPC,
+                - "M" for the MSX,
+                - "P" for the PCW,
+                - "E" for the Enterprise (*not existing yet*),
+                - "S" for the Sam Coupe  (*not existing yet*)
+                ...version. This makes it possible to have different shared
+                services for each platform.
+                If the shared service could be found or started, a counter will
+                be increased. This counter specified the number of application,
+                which are using this shared service. It helps to find out, if
+                a shared service is used or if it isn't used at all by any
+                application.
+                C.) Type 2 (release shared service) will decrease the mentioned
+                counter. If it comes down to 0, the shared service will be
+                removed completely. An application, which doesn't require a
+                shared service anymore (maybe because it also have been
+                quited), should send this command type. That means, that SymbOS
+                always knows, how much applications are using a special shared
+                service. If no one is using it anymore, it can be removed to
+                free system resources.
+Response:       See MSR_SYS_PRGSRV
+-------------------------------------------------------------------------------
+ID:             158 (MSR_SYS_PRGSRV)
+Name:           Program_SharedService_Response
+Message:        00  1B  158
+                01  1B  Result status
+                        0 = OK
+                        5 = application or shared service not found (can only
+                            occur on command type 0)
+                        1-4=error while starting shared service; same codes
+                            like in MSR_SYS_PRGRUN, please read there for a
+                            detailed description
+                - If command type was 0 or 1, and result status is 0:
+                08  1B  Application ID
+                09  1B  Process ID (the applications main process)
+                - If result status is 3:
+                08  1B  File manager error code
+Description:    Command type 0 ("search") will return 5 (not found) or 0 (OK).
+                In the latter case you will find the application and process ID
+                in P8 and P9.
+                Command type 1 ("search, start and use") will return 0 (OK) if
+                the shared services has been found or loaded successfully. In
+                the other case it will return a loading error code of 1, 2, 3
+                or 4, which is identical with these of MSR_SYS_PRGRUN.
+                Command type 2 ("release") will always return 0 (OK).
+-------------------------------------------------------------------------------
+
+===============================================================================
+SYSTEM MANAGER COMMANDS (SYSTEM MANAGEMENT)
+
+The system manager will not send response messages after processing the
+following commands.
+-------------------------------------------------------------------------------
+ID:             018 (MSC_SYS_SYSWNX)
+Name:           System_Dialogue_NextWindow_Command
+Message:        00  1B  018
+Description:    Opens the dialogue for changing the current window. The next
+                window is preselected.
+                [*THIS COMMAND IS NOT IMPLEMENTED YET*]
+-------------------------------------------------------------------------------
+ID:             019 (MSC_SYS_SYSWPR)
+Name:           System_Dialogue_PreviousWindow_Command
+Message:        00  1B  019
+Description:    Opens the dialogue for changing the current window. The
+                previous window is preselected.
+                [*THIS COMMAND IS NOT IMPLEMENTED YET*]
+-------------------------------------------------------------------------------
+ID:             021 (MSC_SYS_SYSSEC)
+Name:           System_Dialogue_SystemSecurity_Command
+Message:        00  1B  021
+Description:    Opens the "SymbOS security" dialogue.
+-------------------------------------------------------------------------------
+ID:             022 (MSC_SYS_SYSQIT)
+Name:           System_Dialogue_ShutDown_Command
+Message:        00  1B  022
+Description:    Opens the "shut down" dialogue.
+-------------------------------------------------------------------------------
+ID:             023 (MSC_SYS_SYSOFF)
+Name:           System_ShutDown_Command
+Message:        00  1B  023
+Description:    Resets the computer.
+-------------------------------------------------------------------------------
+ID:             028 (MSC_SYS_SYSCFG)
+Name:           System_Configuration_Command
+Message:        00  1B  028
+                01  1B  Action type
+                        0 = reload configuration
+                        1 = save current configuration
+                        2 = reload or reinitialize desktop background picture
+                        3 = reload or reinitialize screen saver
+Description:    Loads or saves the configuration or reinitializes the desktop
+                background or the screen saver.
+-------------------------------------------------------------------------------
+
+===============================================================================
+SYSTEM MANAGER COMMANDS AND RESPONSES (DIALOGUE SERVICES)
+-------------------------------------------------------------------------------
+ID:             029 (MSC_SYS_SYSWRN)
+Name:           Dialogue_Infobox_Command
+Library:        SySystem_SYSWRN
+Message:        00  1B  029
+                01  1W  Content data address
+                03  1B  Content data ram bank (0-15)
+                04  1B  [Bit0-5] Number of buttons (1-3)
+                                 1 = "OK" button
+                                 2 = "Yes", "No" buttons
+                                 3 = "Yes", "No", "Cancel" buttons
+                        [Bit6  ] Flag, if window should be super window
+                        [Bit7  ] Box type
+                                 0 = warning (default warning symbol)
+                                 1 = info (own symbol will be used)
+Content data:   00  1W  Address of text line 1
+                02  1W  4 * [text line 1 pen] + 2
+                04  1W  Address of text line 2
+                06  1W  4 * [text line 2 pen] + 2
+                08  1W  Address of text line 3
+                10  1W  4 * [text line 3 pen] + 2
+                - if P4[bit7] is 1:
+                12  1W  Address of symbol (24x24 pixel SymbOS graphic format)
+Description:    Opens an info, warning or confirm box and displays three line
+                of text and up to three click buttons.
+                If Bit7 of P4 is set to 1, you can specify an own symbol, which
+                will be showed left to the text. If this bit is not set, a "!"-
+                warning symbol will be displayed.
+                If Bit6 of P4 is set to 1, the window will be opened as a super
+                window, and you will receive a message with its window number
+                (see MSR_SYS_SYSWRN).
+                Please note, that the content data must always be placed in the
+                transfer ram area (#C000-#FFFF). The texts itself and the
+                optional graphic must always be placed inside a 16K (data ram
+                area).
+                As the text line pen, you should choose 1, so 6 would be the
+                correct value.
+                For more information about the mentioned memory types (data,
+                transfer) see the "applications" chapter.
+                For more information about the SymbOS graphic format see the
+                "desktop manager data records" chapter.
+Response:       See MSR_SYS_SYSWRN
+-------------------------------------------------------------------------------
+ID:             157 (MSR_SYS_SYSWRN)
+Name:           Dialogue_Infobox_Response
+Message:        00  1B  157
+                01  1B  Message type
+                         0 -> The infobox is currently used by another
+                              application. It can only be opened once at the
+                              same time, if it's not a pure info message (one
+                              button, not a super window). The user should
+                              close the other infobox first before it can be
+                              opened again by the application.
+                         1 -> The infobox has been opened successful as a super
+                              window. This message won't be sent for non-super
+                              window infoboxes.
+                         2 -> The user clicked "OK".
+                         3 -> The user clicked "Yes".
+                         4 -> The user clicked "No".
+                         5 -> The user clicked "Cancel" or the close button.
+                - if P1 is 1:
+                02  1B  Number of the infobox window + 1. The application
+                        should store this number as the super window ID of its
+                        own window, so that the infobox will be handled as the
+                        super window of the application window. As long as it
+                        is open the application window can't get the focus
+                        position.
+                        For more information about the window data structure
+                        and super windows see the chapter "desktop manager".
+Description:    The system manager sends back this message to the application,
+                when a infobox should be opened, or if the user clicked one of
+                the buttons.
+-------------------------------------------------------------------------------
+ID:             031 (MSC_SYS_SELOPN)
+Name:           Dialogue_FileSelector_Command
+Library:        SySystem_SELOPN
+Message:        00  1B  031
+                06  1B  [Bit0-3] File mask, path and name ram bank (0-15)
+                        [Bit6  ] Flag, if "open" (0) or "save" (1) dialogue
+                        [Bit7  ] Flag, if file (0) or directory (1) selection
+                07  1B  Attribute filter
+                        Bit0 = 1 -> don't show read only files
+                        Bit1 = 1 -> don't show hidden files
+                        Bit2 = 1 -> don't show system files
+                        Bit3 = 1 -> don't show volume ID entries
+                        Bit4 = 1 -> don't show directories
+                        Bit5 = 1 -> don't show archive files
+                08  1W  File mask, path and name address (#C000-#FFFF)
+                        00  3B  File extension filter (e.g. "*  ")
+                        03  1B  0
+                        04 256B path and filename
+                10  1W  Maximum number of directory entries
+                12  1W  Maximum size of directory data buffer
+Description:    Opens the file selection dialogue. In this dialogue the user
+                can move through the directory structure, change the drive and
+                search and select a file or a directory for opening or saving.
+                If you specify a path, the dialogue will start directly in the
+                directory. If you append a filename, too, it will be used as
+                the preselected file.
+                You can filter the entries of the directory by attributes and
+                filename extension. We recommend always to set Bit3 of the
+                attribute filter byte.
+                The File mask/path/name string (260 bytes) must always be
+                placed in the transfer ram area (#C000-#FFFF). For more
+                information about this memory types see the "applications"
+                chapter.
+                Please note, that the system will reserve memory to store the
+                listed directory entries and the data structure of the list.
+                With P10 and P12 you can choose, how much memory should be
+                used. We recommend to set the number of entries between 100 and
+                200 (Amsdos supports a maximum amount of 64 entries) and to set
+                the data buffer between 5000 and 10000.
+Response:       See MSR_SYS_SELOPN
+-------------------------------------------------------------------------------
+ID:             159 (MSR_SYS_SELOPN)
+Name:           Dialogue_FileSelector_Response
+Message:        00  1B  159
+                01  1B  Message type
+                         0 -> The user choosed a file or directory and closed
+                              the dialogue with "OK". The complete file path
+                              and name can be found in the filepath buffer of
+                              the application.
+                         1 -> The user aborted the file selection. The content
+                              of the applications filepath buffer is unchanged.
+                         2 -> The file selection dialogue is currently used by
+                              another application. It can only be opened once
+                              at the same time. The user should close the
+                              dialogue first before it can be opened again by
+                              the application.
+                         3 -> Memory full. There was not enough memory
+                              available for the directory buffer and/or the
+                              list data structure.
+                         4 -> No window available. The desktop manager couldn't
+                              open a new window for the dialogue, as the
+                              maximum number of windows (32) has already been
+                              reached.
+                        -1 -> The dialogue has been opened successful and the
+                              user is doing his file selection right now.
+                - if P1 is -1:
+                02  1B  Number of the dialogue window + 1. The application
+                        should store this number as the super window ID of its
+                        own window, so that the file selection dialogue will be
+                        handled as the super window of the application window.
+                        As long as it is open the application window can't get
+                        the focus position.
+                        For more information about the window data structure
+                        and super windows see the chapter "desktop manager".
+Description:    The system manager sends back this message to the application,
+                when a file selection dialogue should be opened.
+                If opening was successful the application will first receive a
+                type -1 message and then, after the user choosed his file or
+                aborted, a type 0 or 1 message.
+                If opening failed the application will directly receive a type
+                2, 3 or 4 message.
+-------------------------------------------------------------------------------
+
+===============================================================================
+SYSTEM MANAGER COMMANDS AND RESPONSES (FILE MANAGEMENT)
+
+The following command and response messages must be used for the communication
+between the application and the file manager.
+See the "file manager" chapter for more information about these messages.
+-------------------------------------------------------------------------------
+ID:             026 (MSC_SYS_SYSFIL)
+Name:           System_Filemanager_Command
+-------------------------------------------------------------------------------
+ID:             154 (MSR_SYS_SYSFIL)
+Name:           System_Filemanager_Response
+-------------------------------------------------------------------------------
+
+===============================================================================
+SYSTEM MANAGER FUNCTIONS
+
+The system manager functions have to be called with RST #28 (BNKFCL).
+-------------------------------------------------------------------------------
+Address:        #8103 (SYSINF)
+Name:           System_Information
+How to call:    ld hl,#8103:rst #28
+Input:          E    = Request type
+                       0 = get general information
+                       1 = get application information
+                       2 = get task information
+                       3 = load mass storage device configuration
+                       4 = save mass storage device configuration
+                       5 = load a part of the configuration
+                       6 = save a part of the configuration
+                       7 = get config memory address
+                       8 = get font and version string memory address
+                D,IX,IY
+                     = Sub specification
+Output:         DE,IX,IY
+                     = Data
+Destroyed:      AF,BC,HL
+Description:    This function is mainly used by the task manager and the
+                control panel application.
+                For a detailed documentation about the request types 3-8 see
+                the "configuration" chapter.
+                Request types 0-2 are not documented yet.
+-------------------------------------------------------------------------------

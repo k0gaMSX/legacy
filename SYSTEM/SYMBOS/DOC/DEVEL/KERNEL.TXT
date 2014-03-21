@@ -1,0 +1,560 @@
+S Y M B O S   D E V E L O P E R   D O C U M E N T A T I O N
+Author: Prodatron / Symbiosis
+Date:   25.08.2007
+===============================================================================
+
+K E R N E L
+
+The kernel is the heart of SymbOS and controls the core resources of the
+system. The kernel is devided into the modules "multitasking", "memory",
+"banking" and "messaging".
+The kernel is also the interface between the applications and all parts of the
+operating system.
+
+
+===============================================================================
+KERNEL RESTARTS
+
+Kernel restarts can be accessed via the Z80 RST commands.
+-------------------------------------------------------------------------------
+Address:        RST #08 (MSGSLP)
+Name:           Message_Sleep_And_Receive
+Input:          IXL  = Receiver process ID (your own one)
+                IXH  = Sender process ID or -1
+                       -1 = check for message from any process
+                       XX = check for message only from process XX
+                IY   = Pointer to message buffer (14 bytes)
+Output:         IXL  = Status (0 = no message available, 1 = message received)
+                IXH  = Sender process ID (if IXL=1)
+Destroyed:      AF,BC,DE,HL
+Description:    Checks for a new message from another process. If there is no
+                message, the process will be switched into sleep mode, until a
+                message is available. You still must check the IXL register, as
+                it is also possible, that the process has been wacked up
+                without getting a new message.
+                Use this function, if you don't need to do any other things
+                than waiting for a new message, as it will save CPU time.
+                For more information about receiving message, see RST #18
+                (MSGGET).
+-------------------------------------------------------------------------------
+Address:        RST #10 (MSGSND)
+Name:           Message_Send
+Input:          IXL  = Sender process ID (your own one)
+                IXH  = Receiver process ID
+                IY   = Pointer to the message (1-14 bytes)
+Output:         IXL  = Status (1 = message has been sent successfully,
+                               0 = message queue is full,
+                               2 = receiver process does not exist)
+Destroyed:      AF,BC,DE,HL
+Description:    Sends a message to another process. IXL must contain your own
+                process ID, IXH the ID of the receiver.
+                If the message queue is full or the receiver does not exist,
+                the message will not be sent.
+                The message must always be placed between #C000 and #FFFF
+                (transfer ram area) and can have a maximum size of 14 bytes.
+-------------------------------------------------------------------------------
+Address:        RST #18 (MSGGET)
+Name:           Message_Receive
+Input:          IXL  = Receiver process ID (your own one)
+                IXH  = Sender process ID or -1
+                       -1 = check for message from any process
+                       XX = check for message only from process XX
+                IY   = Pointer to message buffer (14 bytes)
+Output:         IXL  = Status (0 = no message available, 1 = message received)
+                IXH  = Sender process ID (if IXL=1)
+Destroyed:      AF,BC,DE,HL
+Description:    Checks for a new message from another process. IXL must contain
+                your own process ID.
+                If you only want to receive messages from a special process,
+                you have to specify it in IXH. You should always specify the
+                sender process ID, if you expect a special message right now
+                from it. In this case messages from other processes will stay
+                in the message queue and can be received later.
+                If you want to receive messages from any process, IXH must
+                contain -1.
+                The message buffer must have a size of 14 bytes and always be
+                placed between #C000 and #FFFF (transfer ram area). It will be
+                filled with the message, if the functions comes back with
+                IXL=1.
+-------------------------------------------------------------------------------
+Address:        RST #20 (BNKSCL)
+Name:           Banking_SlowCall
+Input:          ((SP+0))          = Destination address
+                AF,BC,DE,HL,IX,IY = Registers for the destination routine
+Output:         AF,BC,DE,HL,IX,IY = Registers from the destination routine
+Destroyed:      -
+Description:    Calls a routine, which is placed in the first ram bank. All
+                registers will be transfered unmodified to and from the
+                routine. The address of the routine has to be specified
+                directly behind the RST command.
+                Use this function, if you want to call a routine, which
+                requires other registers than only DE,IX and IY or which does
+                make bank switching. In any other case you can use RST #28
+                (BNKFCL), as BNKFCL is faster than BNKSCL.
+Example:        rst #20:dw #8130
+                -> Calls the routine at #8130 in the first ram bank.
+
+-------------------------------------------------------------------------------
+Address:        RST #28 (BNKFCL)
+Name:           Banking_FastCall
+Input:          HL       = Destination address
+                DE,IX,IY = Registers for the destination routine
+Output:         DE,IX,IY = Registers from the destination routine
+Destroyed:      AF,BC,HL
+Description:    Calls a routine, which is placed in the first ram bank. DE,IX
+                and IY will be transfered unmodified to and from the routine.
+                It is faster than RST #20 (BNKSCL). Don't use this function, if
+                the routine does make bank switching or requires more registers
+                than DE,IX,IY.
+Example:        ld hl,#8109:rst #28
+                -> Calls the routine at #8109 in the first ram bank.
+-------------------------------------------------------------------------------
+Address:        RST #30 (MTSOFT)
+Name:           Multitasking_SoftInterrupt
+Input:          -
+Output:         -
+Destroyed:      -
+Description:    Releases the CPU time for the operating system. If the process
+                currently has nothing to do because it is waiting for
+                something, you should call this function, so that other
+                processes can get CPU time, too.
+                A process, which called this function, is marked as "idle".
+-------------------------------------------------------------------------------
+Address:        RST #38 (MTHARD)
+Name:           Multitasking_HardInterrupt
+Input:          -
+Output:         -
+Destroyed:      -
+Description:    You shouldn't call this function by yourself. It is called by
+                the hardware interrupt, which comes 300 times per second. The
+                current process will be stopped, so that other processes can
+                get CPU time, too.
+                A process, which is interrupted by this function, is marked as
+                "work", and this and the following is the reason, why you
+                shouldn't call it by yourself, as it will disturb the
+                multitasking behaviour.
+                Please note, that if a process is hard interrupted, processes
+                with a lower priority won't get any CPU time. Only when all
+                processes from the same priority level release the CPU time by
+                themself with RST #30 (MTSOFT), processes with a lower priority
+                have a chance to work, too.
+-------------------------------------------------------------------------------
+
+===============================================================================
+KERNEL COMMANDS (MULTITASKING MANAGEMENT)
+
+Kernel commands are triggered via a message, which has to be sent with RST #10
+(MSGSND) to the kernel process. The kernel process always has the ID 1.
+-------------------------------------------------------------------------------
+ID:             001 (MSC_KRL_MTADDP)
+Name:           Multitasking_Add_Process_Command
+Library:        SyKernel_MTADDP
+Message:        00  1B  001
+                01  1W  Stack address (see notes below)
+                03  1B  Priority (1=highest, 7=lowest)
+                04  1B  Ram bank (0-15)
+Description:    Adds a new process with a given priority and starts it
+                immediately.
+                Application processes usually will be started with priority 4.
+                Note, that the desktop manager process runs with priority 1,
+                the system manager process with 2. If you start a process,
+                which should do some long and intensive calculation, you should
+                choose a priority greater than 4, so that other applications
+                will not be disturbed.
+                The stack must always be placed between #C000 and #FFFF
+                (transfer ram area). It must contain the start address of the
+                process (or timer) routine at offset 12 and may contain the
+                initial values of the registers. You can choose the size of the
+                stack buffer by yourself, just be sure, that it is large
+                enough.
+                At offset 13 there must be a free byte. In this byte the kernel
+                will write the ID of the process (or timer) after it has been
+                started.
+Example (stack):                ds 128              ;Stack buffer
+                stack_pointer:  dw 0                ;initial value for IY
+                                dw 0                ;initial value for IX
+                                dw 0                ;initial value for HL
+                                dw 0                ;initial value for DE
+                                dw 0                ;initial value for BC
+                                dw 0                ;initial value for AF
+                                dw process_start    ;process start address
+                process_id      db 0                ;kernel writes the ID here
+Response:       See MSR_KRL_MTADDP
+-------------------------------------------------------------------------------
+ID:             002 (MSC_KRL_MTDELP)
+Name:           Multitasking_Delete_Process_Command
+Library:        SyKernel_MTDELP
+Message:        00  1B  002
+                01  1B  Process ID
+Description:    Stops an existing process and deletes it.
+Response:       See MSR_KRL_MTDELP
+-------------------------------------------------------------------------------
+ID:             003 (MSC_KRL_MTADDT)
+Name:           Multitasking_Add_Timer_Command
+Library:        SyKernel_MTADDT
+Message:        00  1B  003
+                01  1W  Stack address
+                04  1B  Ram bank (0-15)
+Description:    Adds a new timer and starts it immediately. Timers will be
+                called 50 or 60 times per second, depending on the screen vsync
+                frequency. Please see MSC_KRL_MTADDP for information about the
+                stack.
+                PLEASE NOTE: A timer is nothing else than an usual process with
+                a special priority. That means, that you have to implement a
+                looping code. Don't use a "RET" at the end of the timer routine
+                but a "RST #30:JP CODE_START". The code should also be very
+                short. As the timers have the highest priority, they would
+                slow down the whole system, if they require too much CPU time.
+Response:       See MSR_KRL_MTADDT
+-------------------------------------------------------------------------------
+ID:             004 (MSC_KRL_MTDELT)
+Name:           Multitasking_Delete_Timer_Command
+Library:        SyKernel_MTDELT
+Message:        00  1B  004
+                01  1B  Timer ID
+Description:    Stops an existing timer and deletes it.
+Response:       See MSR_KRL_MTDELT
+-------------------------------------------------------------------------------
+ID:             005 (MSC_KRL_MTSLPP)
+Name:           Multitasking_Sleep_Process_Command
+Library:        SyKernel_MTSLPP
+Message:        00  1B  005
+                01  1B  Process ID
+Description:    Puts an existing process into the sleep mode. It is stopped and
+                does not run anymore, until it receives a message, or until it
+                will be wacked up again (see MSC_KRL_MTWAKP).
+                Usually this command is not needed, as a process can put itself
+                into the sleep mode with the MSGSLP restart (see above).
+Response:       See MSR_KRL_MTSLPP
+-------------------------------------------------------------------------------
+ID:             006 (MSC_KRL_MTWAKP)
+Name:           Multitasking_WakeUp_Process_Command
+Library:        SyKernel_MTWAKP
+Message:        00  1B  006
+                01  1B  Process ID
+Description:    Wakes up a process, which was sleeping before. A process will
+                be wacked up, too, when another process is sending a message to
+                it.
+Response:       See MSR_KRL_MTWAKP
+-------------------------------------------------------------------------------
+ID:             007 (MSC_KRL_TMADDT)
+Name:           Timer_Add_Counter_Command
+Library:        SyKernel_TMADDT
+Message:        00  1B  007
+                01  1W  Counter byte address
+                03  1B  Counter byte ram bank (0-15)
+                04  1B  Process ID
+                05  1B  Speed (counter will be increased every x/50 second)
+Description:    Adds a counter for a process. You need to specify a byte
+                anywhere in the memory. This byte then will be increased every
+                [P5]/50 seconds. So if you want, that the kernel increases it
+                once per second, you have to set P5 to 50.
+                As an example you could check this byte regulary, and if it has
+                been changed you call an event routine. This is much easier and
+                faster than setting up an own timer.
+Response:       See MSR_KRL_TMADDT
+-------------------------------------------------------------------------------
+ID:             008 (MSC_KRL_TMDELT)
+Name:           Timer_Delete_Counter_Command
+Library:        SyKernel_TMDELT
+Message:        00  1B  008
+                01  1W  Counter byte address
+                03  1B  Counter byte ram bank (0-15)
+Description:    Stops the specified counter. Please note, that this will be
+                done automatically, if the process should be deleted.
+Response:       See MSR_KRL_TMDELT
+-------------------------------------------------------------------------------
+ID:             008 (MSC_KRL_TMDELP)
+Name:           Timer_Delete_AllProcessCounters_Command
+Library:        SyKernel_TMDELP
+Message:        00  1B  008
+                01  1B  Process ID
+Description:    Stops all counters of one process. Please note, that this will
+                be done automatically, if the process should be deleted.
+Response:       See MSR_KRL_TMDELP
+-------------------------------------------------------------------------------
+
+===============================================================================
+KERNEL RESPONSES (MULTITASKING MANAGEMENT)
+
+Kernel responses are coming as a message, which has to be received with RST #18
+(MSGSND) or RST #08 (MSGSLP) from the kernel process. The kernel process always
+has the ID 1.
+-------------------------------------------------------------------------------
+ID:             129 (MSR_KRL_MTADDP)
+Name:           Multitasking_Add_Process_Response
+Message:        00  1B  129
+                01  1B  Error status (0=successful, 1=failed)
+                02  1B  Process ID (if P1=0)
+Description:    The kernel sends this message after trying to add a new
+                process (see MSC_KRL_MTADDP).
+                You shouldn't add another process until you receive this
+                message.
+-------------------------------------------------------------------------------
+ID:             130 (MSR_KRL_MTDELP)
+Name:           Multitasking_Delete_Process_Response
+Message:        00  1B  130
+Description:    The kernel sends this message after deleting an existing
+                process (see MSC_KRL_MTDELP).
+-------------------------------------------------------------------------------
+ID:             131 (MSR_KRL_MTADDT)
+Name:           Multitasking_Add_Timer_Response
+Message:        00  1B  131
+                01  1B  Error status (0=successful, 1=failed)
+                02  1B  Timer ID (if P1=0)
+Description:    The kernel sends this message after trying to add a new timer
+                (see MSC_KRL_MTADDT).
+                You shouldn't add another timer until you receive this message.
+-------------------------------------------------------------------------------
+ID:             132 (MSR_KRL_MTDELT)
+Name:           Multitasking_Delete_Timer_Response
+Message:        00  1B  132
+Description:    The kernel sends this message after deleting an existing
+                timer (see MSC_KRL_MTDELT).
+-------------------------------------------------------------------------------
+ID:             133 (MSR_KRL_MTSLPP)
+Name:           Multitasking_Sleep_Process_Response
+Message:        00  1B  133
+Description:    The kernel sends this message after puting a process into sleep
+                mode (see MSC_KRL_MTSLPP).
+-------------------------------------------------------------------------------
+ID:             134 (MSR_KRL_MTWAKP)
+Name:           Multitasking_WakeUp_Process_Response
+Message:        00  1B  134
+Description:    The kernel sends this message after wacking up a process (see
+                MSC_KRL_MTWAKP).
+-------------------------------------------------------------------------------
+ID:             135 (MSR_KRL_TMADDT)
+Name:           Timer_Add_Counter_Response
+Message:        00  1B  135
+                01  1B  Error status (0=successful, 1=failed)
+Description:    The kernel sends this message after trying to add a new counter
+                (see MSC_KRL_TMADDT).
+-------------------------------------------------------------------------------
+ID:             136 (MSR_KRL_TMDELT)
+Name:           Timer_Delete_Counter_Response
+Message:        00  1B  136
+Description:    The kernel sends this message after deleting a counter (see
+                MSC_KRL_TMDELT).
+-------------------------------------------------------------------------------
+ID:             137 (MSR_KRL_TMDELP)
+Name:           Timer_Delete_AllProcessCounters_Response
+Message:        00  1B  137
+Description:    The kernel sends this message after deleting all counters of
+                one process (see MSC_KRL_TMDELP).
+-------------------------------------------------------------------------------
+
+===============================================================================
+KERNEL FUNCTIONS (MEMORY MANAGEMENT)
+
+All kernel memory functions have to be called with RST #20 (BNKSCL) or RST #28
+(BNKFCL). This depends on the function, so have a look at "How to call" in the
+description. Many functions can only be called once at the same time, so they
+are protected with a semaphore mechanism. The calling process will be switched
+to idle mode, while the function is working for another process.
+-------------------------------------------------------------------------------
+Address:        #8100 (MEMSUM)
+Name:           Memory_Summary
+How to call:    ld hl,#8100:rst #28
+Input:          -
+Output:         E,IX = free memory in bytes
+                D    = number of existing 64K extended ram banks
+Destroyed:      A,BC,IY
+Description:    Gives back the size of the total existing memory
+                (=D*65536+65536) and the amount of bytes (=E*65536+IX), which
+                are still available.
+-------------------------------------------------------------------------------
+Address:        #8121 (MEMINF)
+Name:           Memory_Information
+How to call:    rst #20:dw #8121
+Input:          A    = Ram bank (1-8, 0 means search in any bank)
+                E    = Memory type
+                       0 = total (code area)
+                       1 = within a 16K block (data area)
+                       2 = within the last 16K block (transfer area)
+Output:         BC   = length of the largest free area
+                A,HL = total free memory in bytes
+Destroyed:      F,DE
+Description:    Searches for the largest free area inside a 64K bank. If you
+                don't specify the ram bank (A=0) the system is searching for
+                the largest area inside the whole memory.
+                For more information about the three memory types (code, data,
+                transfer) see the "applications" chapter.
+                This function is useful, if you want to reserve as much memory
+                in one piece as possible, but have no idea, how much it could
+                be.
+-------------------------------------------------------------------------------
+Address:        #8118 (MEMGET)
+Name:           Memory_Get
+How to call:    rst #20:dw #8118
+Input:          A    = Ram bank (1-8, 0 means search in any bank)
+                E    = Memory type
+                       0 = total (code area)
+                       1 = within a 16K block (data area)
+                       2 = within the last 16K block (transfer area)
+                BC   = Length in bytes
+Output:         A    = Ram bank (1-8)
+                HL   = Address
+                CF   = Error state (CF=1 -> not enough memory free)
+Destroyed:      BC,DE
+Description:    Reserves the requested amount of memory in any or a special ram
+                bank. If the memory type is 1, it will be reserved inside a
+                16k block, if it is 2, inside the last 16K block of the ram
+                bank.
+                For more information about the three memory types (code, data,
+                transfer) see the "applications" chapter.
+-------------------------------------------------------------------------------
+Address:        #811B (MEMFRE)
+Name:           Memory_Free
+How to call:    rst #20:dw #811B
+Input:          A    = Ram bank (1-8)
+                HL   = Address
+                BC   = Length in bytes
+Output:         -
+Destroyed:      AF,BC,E,HL
+Description:    Frees the specified memory. Please note, that because of
+                performance and resources reasons the system will free it in
+                any way, so be sure, that you really free only the memory you
+                reserved by yourself.
+-------------------------------------------------------------------------------
+Address:        #811E (MEMSIZ)
+Name:           Memory_Resize
+How to call:    rst #20:dw #811E
+Input:          A    = Ram bank (1-8)
+                HL   = Address
+                BC   = Old length in bytes
+                DE   = New length in bytes
+Output:         CF   = Error state (CF=1 -> not enough memory free)
+Destroyed:      AF,BC,DE,HL
+Description:    Changes the length of a reserved memory area. You will always
+                have success, if the new length is smaller than the old one.
+                If the user started already other applications, there is only
+                a little chance to be able to increase an existing memory area.
+                Because of the limitations of the Z80 cpu the system can't move
+                memory areas to another place after they have been occupied.
+-------------------------------------------------------------------------------
+
+===============================================================================
+KERNEL FUNCTIONS (BANKING MANAGEMENT)
+
+All kernel banking functions have to be called with RST #20 (BNKSCL) or RST #28
+(BNKFCL). For more information see KERNEL FUNCTIONS (MEMORY MANAGEMENT).
+-------------------------------------------------------------------------------
+Address:        #8124 (BNKRWD)
+Name:           Banking_ReadWord
+How to call:    rst #20:dw #8124
+Input:          A    = Ram bank (0-15)
+                HL   = Address
+Output:         BC   = Content of A,HL
+                HL   = Address+2
+Destroyed:      -
+Description:    Reads a word from an address in any ram bank.
+-------------------------------------------------------------------------------
+Address:        #8127 (BNKWWD)
+Name:           Banking_WriteWord
+How to call:    rst #20:dw #8127
+Input:          A    = Ram bank (0-15)
+                HL   = Address
+                BC   = Word
+Output:         HL   = Address+2
+Destroyed:      BC
+Description:    Writes a word to an address in any ram bank.
+-------------------------------------------------------------------------------
+Address:        #812A (BNKRBT)
+Name:           Banking_ReadByte
+How to call:    rst #20:dw #812A
+Input:          A    = Ram bank (0-15)
+                HL   = Address
+Output:         B    = Content of A,HL
+                HL   = Address+1
+Destroyed:      -
+Description:    Reads a byte from an address in any ram bank.
+-------------------------------------------------------------------------------
+Address:        #812D (BNKWBT)
+Name:           Banking_WriteByte
+How to call:    rst #20:dw #812D
+Input:          A    = Ram bank (0-15)
+                HL   = Address
+                B    = Byte
+Output:         HL   = Address+1
+Destroyed:      BC
+Description:    Writes a byte to an address in any ram bank.
+-------------------------------------------------------------------------------
+Address:        #8130 (BNKCOP)
+Name:           Banking_Copy
+How to call:    rst #20:dw #8130
+Input:          A    = [bit0-3] Source      ram bank (0-15)
+                       [bit4-7] Destination ram bank (0-15)
+                HL   = Source address
+                DE   = Destination address
+                BC   = Length
+Output:         -
+Destroyed:      AF,BC,DE,HL
+Description:    Copies a memory area from an address in any ram bank to any
+                other place in memory.
+                The low nibble of the A register (bit 0-3) specifies the source
+                bank, the high nibble (bit 4-7) the destination bank.
+-------------------------------------------------------------------------------
+Address:        #8133 (BNKGET)
+Name:           Banking_GetBank
+How to call:    rst #20:dw #8133
+Input:          -
+Output:         A    = Ram bank (1-8)
+Destroyed:      F
+Description:    Gives back the number of the ram bank, where the process is
+                running.
+-------------------------------------------------------------------------------
+Address:        #8142 (BNK16C)
+Name:           Banking_Call_Application16KRoutine
+How to call:    ld hl,#8142:rst #28
+Input:          IX   = Pointer to data structure (must be between #C000-#FFFF)
+                       00  1B  Routine ram bank (0-15)
+                       01  1W  Routine address
+                       03  1W  Address of the temporary stack
+                DE,IY= will be handed over unmodified to the routine
+Ouput:          DE,IX,IY
+                     = will be received unmodified from the routine
+Destroyed:      AF,BC,HL
+Description:    An application usually runs inside a complete secondary 64K ram
+                bank. Normally it has not the possibility to access the memory
+                of the first ram bank directly.
+                For applications, which are running in full screen mode and
+                want to access the video memory directly it would be too slow
+                to use the banking functions for copying bytes, words and
+                blocks into another ram bank.
+                This functions allows you to execute an application routine in
+                the first ram bank. The routine must be placed inside a 16K
+                block (data ram area). This 16K block will be switched to
+                #4000-#7FFF, and the routine will be called. After this the old
+                memory configuration will be restored.
+                Please note, that the application has to relocate the routine
+                by itself first. Just set bit15=0 and bit14=1 for every
+                address pointer, which needs to be relocated.
+                The routine needs an own temporary stack during its execution
+                phase. This stack must be placed in the same 16K block.
+-------------------------------------------------------------------------------
+
+===============================================================================
+KERNEL FUNCTIONS (MISCELLANEOUS)
+
+All miscellaneous kernel functions have to be called with RST #20 (BNKSCL) or
+RST #28 (BNKFCL). For more information see KERNEL FUNCTIONS (MEMORY
+MANAGEMENT).
+-------------------------------------------------------------------------------
+Address:        #8109 (MTGCNT)
+Name:           Multitasking_GetCounter
+How to call:    ld hl,#8109:rst #28
+Input:          -
+Output:         IY,IX= System counter
+                DE   = Idle counter
+Destroyed:      -
+Description:    Gives back the system counter (=IY*65536+IX) and the counter of
+                the idle process.
+                The system counter is increased 150 times per second.
+                The idle process increases its counter every 64 microsecond,
+                when it owns the CPU time.
+                With these two counters you can calculate the CPU usage in the
+                following way:
+                CPU_usage = 100% * (idle_counter_NEW - idle_counter_OLD) /
+                            ((system_counter_NEW - system_counter_OLD) * 104)
+-------------------------------------------------------------------------------

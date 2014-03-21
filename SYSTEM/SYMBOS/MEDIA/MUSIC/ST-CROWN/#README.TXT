@@ -1,0 +1,18 @@
+=======================================
+*     ___       ____  _    ___  ___   *
+*    /__  /__/ / / / /_\  /  / /__    *
+*   ___/ ___/ /   / /__/ /__/ ___/    *
+*       SYMBIOSIS MULTITASKING        *
+*       BASED OPERATING SYSTEM        *
+=======================================
+   B S C   S O U N D   T R A K K E R
+        S O N G   M O D U L E S
+         Artist: Crown / BENG!
+ PLEASE USE SYMAMP TO PLAY THIS SONGS
+---------------------------------------
+#STCROWN.DSK - Crown Songs 1/1
+---------------------------------------
+    For more information about this
+        collection please visit
+   http://www.symbos.de/download.htm
+=======================================

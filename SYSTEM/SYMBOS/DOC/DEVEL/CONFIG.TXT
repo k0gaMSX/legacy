@@ -1,0 +1,249 @@
+S Y M B O S   D E V E L O P E R   D O C U M E N T A T I O N
+Author: Prodatron / Symbiosis
+Date:   14.02.2007
+===============================================================================
+
+S Y S T E M   C O N F I G U R A T I O N
+
+All user settings in SymbOS are stored in the system configuration, which is
+saved in the file "SYMBOS.INI" on floppy or hard disc. This chapter describes
+the content of the system configuration and the functions, with which you can
+access and manipulate the settings. Please note, that the user will do this
+usually with the control panel. The following information may only be useful in
+the case, that you want to write your own control panel or need some of the
+variables for your application.
+
+The SYMBOS.INI file is divided into 5 parts:
+- Header, which contains the identifier and the length of three following parts
+- Core area part, which contains data loaded in the first ram bank
+- Data area part, which contains additional data usually loaded in a different
+  ram bank
+- Tranfer area part (currently empty)
+- Font
+
+
+===============================================================================
+HEADER
+-------------------------------------------------------------------------------
+0000   2B  Identifier, which also contains the version of the config file
+           [byte0]="S", [byte1]=1 (current version)
+0002   1W  length of the header (=8 bytes) plus the core area part of the
+           SymbOS system configuration (will be always loaded to ram-bank 0)
+0004   1W  length of the data area part (the ram-bank depends on the computer
+           platform)
+0006   1W  length of the transfer area part (this is 0, as it is currently not
+           used)
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+CORE AREA PART
+-------------------------------------------------------------------------------
+*** MASS STORAGE DEVICES ***
+0000 128B  device configuration; this consists of 8 data records at 16 bytes
+           for each device
+           00  1B  drive letter (upper case) or 0, if device slot is empty
+           01  1B  [bit0-3]=type (0=Floppy disc, 1=IDE/SCSI)
+                   [bit4-6]=*reserved* (set to 0)
+                   [bit7]  =flag, if removeable media (1=yes)
+           02  1B  sub drive:
+                   - If the device is a floppy disc:
+                   [bit0-1]=drive
+                   [bit2]  =head
+                   [bit3]  =flag, if double step
+                   [bit4-7]=*reserved* (set to 0)
+                   - If the device is an IDE/SCSI device:
+                   [bit0-3]=partition (0=not partitioned)
+                   [bit4-7]=IDE  -> channel (master=0, slave=1)
+                            SCSI -> sub device (0-15)
+           03  1B  *reserved* (set to 0)
+           04 12B  device name (terminated by 0)
+
+*** DISPLAY AND MISCELLANEOUS (1) ***
+0128  17W  colour palette (the border is defined by the 17.word)
+           For each entry:
+           [bit0-3] =blue component
+           [bit4-7] =green component
+           [bit8-11]=red component
+0162   1B  screen mode (0[CPC]=160x200x4, 1[CPC]=320x200x4, 2[CPC]=640x200x2,
+           5[MSX]=256x212x16, 6[MSX]=512x212x4, 7[MSX]=512x212x16)
+0163  32B  system path
+0195   1B  time zone (-12 to +12)
+0196   1B  background type (0-15=plain colour, -1=background graphic)
+0197  32B  background graphic path and filename, terminated by 0 (only, if
+           "background type"=-1)
+
+*** KEYBOARD (1) AND MOUSE ***
+0229   1B  keyboard delay (in 1/50s; between first an second char)
+0230   1B  keyboard repeat speed (delay between every following chars)
+0231   1B  joystick mouse delay (until mouse reaches full speed)
+0232   1B  joystick mouse speed (in pixel)
+0233   1B  mouse speed (CPC-SYMBiFACE [PS/2] and MSX) factor
+           (final_movement = original_movement * mouse_speed / 16)
+0234   1B  mouse double click delay (maximum time in 1/50s, when a double click
+           is recognized)
+0235   1B  flag, if swap left/right mouse keys
+0236   1B  mouse wheel speed (currently only CPC-SYMBiFACE [PS/2])
+
+*** MISCELLANEOUS (2) AND DESKTOP LINKS (1) ***
+0237   2B  *reserved* (set to 0)
+0239   1B  flag (1), if SymbOS extension module should be loaded
+0240   1B  flag for extended hardware (+1=Mouse, +2=Real time clock,
+           +4=IDE/SCSI interface)
+0241   1B  *reserved* (set to 0)
+0242   1B  number of desktop icons
+0243   1B  number of start menu/programs entries
+0244   1B  number of taskbar short-cut entries (currently not supported)
+0245   1B  machine and environment/emulator type
+           [bit0-3]=machine type (0=CPC 464, 1=CPC 664, 2=CPC 6128, 3=CPC 464+,
+                    4=CPC 6128+, 8=MSX2, 9=MSX2+, 10=MSX turboR)
+           [bit4-7]=environment/emulator type (0=real CPC or no emulator
+                    detected, 1=WinCPC, 2=C-One, 3=C-One [Turbo Mode],
+                    4=CPC-TREX, 5=CPC-TREX [Turbo Mode])
+0246  16W  desktop icon positions; for each of the 8 icons there are two words,
+           the first contains the X-, the second the Y-position
+0278  32B  path and filename of the autoexec command line file
+0310   1B  flag, if autoexec command line file should be executed
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+DATA AREA PART
+-------------------------------------------------------------------------------
+*** DESKTOP LINKS (2) ***
+0000 400B  Start menu program entry names (20 entries at 20 bytes, each
+           terminated by 0)
+0400 640B  Start menu program entry pathes and filenames (20 entries at 32
+           bytes, each terminated by 0)
+1040 256B  Desktop icon pathes and filenames (8 entries at 32 bytes, each
+           terminated by 0)
+1296 192B  Desktop icon names (8 entries, each consists of 2 lines at 12 bytes,
+           each line is terminated by 0)
+1488 1176B Desktop icon graphics (8 entries, each consists of the 3 bytes
+           graphic header and the 144 byte (6*24) bitmap)
+
+2664 768B  file extension association (16 entries at 48 bytes)
+           00  3B  extension 1 (uppercase; if byte0=1, then the whole entry is
+                   not defined)
+           03  3B  extension 2 (if byte0=1, then this one entry is not defined)
+           06  3B  extension 3 (s.a.)
+           09  3B  extension 4 (s.a.)
+           12  3B  extension 5 (s.a.)
+           15 33B  application path and filename, which will be started, if a
+                   file with one of the above listed extensions has been opened
+
+*** SCREEN SAVER ***
+3432   1B  flag, if screen saver is present
+3433   1B  duration of user inactivity, after which the screen saver will be
+           started
+3434  33B  screen saver application path and filename (terminated by 0)
+3467  64B  screen saver specific configuration data (can be stored and read
+           here)
+
+*** KEYBOARD (2) ***
+3531  80B  keyboard definition (normal)
+3611  80B  keyboard definition (shift)
+3691  80B  keyboard definition (control)
+3771  80B  keyboard definition (alt)
+
+*** SECURITY ***
+3851  16B  security username
+3867  16B  security password
+3883   1B  security flags [not used yet, set to 0]
+
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+TRANSFER AREA PART
+-------------------------------------------------------------------------------
+This area is currently not used and has a size of 0 bytes.
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+FONT
+-------------------------------------------------------------------------------
+0000   1B  char height in pixel (usual 8)
+0001   1B  number of the first defined char (always 32)
+0002 1568B char bitmaps (98 x 16 bytes)
+-------------------------------------------------------------------------------
+
+
+===============================================================================
+CONFIGURATION HANDLING FUNCTION
+
+There is one System Manager function, which allows you to read and write into
+the configuration and figure out its memory addresses.
+-------------------------------------------------------------------------------
+Address:        #8103 (SYSINF)
+Name:           System_Information
+How to call:    ld hl,#8103:rst #28
+Input:          E        = Request type (for a detailed description see below)
+                D,IX,IY  = Sub specification (see below)
+Output:         DE,IX,IY = Result data (see below)
+Destroyed:      AF,BC,HL
+-------------------------------------------------------------------------------
+Request type:   3 [load mass storage device configuration]
+Input:          E  = 3
+                IX = destination address (must be placed inside the transfer
+                     ram area)
+Output:         -
+Description:    Loads the complete device configuration into the applications
+                memory (8*16 bytes). For a description of the data structure
+                please see "Configuration Data/Core Area Part/Mass Storage
+                Devices".
+-------------------------------------------------------------------------------
+Request type:   4 [save mass storage device configuration]
+Input:          E  = 4
+                IX = source address (must be placed inside the transfer ram
+                     area)
+Output:         -
+Description:    Saves the complete device configuration from the applications
+                memory (8*16 bytes).
+-------------------------------------------------------------------------------
+Request type:   5 [load a part of the configuration core area]
+Input:          E  = 5
+                D  = number of bytes
+                IX = destination address (transfer ram area)
+                IY = source offset (starting from byte 163 [=system path]
+                     in the core part)
+Output:         -
+Description:    Loads a part of the core area into the applications memory. For
+                a description of the data structure please see "Configuration
+                Data/Core Area Part".
+-------------------------------------------------------------------------------
+Request type:   6 [save a part of the configuration core area]
+Input:          E  = 6
+                D  = number of bytes
+                IX = source address (transfer ram area)
+                IY = destination offset (starting from byte 163 [=system path]
+                     in the core part)
+Output:         -
+Description:    Saves a part of the core area from the applications memory.
+-------------------------------------------------------------------------------
+Request type:   7 [get config memory address]
+Input:          E  = 7
+Output:         DE = core area address (including the header; ram bank 0)
+                IX = data area address
+                IYL= data area ram bank (0-8)
+Description:    Sends back the address of the core area part (including the
+                header, so you have to add 8 to have the starting address),
+                which is always placed in ram bank 0, and the data area part
+                together with the data area parts ram bank number.
+-------------------------------------------------------------------------------
+Request type:   8 [get font and version string memory address]
+Input:          E  = 8
+Output:         DE = font address (ram bank 0)
+                IX = font length (=2 byte header + 98*16 byte char bitmaps)
+                IY = address of the version information (this is placed in the
+                     data area ram bank). The version information has a length
+                     of 32 bytes:
+                     00   1B  Version Major
+                     01   1B  Version Minor
+                     02  30B  Version String (terminated by 0)
+Description:    Sends back the address and total size of the font, which is
+                always placed in ram bank 0, and the address of the version
+                string, which is placed in the same ram bank like the data area
+                part (see request type 7).
+-------------------------------------------------------------------------------

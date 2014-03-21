@@ -1,0 +1,672 @@
+S Y M B O S   D E V E L O P E R   D O C U M E N T A T I O N
+Author: Prodatron / Symbiosis
+Date:   25.08.2007
+===============================================================================
+
+F I L E   M A N A G E R
+
+The file manager is owned by the system manager process, which is the only one,
+who is allowed to call file manager functions. If an application wants to use
+the file manager, it needs to send a special message to the system manager
+process, which includes all registers. The system manager then will call the
+specified file manager function and sends a message with the result back to the
+caller application.
+The system manager process always has the ID 3.
+Please note, that in SymbOS all texts must be terminated with a 0 byte. This is
+true for the pathes and file names used in the file manager, too.
+
+
+===============================================================================
+SYSTEM MANAGER MESSAGES
+-------------------------------------------------------------------------------
+ID:             026 (MSC_SYS_SYSFIL)
+Name:           System_Filemanager_Command
+Message:        00  1B  026
+                01  1B  File manager function ID
+                02  1W  input for AF
+                04  1W  input for BC
+                06  1W  input for DE
+                08  1W  input for HL
+                10  1W  input for IX
+                12  1W  input for IY
+Description:    An application has to send this message to the system manager
+                (process ID 3) to call a file manager function.
+-------------------------------------------------------------------------------
+ID:             154 (MSR_SYS_SYSFIL)
+Name:           System_Filemanager_Response
+Message:        00  1B  154
+                01  1B  File manager function ID
+                02  1W  output for AF
+                04  1W  output for BC
+                06  1W  output for DE
+                08  1W  output for HL
+                10  1W  output for IX
+                12  1W  output for IY
+Description:    The system manager sends this message back to the application,
+                after the file manager function has been called.
+-------------------------------------------------------------------------------
+
+===============================================================================
+ERROR CODES
+
+Nearly all file-manager functions return the success status in the carry flag.
+If the carry flag is not set, the operation was successful. If it is set, an
+error occured.
+In this case, the A-register contains the error code number. The following is a
+list of all possible error codes.
+-------------------------------------------------------------------------------
+000 - Device does not exist
+001 - OK
+002 - Device not initialised
+003 - Media is damaged
+004 - Partition does not exist
+005 - Unsupported media or partition
+006 - Error while sector read/write
+007 - Error while positioning
+008 - Abort while volume access
+009 - Unknown volume error
+010 - No free filehandler
+011 - Device does not exist
+012 - Path does not exist
+013 - File does not exist
+014 - Access is forbidden
+015 - Invalid path or filename
+016 - Filehandler does not exist
+017 - Device slot already occupied
+018 - Error in file organisation
+019 - Invalid destination name
+020 - File/path already exist
+021 - Wrong sub command code
+022 - Wrong attribute
+023 - Directory full
+024 - Media full
+025 - Media is write protected
+026 - Device is not ready
+027 - Directory is not empty
+028 - Invalid destination device
+029 - Not supported by file system
+030 - Unsupported device
+031 - File is read only
+255 - Undefined Error
+-------------------------------------------------------------------------------
+
+===============================================================================
+MASS STORAGE DEVICE FUNCTIONS
+
+The mass storage storage device functions normally shouldn't be accessed by an
+application. In most cases they are not usefull for an application.
+You will only find a short documentation here.
+-------------------------------------------------------------------------------
+ID:             000 (STOINI)
+Name:           Storage_Init
+Input:          -
+Output:         -
+Destroyed:      BC,DE,HL
+Description:    Removes all mass storage devices.
+-------------------------------------------------------------------------------
+ID:             001 (STONEW)
+Name:           Storage_New
+Input:          A    = Device (0-7)
+                C    = Sub drive
+                DE   = Driver address
+                L    = Removeable media flag (1 = removeable)
+                B    = Drive letter ("A"-"Z")
+                IX   = Device name (11 characters)
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Adds a new mass storage device.
+-------------------------------------------------------------------------------
+ID:             002 (STORLD)
+Name:           Storage_Reload
+Input:          A    = Device (0-7)
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Reloads a mass storage device, if its "removeable media" status
+                is activated. The format and the filesystem type will be loaded
+                again.
+-------------------------------------------------------------------------------
+ID:             003 (STODEL)
+Name:           Storage_Delete
+Input:          A    = Device (0-7)
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL
+Description:    Removes an existing mass storage device.
+-------------------------------------------------------------------------------
+ID:             004 (STOINP)
+Name:           Storage_ReadSector
+Input:          A    = Device (0-7)
+                IY,IX= First sector number
+                B    = Number of sectors
+                DE   = Destination address
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Reads a sector from a mass storage device.
+-------------------------------------------------------------------------------
+ID:             005 (STOOUT)
+Name:           Storage_WriteSector
+Input:          A    = Device (0-7)
+                IY,IX= First sector number
+                B    = Number of sectors
+                DE   = Source address
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Writes a sector to a mass storage device.
+-------------------------------------------------------------------------------
+ID:             006 (STOACT)
+Name:           Storage_Activate
+Input:          A    = Device (0-7)
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Loads the format and the file system type of a mass storage
+                device.
+-------------------------------------------------------------------------------
+ID:             007 (STOINF)
+Name:           Storage_Information
+Input:          A    = Device (0-7)
+Output:         A    = Type
+                       00 = Device does not exist
+                       01 = Device is ready
+                       02 = Device is not initialized
+                       03 = Device is corrupt
+                B    = Medium
+                       01 = Floppy disc single side (Amsdos, PCW)
+                       02 = Floppy disc double side (Fat 12)
+                       08 = Ram disc
+                       16 = IDE hard disc or CF card (Fat 16, Fat 32)
+                C    = File system
+                       01 = Amsdos Data
+                       02 = Amsdos System
+                       03 = PCW 180K
+                       16 = Fat 12
+                       17 = Fat 16
+                       18 = Fat 32
+                D    = Sectors per cluster
+                IY,IX= Total number of clusters
+Destroyed:      E,HL
+Description:    Returns information about a mass storage device.
+-------------------------------------------------------------------------------
+
+===============================================================================
+FILE MANAGEMENT FUNCTIONS
+
+The file management functions contain everything you need for writing data into
+files and reading data from files. Open files can always be random accessed.
+-------------------------------------------------------------------------------
+ID:             016 (FILINI)
+Name:           File_Init
+Input:          -
+Output:         -
+Destroyed:      AF,BC,DE,HL
+Description:    Initialises the whole file manager. You should never call this
+                function by yourself, as it resets everything.
+-------------------------------------------------------------------------------
+ID:             017 (FILNEW)
+Name:           File_New
+Library:        SyFile_FILNEW
+Input:          IXH  = File path and name ram bank (0-15)
+                HL   = File path and name address
+                A    = Attributes
+                       Bit0 = 1 -> Read only
+                       Bit1 = 1 -> Hidden
+                       Bit2 = 1 -> System
+                       Bit5 = 1 -> Archive
+Output:         A    = Filehandler ID
+                CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      F,BC,DE,HL,IX,IY
+Description:    Creates a new file and opens it for read/write access. If the
+                file was already existing, it will be emptied first. The
+                operation will be aborted, if the existing file is read only or
+                an sub directory. For additional information see 018 (FILOPN).
+-------------------------------------------------------------------------------
+ID:             018 (FILOPN)
+Name:           File_Open
+Library:        SyFile_FILOPN
+Input:          IXH  = File path and name ram bank (0-15)
+                HL   = File path and name address
+Output:         A    = Filehandler ID
+                CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      F,BC,DE,HL,IX,IY
+Description:    Opens an existing file for read/write access. This means, that
+                you can read and write in the file like you want. You can open
+                up to 8 different files at the same time.
+                For more information about the file path see the introduction
+                of the DIRECTORY MANAGEMENT FUNCTIONS.
+                The media will be reloaded first, if the device is set to
+                "removeable media" and there is no other open file on the same
+                device.
+-------------------------------------------------------------------------------
+ID:             019 (FILCLO)
+Name:           File_Close
+Library:        SyFile_FILCLO
+Input:          A    = Filehandler ID
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Closes an opened file. If there is unwritten data in the sector
+                cache, it will be written to disc at once.
+                This command closes a file in any case, even if an error
+                occured.
+                If an error occured during file reading/writing you must close
+                the file, too, to make the filehandler free again!
+-------------------------------------------------------------------------------
+ID:             020 (FILINP)
+Name:           File_Input
+Library:        SyFile_FILINP
+Input:          A    = Filehandler ID
+                HL   = Destination address
+                E    = Destination ram bank (0-15)
+                BC   = Number of bytes
+Output:         BC   = Number of read bytes
+                ZF   = 1 -> All requested bytes have been read
+                       0 -> The end of the file has been reached, and less
+                            bytes than requested have been read (check BC)
+                CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,DE,HL,IX,IY
+Description:    Reads a specified amount of bytes out of an opened file. After
+                this operation the file pointer will be moved behind the last
+                read byte. This means, that it is possible to read several
+                blocks with different sizes out of an opened file. It doesn't
+                matter, if you already did write operations, too.
+                If you try to read more bytes than available, the zero flag
+                will be reset. In any case BC contains the amount of read
+                bytes.
+-------------------------------------------------------------------------------
+ID:             021 (FILOUT)
+Name:           File_Output
+Library:        SyFile_FILOUT
+Input:          A    = Filehandler ID
+                HL   = Source address
+                E    = Source ram bank (0-15)
+                BC   = Number of bytes
+Output:         BC   = Number of written bytes
+                A    = 0 -> All bytes have been written
+                       1 -> The device is full, and less bytes have been
+                            written (check BC)
+                CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,DE,HL,IX,IY
+Description:    Writes a specified amount of bytes into an opened file. After
+                this operation the file pointer will be moved behind the last
+                written byte. If the file pointer has been somewhere in the
+                middle of the file before this operation, the data at this
+                place will be overwritten. If you have been at the end of the
+                file, its length will be extended.
+                You can write several blocks with different sizes, and it
+                doesn't matter if you already read from the file before.
+                It's possible, that not all bytes have been written, if the
+                device is full. Register A will be 1 in this case. In any case
+                BC contains the amount of written bytes.
+-------------------------------------------------------------------------------
+ID:             022 (FILPOI)
+Name:           File_Pointer
+Library:        SyFile_FILPOI
+Input:          A    = Filehandler ID
+                IY,IX= Difference
+                C    = Reference point
+                       0 = File begin
+                       1 = Current pointer position
+                       2 = File end
+Output:         IY,IX= new absolute pointer position
+                CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL
+Description:    Moves the file pointer to another position. The difference is
+                specified with IY and IX, IY is the high word, IX the low word
+                (difference = 65536 * IY + IX).
+                You can also use this function to find out the length of an
+                opened file. Just set IY,IX to 0 and choose 2 as the reference
+                point type. The pointer will be placed behind the last byte of
+                the file, so you will get its length in IY,IX.
+Examples:       IY = 0,     IX = 1,   C = 1 -> Increases the position by 1
+                IY = 65535, IX = -10, C = 2 -> Sets the pointer before the last
+                                               10 bytes of the file
+-------------------------------------------------------------------------------
+ID:             023 (FILF2T)
+Name:           File_Decode_Timestamp
+Library:        SyFile_FILF2T
+Input:          BC   = Time code
+                       bit  0- 4 = second/2
+                       bit  5-10 = minute
+                       bit 11-15 = hour
+                DE   = Date code
+                       bit  0- 4 = day (starting from 1)
+                       bit  5- 8 = month (starting from 1)
+                       bit  9-15 = year-1980
+Output:         A    = second
+                B    = minute
+                C    = hour
+                D    = day (starting from 1)
+                E    = month (starting from 1)
+                HL   = year
+Destroyed:      F
+Description:    Decodes the file timestamp, which is used for the file system.
+                You can use this function after reading the timestamp of a
+                file with 035 (DIRPRR) or 038 (DIRINP).
+-------------------------------------------------------------------------------
+ID:             024 (FILT2F)
+Name:           File_Encode_Timestamp
+Library:        SyFile_FILT2F
+Input:          A    = second
+                B    = minute
+                C    = hour
+                D    = day (starting from 1)
+                E    = month (starting from 1)
+                HL   = year
+Output:         BC   = Time code (see FILF2T)
+                DE   = Date code (see FILF2T)
+Destroyed:      AF,HL,IX,IY
+Description:    Encodes the file timestamp, which is used for the file system.
+                You can use this function before changing the timestamp of a
+                file with 034 (DIRPRS).
+-------------------------------------------------------------------------------
+ID:             025 (FILLIN)
+Name:           File_LineInput
+Library:        SyFile_FILLIN
+Input:          A    = Filehandler ID
+                HL   = Destination buffer address (size must be 255 bytes)
+                E    = Destination buffer ram bank (0-15)
+Output:         BC   = Number of read bytes (without terminator)
+                ZF   = 0 -> 1 or more bytes have been loaded
+                       1 -> EOF reached, nothing has been loaded
+                CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,DE,HL,IX,IY
+Description:    Reads one text line out of an opened file. A text line is
+                terminated by a single 13, a single 10, a combination of 13+10,
+                a combination of 10+13 or by a single 26 ("end of file" code).
+                The line terminator will not be copied to the destination line
+                buffer, but a 0 will be added behind the last char of the line.
+                This function allows you to read a text file line by line at a
+                very high speed, because you don't need to read single chars
+                and check for line feeds by yourself.
+-------------------------------------------------------------------------------
+
+===============================================================================
+DIRECTORY MANAGEMENT FUNCTIONS
+
+The directory management functions allow to show and edit the content of a
+directory.
+Many functions require a path with or without a filename. A path including the
+filename must never be longer than 255 bytes. It is built like this:
+
+[Drive:][\][directory1\][directory2\][...\][filename or filemask]
+A       B  C                               D
+
+[A] If the drive is specified, not the active device will be used but the
+    specified one. If the device is not included in the path, the system will
+    search on the current device.
+[B] If the path itself starts with a "\", the system starts working from the
+    root directory. If there is not "\" at the beginning, the system starts
+    searching in the current directory.
+[C] You can go into as many sub directories as you want. You can also change to
+    the parent directory ("..") or the current one ("."). In the following
+    example at the end you will stay in your current directory:
+    new_path = "subdir\.\..\subdir\..\"
+    If it makes sense or not, but such a path is possible.
+[D] If you want to specify a directory, the path must end with a \. If you want
+    to specify a filename or a filemask you append it behind the last \.
+    A filemask can contain ? (any char at this place) and * (any chars until
+    the end of the current filename part).
+
+Please note:
+Instead of the backslash ("\", Microsoft), you can also use the normal slash
+("/", Unix, Linux).
+
+-------------------------------------------------------------------------------
+ID:             032 (DIRDEV)
+Name:           Directory_Device
+Library:        SyFile_DIRDEV
+Input:          A    = Driveletter ("A"-"Z")
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Selects the current drive.
+                As your application is running in a multitasking environment,
+                unfortunately this command does not make many sense, as other
+                applications could select an other drive again.
+-------------------------------------------------------------------------------
+ID:             033 (DIRPTH)
+Name:           Directory_Path
+Library:        SyFile_DIRPTH
+Input:          IXH  = File path ram bank (0-15)
+                HL   = File path address
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Selects the current path for the current or a different drive.
+                As your application is running in a multitasking environment,
+                unfortunately this command does not make many sense, as other
+                applications could select an other path again.
+-------------------------------------------------------------------------------
+ID:             034 (DIRPRS)
+Name:           Directory_Property_Set
+Library:        SyFile_DIRPRS
+Input:          IXH  = File path and name ram bank (0-15)
+                HL   = File path and name address
+                A    = Property type
+                       0 = Attribute          -> C  = attribute
+                                                      Bit0 = 1 -> Read only
+                                                      Bit1 = 1 -> Hidden
+                                                      Bit2 = 1 -> System
+                                                      Bit5 = 1 -> Archive
+                       1 = Timestamp modified -> BC = time code, DE = date code
+                       2 = Timestamp created  -> BC = time code, DE = date code
+                BC,DE= see above
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Changes a property of a file or a directory. You can set the
+                attribute, the "created" time and the "modified" time.
+                For more information about the time and date code see 023
+                (FILF2T).
+-------------------------------------------------------------------------------
+ID:             035 (DIRPRR)
+Name:           Directory_Property_Get
+Library:        SyFile_DIRPRR
+Input:          IXH  = File path and name ram bank (0-15)
+                HL   = File path and name address
+                A    = Property type
+                       0 = Attribute
+                       1 = Timestamp modified
+                       2 = Timestamp created
+Output:         C    = Attributes (if requested)
+                       Bit0 = 1 -> Read only
+                       Bit1 = 1 -> Hidden
+                       Bit2 = 1 -> System
+                       Bit3 = 1 -> Volume ID
+                       Bit4 = 1 -> Directory
+                       Bit5 = 1 -> Archive
+                BC,DE= Time and date code (if requested)
+                CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,HL,IX,IY
+Description:    Reads a property of a file or a directory.
+                For more information about the time and date code see 023
+                (FILF2T).
+-------------------------------------------------------------------------------
+ID:             036 (DIRREN)
+Name:           Directory_Rename
+Library:        SyFile_DIRREN
+Input:          IXH  = Ram bank (0-15) of old and new file name
+                HL   = Address of file path and old file name
+                DE   = Address of new file name
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Renames a file or a directory. The new file name must not
+                include a path. The function will fail, if a file or directory
+                with the new name already exists.
+-------------------------------------------------------------------------------
+ID:             037 (DIRNEW)
+Name:           Directory_New
+Library:        SyFile_DIRNEW
+Input:          IXH  = Directory path and name ram bank (0-15)
+                HL   = Directory path and name address
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Creates a new directory. The function will fail, if a file or
+                directory with the same name already exists.
+-------------------------------------------------------------------------------
+ID:             038 (DIRINP)
+Name:           Directory_Input
+Library:        SyFile_DIRINP
+Input:          IXH  = Directory path ram bank (0-15)
+                HL   = Directory path address (may include a search mask)
+                IXL  = attribute filter
+                       Bit0 = 1 -> don't show read only files
+                       Bit1 = 1 -> don't show hidden files
+                       Bit2 = 1 -> don't show system files
+                       Bit3 = 1 -> don't show volume ID entries
+                       Bit4 = 1 -> don't show directories
+                       Bit5 = 1 -> don't show archive files
+                A    = Destination buffer ram bank (0-15)
+                DE   = Destination buffer address
+                BC   = Destination buffer length
+                IY   = Number of entries, which should be skipped
+Output:         HL   = Number of read entries
+                BC   = Remaining unused space in the destination buffer
+                CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,DE,IX,IY
+Data structure: 00  4B  File length (32bit double word)
+                04  1W  Date code, see 023 (FILF2T)
+                06  1W  Time code, see 023 (FILF2T)
+                08  1B  Attributes, see 035 (DIRPRR)
+                09  ?B  File or sub directory name
+                ??  1B  0 terminator
+Description:    Reads the content of a directory. You can specify a name filter
+                by adding a file mask to the path (* and ? are allowed) and an
+                attribute filter. We recommend always to set Bit3 (volume ID)
+                of the attribute filter byte.
+                The system skips the specified amount of entries first and
+                then loads as many entries as exist or as there is place in the
+                destination buffer. Please note, that the entries will not be
+                sorted. Depending on its name every entry in the destination
+                buffer can have a different length and is terminated with 0
+                behind the file name. Filenames don't contain spaces.
+-------------------------------------------------------------------------------
+ID:             039 (DIRDEL)
+Name:           Directory_DeleteFile
+Library:        SyFile_DIRDEL
+Input:          IXH  = File path and name/mask ram bank (0-15)
+                HL   = File path and name/mask address
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Deletes one or more files. You can delete multiple files by
+                using a file mask (* and ? are allowed). Files, which are read
+                only, can't be deleted.
+                This function also can't be used for deleting directories. Use
+                040 (DIRRMD), if you want to delete directories.
+-------------------------------------------------------------------------------
+ID:             040 (DIRRMD)
+Name:           Directory_DeleteDirectory
+Library:        SyFile_DIRRMD
+Input:          IXH  = Directory path and name ram bank (0-15)
+                HL   = Directory path and name address
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Deletes a sub directory. The sub directory has to be empty and
+                not read only, otherwise the operation will be aborted. You can
+                specify the directory with or without "/" at the end of the
+                full path.
+-------------------------------------------------------------------------------
+ID:             041 (DIRMOV)
+Name:           Directory_Move
+Library:        SyFile_DIRMOV
+Input:          IXH  = File/directory old and new path ram bank (0-15)
+                HL   = File/directory source path and name address
+                DE   = File/directory destination path address
+Output:         CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,HL,IX,IY
+Description:    Moves a file or sub directory into another directory of the
+                same drive. That means, that the drive letter of the source
+                path must be the same like the drive letter of the destination
+                path, otherwise the operation will be aborted. You can either
+                move files or sub directories with this function, in both cases
+                the source path+name must not end with a "/".
+-------------------------------------------------------------------------------
+ID:             042 (DIRINF)
+Name:           Directory_DriveInformation
+Library:        SyFile_DIRINF
+Input:          A    = Driveletter ("A"-"Z")
+                C    = Information type
+                       0 = general drive information
+                       1 = free and total amount of memory
+Output:         - Information type 0:
+                A    = Type
+                       00 = Device does not exist
+                       01 = Device is ready
+                       02 = Device is not initialized
+                       03 = Device is corrupt
+                B    = Medium
+                       01 = Floppy disc single side (Amsdos, PCW)
+                       02 = Floppy disc double side (Fat 12)
+                       08 = Ram disc
+                       16 = IDE hard disc or CF card (Fat 16, Fat 32)
+                C    = File system
+                       01 = Amsdos Data
+                       02 = Amsdos System
+                       03 = PCW 180K
+                       16 = Fat 12
+                       17 = Fat 16
+                       18 = Fat 32
+                D    = Sectors per cluster
+                IY,IX= Total number of clusters
+                - Information type 1:
+                HL,DE= Number of free 512Byte sectors
+                IY,IX= Total number of clusters
+                C    = Sectors per cluster
+                - Information type 0 and 1:
+                CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      F
+Description:    Returns information about one drive. This function can be used
+                to find out the amount of free memory on one drive. Please
+                note, that calculating the free amount of memory on a FAT16
+                device can take a while, as everytime the whole FAT (up to
+                128KB) needs to be scanned.
+-------------------------------------------------------------------------------
+ID:             013 (DEVDIR)
+Name:           Directory_Input_Extended
+Library:        SyFile_DEVDIR
+Input:          A    = [bit0-3] Destination buffer ram bank (0-15)
+                       [bit4-7] Directory path ram bank (0-15)
+                HL   = Directory path address (may include a search mask)
+                DE   = Destination buffer address. This must first contain two
+                       words with additional information at the beginning:
+                       00  1W  Address of list control table
+                       02  1W  Maximum number of entries
+                       The function will overwrite this information and fill
+                       the buffer with the directory data.
+                BC   = Maximum size of destination buffer
+                IXL  = attribute filter
+                       Bit0 = 1 -> don't show read only files
+                       Bit1 = 1 -> don't show hidden files
+                       Bit2 = 1 -> don't show system files
+                       Bit3 = 1 -> don't show volume ID entries
+                       Bit4 = 1 -> don't show directories
+                       Bit5 = 1 -> don't show archive files
+                IY   = Number of entries, which should be skipped
+                IXH  = Additional columns
+                       Bit0 = 1 -> File size
+                       Bit1 = 1 -> Date and time (last modified)
+                       Bit2 = 1 -> Attributes
+Output:         HL   = Number of read entries
+                CF   = Error state (0 = ok, 1 = error; A = error code)
+Destroyed:      AF,BC,DE,IX,IY
+Description:    This is a very powerful extension of the directory input
+                (DIRINP) function. It reads the content of a directory and
+                converts it into ready to use list control data. So if your
+                application wants to display the content of a directory inside
+                a list control, it can use this function and doesn't need to do
+                any conversion jobs by itself. Then the list control itself can
+                do the sorting of the directory.
+                First you have to reserve two memory areas in the same ram
+                bank. One area needs to be reserved inside the data ram area.
+                It will contain the texts (file names, dates etc.) and numbers
+                (file sizes) for the list control. You can choose any size, but
+                we recommend at least 4000 Bytes. BC must contain its size,
+                when you call the function. DE contains the address, and the
+                low nibble of A the ram bank number.
+                The second area needs to be reserved inside the transfer ram
+                area of the same bank. It contains the data structure of the
+                list control. It size is calculated like this:
+                Size = Maximum_number_of_entries * (4 + Additional_columns * 2)
+                So when you have two additional columns (like date and
+                attributes) and want to load up to 100 entries, you need to
+                reserve 800 bytes.
+                As there are no more Z80-registers available, the address of
+                this memory area and the maximum number of entries must be
+                written to the beginning of the other memory area.
+                For additional information about reading directories see 038
+                (DIRINP).
+-------------------------------------------------------------------------------
