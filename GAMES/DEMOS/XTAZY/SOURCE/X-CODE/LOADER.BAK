@@ -1,0 +1,1448 @@
+*S 14,Q-,B 0,G 0
+
+trace_mode	equ	1=0
+
+RBuffer equ	#8000
+BuffSize	equ	3*1024
+
+*i	x-equ
+
+	call	INIT_AND_LOAD
+
+	ld	a,1
+	call	WriteFE
+
+	ld	de,enemy_dat	;load enemy data
+	ld	hl,#8000
+	call	disk_ld
+	jp	nz,error
+
+	ld	de,game 	    ;load game routine
+	ld	hl,#4000
+	call	disk_ld
+	jp	nz,error
+
+	call	#4000		;run game
+
+	call	all_voice_off
+	jp	#0000
+
+;*i	 r_info
+
+trace_file:
+	ld	hl,(file_error)
+	call	print_message
+	ld	hl,mess0
+	call	print_message
+	ret
+
+
+;***********************************************************************
+;
+;		INITIALISATION & LOADING PART
+;
+;***********************************************************************
+
+bg_a:		db	"ownplned.sr5",0
+bg_a1:		db	"ownplnef.sr5",0
+
+bg_b:		db	"ownplnei.sr5",0
+bg_b1:		db	"ownplnej.sr5",0
+
+spr1:		db	"sprite1.sr5",0
+spr2:		db	"sprite2.sr5",0
+spr3:		db	"sprite3.sr5",0
+spr4:		db	"sprite4.sr5",0
+
+palette:	db	"meteor.p32",0
+
+mapper2:	db	"mapxtazy.com",0
+replayer:	db	"wavepla2.com",0
+
+music4: 	db	"thepower.mwm",0
+wavekit:	db	"thepower.mwk",0
+
+map_plan_A:	db	"lv5.cut",0
+map_plan_B:	db	"lv5back.cut",0
+
+game:		db	"x-tazy.com",0
+
+enemy_dat:	db	"dat-enem.com",0
+
+		db	0		;file handle number
+file_handle:	db	0
+buffer_add:	dw	0
+
+;-----------------------------------------------------------------------
+;
+;	INIT ALL AND LOAD ALL THE NEEDED STUFF
+;
+INIT_AND_LOAD:
+
+	call	set_p1
+	call	screen_off		;set display OFF
+
+	ld	de,mapper2		;load mapper handling routines
+	ld	hl,#c000
+	call	disk_ld
+	jp	nz,error
+
+	ld	hl,stat_equ0
+	ld	(hl),0
+	ld	de,stat_equ0+1
+	ld	bc,stat_equ1-stat_equ0
+	ldir
+
+	ld	a,0
+	ld	(stick_port),a
+	ld	a,1
+	ld	(stage_number),a
+	ld	a,3
+	ld	(ship_type),a
+	ld	a,1			;active le mode slow motion
+	ld	(slow_motion),a
+
+	ld	a,99			;nombre de vie
+	ld	(life),a
+	ld	a,#99
+	ld	(life_bcd),a
+
+	ld	a,1
+	ld	(bank_FE),a
+	inc	a
+	ld	(bank_FD),a
+
+	ld	a,4
+	ld	(replayer_bank),a
+	inc	a
+	ld	(songdata_bank1),a
+	inc	a
+	ld	(pat_map_bank),a
+
+	call	Init_Mapper	;init mapper routines & replayer handler
+	jp	c,Mapper_error
+
+	call	alloc_test	;check number of mapper bank allocated
+
+	xor	a
+	ld	(opl4_flag),a
+	in	a,(#c4)
+	cp	255
+	jr	nz,opl4_ok
+	ld	(opl4_flag),a
+opl4_ok:
+	ld	hl,#8000
+	ld	(buffer_add),hl
+
+;
+;	plane A
+;
+	ld	de,bg_a 	;load grafx of plane A
+	ld	hl,0
+	ld	a,0
+	call	load5_2_vram
+	jp	nz,error
+	if	trace_mode
+	call	trace_file
+	endif
+
+	ld	de,bg_a1	 ;load grafx of plane A
+	ld	hl,#6800
+	ld	a,0
+	call	load5_2_vram
+	jp	nz,error
+	if	trace_mode
+	call	trace_file
+	endif
+
+;
+;	plane B
+;
+	ld	de,bg_b 	;load grafx of plane B
+	ld	hl,0
+	ld	a,4
+	call	load5_2_vram
+	jp	nz,error
+	if	trace_mode
+	call	trace_file
+	endif
+
+	ld	de,bg_b1	 ;load grafx of plane B
+	ld	hl,#6800
+	ld	a,4
+	call	load5_2_vram
+	jp	nz,error
+	if	trace_mode
+	call	trace_file
+	endif
+
+;
+;	sprites
+;
+	ld	de,spr1        ;load sprite grafx
+	ld	hl,#8000
+	ld	a,1
+	call	load5_2_vram
+	jp	nz,error
+	if	trace_mode
+	call	trace_file
+	endif
+
+	ld	de,spr2        ;load sprite grafx
+	ld	hl,#0000
+	ld	a,2
+	call	load5_2_vram
+	jp	nz,error
+	if	trace_mode
+	call	trace_file
+	endif
+
+	ld	de,spr3        ;load sprite grafx
+	ld	hl,#8000
+	ld	a,2
+	call	load5_2_vram
+	jp	nz,error
+	if	trace_mode
+	call	trace_file
+	endif
+
+	ld	de,spr4        ;load sprite grafx
+	ld	hl,#0000
+	ld	a,3
+	call	load5_2_vram
+	jp	nz,error
+	if	trace_mode
+	call	trace_file
+	endif
+
+
+;
+;	LOAD SHIP GRAFX
+;
+	call	ship_ldr
+
+;
+;	PALETTES P32 format
+;
+	ld	de,palette	;load all palette
+	call	load_p32	;load 4 palette in P32 format
+	jp	nz,error
+	if	trace_mode
+	call	trace_file
+	endif
+
+;
+;	music & replayer
+;
+	ld	a,(opl4_flag)
+	or	a
+	jp	nz,music_not_load
+	call	ReadFD
+	ld	(bank_FD),a
+	ld	a,(songdata_bank1)
+	call	WriteFD
+
+	ld	de,music4
+	ld	hl,#8000
+	call	disk_ld
+	jp	nz,error
+	if	trace_mode
+	call	trace_file
+	endif
+
+	ld	hl,#8006		;skip 6 byte to remove header
+	ld	de,#4000
+	ld	bc,#4000-6
+	ldir
+
+	ld	a,(replayer_bank)
+	call	WriteFD
+
+	ld	de,replayer		;load R800 wave replayer
+	ld	hl,#8000
+	call	disk_ld
+	jp	nz,error
+	if	trace_mode
+	call	trace_file
+	endif
+
+	ld	hl,#8000
+	ld	de,#4000
+	ld	bc,#4000
+	ldir
+
+;*******************************************************
+;
+;	WAVE KIT Loader
+;
+;*******************************************************
+	call	all_voice_off
+
+	if	trace_mode
+	ld	hl,loading_mwk
+	call	print_message
+	endif
+	ld	de,wavekit
+	call	Mwk_Load
+	if	trace_mode
+	ld	hl,mwk_loaded
+	call	print_message
+	endif
+
+	ld	a,(bank_FD)		;restore original bank of FD
+	call	WriteFD
+
+music_not_load:
+	ld	hl,0			;reset score
+	ld	(score+0),hl
+	ld	(score+2),hl
+	ld	(score+4),hl
+
+	ld	de,map_plan_A
+	ld	hl,0
+	ld	(map_offset),hl
+	ld	ix,sceneA_bank1
+	call	map_ld
+	jp	nz,error
+	if	trace_mode
+	call	trace_file
+	endif
+
+	ld	de,map_plan_B
+	ld	hl,5408
+	ld	(map_offset),hl
+	ld	ix,sceneB_bank1
+	call	map_ld
+	jp	nz,error
+	if	trace_mode
+	call	trace_file
+	endif
+
+	ld	a,(bank_FD)
+	call	WriteFD
+
+	ld	a,(opl4_flag)
+	call	outdec
+	ld	hl,mess0
+	call	print_message
+
+	ret
+
+
+;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+alloc_test:
+	ld	hl,alloc_mess
+	call	print_message
+
+	ld	b,26
+alloc_test0:
+	ld	a,26
+	sub	b
+	ld	l,a
+	ld	h,0
+	add	hl,hl
+	ld	de,(Mapper_Tbl)
+	add	hl,de
+	inc	hl
+	ld	a,(hl)
+	push	bc
+	call	outdec
+	pop	bc
+	djnz	alloc_test0
+	ld	hl,mess0
+	call	print_message
+
+	ld	hl,alloc_mess1
+	call	print_message
+	ld	b,26
+alloc_test1:
+	ld	a,26
+	sub	b
+	ld	l,a
+	ld	h,0
+	add	hl,hl
+	ld	de,(Mapper_Tbl)
+	add	hl,de
+	ld	a,(hl)
+	push	bc
+	call	outhexa
+	pop	bc
+	djnz	alloc_test1
+	ld	hl,mess0
+	call	print_message
+
+	ld	hl,alloc_mess2
+	call	print_message
+	ld	a,(replayer_bank)
+	call	outdec
+	ld	a,(songdata_bank1)
+	call	outdec
+	ld	a,(pat_map_bank)
+	call	outdec
+
+	ld	hl,sceneA_bank1
+	ld	b,19
+alloc_test2:
+	ld	a,(hl)
+	push	bc
+	push	hl
+	call	outdec
+	pop	hl
+	pop	bc
+	inc	hl
+	djnz	alloc_test2
+
+	ld	hl,mess0
+	call	print_message
+
+	ld	hl,pat_map_bank
+	ld	de,#f41f
+	ld	bc,20
+	ldir
+
+	ret
+
+alloc_mess:
+	db	"Allocating Mapper pages:",10,13,0
+alloc_mess1:
+	db	"Allocated Mapper slot for each page:",10,13,0
+alloc_mess2:
+	db	"Allocated Mapper segment for X-TAZY:",10,13,0
+
+outmess:			;message output
+	ld	c,9
+	call	bdos
+	ret
+
+outdec: 			;DEC output of accumulator
+	call	decimal
+	ld	de,dcbdata
+	call	outmess 	;DCB val
+	ret
+
+; routine de conversion au format decimal
+; le 11/08/93
+; by SLAYERMAN fron FUC
+;
+;	routine de convertion en decimal
+;	entree: A = val a convertir
+;	modifie: HL, C
+;
+decimal:
+	ld	hl,#3030
+	ld	(dcbdata),hl
+	ld	hl,dcbdata
+	ld	c,a
+	cp	10
+	jr	c,unite
+	cp	200
+	jr	c,dec2
+	ld	(hl),#32	;"2"
+	jr	dec3
+dec2:	cp	100
+	jr	c,dec3
+	ld	(hl),#31	;"1"
+dec3:	inc	hl
+	ld	de,valdcb
+	ex	de,hl
+	xor	a
+	ld	b,8
+dec4:	rr	c
+	jr	nc,dec5
+	add	a,(hl)
+	daa
+dec5:	inc	hl
+	djnz	dec4
+	ex	de,hl
+	ld	c,a
+	rrca
+	rrca
+	rrca
+	rrca
+	and	#0f
+	or	#30
+	ld	(hl),a
+	inc	hl
+	ld	a,c
+	and	#0f
+	or	#30
+	ld	(hl),a
+	ret
+unite:	or	#30
+	ld	(dcbdata+2),a
+	ret
+
+dcbdata:
+	defb	#30,#30,#30,' $'
+valdcb: defb	1,2,4,8,#16,#32,#64,#28
+
+outhexa:
+	push	af		;HEX output of accumulator
+	rrca
+	rrca
+	rrca
+	rrca
+	and	#0f
+	call	outhex1
+	ld	e,a
+	ld	c,2
+	call	bdos		;print MSB
+	pop	af
+	and	#0f
+	call	outhex1
+	ld	e,a
+	ld	c,2
+	call	bdos		;print LSB
+	ld	e,32
+	ld	c,2
+	call	bdos		;print space
+	ld	e,32
+	ld	c,2
+	call	bdos		;print space
+	ret
+
+outhex1:
+	cp	10
+	jp	nc,outhex10	;si plus que 10 alors add 7
+	add	a,#30
+	ret
+outhex10:
+	add	a,#37
+	ret
+
+;-------------------------------------------------------
+;
+;	SHUTDOWN ALL VOICES OF THE OPL4
+;
+;-------------------------------------------------------
+all_voice_off:
+	ld	b,24
+	ld	c,#50
+all_off_loop:
+	ld	a,c
+	out	(#7e),a
+	push	af
+	pop	af
+	ld	a,#fe
+	out	(#7f),a
+	push	af
+	pop	af
+	inc	c
+	djnz	all_off_loop
+	ret
+
+mapper_err:	db	"Not Enough Memory in: Mapper Init",0
+loading_mwk:	db	"Mess from X-TAZY: Loading MWK",13,10,0
+mwk_loaded:	db	"Mess from X-TAZY: Go on with X-TAZY init",13,10,0
+
+;--- Load MWK file ---
+; Note: This will clear the first song bank!!
+
+Mwk_Load:
+	call	open_file		; open Wavekit file
+	or	a
+	ret	nz
+	if	trace_mode
+	ld	hl,mwk_1
+	call	print_message
+	endif
+
+	ld	hl,6
+	ld	de,#8000
+	call	load_file		; read header
+	if	trace_mode
+	ld	hl,mwk_2
+	call	print_message
+	endif
+
+	call	init_opl4
+	if	trace_mode
+	ld	hl,mwk_3
+	call	print_message
+	endif
+
+	call	load_mwkdata		; load tone and wave data
+	if	trace_mode
+	ld	hl,mwk_4
+	call	print_message
+	endif
+
+	call	load_mwktones		; load tones
+	if	trace_mode
+	ld	hl,mwk_5
+	call	print_message
+	endif
+
+	call	close_file
+	if	trace_mode
+	ld	hl,mwk_6
+	call	print_message
+	endif
+	ret
+
+mwk_1:	db	"          Mess from MWK Loader: file is open",10,13,0
+mwk_2:	db	"          Mess from MWK Loader: OPL4 init passed",10,13,0
+mwk_3:	db	"          Mess from MWK Loader: header read",10,13,0
+mwk_4:	db	"          Mess from MWK Loader: tone and waves data loaded",10,13,0
+mwk_5:	db	"          Mess from MWK Loader: tones loaded",10,13,0
+mwk_6:	db	"          Mess from MWK Loader: file closed",10,13,0
+
+;--- Load tone info bytes and wave tables ---
+; In: wavekit file is open
+; Out: tones_data: contains tone info bytes
+;	waves: contains wave tables
+load_mwkdata:
+	ld	hl,4 + 64
+	ld	de,08000h
+	call	load_file		; load tone info bytes
+	ld	hl,08000h + 4
+	ld	de,tones_data
+	ld	bc,64
+	ldir
+	ld	a,(08000h + 3)		; #waves
+	ld	b,a
+	ld	hl,0
+	ld	de,25
+mwkload_lp1:
+	add	hl,de
+	djnz	mwkload_lp1
+	push	hl
+	ld	de,08000h
+	call	load_file		; load wave tables
+	pop	bc
+	ld	hl,08000h
+	ld	de,waves
+	ldir
+	ret
+
+;--- Load all tones ---
+; In: tones_data is filled with tone info bytes
+;      wavekit file is open
+; Out: sample headers and data is set in sample RAM
+load_mwktones:
+	ld	de,0		; tone header start at 200000h
+	ld	ix,sample_address
+	ld	(ix + 0),0
+	ld	(ix + 1),3
+	ld	(ix + 2),20h		; sample start at 200300h
+	ld	hl,tones_data
+	ld	b,64
+load_mwktonesl:
+	push	bc
+	push	hl
+	bit	0,(hl)
+	call	nz,load_mwktone
+	ex	de,hl
+	ld	de,12
+	add	hl,de
+	ex	de,hl
+	pop	hl
+	inc	hl
+	pop	bc
+	djnz	load_mwktonesl
+
+	ld	c,2
+	ld	a,10000b
+	call	opl4_out_wave		; disable SRAM access mode
+	ret
+
+;--- Load one tone ---
+; In: tones_data is filled with tone info bytes
+;      wavekit file is open
+;      IX = pointer to current sample address
+;      HL = pointer to tone info byte
+;      DE = pointer to tone header SRAM address
+; Out: sample header and data is set in sample RAM
+;	contents of IX is increased by sample size
+load_mwktone:
+	push	de
+	push	hl
+	ld	de,08000h + 1
+	ld	hl,11 + 2
+	call	load_file
+
+	ld	hl,(08000h + 1)
+	ld	a,(ix + 0)	; add relative start address
+	add	a,l
+	ld	(08000h + 2),a
+	ld	a,(ix + 1)
+	add	a,h
+	ld	(08000h + 1),a
+	pop	hl
+	push	af
+	ld	a,(hl)	; include sample type bits
+	and	11000000b
+	or	(ix + 2)
+	ld	(08000h),a
+	pop	af
+	jr	nc,load_mwktone2	; Carry from add a,h?
+	ld	hl,08000h
+	inc	(hl)
+
+load_mwktone2:
+	pop	hl
+	push	hl
+	ld	e,020h
+	call	set_opl4_wrt	; set write to address for header
+	ld	hl,08000h
+	ld	de,12
+	call	ramtosram	; move header to Sample RAM
+
+	ld	l,(ix + 0)	; current sample RAM address
+	ld	h,(ix + 1)
+	ld	e,(ix + 2)
+	call	set_opl4_wrt
+
+	ld	hl,(08000h + 1 + 11)	; sample size
+	push	hl
+
+	ld	(sample_size),hl
+load_mwktonelp:
+	ld	de,04000h
+	ld	hl,(sample_size)
+	or	a
+	sbc	hl,de
+	ld	(sample_size),hl
+	jr	c,load_mwktone3 ; < 4000h
+	ld	a,l
+	or	h
+	jr	z,load_mwktone3 ; == 4000h
+
+	ld	de,08000h	; buffer address
+	ld	hl,04000h
+	call	load_file	; load 04000h bytes
+	ex	de,hl
+	call	ramtosram	; and put them in SRAM
+	jr	load_mwktonelp
+load_mwktone3:
+	add	hl,de
+	ld	de,08000h	; buffer address
+	call	load_file	; load last bytes
+	ex	de,hl
+	call	ramtosram	; and put them in SRAM
+
+	pop	hl
+	ld	a,(ix + 0)
+	add	a,l
+	ld	(ix + 0),a
+	ld	a,(ix + 1)
+	adc	a,h
+	ld	(ix + 1),a
+	jr	nc,load_mwktone4
+	inc	(ix + 2)
+load_mwktone4:
+	pop	de
+	ret
+
+sample_address: ds	3,0
+sample_size:	dw	0
+
+;--- put samples in SRAM ---
+; In: HL = RAM address DE = length
+ramtosram:
+	push	hl
+	push	de
+	push	bc
+	ld	c,WVIO + 1
+ramtosram_lp:
+	outi			 ; unsigned
+ramtosram_wt:
+	in	a,(FMIO)
+	bit	0,a
+	jr	nz,ramtosram_wt
+	dec	de
+	ld	a,d
+	or	e
+	jr	nz,ramtosram_lp
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+;------------------------------------
+;--- Set OPL4 for SRAM read/write ---
+;------------------------------------
+; In: EHL = SRAM address
+; Out: C = wave data port
+set_opl4_wrt:
+	ld	c,2	; enable SRAM access
+	ld	a,10001b
+	call	opl4_out_wave
+	inc	c
+	ld	a,e
+	and	111111b
+	call	opl4_out_wave
+	inc	c
+	ld	a,h
+	call	opl4_out_wave
+	inc	c
+	ld	a,l
+	call	opl4_out_wave
+	ld	a,6
+	out	(WVIO),a
+	ld	c,WVIO + 1
+	ret
+
+;--- initialise OPL4 registers ---
+init_opl4:
+	ld	a,3
+	ld	c,5
+	call	opl4_out_bnk1		; Set the OPL4 in OPL4 mode
+
+	ld	c,2
+	ld	a,10000b
+	jp	opl4_out_wave		; init Wave ROM stuff
+
+;----------------
+;--- OPL4 out ---
+;----------------
+opl4_out_bnk1:
+	ex	af,af'
+	ld	a,c
+	push	bc
+	pop	bc
+	out	(FMIO + 2),a
+	ex	af,af'
+	push	bc
+	pop	bc
+	out	(FMIO + 1),a
+	ret
+
+opl4_out_wave:
+	ex	af,af'
+	ld	a,c
+	push	bc
+	pop	bc
+	out	(WVIO),a
+	ex	af,af'
+	push	bc
+	pop	bc
+	out	(WVIO+1),a
+	ret
+
+open_file:
+	ld	c,_open
+	ld	a,1		;read only open
+	call	bdos
+	ret	nz		;RET if open error
+	ld	a,b			; save file handle number
+	ld	(file_handle),a
+	xor	a
+	ret
+load_file:
+	push	hl
+	push	bc
+	push	de
+	ld	bc,(file_handle-1)
+	ld	c,_read
+	call	bdos
+	pop	de
+	pop	bc
+	pop	hl
+	ret
+close_file:
+	ld	bc,(file_handle-1)	;close file
+	ld	c,_close
+	call	bdos
+	ret
+
+Mapper_error:
+	ld	hl,mapper_err
+	jr	error2
+explain:
+	ld	b,a
+	ld	c,_explain
+	ld	de,error_buffer
+	call	bdos
+
+	ld	hl,error_buffer
+	call	print_message
+	ld	hl,mess0
+	call	print_message
+	ret
+
+error:
+	call	explain
+error1:
+	ld	hl,(file_error)
+error2:
+	call	print_message
+	ld	hl,mess0
+	call	print_message
+	jp	#0000
+
+mess0:	db	10,13,0
+file_error:
+	dw	0
+
+print_message:
+	ld	a,(hl)
+	or    a
+	jr	z,print_end
+	push	hl
+	ld    e,a
+	ld	c,2
+	call  bdos
+	pop	hl
+	inc	hl
+	jr	print_message
+print_end:
+	ret
+
+error_buffer:	    ds	    65
+
+;-----------------------------------------------------------------------
+;
+;		END OF LOADING AND INIT PART
+;
+;-----------------------------------------------------------------------
+
+
+;---------------------------------------------------------------
+;
+;	SET MODE P1
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,BC
+;
+set_p1:
+	ld	a,0		;quit reset mode & select XTAL oscilator
+	out	(vdp+7),a
+	ld	a,6		;set REGISTER 6,7,8 for P1 mode
+	out	(vdp+4),a
+	ld	a,5		;reg #6
+	out	(vdp+3),a
+	ld	a,0+0		;reg #7   +8 pour 50Hz
+	out	(vdp+3),a
+	ld	a,%10000010	;REG #8: display on, SPR on, 512kB VRAM
+	out	(vdp+3),a
+
+	ld	a,13			;preset palette index
+	out	(vdp+4),a
+	ld	a,%00000100	;plt0 for plane A & plt1 for plane B
+	out	(vdp+3),a
+
+	ld	a,17		;reset SA & SB scrollx register
+	out	(vdp+4),a
+	ld	b,8
+	xor	a
+loop_p1:
+	out	(vdp+3),a
+	djnz	loop_p1
+
+	ld	a,27		;clear priority between SA & SB
+	out	(vdp+4),a
+	xor	a
+	out	(vdp+3),a
+
+	ld	a,25		;set sprite generator at #18000
+	out	(vdp+4),a
+	ld	a,6
+	out	(vdp+3),a
+
+	xor	a		;reset super-impose of GRAFX9000
+	out	(vdp+15),a
+	ret
+
+;---------------------------------------------------------------
+;
+;	SET SCREEN ON
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+screen_on:
+	ld	a,8
+	or	%11000000
+	out	(vdp+4),a
+	in	a,(vdp+3)
+	or	#80
+	out	(vdp+3),a
+	ret
+
+;---------------------------------------------------------------
+;
+;	SET SCREEN OFF
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+screen_off:
+	ld	a,8
+	or	%11000000
+	out	(vdp+4),a
+	in	a,(vdp+3)
+	and	#7f
+	out	(vdp+3),a
+	ret
+
+;-------------------------------------------------------
+;
+;	load file to memory
+;
+;	IN:	DE= filename
+;		HL= number of byte to read
+;
+;	OUT:	A = disk error number
+;
+;	MOD:	AF,BC,HL,DE
+;
+disk_ld:
+	ld	(file_error),de
+	ld	(disk_ld_add),hl
+	ld	c,_open
+	ld	a,1		;read only open
+	call	bdos
+	ret	nz		;RET if open error
+
+	ld	a,b			; save file handle number
+	ld	(file_handle),a
+
+	ld	hl,#8000
+	ld	de,(disk_ld_add)	 ; read file
+	ld	bc,(file_handle-1)
+	ld	c,_read
+	call	bdos
+	ret	nz
+	ld	de,#8000		;check if all byte were read
+	call	sim_rst20
+	jr	z,disk_ld_end		;yes so close file
+
+disk_ld_loop:
+	ld	hl,1
+	ld	de,dummy_buffer 	; read file
+	ld	bc,(file_handle-1)
+	ld	c,_read
+	call	bdos
+	ld	b,a
+	ld	de,0
+	call	sim_rst20
+	jr	nz,disk_ld_loop
+	ld	a,b
+	cp	#c7			;check for EOF
+	jr	z,disk_ld_end1
+	or	a
+	ret
+
+disk_ld_end1:
+	ld	hl,eof_mess
+	call	print_message
+	ld	hl,(file_error)
+	call	print_message
+	ld	hl,mess0
+	call	print_message
+
+disk_ld_end:
+	ld	bc,(file_handle-1)	;close file
+	ld	c,_close
+	call	bdos
+	ret
+
+disk_ld_add:	dw	0
+dummy_buffer:	db	0
+eof_mess:	db	"End Of File in :",0
+
+sim_rst20:
+	ld	a,h
+	sub	d
+	ret	nz
+	ld	a,l
+	sub	e
+	ret
+
+;-------------------------------------------------------
+;
+;	load MAP file to memory
+;
+;	IN:	DE= filename
+;		IX= add of mapper data
+;		(map_offset)= offset correspondant au SCENE DATA
+;			      =0 pour plan A =5408 pour plan B
+;
+;	OUT:	A = disk error number
+;
+;	MOD:	AF,BC,HL,DE,IX
+;
+map_ld:
+	ld	(file_error),de
+	ld	hl,#8000
+	ld	(disk_ld_add),hl
+	ld	c,_open
+	ld	a,1		;read only open
+	call	bdos
+	ret	nz		;RET if open error
+
+	ld	a,b			; save file handle number
+	ld	(file_handle),a
+
+	ld	a,(pat_map_bank)
+	call	WriteFD
+
+	ld	hl,5408 		;read scene map datas
+	ld	de,#8000+0		; read file
+	ld	c,_read
+	call	bdos
+	ret	nz
+
+	ld	hl,(map_offset)
+	ld	de,#4000
+	add	hl,de
+	ex	de,hl
+	ld	hl,#8000
+	ld	bc,5408
+	ldir
+
+;	 ld	 b,14
+map_ld_loop:
+;	 push	 bc
+	ld	a,(ix+0)		;read 1st page of scene
+	call	WriteFD
+	ld	hl,#4000		;len
+	ld	de,#8000		;destination
+	ld	bc,(file_handle-1)
+	ld	c,_read
+	call	bdos
+	ld	hl,#8000
+	ld	de,#4000
+	ld	bc,#4000
+	ldir
+	cp	#c7			;check for EOF
+	jp	z,disk_ld_end1
+	or	a
+	ret	nz
+	inc	ix
+	jr	map_ld_loop
+
+	jp	disk_ld_end
+
+map_offset:	dw	0
+
+;-------------------------------------------------------
+;
+;	load palette
+;
+;	IN:	DE= filename
+;		B = palette number
+;		C = V9990 palette number
+;
+;	OUT:	A = disk error number
+;
+;	MOD:	AF,BC,HL,DE
+;
+load_plt:
+	ld	(v9990_plt),bc		;save plt number of file & V9990
+	ld	(file_error),de
+
+	ld	c,_open
+	ld	a,1		;read only open
+	call	bdos
+	ret	nz		;RET if open error
+
+	ld	a,b			; save file handle number
+	ld	(file_handle),a
+
+	ld	de,(buffer_add) 	; read file
+	ld	hl,32*8 		; 8 palettes de 32 octets
+	ld	bc,(file_handle-1)
+	ld	c,_read
+	call	bdos
+	ret	nz
+
+	call	plt_ldr 		;send palette to the V9990
+
+	ld	bc,(file_handle-1)	;close file
+	ld	c,_close
+	call	bdos
+	ret
+
+v9990_plt:	db	0
+plt_nb: 	db	2
+
+plt_ldr:
+	ld	a,14			;preset palette index
+	out	(vdp+4),a
+	ld	a,(v9990_plt)
+	and	3			;make sure plt nb is between 0 & 3
+	rrca
+	rrca
+	out	(vdp+3),a
+
+	ld	a,(plt_nb)		;calcul plt offset
+	and	7
+	rrca
+	rrca
+	rrca
+	ld	e,a
+	ld	d,0
+	ld	hl,(buffer_add)
+	add	hl,de			;HL = plt add
+
+	ld	b,16
+plt_loop:
+	ld	a,(hl)
+	ld	c,a
+	and	#f0
+	rrca
+	rrca
+	out	(vdp+1),a		  ;output RED
+	inc	hl
+	ld	a,(hl)
+	and	#0f
+	rlca
+	rlca
+	out	(vdp+1),a		  ;output GREEN
+	ld	a,c
+	and	#0f
+	rlca
+	rlca
+	out	(vdp+1),a
+	inc	hl
+	djnz	plt_loop
+	ret
+
+;-------------------------------------------------------
+;
+;	load palette
+;
+;	IN:	DE= filename
+;
+;	OUT:	A = disk error number
+;
+;	MOD:	AF,BC,HL,DE
+;
+load_p32:
+	ld	(file_error),de
+
+	ld	c,_open
+	ld	a,1		;read only open
+	call	bdos
+	ret	nz		;RET if open error
+
+	ld	a,b			; save file handle number
+	ld	(file_handle),a
+
+	ld	de,(buffer_add) 	; read file
+	ld	hl,192			; 4 palettes de 48 octets
+	ld	bc,(file_handle-1)
+	ld	c,_read
+	call	bdos
+	ret	nz
+
+	ld	bc,(file_handle-1)	;close file
+	ld	c,_close
+	call	bdos
+
+	ld	a,14			;preset palette index
+	out	(vdp+4),a
+	xor	a
+	out	(vdp+3),a
+	ld	hl,(buffer_add)
+	ld	b,192
+load_plt0:
+	ld	a,(hl)
+	out	(vdp+1),a
+	inc	hl
+	djnz	load_plt0
+	ret
+
+;---------------------------------------------------------------
+;
+;	load a screen 5 file to V9990 VRAM
+;
+;	IN:	DE= filename
+;		HL= VRAM add
+;		A = VRAM add MSB (3 bits)
+;
+;	OUT:	A = disk error number
+;
+;	MOD:	AF,BC,HL,DE
+;
+load5_2_vram:
+	ld	b,a
+	xor	a			;set VRAM add 0
+	out	(vdp+4),a
+	ld	a,l			;LSB add
+	out	(vdp+3),a
+	ld	a,h			;center add
+	out	(vdp+3),a
+	ld	a,b			;3 bits MSB add
+	out	(vdp+3),a
+
+	ld	(file_error),de
+
+	ld	c,_open
+	ld	a,1		;read only open
+	call	bdos
+	ret	nz		;RET if open error
+
+	ld	a,b			; save file handle number
+	ld	(file_handle),a
+
+	ld	de,(buffer_add) 	; read file
+	ld	hl,7			;read header
+	ld	bc,(file_handle-1)
+	ld	c,_read
+	call	bdos
+	ret	nz
+
+	ld	a,2
+	ld	(load5_cnt),a
+load5_2_vram0:
+	ld	de,(buffer_add) 	; read file
+	ld	hl,#3500		 ;read 1st part
+	ld	bc,(file_handle-1)
+	ld	c,_read
+	call	bdos
+	ret	nz
+	call	Ram2Vram
+	ld	a,(load5_cnt)
+	dec	a
+	ld	(load5_cnt),a
+	jr	nz,load5_2_vram0
+
+	ld	bc,(file_handle-1)	;close file
+	ld	c,_close
+	call	bdos
+	ret
+
+load5_cnt:	db	0
+
+Ram2Vram:
+	ld	bc,#3500
+	ld	hl,(buffer_add)
+Ram2Vram_loop:
+	ld	a,(hl)
+	out	(vdp+0),a
+	inc	hl
+	dec	bc
+	ld	a,b
+	or	c
+	jr	nz,Ram2Vram_loop
+	ret
+
+;---------------------------------------------------------------
+;
+;	load the ship grafx file to V9990 VRAM
+;
+;	IN:	None
+;	OUT:	None
+;	MOD:	All
+;
+ship_ldr:
+	ld	a,(ship_type)
+	rlca
+	ld	l,a
+	ld	h,0
+	ld	de,ship_list
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	call	load_ship
+	ret	nz
+
+	xor	a			;set VRAM add 0
+	out	(vdp+4),a
+	ld	a,#00			;LSB add
+	out	(vdp+3),a
+	ld	a,#80			;center add
+	out	(vdp+3),a
+	ld	a,1			;3 bits MSB add
+	out	(vdp+3),a
+	ld	hl,(buffer_add)
+	call	ship2vram
+
+	xor	a			;set VRAM add 0
+	out	(vdp+4),a
+	ld	a,#00			;LSB add
+	out	(vdp+3),a
+	ld	a,#00			;center add
+	out	(vdp+3),a
+	ld	a,2			;3 bits MSB add
+	out	(vdp+3),a
+	call	ship2vram
+
+	xor	a			;set VRAM add 0
+	out	(vdp+4),a
+	ld	a,#00			;LSB add
+	out	(vdp+3),a
+	ld	a,#80			;center add
+	out	(vdp+3),a
+	ld	a,2			;3 bits MSB add
+	out	(vdp+3),a
+	call	ship2vram
+
+	xor	a			;set VRAM add 0
+	out	(vdp+4),a
+	ld	a,#00			;LSB add
+	out	(vdp+3),a
+	ld	a,#00			;center add
+	out	(vdp+3),a
+	ld	a,3			;3 bits MSB add
+	out	(vdp+3),a
+	call	ship2vram
+
+	ret
+
+ship_list:	dw	ship_lst0,ship_lst1,ship_lst2,ship_lst3
+
+ship_lst0:	db	"ship0.sr5",0
+ship_lst1:	db	"ship1.sr5",0
+ship_lst2:	db	"ship2.sr5",0
+ship_lst3:	db	"ship3.sr5",0
+
+ship2vram:
+	ld	bc,2048
+ship2vram0:
+	ld	a,(hl)
+	out	(vdp+0),a
+	inc	hl
+	dec	bc
+	ld	a,b
+	or	c
+	jr	nz,ship2vram0
+	ret
+
+;---------------------------------------------------------------
+;
+;	load a ship file to V9990 VRAM
+;
+;	IN:	DE= filename
+;	OUT:	A = disk error number
+;	MOD:	AF,BC,HL,DE
+;
+load_ship:
+	ld	(file_error),de
+
+	ld	c,_open
+	ld	a,1		;read only open
+	call	bdos
+	ret	nz		;RET if open error
+
+	ld	a,b			; save file handle number
+	ld	(file_handle),a
+
+	ld	de,(buffer_add) 	; read file
+	ld	hl,7			;read header
+	ld	bc,(file_handle-1)
+	ld	c,_read
+	call	bdos
+	ret	nz
+
+	ld	de,(buffer_add) 	; read file
+	ld	hl,8192 		;read 1st part
+	ld	bc,(file_handle-1)
+	ld	c,_read
+	call	bdos
+	ret	nz
+
+	ld	bc,(file_handle-1)	;close file
+	ld	c,_close
+	call	bdos
+	ret
+
+

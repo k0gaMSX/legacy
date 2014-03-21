@@ -1,0 +1,422 @@
+	
+;	X-ANIME BY ABYSS.
+
+	defb	0feh
+	defw	start
+	defw	end
+	defw	start
+
+	org	0c000h
+
+start:	ld	a,8		; Si space alors end.
+	call	141h
+	and	1
+	or	a
+	ret	z
+
+	halt
+
+	ld	b,9
+retour0:push	bc
+
+	ld	hl,str_spr	; Display sprites (attributs)
+	ld	de,07600h
+	ld	bc,128
+	call	05ch
+
+	pop	bc
+	djnz	retour0
+
+	ld	a,0
+	ld	(caps),a
+
+	ld	a,5
+	ld	bc,07000h
+	call	pal
+
+	ld	a,0		 ; Sprite number (127 pers possibl bit 7=cond).
+	ld	hl,255+106*256	 ; Coordonees.
+	call	animes
+
+	ld	a,5
+	ld	bc,02703h
+	call	pal
+
+	ld	a,(caps)
+	or	a
+	jr	z,zero
+
+	in	a,(0aah)
+	and	%10111111
+	jr	un
+
+zero:	in	a,(0aah)
+	or	040h
+
+un:	out	(0aah),a
+
+	ld	hl,str_spr	; Display sprites (attributs)
+	ld	de,07600h
+	ld	bc,128
+	call	05ch
+
+	jr	start
+
+pal:	di
+	out	(099h),a
+	ld	a,080h+16
+	out	(099h),a
+
+	ld	a,b
+	out	(09ah),a
+	ld	a,c
+	out	(09ah),a
+	ei
+
+	ret
+
+animes:
+
+z_life: ld	bc,0401h	; personnage 1(c) de deux(b) nbr sprites.
+	ld	de,cond01
+	exx
+	ld	iy,str_spr	; Position du personnage dans la table des spr.
+	ld	de,move01	; Adresse du deplacement actuel.
+	ld	hl,side01	; Adresse de l'image actuel.
+	ld	bc,00120h	; B = Duree d'apparition d'une image.
+				; C = duree du deplacement du personnage.
+	call	pers1
+	jr	jmpjr
+
+jmpjr:	ld	bc,0402h	; personnage 2(c) de deux(b) nbr sprites.
+	ld	de,cond02	; Zero pas de conditions.
+	exx
+	ld	iy,str_spr+16	; Position du personnage dans la table des spr.
+	ld	de,move02	; Adresse du deplacement actuel.
+	ld	hl,side02	; Adresse de l'image actuel.
+	ld	bc,00120h	; B = Duree d'apparition d'une image.
+				; C = duree du deplacement du personnage.
+	call	pers1
+	ret
+	nop
+
+; Routine animation d'images.
+
+pers1:	pop	ix		; Recupere le pointeur d'instructions dans ix.
+	push	ix
+
+	djnz	no_chg		; Duree d'apparition d'une image.
+
+	push	de		; Sauve l'adresse du deplacement actuel.
+
+	ld	e,(hl)		; Si b=0 alors lit l'adrs de la sequence image.
+	inc	hl		; Adresse de l'image + son compteur.
+	ld	d,(hl)
+	inc	hl
+
+	ld	a,e		; Si adr = 0 alors saut a une autre image.
+	or	d
+	jr	nz,jmp01
+
+	ld	e,(hl)		; Recupere dans DE l'adresse du saut.
+	inc	hl
+	ld	d,(hl)
+
+	ex	de,hl		; Adresse du saut dans HL.
+
+	ld	e,(hl)		; Nouvelle adresse de l'image + compteur.
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+				; Change les parametres avant le call.
+jmp01:	ld	(ix-8),l	; Nouvelle Image .
+	ld	(ix-7),h
+
+	ld	a,(de)
+	ld	b,a		; Nouvelle duree d'apparition d'une image.
+	inc	de
+
+	push	iy
+	push	bc
+
+	exx
+	ld	a,b
+	exx
+	ld	b,a
+
+	ld	a,(de)
+	inc	de
+	or	a
+	jr	nz,jmpspr
+
+loopspr:ld	a,(de)		; Met dans la table des sprites pointee par IY.
+	inc	de		; Les numeros d'images pointees DE.
+
+	ld	(iy+2),a
+	inc	iy
+	inc	iy
+	inc	iy
+	inc	iy
+
+	djnz	loopspr
+	jr	end_im
+
+jmpspr: ld	a,(de)		; Met dans la table des sprites pointee par IY.
+
+loopsp2:ld	(iy+2),a	; Les numeros d'images pointees DE.
+	add	a,4
+
+	inc	iy
+	inc	iy
+	inc	iy
+	inc	iy
+
+       djnz    loopsp2
+
+end_im: pop	bc
+	pop	iy
+	pop	de		; restitue.
+
+no_chg: ld	(ix-4),b
+
+; Routine mouvement de sprites.
+
+	ex	de,hl
+
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ld	b,c
+	djnz	no_mov
+
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	dec	hl
+
+	ld	a,e
+	or	d
+	jr	nz,jmp02
+
+	inc	hl
+	inc	hl
+
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+
+	ex	de,hl
+
+jmp02:	ld	(ix-11),l
+	ld	(ix-10),h
+
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+
+	ld	a,(de)
+	ld	b,a
+
+no_mov: ld	(ix-5),b
+
+	ex	de,hl
+
+	push	iy
+
+	inc	hl
+	ld	a,(hl)
+
+loop_mv cp	128
+	jr	z,end_mv
+
+	ld	d,a
+
+	add	a,(iy)		; Coordonnee Y.
+	ld	(iy),a
+	inc	hl
+	inc	iy
+
+	ld	a,(hl)		; Coordonnee X.
+	ld	e,a
+
+	add	a,(iy)
+	ld	(iy),a
+	inc	hl
+
+	inc	iy
+	inc	iy
+	inc	iy
+
+	ld	a,(hl)
+	cp	127
+	jr	nz,loop_mv
+
+	exx			; Nbr de sprite(s) dans B'.
+	ld	a,b
+	exx
+	ld	b,a
+	dec	b
+
+loopmv2:ld	a,d		; Coordonnee Y.
+	add	a,(iy)
+	ld	(iy),a
+	inc	iy
+
+	ld	a,e		; Coordonnee X.
+	add	a,(iy)
+	ld	(iy),a
+
+	inc	iy
+	inc	iy
+	inc	iy
+
+	djnz	loopmv2
+
+end_mv: pop	iy
+
+; Condition
+
+	exx
+
+	ld	a,e		; Si zero pas de conditions.
+	or	d
+	jr	z,end_cd
+
+loop_cd:ld	a,(de)
+	inc	de
+
+	cp	255
+	jr	z,end_cd
+
+	ld	l,a		; Numero du sprite
+	ld	h,0
+
+	add	hl,hl		; Multiplie par quatre.
+	add	hl,hl
+
+	push	de
+
+	ld	de,str_spr	; Table des sprites
+	add	hl,de		; Adresse du sprite a tester.
+
+	push	iy
+	push	bc		; IY position du personnage dans la table.
+loopcd2:push	hl
+
+	ld	a,(iy+0)	; Yprs -Yspr
+	sub	(hl)
+	jr	nc,no_neg
+	neg
+
+no_neg: cp	16
+	jr	nc,not_tch
+
+	inc	hl
+
+	ld	a,(iy+1)	; Xprs -Xspr
+	sub	(hl)
+	jr	nc,no_neg2
+	neg
+
+no_neg2:cp	16
+	jr	nc,not_tch
+
+	ld	a,1
+	ld	(caps),a
+
+not_tch:inc	iy
+	inc	iy
+	inc	iy
+	inc	iy
+
+	pop	hl
+	djnz	loopcd2
+
+	pop	bc
+	pop	iy
+	pop	de
+
+	jr	loop_cd
+end_cd: ret
+
+caps:	defb	0
+
+
+; Datas des animations d'images.
+
+
+side01: defw	pic01,pic02,pic03,0,side01
+side02: defw	pic04,pic05,pic06,0,side02
+
+pic01:	defb	064,1,01*4			; Timing, mode, picture.
+pic02:	defb	064,1,02*4
+pic03:	defb	064,1,03*4
+
+pic04:	defb	032,1,04*4
+pic05:	defb	032,1,05*4
+pic06:	defb	032,1,06*4
+
+
+; Data des deplacements
+
+
+move01: defw	mv01,mv02,mv03,mv04,0,move01
+move02: defw	mv05,mv06,mv07,mv08,0,move02
+
+mv01:	defb	032, 00,+01,127 	; 128 = fin de chaine
+mv02:	defb	016,+01,-01,127 	; 127,? = coordonnee pour x sprite(s).
+mv03:	defb	016,-01,-01,127
+mv04:	defb	032, 00,+01,127
+
+mv05:	defb	032, 00,-01,127 	; 128 = fin de chaine
+mv06:	defb	016,-01,+01,127 	; 127,? = coordonnee pour x sprite(s).
+mv07:	defb	016,+01,+01,127
+mv08:	defb	032, 00,-01,127
+
+; Conditions des personnages.
+
+
+cond01: defb	4,5,6,7,8,255		; Personnage1.
+cond02: defb	8,255			; Pers2.
+
+
+; Table des attributs.
+
+
+str_spr:defb	064	,032	,00*4,0  ; Nßdu spr *4 (V9958).
+	defb	064	,016	,01*4,0
+	defb	064+16	,032	,02*4,0
+	defb	064+16	,016	,03*4,0
+	defb	064	,240	,04*4,0
+	defb	064	,224	,05*4,0
+	defb	064+16	,240	,06*4,0
+	defb	064+16	,224	,07*4,0
+	defb	064	,064	,08*4,0
+	defb	128+48	,0	,09*4,0
+	defb	212	,0	,10*4,0
+	defb	212	,0	,11*4,0
+	defb	212	,0	,12*4,0
+	defb	212	,0	,13*4,0
+	defb	212	,0	,14*4,0
+	defb	212	,0	,15*4,0
+	defb	212	,0	,16*4,0
+	defb	212	,0	,17*4,0
+	defb	212	,0	,18*4,0
+	defb	212	,0	,19*4,0
+	defb	212	,0	,20*4,0
+	defb	212	,0	,21*4,0
+	defb	212	,0	,22*4,0
+	defb	212	,0	,23*4,0
+	defb	212	,0	,24*4,0
+	defb	212	,0	,25*4,0
+	defb	212	,0	,26*4,0
+	defb	212	,0	,27*4,0
+	defb	212	,0	,28*4,0
+	defb	212	,0	,29*4,0
+	defb	212	,0	,30*4,0
+end_spr:defb	212	,0	,31*4,0
+
+end:
+

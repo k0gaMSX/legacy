@@ -1,0 +1,48 @@
+;---------------------------------------------------------------
+;
+;	SET MODE P1
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,BC
+;
+set_p1:
+	ld	a,0		;quit reset mode & select XTAL oscilator
+	out	(vdp+7),a
+	ld	a,6		;set REGISTER 6,7,8 for P1 mode
+	out	(vdp+4),a
+	ld	a,5
+	out	(vdp+3),a
+	ld	a,0
+	out	(vdp+3),a
+	ld	a,%10000010	;REG #8: display on, SPR on, 512kB VRAM
+	out	(vdp+3),a
+
+	ld	a,13			;preset palette index
+	out	(vdp+4),a
+	ld	a,%00000100	;plt0 for plane A & plt1 for plane B
+	out	(vdp+3),a
+
+	ld	a,17		;reset SA & SB scrollx register
+	out	(vdp+4),a
+	ld	b,8
+	xor	a
+loop_p1:
+	out	(vdp+3),a
+	djnz	loop_p1
+
+	ld	a,27		;clear priority between SA & SB
+	out	(vdp+4),a
+	xor	a
+	out	(vdp+3),a
+
+	ld	a,25		;set sprite generator at #18000
+	out	(vdp+4),a
+	ld	a,6
+	out	(vdp+3),a
+
+	xor	a		;reset super-impose of GRAFX9000
+	out	(vdp+15),a
+	ret
+
+

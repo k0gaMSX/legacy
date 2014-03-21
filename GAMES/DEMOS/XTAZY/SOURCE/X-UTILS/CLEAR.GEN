@@ -1,0 +1,52 @@
+;-------------------------------------------------------
+;
+;	clear pattern generator du plan A
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,BC
+;
+clear_pga:
+	xor	a
+	out	(vdp+4),a
+	out	(vdp+3),a
+	out	(vdp+3),a
+	out	(vdp+3),a
+
+	ld	bc,#0000
+loop_pga:
+	xor	a
+	out	(vdp+0),a
+	dec	bc
+	ld	a,b
+  or	c
+	jp	nz,loop_pga
+	ret
+
+;-------------------------------------------------------
+;
+;	clear pattern generator du plan B
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,BC
+;
+clear_pgb:
+	xor	a
+	out	(vdp+4),a
+	out	(vdp+3),a
+	out	(vdp+3),a
+	ld	a,#04
+	out	(vdp+3),a
+
+	ld	bc,#0000
+loop_pgb:
+	xor	a
+	out	(vdp+0),a
+	dec	bc
+	ld	a,b
+	or	c
+	jp	nz,loop_pgb
+	ret
+
+

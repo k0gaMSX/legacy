@@ -1,0 +1,1797 @@
+
+*i	zone
+
+;position_ship:  equ	 #8000
+;save_pos_ship:  equ	 position_ship+2
+;personages_dat: equ	 save_pos_ship+2
+;auxiliary_Y:	 equ	 personages_dat+2
+;data_bigbang:	 equ	 auxiliary_Y+2
+;square_data:	 equ	 data_bigbang+2
+;collision_data: equ	 square_data+2
+
+
+;	 in	 a,(#aa)		 ; read line 7 of key board
+;	 and	 #f0
+;	 or	 7
+;	 out	 (#aa),a
+;	 in	 a,(#a9)
+
+;	 bit	 4,a			 ; if stop then stop
+;	 jr	 nz,no_stop
+
+;	 ld	 hl,all_sp_data
+;	 ld	 de,0f55eh
+;	 ld	 bc,125*4
+;	 ldir
+
+;	 ld	 hl,zone_of_life
+;	 ld	 de,0f55eh
+;	 ld	 bc,125*4
+;	 ldir
+
+;	 jp	 0000h
+;no_stop:
+
+	in	a,(#aa) 		; read line 8 of key board
+	and	#f0
+	or	8
+	out	(#aa),a
+	in	a,(#a9)
+
+	bit	1,a			; if "DEL" key then bigbang
+	jr	nz,no_del
+;	 ld	 hl,bigbang
+;	 ld	 (hl),1
+
+	ld	a,(timer)
+	cp	0
+	jr	nz,no_del
+
+;**
+;	 ld	 a,(reg_r)
+;	 ld	 l,a
+
+;	 ld	 a,r
+;	 ld	 (reg_r),a
+;	 and	 %10111111
+;	 ld	 h,a
+
+	ld	de,106
+	ld	hl,128
+	ld	a,18	       ;**
+	call	add_birth
+
+;	 call	 reset_enemy
+
+;	 call	 check_ship0
+
+	ld	a,5
+	ld	(timer),a
+
+no_del:
+	ld	a,(timer)
+	cp	0
+	jr	z,no_zero
+	dec	a
+no_zero:ld	(timer),a
+
+
+	ld	hl,(position_ship)	;recup add du monstre suivant
+
+	ld	e,(hl)			;DE = pos X d'apparition du monstre
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ld	b,h		;save HL
+	ld	c,l
+
+	ld	a,e		;test DE= 0
+	or	d
+	jr	z,no_action_ship
+
+	ex	de,hl		;HL= position X d'apparition
+				;DE= add du 2eme parametre du monstre
+	ld	de,(Scroller_x)
+	call	simrst20
+
+	ld	h,b
+	ld	l,c
+
+	ld	a,0			;pas optimisable!
+	jr	nz,no_action_ship
+;	 jr	 nc,no_action_ship
+
+;	 ld	 a,14
+;	 out	 (vdp+4),a
+;	 xor	 a
+;	 out	 (vdp+3),a
+;	 out	 (vdp+1),a
+;	 out	 (vdp+1),a
+;	 ld	 a,31
+;	 out	 (vdp+1),a
+
+	ld	a,(hl)		;A= type de monstre
+	inc	hl
+
+	ld	e,(hl)		;DE=Y pos
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ex	de,hl		;DE=add data
+				;HL=Y pos
+	ld	bc,(Scroller_y) ;sub Y scroller
+	or	a
+	sbc	hl,bc
+	ex	de,hl		;DE= Y pos - Y scroller
+				;HL= add data
+
+	ld	c,(hl)		;BC=X pos
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+
+	ld	(position_ship),hl
+
+	ld	h,b		;osons l'optimisation du transfer! :-)
+	ld	l,c		;HL=X pos
+
+	ld	bc,(Scroller_x) ;BC= X scroller
+	or	a
+	sbc	hl,bc		;HL = X pos - X scroller
+
+no_action_ship:
+	call	make_action		; mover personages
+
+	ld	a,(ship_destroy)	; ship destroy
+	cp	1
+	jr	nz,no_destroy
+	call	check_ship0
+	ld	a,2
+	ld	(ship_destroy),a
+no_destroy:
+
+	ld	a,(getting_option)	; getting_option
+	cp	255
+	call	nz,gellule
+	ld	a,255
+	ld	(getting_option),a
+	ret
+
+; personages positions datas on screen roll
+
+timer:		defb	5
+reg_r:          defb    00
+
+
+;-------------------------------------------------------
+;
+;	RESET OF ALL ENEMY
+;
+;	IN:	none
+;	OUT:	make reset of all enemy
+;	MOD:	A, HL, BC
+;
+reset_enemy:
+	xor	a
+	ld	hl,create_datas
+	ld	(create_address),hl
+	ld	(hl),a
+
+	ld	(ship_destroy),a
+
+	ld	hl,0
+	ld	(zone_of_life),hl
+
+	ld	hl,all_other
+	ld	b,99
+
+loop_init_sp:
+
+	ld	(hl),212
+
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
+	dec	bc
+
+	djnz	loop_init_sp
+	ret
+
+;-------------------------------------------------------
+;
+;	MAKE ACTION
+;
+;	IN:	A,DE,HL
+;	OUT:	make animation all sprites
+;	MOD:	all
+;
+make_action:
+	call	add_birth
+
+	ld	hl,(Scroller_x) 	; calculate scroller motions
+	ld	de,(save_x_scroll)	; load old scroll
+	ld	(save_x_scroll),hl	; save new scroll
+	or	a
+	sbc	hl,de
+	ld	a,l
+	neg
+	ld	(scrol_motion +0),a	; save X motion scroll
+
+	ld	hl,(Scroller_y) 	; calculate Y roller
+	ld	de,(save_y_scroll)	; load old scroll
+	ld	(save_y_scroll),hl	; save new scroll
+	or	a
+	sbc	hl,de
+	ld	a,l
+	neg
+	ld	(scrol_motion +1),a	; save Y roller
+
+
+	ld	ix,zone_of_life
+
+	ld	e,(ix +00)		; if zero then no life
+	ld	d,(ix +01)
+
+	ld	a,e
+	or	d
+	jr	z,make_birth		; zero then jump in birth
+
+	ld	(next_personage),de	; save old jumper
+	add	ix,de			; jump in next personage
+
+loop_an:
+	push	ix
+	call	start_animes	      ; personages movers
+	pop	ix
+
+	ld	e,(ix +13)		; read in DE. jumper of personage
+	ld	d,(ix +14)
+
+	ld	a,(ix +00)		; test personage number
+	or	a
+	jr	z,no_nxt		; if zero then no save old jumper
+
+	ld	(next_personage),de	; save old jumper
+
+no_nxt:
+	add	ix,de			; new position
+
+	ld	a,e
+	or	d
+	jr	nz,loop_an		; if zero then end mover
+
+	xor	a			; bigbang reset
+	ld	(bigbang),a
+
+;-------------------------------------------------------
+;
+;	MAKE BIRTH (faire une naissance)
+;
+;	IN:	none
+;	OUT:	make birth sequences animations
+;	MOD:	?
+;
+make_birth:
+
+; string creates system
+
+	ld	de,2			; init
+	ld	hl,zone_of_life
+	ld	(string_address),hl
+
+	ld	hl,create_datas 	; datas address
+
+
+loop_creates:
+	ld	a,(hl)			; personage number
+	or	a			; if zero then end create
+	jp	z,end_birth		; create finish.
+
+	push	de
+
+	ld	(create_number),a
+	inc	hl
+
+	ld	e,(hl)			; Y position
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	(save_Y),de
+
+	ld	e,(hl)			; X position
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	(save_X),de
+
+	ld	ix,(string_address)	; zone of lifes address actual
+
+	pop	de
+
+	push	hl			; save datas address
+	call	please_creates
+	pop	hl
+
+	ld	de,15
+	jr	loop_creates
+
+end_birth:
+	ld	hl,create_datas 	; reset create_datas
+	ld	(create_address),hl
+	ld	(hl),0
+	ret
+
+; search free position in "zone of life"
+
+please_creates:
+
+loop_bb:
+	ld	a,(ix +01)		; if zero then free position
+	or	a
+	jr	nz,no_free
+
+	ld	a,(ix +00)
+	or	a
+	jr	z,ys_free
+
+	cp	10h			; if > 15 then free position
+	jr	nc,ys_free
+
+no_free:
+	ld	de,15			; second jumper +15 bytes
+	add	ix,de
+
+	jr	loop_bb 		; next position
+
+ys_free:
+	ld	l,(ix +00)		; free position found
+	ld	h,(ix +01)
+
+	ld	(ix +00),e		; new jumper for old personage (2or15)
+	ld	(ix +01),d
+
+	ld	bc,15
+	add	ix,bc			; new position for new personage
+
+	ld	a,h			; second jumper =0 then end string
+	or	l
+	jr	nz,nxt_fre
+
+	ld	e,0			; reset old jumper
+
+nxt_fre:
+	or	a			; save new jumper at new personage
+	sbc	hl,de
+
+	ld	(ix +00),l
+	ld	(ix +01),h
+
+	ld	(string_address),ix	; save address for string creates
+
+; enter news parameters for new personage
+
+	ld	a,(create_number)	; personage number
+	ld	(ix -13),a
+
+	ld	l,a			; calculate data address of personage
+	ld	h,0
+	add	hl,hl
+
+	ld	de,(personages_dat)
+	add	hl,de			; personage number *2 + "pers_datas"
+
+	ld	e,(hl)			; second data address in fisrt address
+	inc	hl
+	ld	d,(hl)
+
+	ld	a,(de)			; flag
+	ld	(ix -12),a
+	inc	de
+
+	bit	6,a			; test flag
+
+	ld	a,(de)			; sprites number
+	ld	(ix -11),a
+	inc	de
+
+
+	ld	a,(de)			; test conditions address.
+	ld	(ix -10),a
+	inc	de
+	ld	a,(de)
+	ld	(ix -09),a
+	inc	de
+
+	ex	de,hl			; new data address in HL. old in DE.
+
+	ld	c,(hl)			; moving sequence address
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+
+	jr	nz,eco_1		; test flag and jump
+	dec	bc
+	dec	bc
+
+	ld	(ix -02),1		; 1 for timer moving
+eco_1:
+	ld	(ix -06),c
+	ld	(ix -05),b
+
+	ld	c,(hl)			; pattern sequence address
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+
+	jr	nz,eco_2		; test flag and jump
+	dec	bc
+	dec	bc
+
+	ld	(ix -01),1		; 1 for timer pattern
+eco_2:
+	ld	(ix -04),c
+	ld	(ix -03),b
+
+
+
+	push	hl			; save data address of personage
+
+
+; search free position in attributes sprites table.
+
+	ld	hl,all_sp_data +496 +4	; last sprite position table +4
+nxt212:
+	ld	b,(ix -11)		; number sprites
+loop212:
+	dec	hl			; next position
+	dec	hl
+	dec	hl
+	dec	hl
+
+	ld	a,(hl)			; Y position
+
+	cp	212			; if not 212 then not free
+	jr	nz,nxt212
+
+	djnz	loop212 		; B. = zero then free position
+
+;	 inc	 hl			 ; address right
+;	 inc	 hl
+;	 inc	 hl
+;	 inc	 hl
+
+	ld	(ix -08),l		; save address at personage and IY.
+	ld	(ix -07),h
+	push	hl
+	pop	iy
+
+	ld	bc,all_sp_data		; Calculate address of second Y
+	or	a
+	sbc	hl,bc
+	srl	h			; hl / 2
+	rr	l
+	ld	bc,(auxiliary_Y)	; second Y table
+	add	hl,bc			; second address in HL.
+
+
+	pop	de			; load data address of personage
+
+
+; set sprites attributes of personage
+
+	ld	a,(ix -11)		; number sprites of personage
+
+	push	hl			; IY. attibutes table, IX.= second Y
+	pop	ix
+loop_position:
+
+	ex	af,af'
+
+	ld	hl,(save_Y)		; position on 16 bits
+	ld	a,(de)			; add mover
+	inc	de
+
+	ld	c,a			; carry if negative
+	add	a,a
+	sbc	a,a
+	ld	b,a
+	add	hl,bc			; to add up or to subtract
+
+	ld	(ix +00),l		; new sprite position for Y
+	ld	(ix +01),h
+	ld	(iy +00),213		; sprite disable
+
+	ld	hl,(save_X)		; position on 16 bits
+	ld	a,(de)			; add mover
+	inc	de
+
+	ld	c,a			; carry if negative
+	add	a,a
+	sbc	a,a
+	ld	b,a
+	add	hl,bc			; to add up or to subtract
+
+	ld	(iy +2),l		; new sprite position for X on 10 bits
+	ld	a,h
+	and	%00000011
+	ld	(iy +3),a
+
+	inc	ix			; next sprite attributes.
+	inc	ix
+
+	inc	iy
+	inc	iy
+	inc	iy
+	inc	iy
+
+	ex	af,af'                  ; if A. = zero then end
+	dec	a
+	jr	nz,loop_position
+
+	ret
+
+
+start_animes:
+	ld	(save_stack),sp 	; save stack pointer for return
+
+;-------------------------------------------------------
+;
+;	MAKE BIGBANG
+;
+;	IN:	none
+;	OUT:	kill all sprites animations (sprites enables only)
+;	MOD:	?
+;
+make_bigbang:
+	ld	a,(bigbang)		; zero then no bigbang
+	or	a
+	jr	z,no_bigbang
+
+	ld	a,(ix +03)		; no condition address then no bigbang
+	or	  (ix +04)
+	jr	z,no_bigbang
+
+	bit	7,(ix +01)		; if personage disable then no bigbang
+	jr	nz,no_bigbang
+
+	ld	h,0			; calculate data bigbang address
+	ld	l,(ix +00)
+	ld	de,(data_bigbang)
+
+	dec	l
+	add	hl,hl
+	add	hl,de
+
+	ld	e,(hl)			; HL. data bigbang address
+	inc	hl
+	ld	d,(hl)
+
+	ld	a,e			; (HL). = 0 then no bigbang
+	or	d
+
+	call	nz,chg_sequence 	; change parameters of personage
+
+no_bigbang:
+
+;-------------------------------------------------------
+;
+;	MAKE PATTERNS ANIMATIONS OF SPRITES (+attribute)
+;
+;	IN:	none
+;	OUT:	make animation patterns
+;	MOD:	?
+;
+anime_pattern:
+
+	ld	l,(ix +05)		; IX. position in zone of life
+	ld	h,(ix +06)
+	push	hl
+	pop	iy			; IY. position in sprite table
+
+	bit	6,(ix +01)		; special condition
+	jp	nz,eco_move
+
+	ld	b,(ix +12)		; timer of patterns
+	djnz	no_chg_pattern
+
+	ld	l,(ix +09)		; pattern sequence address
+	ld	h,(ix +10)
+
+	inc	hl			; next sequence
+	inc	hl
+
+	ld	e,(hl)			; sequence address
+	inc	hl
+	ld	d,(hl)
+
+ ; sound effects
+	ld	a,d
+	cp	254			; address = -2 then sound effects
+	jr	nz,no_play_effect
+
+	ld	a,(iy +02)
+	rrca
+	rrca
+	rrca
+	rrca
+	and	#0f		;make sure result is: 0 <= result < 16
+	or	#80		;non interuptible sound effect
+
+	push	hl
+	ld	b,a
+	ld	a,e		;sound effect number
+	call	Sound_Effect	;activate "explode" sound effect
+	pop	hl
+
+	inc	hl
+	ld	e,(hl)			; sequence address
+	inc	hl
+	ld	d,(hl)
+
+no_play_effect:
+
+	ld	a,d
+	cp	253
+	call	z,other_birth
+
+	dec	hl
+
+	ld	a,d			; address = -1 then dead sequence
+	cp	255
+	jp	z,dead_sequence
+
+	or	e			; address = 0 then jump other sequence
+	jr	nz,jump_other_pat
+
+	inc	hl			; next sequence address
+	inc	hl
+
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+
+	ex	de,hl
+
+	ld	e,(hl)			; new pattern address
+	inc	hl
+	ld	d,(hl)
+	dec	hl
+
+jump_other_pat:
+	ld	(ix +09),l		; save new sequence address
+	ld	(ix +10),h
+
+	ld	a,(de)			; new timer
+	ld	b,a
+	inc	de
+
+	ld	l,(ix +05)		; position in sprites attributes table
+	ld	h,(ix +06)
+
+	push	hl
+	pop	iy
+
+	push	hl
+	push	bc
+
+	ld	b,(ix +02)		; number sprites
+
+	ld	a,(de)			; mode (0 or 1)
+	inc	de
+
+	ex	de,hl
+	or	a
+	jr	nz,pattern_mode1
+
+loop_pat_mode0:
+	ld	a,(hl)			; set pattern number
+	inc	hl
+	ld	(iy +1),a
+
+	ld	a,(iy +3)		; set palette number + screen number
+	and	%00000011
+	or	(hl)
+	inc	hl
+	ld	(iy +3),a
+
+	inc	iy			; next sprite
+	inc	iy
+	inc	iy
+	inc	iy
+
+	djnz	loop_pat_mode0
+	jr	end_pattern
+
+no_chg_pattern:
+	ld	(ix +12),b		; timer patterns
+	jr	moving_sprites
+
+pattern_mode1:
+	ld	e,(hl)			; get parameters
+	inc	hl
+	ld	d,(hl)
+
+loop_pat_mode1:
+	ld	(iy+1),e		; set pattern number
+	inc	e
+
+	ld	a,(iy +3)		; set palette number + screen number
+	and	%00000011
+	or	d
+	ld	(iy +3),a
+
+	inc	iy			; next sprite
+	inc	iy
+	inc	iy
+	inc	iy
+
+       djnz    loop_pat_mode1
+
+end_pattern:
+	pop	bc
+	pop	iy
+
+	ld	(ix +12),b		; timer patterns
+
+;-------------------------------------------------------
+;
+;	MOVING ANIMATIONS SPRITES
+;
+;	IN:	none
+;	OUT:	make moves all sprites
+;	MOD:	?
+;
+moving_sprites:
+
+	set	7,(ix +01)		; set desable personage flag
+
+	ld	l,(ix +07)		; move sequence address.
+	ld	h,(ix +08)
+
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+
+	ld	b,(ix +11)		; timer of motions
+	djnz	no_motions
+
+	ld	e,(hl)			; new motions address
+	inc	hl
+	ld	d,(hl)
+	dec	hl
+
+	ld	a,d			; address = -1 then dead sequence
+	cp	255
+	jp	z,dead_sequence
+
+	ld	a,e			; address = 0 then jump other sequence
+	or	d
+	jr	nz,jump_other_mov
+
+	inc	hl			; next sequence address
+	inc	hl
+
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+
+	ex	de,hl
+
+jump_other_mov:
+	ld	(ix +07),l		; new motions address
+	ld	(ix +08),h
+
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+
+	ld	a,(de)			; new timer address
+	ld	b,a
+
+no_motions:
+	ld	(ix +11),b
+
+	ex	de,hl
+	push	iy
+	inc	hl
+
+	ld	b,(ix +02)		; number sprites
+
+	exx				; calculate Y extend address
+	push	iy
+	pop	hl
+
+	ld	de,all_sp_data		; ((Y address) - (all_sp_data)) /2
+	or	a
+	sbc	hl,de
+
+	srl	h
+	rr	l
+
+	ld	de,(auxiliary_Y)	; (auxiliary_Y) + result
+	add	hl,de
+	exx				; calculate end
+
+
+	ld	a,(hl)			; mode selection 0 or 1 or 2
+	cp	2
+	jr	z,motions_mode2
+	inc	hl
+	cp	1
+	jr	z,motions_mode1
+
+
+; Premiere routine de mouvements.
+
+
+motions_mode0:				; Y sprites motions
+
+loop_mov_mode0:
+	ld	a,(scrol_motion +1)	; add scrolling
+	add	a,(hl)			; add motions
+	call	set_motions_Y		; set motions
+	inc	hl
+					; X sprites motions
+	ld	a,(scrol_motion +0)	; add scrolling
+	add	a,(hl)			; add motions
+	call	set_motions_X		; set motions
+
+	inc	hl			; next sprite
+	inc	iy
+	inc	iy
+	inc	iy
+	inc	iy
+
+	djnz	loop_mov_mode0
+	jr	end_motions
+
+
+; Deuxieme routine de mouvements.
+
+motions_mode1:
+	ld	d,(hl)			; motions datas
+	inc	hl
+	ld	e,(hl)
+
+loop_mov_mode1: 			; Y sprites motions
+	ld	a,(scrol_motion +1)	; add scrolling
+	add	a,d			; add motions
+	call	set_motions_Y		; set motions
+					; X sprites motions
+	ld	a,(scrol_motion +0)	; add scrolling
+	add	a,e			; add motions
+	call	set_motions_X		; set motions
+
+	inc	iy			; next sprite
+	inc	iy
+	inc	iy
+	inc	iy
+
+	djnz	loop_mov_mode1
+	jr	end_motions
+
+; Troisieme routine de mouvements.
+
+motions_mode2:
+	dec	hl			; calculate motions address
+	ld	a,(hl)
+	sub	(ix +11)		; timer motions
+	inc	hl
+	inc	hl
+
+	ex	de,hl
+	ld	l,a
+	ld	h,0
+	add	hl,hl
+	add	hl,de
+
+	ld	d,(hl)			; motions data
+	inc	hl
+	ld	e,(hl)
+
+loop_mov_mode2: 			; Y sprites motions
+	ld	a,(scrol_motion +1)	; add scrolling
+	add	a,d			; add motions
+	call	set_motions_Y		; set motions
+
+					; X sprites motions
+	ld	a,(scrol_motion +0)	; add scrolling
+	add	a,e			; add motions
+	call	set_motions_X		; set motions
+
+	inc	iy			; next sprite
+	inc	iy
+	inc	iy
+	inc	iy
+
+	djnz	loop_mov_mode2
+
+end_motions:
+	pop	iy
+	jp	testing_spr
+
+;---------------------------------------------------------
+
+; special programe for fires
+;***
+eco_move:
+	bit	3,(ix +01)
+	jr	nz,no_calcul_dir
+
+	ld	a,(ship_destroy)
+	cp	2
+	jp	z,dead_sequence
+
+;	 ld	 a,(ix +03)		 ; pattern
+;	 ld	 (iy +01),a
+;	 ld	 (iy +03),%11100000	 ; plt
+;	 ld	 a,(ix +09)		 ; timer copy
+;	 ld	 (ix +10),a
+;	 ld	 (iy +03),%11100000	 ; plt
+
+	ld	l,(ix +09)		; animes address
+	ld	h,(ix +10)
+
+	ld	a,(hl)
+	ld	(iy +03),a		; plt
+	inc	hl
+
+	ld	a,(hl)			; timer
+	ld	(ix +12),a
+	inc	hl
+
+	ld	a,(hl)			; pattern
+	ld	(iy +01),a
+	inc	hl
+
+	ld	(ix +09),l		; animes address
+	ld	(ix +10),h
+
+
+	ld	l,(ix +05)
+	ld	h,(ix +06)
+	ld	bc,all_sp_data		; Calculate address for Y
+	or	a
+	sbc	hl,bc
+	srl	h			; hl / 2
+	rr	l
+	ld	bc,(auxiliary_Y)	; second Y table
+	add	hl,bc			; second address in HL.
+
+	ld	a,(hl)
+	ld	(iy +00),a
+
+
+	ld	a,(ship_data +6)			;X.l
+;	 add	 a,15
+	sub	(iy +02)
+	jr	nc,shot_dir0		; 0 =x+
+	set	0,(ix +01)		; 1 =x- 	(flag)
+	neg
+shot_dir0:
+	ld	l,a
+
+	ld	a,(ship_data +4 )			;Y.l
+	sub	(iy +00)
+	jr	nc,shot_dir1		; 0 =y+
+	set	1,(ix +01)		; 1 =y- 	(flag)
+	neg
+shot_dir1:
+	ld	e,a
+
+	cp	l
+	jr	nc,shot_dir2
+	set	2,(ix +01)		;		(flag)
+	ex	de,hl			; nx > ny
+
+shot_dir2:				; ny > nx
+	ld	h,l
+	ld	l,0
+	ld	d,l
+	call	div16
+
+	ld	(ix +07),l		; dir_incr ou quotien
+	ld	(ix +08),h
+
+	set	3,(ix +01)		; no_next
+	ret
+
+no_calcul_dir:
+
+	ld	c,(ix +07)		; quotien
+	ld	b,(ix +08)
+	bit	2,(ix +01)		; step by step attribute
+	jr	z,swap_dir
+
+;----------------------------------------------------
+	ld	a,(scrol_motion +1)
+	add	a,(iy +00)		; Y position
+
+	ld	h,a
+	ld	l,(ix +11)
+
+	bit	1,(ix +01)		; change signe
+	jr	z,swp1_sg
+	and	a
+	sbc	hl,bc
+	jr	sgn_Y
+swp1_sg:add	hl,bc
+sgn_Y:	ld	(iy +00),h
+	ld	(ix +11),l
+	ld	d,h			; save Y
+
+	ld	a,(iy +02)		;X
+	ld	e,a			; save X
+
+	bit	0,(ix +01)		; change signe
+	jr	z,swp0_sg
+	sub	2
+swp0_sg:inc	a
+	ld	hl,scrol_motion +0	; add scrolling  -- X
+	add	a,0  ;(hl)
+	ld	(iy +02),a
+
+	jr	border_X
+
+;----------------------------------------------------
+
+swap_dir:
+	ld	a,(iy +00)		;Y
+	bit	1,(ix +01)		; change signe
+	jr	z,swp2_sg
+	sub	2
+swp2_sg:inc	a
+	ld	hl,scrol_motion +1	; add scrolling  -- Y
+	add	a,(hl)
+	ld	(iy +00),a
+	ld	d,a			; save Y
+
+	ld	a,0 ;(scrol_motion +0)
+	ld	e,(iy +02)
+	add	a,e			; X position
+
+	ld	h,a
+	ld	l,(ix +11)
+
+	bit	0,(ix +01)		; change signe
+	jr	z,swp3_sg
+	or	a
+	sbc	hl,bc
+	jr	sgn_X
+swp3_sg:add	hl,bc
+sgn_X:	ld	(iy +02),h
+	ld	(ix +11),l
+
+	ld	a,h
+
+border_X:
+	sub	e
+	jr	nc,make_s
+	neg
+make_s: cp	32
+	jp	nc,dead_sequence
+
+	ld	a,d
+	add	a,16
+	cp	228
+	jp	nc,dead_sequence
+
+	ld	a,(ship_destroy)		; if ship destroy then no tst
+	cp	0
+	jr	nz,cont_P
+
+	ld	b,4				; Y test
+	ld	a,(ship_data +00)
+	sub	d
+	jr	nc,make_Y
+	neg
+	ld	b,10
+make_Y: cp	b
+	jr	nc,cont_P
+
+	ld	b,4				; X test
+	ld	a,(ship_data +02)
+	sub	(iy +02)
+	jr	nc,make_X
+	neg
+	ld	b,32
+make_X: cp	b
+	jr	nc,cont_P
+
+	ld	a,1
+	ld	(ship_destroy),a
+	jp	dead_sequence
+
+cont_P: dec	(ix +12)		; timer -1
+	ret	nz
+
+	ld	l,(ix +09)		; animes address
+	ld	h,(ix +10)
+
+	ld	a,(hl)			; timer
+	or	a
+	jr	nz,cont_P2
+
+	inc	hl
+	ld	e,(hl)			; animes address
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+
+	ld	a,(hl)
+cont_P2:ld	(ix +12),a
+	inc	hl
+
+	ld	a,(hl)
+	ld	(iy +01),a
+	inc	hl
+
+	ld	(ix +09),l		; animes address
+	ld	(ix +10),h
+
+	ret
+
+
+;	*********************************
+;	      routine de division
+;	    sur 16 bits: HL = HL / DE
+;	         reste dans DE
+;	*********************************
+div16:	;push	 af
+	;push	 bc
+	ld	a,h
+	ld	c,l
+	ld	hl,0
+	ld	b,16
+div:	rl	c
+	rla
+	adc	hl,hl
+	sbc	hl,de
+	jp	nc,noadd_div
+	add	hl,de
+noadd_div:
+	ccf
+	djnz	div
+	rl	c
+	rla
+	ex	de,hl
+	ld	h,a
+	ld	l,c
+;	pop	bc
+;	pop	af
+	ret
+
+
+;-------------------------------------------------------
+;
+;	TESTING ALL SPRITES
+;
+;	IN:	none
+;	OUT:	to be or not to be?
+;	MOD:	?
+;
+
+testing_spr:
+
+	bit	7,(ix  +01)
+	ret	nz
+
+	ld	l,(ix +03)		; test conditions address
+	ld	h,(ix +04)
+
+	ld	a,l
+	or	h
+	ret	z
+
+	ld	e,(hl)			; jump address if testing is true
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	(address_test),de	; set address
+
+	xor	a
+	ld	(number_tests),a
+
+loop_test:
+
+	ld	a,(hl)
+	cp	254			; if -2 jump to other datas ;**
+	jr	nz,no_jumptest
+
+	inc	hl
+	ld	a,(hl)			; this is new test address
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+
+no_jumptest
+
+	ld	a,(hl)			; if 255 then no tests
+	inc	hl
+	cp	255
+	ret	z
+
+;	 cp	 1
+;	 jr	 z,testing_mode1
+
+testing_mode0:
+	ld	a,(hl)			; sprite address test in attribute
+	ld	(sprite_test),a
+	inc	hl
+
+	push	hl			; sauve data address
+
+	ld	l,a			; calculate sprite address to test
+	ld	h,0
+	add	hl,hl
+	add	hl,hl
+	ld	de,all_sp_data
+	add	hl,de
+	ld	(pattern_adress),hl
+
+	ld	a,(ix +02)		; number sprites
+	push	iy			; personage position
+
+loop_sprite:
+	ex	af,af'
+	push	hl
+
+	ld	a,(iy +03)		; if sprite desable then no tests
+	and	%00000011
+	jr	nz,no_touch
+
+	ld	a,(hl)
+	or	(iy +00)
+	add	a,16
+	cp	228
+	jr	nc,no_touch
+
+	exx				; square test address 1&2
+	ld	bc,(square_data)
+	ld	h,0
+	ld	l,(iy +01)
+	add	hl,hl
+	add	hl,hl
+	add	hl,bc
+
+	ex	de,hl			;**
+	ld	hl,(pattern_adress)
+	inc	hl
+	ld	l,(hl)
+	ld	h,0
+	add	hl,hl
+	add	hl,hl
+	add	hl,bc
+	ex	de,hl
+	exx
+
+	ld	a,(hl)
+	exx
+
+	ex	de,hl		;**
+	add	a,(hl)
+	inc	hl
+	ex	de,hl
+
+	sub	(hl)
+	inc	hl
+	sub	(iy +00)
+					; if Y sprite is touched then test X
+	ld	b,(hl)
+	inc	hl
+	jr	nc,positive_Y
+
+	ex	de,hl		;**
+	ld	b,(hl)
+	ex	de,hl
+
+	neg
+positive_Y:
+	cp	b
+	exx
+
+	jr	nc,no_touch
+
+	inc	hl			; if X sprite is touched
+	inc	hl
+
+	ld	a,(hl)
+	exx
+
+	ex	de,hl			;**
+	inc	hl
+	add	a,(hl)
+	inc	hl
+	ex	de,hl
+
+	sub	(hl)
+	inc	hl
+	sub	(iy +02)
+
+
+	ld	b,(hl)
+	jr	nc,positive_X
+
+	ex	de,hl		;**
+	ld	b,(hl)
+	ex	de,hl
+
+	neg
+positive_X:
+	cp	b
+	exx
+
+	jr	nc,no_touch
+
+	call	collision_spr
+
+no_touch:
+	inc	iy			; next sprite
+	inc	iy
+	inc	iy
+	inc	iy
+
+	pop	hl
+	ex	af,af'
+	dec	a
+	jr	nz,loop_sprite
+
+	pop	iy			; next test
+
+	ld	hl,number_tests
+	inc	(hl)
+
+	pop	hl
+
+	jp	loop_test
+
+; collision sprites with personage and results
+
+collision_spr:
+
+	push	de			; save data address
+
+;-------------------------------------------------------------
+	push	bc
+
+	ld	de,(collision_data)	; address collision list calculate
+	ld	l,(ix +00)		; personage number
+	ld	h,0
+	add	hl,hl
+	add	hl,de
+
+	ld	e,(hl)			; list address in HL.
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+
+	ld	a,(sprite_test) 	; sprite number in A.
+	ld	c,a
+
+loop_add_write: 			; test list sprite number
+	ld	e,(hl)			; address for write
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ld	a,e			; if zero then no list or end list
+	or	d
+	jr	z,end_list
+
+	ld	a,(hl)			; sprite number test
+	inc	hl
+
+	cp	c
+	jr	nz,loop_add_write:
+
+ok_list:
+	ex	de,hl
+
+loop_list_add:
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ld	a,e
+	or	d
+	jr	z,end_list
+
+	ld	a,(hl)
+	inc	hl
+
+	ld	(de),a
+
+	jr	loop_list_add
+
+end_list:
+	pop    bc
+
+	ld	de,(address_test)	; calculate datas address test
+	ld	hl,number_tests
+	ld	l,(hl)
+	ld	h,0
+	add	hl,hl
+	add	hl,de
+
+	ld	e,(hl)			; results data address
+	inc	hl
+	ld	d,(hl)
+
+	call	chg_sequence		; change paramerters
+
+	pop	de
+
+	ld	a,(hl)			; next test
+	or	a
+	ret	z
+
+	ld	sp,(save_stack) 	; end tests
+	ret
+
+;-------------------------------------------------------
+;
+;	CHANGE DATAS PARAMETERS OF PERSONAGE
+;
+;	IN:	none
+;	OUT:	change destiny of personage (dead or change sequence)
+;	MOD:	?
+;
+chg_sequence:
+	ex	de,hl
+
+	ld	e,(hl)			; new pattern sequence address
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ld	a,d
+	or	a
+	jp	z,dead_sequence
+
+	cp	255
+	jr	z,no_change_pat
+
+	ld	(ix +09),e
+	ld	(ix +10),d
+
+	push	hl
+	ex	de,hl
+
+	ld	e,(hl)			; new timer patterns sequence
+	inc	hl
+	ld	d,(hl)
+
+	ld	a,(de)
+	ld	(ix +12),a
+	pop	hl
+
+
+no_change_pat:
+	ld	e,(hl)			; new moving sequence address
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ld	a,d
+	cp	255
+	jr	z,no_change_mov
+
+	ld	(ix +07),e
+	ld	(ix +08),d
+
+	push	hl
+	ex	de,hl
+
+	ld	e,(hl)			; new timer motions sequence
+	inc	hl
+	ld	d,(hl)
+
+	ld	a,(de)
+	ld	(ix +11),a
+	pop	hl
+
+
+no_change_mov:
+	ld	e,(hl)			; new test conditions address
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ld	(ix +03),e
+	ld	(ix +04),d
+	ret
+
+;-------------------------------------------------------
+;
+;	SET X MOTIONS PARAMETERS OF SPRITES
+;
+set_motions_X:
+
+	exx
+	ex	de,hl
+
+	ld	c,a			; carry if negative
+	add	a,a
+	sbc	a,a
+	ld	b,a
+
+	ld	l,(iy +2)		; position on 16 bits
+	ld	a,(iy +3)
+	and	%00000011
+	ld	h,a
+
+	add	hl,bc			; to add up or to subtract
+
+
+; if sprite is screen out
+
+	ld	a,h			; mask plt and scr of sprite
+	and	%00000011
+	ld	h,a
+
+	cp	3			; if <-128 or >512 then dead.
+	jr	nz,X_is_others
+	ld	a,l
+	cp	128
+	jp	c,dead_sequence
+
+	cp	240			; if <-16 or >256 then out screen
+	jr	c,X_out_screen
+	jr	X_no_out
+
+X_is_others:
+	or	a
+	jr	z,X_no_out
+	cp	1
+	jr	nz,X_no_out
+	ld	a,l
+	cp	128
+	jr	nc,dead_sequence
+
+X_out_screen:				; desable personage
+	ld	(iy +0),213
+	set	7,(ix +01)
+
+X_no_out:				; enable personage
+	ld	a,(iy +3)
+	and	%11110000
+	or	h
+	ld	(iy +3),a
+	ld	(iy +2),l
+
+	ex	de,hl
+	exx
+	ret
+
+;-------------------------------------------------------
+;
+;	SET Y MOTIONS PARAMETERS OF SPRITES
+;
+set_motions_Y:
+
+	exx
+
+	ld	c,a			; carry if negative
+	add	a,a
+	sbc	a,a
+	ld	b,a
+
+	ld	e,(hl)			; position on 16 bits
+	inc	hl
+	ld	d,(hl)
+	dec	hl
+
+	ex	de,hl			; to add up or to subtract
+	add	hl,bc
+	ex	de,hl
+
+
+; if sprite is screen out
+
+	ld	(hl),e
+	inc	hl
+	ld	(hl),d
+	inc	hl
+
+	ld	a,d			; if <-256 or >512 then dead
+	cp	255
+	jr	nc,Y_is_others
+	cp	2
+	jr	nc,dead_sequence
+
+Y_is_others:
+	or	a
+	jr	nz,is_others
+	ld	a,e
+	cp	212
+	jr	c,Y_no_out
+
+is_others:
+	ld	a,d
+	cp	255
+	jr	nz,Y_out_screen 	; if <-16 or >256 then out screen
+	ld	a,e
+	cp	240
+	jr	nc,Y_no_out
+
+Y_out_screen:				; desable personage
+	ld	e,213
+	ld	(iy +0),e
+	exx
+	ret
+
+Y_no_out:				; enable personage
+	ld	(iy +0),e
+	res	7,(ix +01)
+
+	exx
+        ret
+
+
+;-------------------------------------------------------
+;
+;	DEAD SEQUENCE
+;
+;	IN:	none
+;	OUT:	...
+;	MOD:	?
+;
+dead_sequence:
+	ld	sp,(save_stack) 	; load stack for return
+
+; Y sprites position in 212
+
+	ld	l,(ix +05)		; Y position
+	ld	h,(ix +06)
+	ld	b,(ix +02)		; number sprites
+	ld	de,4
+
+loop_dead:
+	ld	(hl),212
+	add	hl,de
+	djnz	loop_dead
+
+; set new jump
+
+	ld	l,(ix +13)		; real jump
+	ld	h,(ix +14)
+	ld	bc,(next_personage)	; old jump
+	ld	(ix +00),0		; number sprite to zero for dead flag
+
+	push	bc
+
+	ld	a,h			; if zero then last personage jump
+	or	l
+	jr	nz,no_last_sprite
+	ld	bc,0			; reset old jump
+
+no_last_sprite:
+	add	hl,bc			; set new jump in DE. and "nxt_psr"
+	ex	de,hl
+	ld	(next_personage),de
+
+	pop	bc
+
+	push	ix			; jump to before personage
+	pop	hl
+	or	a
+	sbc	hl,bc
+	push	hl
+	pop	ix
+
+	ld	bc,zone_of_life 	; if IX.= zone of life address
+	ld	a,b
+	cp	h
+	jr	nz,no_equal
+	ld	a,c
+	cp	l
+	jr	nz,no_equal
+
+					; if IX.= zone of life address
+	ld	(ix +00),e		; set new jump
+	ld	(ix +01),d
+	ret				; end personage
+no_equal:
+	ld	(ix +13),e		; set new jump
+	ld	(ix +14),d
+	ret				; end personage
+
+
+;-------------------------------------------------------
+;
+;	OTHER BIRTH
+;
+;	IN:	none
+;	OUT:	make_birth
+;	MOD:	?
+;
+
+other_birth:
+
+	push	de
+	push	hl
+
+	ld	hl,(create_address)
+	ld	(hl),e
+	inc	hl
+
+	ld	a,(iy +00)		;Y
+	ld	(hl),a
+	inc	hl
+
+	xor	a
+	ld	(hl),a
+	inc	hl
+
+	ld	a,(iy +02)		;X
+	ld	(hl),a
+	inc	hl
+
+	ld	a,(iy +03)
+	and	%00000011
+	ld	(hl),a
+	inc	hl
+
+	xor	a
+	ld	(hl),a
+
+	ld	(create_address),hl
+
+	pop	hl
+	pop	de
+
+	inc	hl
+	ld	e,(hl)			; sequence address
+	inc	hl
+	ld	d,(hl)
+
+	ret
+
+set_explode:
+	ld	d,0			; special for x-tazy.gen
+	ld	e,h
+	ld	h,d
+
+add_birth:
+	or	a
+	ret	z
+
+	push	hl
+
+	ld	hl,(create_address)
+	ld	(hl),a
+	inc	hl
+	ld	(hl),e			;Y
+	inc	hl
+	ld	(hl),d
+	inc	hl
+
+	pop	de
+
+	ld	(hl),e			;X
+	inc	hl
+	ld	(hl),d
+	inc	hl
+	ld	(hl),0			; this is the last pesonnage.
+	ld	(create_address),hl
+
+	ret
+
+
+;-------------------------------------------------------
+;
+;	COMMUNICATIONS DATAS
+;
+
+; free datas zone for personages creates
+
+zone_of_life:
+	dw	0			; 0 = none
+	defs	16 * 25 		; bytes * personages
+

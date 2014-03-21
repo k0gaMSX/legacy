@@ -1,0 +1,135 @@
+
+	in	a,(#aa) 		; read line 8 of key board
+	and	#f0
+	or	8
+	out	(#aa),a
+	in	a,(#a9)
+
+	bit	3,a			; if "DEL" key then bigbang
+	jr	nz,no_del
+	ld	hl,bigbang
+	ld	(hl),1
+no_del:
+;	 bit	 2,a			 ; if "INS" key then create man
+;	 jr	 nz,no_ins
+
+;	 ld	 a,(timer)		 ; if timer <> 32 then no create
+;	 cp	 32
+;	 jr	 nz,no_ins
+
+;	 xor	 a			 ; reset timer
+;	 ld	 (timer),a
+
+;	 ld	 a,2			 ; create personage one
+;	 ld	 (create_number),a
+;no_ins:
+;	 ld	 a,(timer)		 ; create possible if 32
+;	 cp	 32
+;	 jr	 z,no_timer
+
+;	 inc	 a			 ; timing system
+;	 ld	 (timer),a
+
+;no_timer:
+;---------------------------------------------
+
+	ld	hl,(position_ship)	;recup add du monstre suivant
+
+	ld	e,(hl)			;DE = pos X d'apparition du monstre
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ld	b,h		;save HL
+	ld	c,l
+
+	ld	a,e		;test DE= 0
+	or	d
+	jr	z,no_action_ship
+
+	ex	de,hl		;HL= position X d'apparition
+				;DE= add du 2eme parametre du monstre
+	ld	de,(Scroller_x)
+	call	simrst20
+
+	ld	h,b
+	ld	l,c
+
+	ld	a,0			;pas optimisable!
+	jr	nz,no_action_ship
+;	 jr	 nc,no_action_ship
+
+	ld	a,14
+	out	(vdp+4),a
+	xor	a
+	out	(vdp+3),a
+	out	(vdp+1),a
+	out	(vdp+1),a
+	ld	a,31
+	out	(vdp+1),a
+
+	ld	a,(hl)		;A= type de monstre
+	inc	hl
+
+	ld	e,(hl)		;DE=Y pos
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ex	de,hl		;DE=add data
+				;HL=Y pos
+	ld	bc,(Scroller_y) ;sub Y scroller
+	or	a
+	sbc	hl,bc
+	ex	de,hl		;DE= Y pos - Y scroller
+				;HL= add data
+
+	ld	c,(hl)		;BC=X pos
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+
+	ld	(position_ship),hl
+
+	ld	h,b		;osons l'optimisation du transfer! :-)
+	ld	l,c		;HL=X pos
+
+	ld	bc,(Scroller_x) ;BC= X scroller
+	or	a
+	sbc	hl,bc		;HL = X pos - X scroller
+
+no_action_ship:
+	call	make_action		; mover personages
+	jr	after_datas
+
+timer:	defb	0
+
+; personages positions datas on screen roll
+
+position_ship:	defw	position_datas
+
+position_datas:
+		defw	256	; position test
+		defb	01	; personage number
+		defw	064	; Y position
+		defw	256-32	; X position
+		defw	256	; position test
+		defb	01	; personage number
+		defw	100	; Y position
+		defw	256-32	; X position
+
+		defw	512	; position test
+		defb	01	; personage number
+		defw	064	; Y position
+		defw	512-32	; X position
+		defw	768	; position test
+		defb	01	; personage number
+		defw	150	; Y position
+		defw	768-32	; X position
+
+		defw	00	; zero = read end
+;		defb	00	; zero = read end
+after_datas:
+
+
+

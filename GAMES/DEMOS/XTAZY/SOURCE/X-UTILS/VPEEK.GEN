@@ -1,0 +1,30 @@
+;
+;	routine vpeek
+;	entry:	HL = add in VRAM
+;	out:	A = vpeek(HL)
+
+vpeek:	di
+	ld	a,0
+	out	(#99),a
+	ld	a,#80+45
+	out	(#99),a
+
+	ld	a,h		;set bits 14 to 16
+	and	#c0
+	rlca
+	rlca
+;	or	4		;bit 16 = 1 => page 1,1
+	out	(#99),a
+	ld	a,#80+14
+	out	(#99),a
+	ld	a,l		;set bits 0 to 7
+	out	(#99),a
+	ld	a,l		;set bits 8 to 13
+	and	#3f
+	out	(#99),a
+	ex	de,hl
+	ex	de,hl
+	in	a,(#98)
+	ei
+	ret
+

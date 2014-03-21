@@ -1,0 +1,272 @@
+;vdp     equ     60h
+
+enaseg  equ     WriteFE
+map_    equ     pat_map_bank    ; 1 Byte
+;scnseg  equ     sceneA_bank1    ; 6 Bytes
+seg_a_  equ     sceneA_bank1
+seg_b_  equ     sceneB_bank1
+scrlcd  equ     Scroller_x      ; 8 Bytes
+
+
+;        public  .lauhl,.laut4,.laut6,.SRNHB,print_,setw_
+;        public  scnseg,map_,enaseg,scrlcd,main_
+
+
+.lauhl:
+; load 16-bit automatic variable
+;       hl = var
+
+    pop     hl
+    ld      e,(hl)
+    inc     hl
+    ld      d,(hl)
+    inc     hl
+    push    hl
+    ex      de,hl
+.laut:
+    add     hl,sp
+    ld      e,(hl)
+    inc     hl
+    ld      d,(hl)
+    ex      de,hl
+    ret
+
+.laut2: ld  hl,2+2
+    jp      .laut
+
+.laut4: ld  hl,4+2
+    jp      .laut
+
+.laut6: ld  hl,6+2
+    jp  .laut
+
+
+.SRNHB:
+; 16-bit unsigned shift right
+;       hl >>= b
+
+        inc     b
+.71:    dec     b
+        ret     z
+        srl     h
+        rr      l
+        jr  .71
+
+setw_:
+        ld      b,a
+        xor     a
+        ld      c,vdp+4
+        out     (c),a
+        dec     c
+        out     (c),e
+        out     (c),d
+        out     (c),b
+        ret
+
+.MULHD:
+; 16-bit multiply
+;   hl *= de
+
+    ld  b,h
+    ld  c,l
+    ld  hl,0
+    ld  a,16
+m01:
+        add hl,hl
+        ex  de,hl
+        add hl,hl
+        ex  de,hl
+        jr  nc,m02
+            add hl,bc
+m02:
+        dec a
+        jr  nz,m01
+    ret
+
+.DVNHD:
+; 16-bit unsigned division
+;       hl /= de
+;       de = hl % de
+
+    ld      b,d
+    ld      c,e
+    ld      de,0
+    ld      a,16
+d21:
+        add     hl,hl
+        ex      de,hl
+        adc     hl,hl
+        jr  c,d22
+        push    hl      ;carry is always cleared
+        sbc     hl,bc
+        pop     hl
+        jr  c,d23
+d22:    and a   ;clear carry
+            sbc     hl,bc
+            inc     e
+d23:
+        ex      de,hl
+        dec     a
+        jr  nz,d21
+    ret
+
+print_:
+        ld      c,vdp
+        out     (c),l
+        out     (c),h
+        ret
+
+;
+;                   V9990 Graphic-Library for Ascii-C 1.2
+;
+;   by MI-CHI
+;
+;       last update:    Sep - 1996
+;
+;
+
+;       public  waitend@,m2v@,v2m@,setscr@,colors@,images@,vsync@,setw@,setr@
+;       public  @line@,setcol@,setmask@,setlogop@,setarg@,setregs@,cmdexe@
+;       public  palmod@,print@,vdpini@,setpal@,getpal@,putpnt@
+;       public  vload@,vsave@,v2m@exec@,m2v@exec@
+
+;       public  v_sx,v_sy,v_dx,v_dy,v_nx,v_ny,v_argu,v_logop,v_color
+;       public  v_mask0,v_cmd
+
+;       cseg
+
+;
+;       VDP  commands
+;
+c_abort         equ     00000000b
+c_lmmc          equ     00010000b
+c_lmmv          equ     00100000b
+c_lmcm          equ     00110000b
+c_lmmm          equ     01000000b
+c_cmmc          equ     01010000b
+c_cmmk          equ     01100000b
+c_cmmm          equ     01110000b
+c_bmxl          equ     10000000b
+c_bmlx          equ     10010000b
+c_bmll          equ     10100000b
+c_line          equ     10110000b
+c_srch          equ     11000000b
+c_point         equ     11010000b
+c_pset          equ     11100000b
+c_advance       equ     11110000b
+
+
+v_sx:     defs    2
+v_sy:     defs    2
+v_dx:     defs    2
+v_dy:     defs    2
+v_nx:     defs    2
+v_ny:     defs    2
+v_argu:   defs    1
+v_logop:  defs    1
+v_mask0:  defs    1
+v_mask1:  defs    1
+v_color:  defs    4
+v_cmd:    defs    1
+
+stack:  defs    2                   ; 2 bytes for stack
+
+waitend:
+        in      a,(vdp+5)
+        rrca
+        jr      c,waitend
+        ret
+
+print2:
+        ld      c,vdp+2
+        out     (c),l
+        out     (c),h
+        ret
+
+;
+;       setlogop ( [char] logop)
+;
+setlog:
+        ld      (v_logop),a
+        ret
+
+;
+;       setmask ( [int] mask)
+;
+setmas:
+        ld      (v_mask0),hl
+
+;
+;       setarg ( [char] argu)
+;
+setarg:
+        ld      (v_argu),a
+        ret
+;
+;       setregs (reg, command, 1st, 2nd,...,6th) : set R#32 ~ R#45
+;               reg = 32..42
+;
+
+setreg:
+        pop     iy                  ; get caller
+        ld      (stack),sp          ; save stack
+        ld      d,a                 ; store reg
+        ld      a,e
+        ld      (v_cmd),a           ; write command
+        ld      a,d                 ; restore reg
+        sub     32
+        ld      e,a
+        ld      d,0
+        ld      hl,v_sx
+        add     hl,de
+        ld      d,b                     ; faster that push bc / pop de
+        ld      e,c
+        call    wrt_de
+
+        cp      10
+        jr      nc,ready            ; wenn reg>=42 (a>=10), dann fertig
+        srl     a                   ; a=a/2 (0,1,2,3,4)
+        ld      b,a                 ;        | | | | |
+        ld      a,5                 ;       (5,4,3,2,1)
+        sub     b
+        ld      b,a
+reg_loop:
+        pop     de
+        call    wrt_de
+        djnz    reg_loop
+ready:
+        ld      sp,(stack)          ; rebuilt stack
+        push    iy                  ; store caller
+        ret
+
+wrt_de:
+        ld      (hl),e
+        inc     hl
+        ld      (hl),d
+        inc     hl
+        ret
+
+
+;
+;       cmdexe ( [char] reg) : execute command
+;
+
+cmdexe:
+        ld      b,a                 ; b=reg
+        ld      a,52
+        sub     b                   ; A=52-reg
+        ld      e,a
+        ld      d,0
+        ld      hl,v_cmd
+        or      a                   ; reset carry
+        sbc     hl,de               ; hl=v_cmd-(52-reg)
+        inc     a
+        ld      c,b                 ; c=reg
+        ld      b,a                 ; b=(53-reg)
+        call    waitend
+        ld      a,c
+        out     (vdp+4),a
+        ld      c,vdp+3
+        otir
+        ret
+

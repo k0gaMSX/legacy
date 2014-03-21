@@ -1,0 +1,568 @@
+*q-,s 14,b 0
+;,g 0
+
+
+strmus	equ	#4000		;start music
+musint	equ	strmus+3	;interupt music routine
+stpmus	equ	musint+3	;stop music
+cntmus	equ	stpmus+3	;continue music
+hltmus	equ	cntmus+3	;halt music
+fadmus	equ	hltmus+3	;fade music
+
+*i	stat-equ
+
+
+fire_plt	equ	2
+ship_plt	equ	2
+missile_plt	equ	2
+option_plt	equ	2
+
+score_sp	equ	10	;pattern sprite number of "score"
+score_x 	equ	16	;X location of the "score" sprites
+score_y 	equ	08	;Y location of the "score" sprites
+
+weap_sp 	equ	32	;pattern sprite number of weapon list
+weap_x		equ	0	;X line of display for weapon "list"
+weap_y		equ	212	;Y line of display for weapon "list"
+weap_step	equ	44	;display step of the weapons symbols
+
+fire_default	equ	19	;pattern sprite number of "normal" fire
+missile_d	equ	16	;pattern sprite number of falling missile
+
+sp_en		equ	66	;pattern sprite nimber of the ennemies
+ship_sp 	equ	0	;pattern sprite number of the ship
+option_sp:	equ	15	;pattern sprite number of option
+
+
+
+
+
+	org	#c000
+
+	jp	InitMapRouts
+
+	jp	WriteFC
+	jp	WriteFD
+	jp	WriteFE
+	jp	WriteFF
+
+	jp	ReadFC
+	jp	ReadFD
+	jp	ReadFE
+	jp	ReadFF
+
+	jp	Start_Music
+	jp	Stop_Music
+	jp	Halt_Music
+	jp	Cont_Music
+	jp	Fade_Music
+	jp	Play_Music
+
+	dw	manager_tbl
+
+Music_Status:
+	db	0
+
+;---------------------------------------------------------------
+;
+;	Play Music Int
+;
+Play_Music:
+	ld	a,(Music_Status)
+	or	a
+	ret	z			;not playing
+	call	ReadFD			;sauve pages mapper 4000 et 8000
+	ld	(MB_page1),a
+
+	ld	a,(replayer_bank)	;install page mapper MB
+	call	WriteFD
+
+	call	musint			;play music
+
+	ld	a,(MB_page1)	;restore pages mapper 4000 et 8000
+	call	WriteFD
+
+	ret
+
+;---------------------------------------------------------------
+;
+;	Start Replayer
+;
+Start_Music:
+	ld	a,(Music_Status)
+	or	a
+	ret	nz			;already playing
+	call	ReadFD			;sauve pages mapper 4000 et 8000
+	ld	(MB_page1),a
+
+	ld	a,(replayer_bank)	;install page mapper MB
+	call	WriteFD
+
+	call	strmus		;call Start music
+
+	ld	a,(MB_page1)	;restore pages mapper 4000 et 8000
+	call	WriteFD
+
+	ld	a,255
+	ld	(Music_Status),a
+	ret
+
+;-------------------------------------------------------
+;
+;	RESTORE HOOK & STOP REPLAYER
+;
+Stop_Music:
+	ld	a,(Music_Status)
+	or	a
+	ret	z			;already stoped
+	call	ReadFD		;sauve pages mapper 4000 et 8000
+	ld	(MB_page1),a
+
+	ld	a,(replayer_bank)	;install page mapper MB
+	call	WriteFD
+
+	call	stpmus		;call Stop music
+
+	ld	a,(MB_page1)	;restore pages mapper 4000 et 8000
+	call	WriteFD
+	xor	a
+	ld	a,(Music_Status)
+	ret
+
+;--------------------------------------------------------
+;
+;	HALT REPLAYER
+;
+;
+Halt_Music:
+	ld	a,(Music_Status)
+	or	a
+	ret	z			;alredy stoped
+	call	ReadFD		;sauve pages mapper 4000 et 8000
+	ld	(MB_page1),a
+
+	ld	a,(replayer_bank)	;install page mapper MB
+	call	WriteFD
+
+	call	hltmus		;call halt music
+
+	ld	a,(MB_page1)	;restore pages mapper 4000 et 8000
+	call	WriteFD
+	xor	a
+	ld	a,(Music_Status)
+	ret
+
+;-------------------------------------------------------
+;
+;	CONTINUE HALTED REPLAYER
+;
+Cont_Music:
+	ld	a,(Music_Status)
+	or	a
+	ret	nz			;already playing
+	call	ReadFD		;sauve pages mapper 4000 et 8000
+	ld	(MB_page1),a
+
+	ld	a,(replayer_bank)	;install page mapper MB
+	call	WriteFD
+
+	call	cntmus		;call continue music
+
+	ld	a,(MB_page1)	;restore pages mapper 4000 et 8000
+	call	WriteFD
+
+	ld	a,255
+	ld	(Music_Status),a
+	ret
+
+;-------------------------------------------------------
+;
+;	FADE MUSIC
+;
+Fade_Music:
+	push	af
+	call	ReadFD		;sauve pages mapper 4000 et 8000
+	ld	(MB_page1),a
+
+	ld	a,(replayer_bank)	;install page mapper MB
+	call	WriteFD
+
+	pop	af
+	call	fadmus		;call continue music
+
+	ld	a,(MB_page1)	;restore pages mapper 4000 et 8000
+	call	WriteFD
+	ret
+
+MB_page1:
+	defb	0
+MB_page2:
+	defb	0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+; Standard mapper routines
+; Runs under both DOS1 & DOS2
+; Use DOS2 mapper routines if present
+; Don't access the mapper directly, do everything
+; with these routines!!!
+
+; Call InitMapRouts first before using the other routines!
+
+; By Roderik Muit/Stefan Boer
+; Sunrise Magazine #16
+; (c) Stichting Sunrise 1995
+
+
+; Init mapper routines
+; Call once before using Read/Write routines!
+
+InitMapRouts:
+	LD	A,(#FB20)	; Not necessary
+	RRCA                    ;  under MSX-DOS
+	ccf
+	RET	C		; No EXTBIOS
+
+	XOR	A
+	LD	DE,0402H	; ID/functionnr
+	CALL	#FFCA
+	OR	A
+	jr	nz,cont1
+	scf
+	RET			; No maprouts
+
+cont1:
+	ld	(st_map_data),bc
+	ld	a,b			;primary slot number in A
+	ld	(manager_tbl+0),a
+	ld	(manager_tbl+2),a
+	ld	(manager_tbl+4),a
+	ld	(manager_tbl+6),a
+
+
+	push	hl
+
+	LD	BC,#1e
+	ADD	HL,BC		; Jumpadres PUT_P1
+
+	LD	DE,WriteFD0
+	LD	C,3
+	LDIR
+
+	pop	hl
+	push	hl
+	LD	BC,#24
+	ADD	HL,BC		; Jumpadres PUT_P2
+
+	LD	DE,WriteFE0
+	LD	C,3
+	LDIR
+
+	pop	hl
+	ld	c,3
+	ld	de,Allocate_Seg
+	ldir
+
+
+Alloc_XTAZY:
+	ld	a,4
+	ld	(page_cnt),a
+	ld	ix,map_slt
+	ld	b,22			 ;on a besoin de 22 pages
+Alloc_XTAZY0:
+	push	bc
+	ld	a,(st_map_data+1)      ;allocate 1st map before other
+	or	%00100000
+	ld	b,a
+	xor	a			;user segment
+	call	Allocate_Seg
+	ld	(ix+0),b		;save slot of allocated segment
+	pop	bc
+	ret	c			;no free segment left
+
+	push	 af			;sauve le numero de page mapper
+	ld	a,(page_cnt)
+	ld	l,a
+	ld	h,0
+	add	hl,hl
+	ld	de,manager_tbl
+	add	hl,de			;HL pointe dans la table
+	ld	a,(map_slt)		;recup du numero de slot du segment
+	ld	(hl),a			;store slot of the segment
+	inc	hl
+	pop	af			;get segment number
+	ld	(hl),a			;store segment number
+	ld	a,(page_cnt)
+	inc	a
+	ld	(page_cnt),a
+	djnz	Alloc_XTAZY0
+
+	ld	b,22
+	ld	a,4
+	ld	hl,Allocate_tbl
+Alloc_loop:
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	(de),a
+	inc	a
+	djnz	Alloc_loop
+
+	ret
+
+page_cnt:
+	db	0
+
+Allocate_tbl:
+	dw	replayer_bank,songdata_bank1,pat_map_bank
+	dw	sceneA_bank1+0,sceneA_bank1+1,sceneA_bank1+2,sceneA_bank1+3
+	dw	sceneA_bank1+4,sceneA_bank1+5,sceneA_bank1+6,sceneA_bank1+7
+	dw	sceneA_bank1+8,sceneA_bank1+9,sceneA_bank1+10,sceneA_bank1+11
+	dw	sceneA_bank1+12,sceneA_bank1+13,sceneA_bank1+14
+	dw	sceneA_bank1+15,sceneA_bank1+16,sceneA_bank1+17
+	dw	sceneA_bank1+18
+
+manager_tbl:
+	db	0,0,0,1,0,2,0,3 ;system default
+
+	ds	22*2		;replayer, pat_map, songdata, sceneA, sceneB
+	dw	0
+
+st_map_data:
+	db	0	;number of free 16KB in 1st mapper
+	db	0	;slot number of 1st mapper
+
+map_slt:
+	db	0	;mapper slot number returned by allocate function
+
+Allocate_Seg:
+	ret
+	ret
+	ret
+
+slot_manager:
+	push	hl
+	push	de
+	ld	l,a
+	ld	h,0
+	add	hl,hl
+	ld	de,manager_tbl
+	add	hl,de
+	ld	a,(hl)
+	push	hl
+
+	ld	d,#f3
+	ld	e,c
+	ld	(de),a	;store new slot for page 1 or 2 (F342h or F343h)
+
+	ld	h,b
+	call	#0024
+	pop	hl
+	inc	hl
+	ld	a,(hl)		;get mapper segment number
+	pop	de
+	pop	hl
+	ret
+
+; Routines for writing the mapper
+; In : A = entry number
+; Out: -  CPU is in "DI" mode because of the CALL #0024
+; Changes: -
+
+WriteFC:
+	RET
+
+WriteFD:
+	LD	(StoreFD),A
+	push	bc
+	ld	bc,#4042	;C= parti de l'address F3xxh dans le cas
+				;present F342h
+				;B= page du Z80 concernee par le changement
+				;de slot, soit #40 pour la page 1 (4000h)
+	call	slot_manager
+	pop	bc
+WriteFD0:
+	OUT	(#FD),A
+	RET
+
+WriteFE:
+	LD	(StoreFE),A
+	push	bc
+	ld	bc,#8043	;pour explications voir ci-dessus :-)
+	call	slot_manager
+	pop	bc
+WriteFE0:
+	OUT	(#FE),A
+	RET
+
+WriteFF:
+	RET
+
+; DW 0 is necessary because there have to be 3 bytes
+; between WriteFF and ReadFC. (You can discuss the use
+; of relinking WriteFF, but never mind.)
+
+
+; Routines for reading the mapper
+; In : -
+; Out: A = segment number
+; Changes: -
+
+ReadFC:
+	LD	A,(StoreFC)
+	RET
+
+ReadFD:
+	LD	A,(StoreFD)
+	RET
+
+ReadFE:
+	LD	A,(StoreFE)
+	RET
+
+ReadFF:
+	LD	A,(StoreFF)
+	RET
+
+; storage space under DOS1
+
+StoreFF:	DB     0
+StoreFE:	DB     1
+StoreFD:	DB     2
+StoreFC:	DB     3
+
+all_sp_data:
+weapon_data:
+		db	weap_y,weap_sp+00,weap_x+0*weap_step,2*64+0*16 ;weap1
+		db	weap_y,weap_sp+01,weap_x+0*weap_step+16,2*64+0*16
+		db	weap_y,weap_sp+02,weap_x+1*weap_step,2*64+0*16 ;weap2
+		db	weap_y,weap_sp+03,weap_x+1*weap_step+16,2*64+0*16
+		db	weap_y,weap_sp+04,weap_x+2*weap_step,2*64+0*16 ;weap3
+		db	weap_y,weap_sp+05,weap_x+2*weap_step+16,2*64+0*16
+		db	weap_y,weap_sp+06,weap_x+3*weap_step,2*64+0*16 ;weap4
+		db	weap_y,weap_sp+07,weap_x+3*weap_step+16,2*64+0*16
+		db	weap_y,weap_sp+08,weap_x+4*weap_step,2*64+0*16 ;weap5
+		db	weap_y,weap_sp+09,weap_x+4*weap_step+16,2*64+0*16
+		db	weap_y,weap_sp+10,weap_x+5*weap_step,2*64+0*16 ;weap6
+		db	weap_y,weap_sp+11,weap_x+5*weap_step+16,2*64+0*16
+
+score_data:	db	score_y,score_sp+000,score_x+000,2*64+0*16
+		db	score_y,score_sp+001,score_x+016,2*64+0*16
+		db	score_y,score_sp+002,score_x+32,2*64+0*16
+score_extende:	db	score_y,score_sp+003,score_x+48,2*64+0*16
+		db	score_y,score_sp+004,score_x+64,2*64+0*16
+
+ship_data:	db	0,ship_sp+000,0,ship_plt*64+0*16
+		db	0,ship_sp+001,16,ship_plt*64+0*16
+option1_data:	db	212,option_sp,0,option_plt*64+0*16
+option2_data:	db	212,option_sp,0,option_plt*64+0*16
+
+fire_data:	db	212,fire_default,0,fire_plt*64+0*16
+fire1_data:	db	212,fire_default,0,fire_plt*64+0*16
+fire2_data:	db	212,fire_default,0,fire_plt*64+0*16
+
+missile_data:	db	212,missile_d,000,missile_plt*64+0*16
+missile1_data:	db	212,missile_d,016,missile_plt*64+0*16
+missile2_data:	db	212,missile_d,032,missile_plt*64+0*16
+
+all_other:
+monster1_data:	db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+monster2_data:	db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+monster3_data:	db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+monster4_data:	db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+monster5_data:	db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+monster6_data:	db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+monster7_data:	db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+monster8_data:	db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+monster9_data:	db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+monsterA_data:	db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+		db	212,sp_en,000,2*64+0*1, 212,sp_en,000,2*64+0*1
+
+;-------------------------------------------------------
+;
+;	COMMUNICATIONS DATAS
+;
+
+bigbang:	db	0		; bigbang flag
+
+number_tests:	db	0
+sprite_test:	db	0
+pattern_adress: dw	0
+
+ship_destroy:	db	0
+getting_option: db	255
+
+
+create_number:	db	0		; creation datas
+string_datas:
+save_X: 	dw	00000h
+save_Y: 	dw	00000h
+
+string_address: dw	00000h		; for creates string
+
+
+save_y_scroll:	dw	0
+save_x_scroll:	dw	0
+scrol_motion:	dw	00000h		; scroll motions XY
+address_test:	dw	00000h
+next_personage: dw	00000h		; jumper save data
+save_stack:	dw	00000h
+
+create_address: dw	create_datas
+create_datas:	defs	5*125		; maxi 125 creates personages in 1time
+
+fin:	 equ	 $
+
+	END
+
+

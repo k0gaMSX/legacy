@@ -1,0 +1,3068 @@
+*S 14,B 0,G 0,Q+
+
+*i	x-equ
+*i	macro
+
+*i	spdata
+
+	org	#4000
+
+;-----------------------------------------------------------------------
+;
+;	PROGRAM START HERE :-)
+;
+
+	call	reset_enemy
+
+	xor	a
+	ld	(fire_cnt0),a
+	ld	(fire_cnt1),a
+	ld	(fire_cnt2),a
+
+	call	set_speed
+	ld	a,(stage_number)
+	cp	1
+	call	z,init_ship_weapon
+
+	ld	a,2
+	ld	(ship_dir),a
+
+	ld	hl,re_start0
+	call	set_start_pos
+	call	init_movetbl
+
+	ld	a,1
+	call	WriteFE
+
+	call	screen_on
+
+;-----------------------------------------------------------------------
+;
+;	*****	MAIN LOOP	*****
+;
+
+	di
+
+	ld	hl,#8000
+	ld	(songdata_adres),hl
+
+	ld	a,(opl4_flag)
+	or	a
+	call	z,Start_Music
+
+	SETCOLOR0	0,0,0		;make sure colr 0 is black
+
+main_loop:
+	call	wait_vsync
+;	 ld	 a,0
+;	 call	 waitline
+
+	call	set_scroll
+
+	if	colors
+	SETCOLOR0	0,0,31
+	endif
+
+	call	put_all_sp
+	call	sprite_anim
+
+	if	colors
+	SETCOLOR0	31,0,0
+	endif
+
+	ld	de,val
+	call	score_plus
+	call	gest_score
+	call	gest_life
+
+	if	colors
+	SETCOLOR0	31,31,0
+	endif
+
+	ld	a,(crash_flag)
+	or	a
+	jp	nz,crashed
+	ld	a,(stick_port)		;joystisk read
+	call	rd_stk
+	ld	(stick),a
+	ld	a,(ralenti)
+	or	a
+	call	z,clipper		  ;clipping of ship
+	call	gest_ship		;ship gestion
+	call	gest_option		;handle options moves
+	call	gest_fire		;fire handler
+	call	fire_counter
+	call	gest_missile		;missile handler
+	call	gest_shield		;gestion du bouclier
+	ld	a,(ralenti_flag)
+	or	a
+	call	nz,ralentisseur
+
+	ld	a,(stick_port)		;trigger read
+	call	rd_stg
+	ld	(strig),a
+	jp	z,no_fire
+	call	fire_init	     ;fire initialisation
+	ld	a,(missile_status)
+	or	a
+	call	nz,missile_init 	;missile initialiasation
+no_fire:
+
+crashed:
+	if	check
+	ld	a,(invincible)
+	or	a
+	call	z,check_ship
+	call	check_fire
+	call	check_missile
+	endif
+
+	call	Play_Effect
+
+	if	colors
+	SETCOLOR0	31,0,31
+	endif
+
+	SETCOLOR0	0,0,0
+	call	enemy
+
+	if	colors
+	SETCOLOR0	0,31,0
+	endif
+
+	ld	a,(opl4_flag)
+	or	a
+	call	z,Play_Music
+
+	if	colors
+	SETCOLOR0	0,0,31
+	endif
+
+	call	inc_scroll
+
+	call	scr_ct
+	ld	a,1
+	call	WriteFE
+
+	if	colors
+	SETCOLOR0	0,0,0
+	endif
+
+	ld	a,(life)
+	or	a
+	jr	z,leave_program
+
+	call	Pause
+
+	ld	a,(slow_motion)
+	or	a
+	call	nz,Slow_Motion
+
+	in	a,(#aa) 	;test touche ESC
+	and	#f0
+	or	7
+	out	(#aa),a
+	in	a,(#a9)
+	and	4
+	jp	nz,main_loop	;si ESC not pressed then loop
+
+
+;-----------------------------------------------------------------------
+;
+;		LEAVING PROGRAM
+;
+leave_program:
+	SETCOLOR0	0,0,0
+
+	ld	a,(opl4_flag)
+	or	a
+	call	z,Stop_Music
+	ld	a,1
+	call	WriteFE
+	ei
+	ret
+
+
+;-----------------------------------------------------------------------
+;
+;			PROGRAM END
+;
+;-----------------------------------------------------------------------
+
+
+;-------------------------------------------------------
+;
+;	ROUTINE DE GESTION DE LA TOUCHE "F1"
+;	POUR LE MODE PAUSE
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	All
+;
+Pause:
+	call	check_F1
+	ret	nz
+
+	ld	a,(opl4_flag)
+	or	a
+	call	z,Halt_Music
+	call	all_voice_off
+
+	ld	a,0
+	ld	b,#88		;priority= yes / stereo=both
+	call	Sound_Effect
+
+	ld	b,10
+	call	wait_a_while
+
+Pause_1:
+	ld	b,5
+	call	wait_a_while
+	call	check_F1
+	jr	nz,Pause_1
+
+	ld	b,10
+	call	wait_a_while
+
+	ld	a,(opl4_flag)
+	or	a
+	call	z,Cont_Music
+	ret
+
+wait_a_while:
+	call	wait_vsync	;attend un peu
+	djnz	wait_a_while
+
+
+;-------------------------------------------------------
+;
+;	ROUTINE DE TEST DE LA TOUCHE "F1"
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+check_F1:
+	in	a,(#aa)
+	and	#f0
+	or	6
+	out	(#aa),a
+	in	a,(#a9)
+	and	32
+	ret
+
+;-------------------------------------------------------
+;
+;	ROUTINE DE TEST DE LA TOUCHE "F1"
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,BC
+;
+Slow_Motion:
+	in	a,(#aa)
+	and	#f0
+	or	8
+	out	(#aa),a
+	in	a,(#a9)
+	bit	2,a
+	jr	z,inc_slow
+	bit	3,a
+	jr	z,dec_slow
+	jr	Slow_Motion2
+inc_slow:
+	ld	a,(slow_cnt)
+	inc	a
+	cp	11
+	jr	c,Slow_Motion1
+	ld	a,10
+	jr	Slow_Motion1
+dec_slow:
+	ld	a,(slow_cnt)
+	or	a
+	jr	z,Slow_Motion1
+	dec	a
+Slow_Motion1:
+	ld	(slow_cnt),a
+	ld	b,4
+Slow_Motion11:
+	call	wait_vsync
+	djnz	Slow_Motion11
+
+Slow_Motion2:
+	ld	a,(slow_cnt)
+	or	a
+	ret	z
+	ld	b,a
+Slow_Motion3:
+	call	wait_vsync	;attend un peu
+	djnz	Slow_Motion3
+	ret
+
+;-------------------------------------------------------
+;
+;	SHUTDOWN ALL VOICES OF THE OPL4
+;
+;-------------------------------------------------------
+all_voice_off:
+	ld	b,24
+	ld	c,#50
+all_off_loop:
+	ld	a,c
+	out	(#7e),a
+	push	af
+	pop	af
+	ld	a,#fe
+	out	(#7f),a
+	push	af
+	pop	af
+	inc	c
+	djnz	all_off_loop
+	ret
+
+;-------------------------------------------------------
+;
+;	ROUTINE D'INCREMENTATION DES SCROLLS
+;
+;-------------------------------------------------------
+inc_scroll:
+	ld	h,0
+	ld	a,(scrollA_cnt)      ;incremente les compteurs des
+	add	a,scr_spd
+	and	3
+	ld	(scrollA_cnt),a
+	jr	nz,pas_plus_A
+	or	1
+	jr	pas_plus_A0
+pas_plus_A:
+	xor	a
+pas_plus_A0:
+	ld	l,a
+	ld	h,0
+	ld	(scrollA_spd),hl
+
+	ld	a,(scrollB_cnt)      ;incremente les compteurs des
+	add	a,scr_spd
+	and	7
+	ld	(scrollB_cnt),a
+	jr	nz,pas_plus_B
+	or	1
+	jr	pas_plus_B0
+pas_plus_B:
+	xor	a
+pas_plus_B0:
+	ld	l,a
+	ld	h,0
+	ld	(scrollB_spd),hl
+
+	ld	hl,(Scroller_x) 	;scroll A
+	ld	de,(scrollA_spd)
+	add	hl,de
+	ld	(Scroller_x),hl 	;*
+
+	ld	hl,(ScrollerB_x)	;scroll B
+	ld	de,(scrollB_spd)
+	add	hl,de
+	ld	(ScrollerB_x),hl	;*
+
+	ret
+
+;-------------------------------------------------------
+;
+;	ROUTINE D'EFFETS SONORES
+;
+;	IN:	A = effect number
+;		B = priority and stereo
+;	OUT:	none
+;	MOD:	AF,HL,BC
+;
+Sound_Effect:
+	ld	(SE_number),a
+
+	ld	a,(opl4_flag)		;quitte si pas d'OPL4 detecte
+	or	a
+	ret	nz
+
+	ld	a,b
+	ld	(SE_parameter),a
+
+;	 call	 check_SE0
+
+	ld	hl,SE_counter+3 	;check for free voice
+	ld	b,4
+Sound_Effect0:
+	ld	a,(hl)
+	or	a
+	jr	z,Sound_Effect2 	;got it!
+	dec	hl
+	djnz	Sound_Effect0
+
+	ld	hl,SE_status+3		;check for interuptible voice
+	ld	b,4
+Sound_Effect1:
+	ld	a,(hl)
+	or	a
+	jr	z,Sound_Effect2 	;got it!
+	dec	hl
+	djnz	Sound_Effect1
+	jr	End_Effect		;no free or interuptible voice
+
+Sound_Effect2:
+	dec	b			;make sure number = 0 - 3
+	ld	a,b
+	ld	(SE_voice),a
+
+;	 call	 outhexa
+
+	ld	a,(SE_number)		;calcul add data du son
+	and	31			;32 sample max.
+	rlca
+	ld	l,a
+	ld	h,0
+	ld	de,SE_list
+	add	hl,de			;HL = add des data pour le SE_number
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl			;HL = list de data pour l'OPL4
+					;DE = add SE_list + 2 * SE_number + 1
+
+	call	send_sample
+
+	ld	a,(hl)			;get time lenght
+	ld	c,a			;sauve la valeur du timer dans C
+	ld	a,(SE_voice)		;A= numero de la voie
+	ld	e,a
+	ld	d,0
+	ld	hl,SE_counter
+	add	hl,de			;HL = add du compteur de la voie
+	ld	(hl),c			;le compteur = valeur du timer
+	ld	de,4
+	add	hl,de			;HL = add du flag de priorite
+					;de la voie
+	ld	a,(SE_parameter)	;on recupere la priorite demandee
+	and	#80			; pour etre sure = 128 ou 0
+	ld	(hl),a			;set priority
+
+	ld	a,(SE_voice)		;on active le son
+	add	a,#68			;set Key ON and PAN pot.
+	out	(#7e),a
+	ld	a,(SE_parameter)	;recuperation de la balance
+	and	#7f
+	ld	e,a
+	ld	d,0
+	ld	hl,SE_Balance
+	add	hl,de			;HL = add de la balance dans la table
+	ld	a,(hl)			;A= valeur de la balance pour l'OPL4
+	or	#80			;set Key ON bit (la note est ON)
+	out	(#7f),a
+End_Effect:
+	ret
+
+send_sample:
+	push	bc
+	ld	a,(SE_voice)
+	ld	c,a
+	ld	b,5
+send_sample0:
+	ld	a,(hl)
+	add	a,c
+	out	(#7e),a
+	push	af
+	pop	af
+	inc	hl
+	ld	a,(hl)
+	out	(#7f),a
+	push	af
+	pop	af
+	inc	hl
+	djnz	send_sample0
+	pop	bc
+	ret
+
+
+SE_voice:	db	0
+SE_number:	db	0
+SE_parameter:	db	0
+SE_Balance:	db	9,10,11,12,13,14,15,0,0,1,2,3,4,5,6,7
+
+SE_list:
+	dw	SE000,SE001,SE002,SE003,SE004,SE005,SE006,SE007,SE008
+
+SE000:	db	#68,#00, #50,#01, #20,#dd, #08,#80, #38,#e6, 40 ;laserspeech
+SE001:	db	#68,#00, #50,#01, #20,#dd, #08,#81, #38,#e6, 40 ;missiles_sp
+SE002:	db	#68,#00, #50,#01, #20,#dd, #08,#82, #38,#e6, 40 ;optionspeech
+SE003:	db	#68,#00, #50,#01, #20,#dd, #08,#83, #38,#e6, 40 ;shieldspeech
+SE004:	db	#68,#00, #50,#01, #20,#dd, #08,#84, #38,#e6, 40 ;speedspeech
+SE005:	db	#68,#00, #50,#2d, #20,#dd, #08,#85, #38,#e6, 09 ;shot
+SE006:	db	#68,#00, #50,#2d, #20,#dd, #08,#86, #38,#e6, 15 ;laser
+SE007:	db	#68,#00, #50,#01, #20,#dd, #08,#87, #38,#e1, 70 ;explod1
+SE008:	db	#68,#00, #50,#01, #20,#dd, #08,#88, #38,#e6, 40 ;explode2
+
+;-------------------------------------------------------
+;
+;	ROUTINE DE GESTION DES EFFETS SONORES SOUS INTERUPTION
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,HL,BC,DE
+;
+Play_Effect:
+	ld	de,SE_counter+3
+	ld	b,4
+Play_Effect0:
+	ld	a,(de)
+	or	a
+	jr	z,Play_Effect1
+	dec	a
+	ld	(de),a
+	jr	nz,Play_Effect1
+	ld	hl,4			;reset status flag
+	add	hl,de
+	xor	a			;annule la priorite
+	ld	(hl),a
+	ld	a,#50-1 		;set volume to 0
+	add	a,b
+	out	(#7e),a
+	push	af
+	pop	af
+	ld	a,254			;maimum attenuation = son minimum
+	out	(#7f),a
+Play_Effect1:
+	dec	de
+	djnz	Play_Effect0
+	ret
+
+SE_counter:	db	0,0,0,0 	;0 = free voice
+					;<>0 = playing sample
+SE_status:	db	0,0,0,0 	;0= interuptible voice
+
+;-------------------------------------------------------
+;
+;	ROUTINE DE SET-SCROLL
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,HL
+;
+set_scroll:
+	ld	a,17			;set scroll Y plan A
+	out	(vdp+4),a
+	ld	hl,(Scroller_y)
+	ld	a,l
+	out	(vdp+3),a
+	ld	a,h
+	and	1			;maximum 512 (0 to 511)
+	or	128			;display page rolled on 512 lines
+	out	(vdp+3),a
+
+	ld	hl,(Scroller_x) 	;set scroll X plane A
+	ld	a,h			;maxi 512
+	and	1
+	ld	h,a
+	ld	a,l			;send 1st part
+	and	7
+	out	(vdp+3),a
+	ld	a,l
+	rr	h
+	rra
+	rr	h
+	rra
+	rr	h
+	rra
+	out	(vdp+3),a
+
+	ld	hl,(ScrollerB_y)	;set scroll Y pan B
+	ld	a,l
+	out	(vdp+3),a
+	ld	a,h
+	and	1
+	out	(vdp+3),a
+
+	ld	hl,(ScrollerB_x)	 ;set scroll X plane B
+	ld	a,h			;maxi 512
+	and	1
+	ld	h,a
+	ld	a,l			;send 1st part
+	and	7
+	out	(vdp+3),a
+	ld	a,l
+	rr	h
+	rra
+	rr	h
+	rra
+	rr	h
+	rra
+	out	(vdp+3),a
+	ret
+
+;-------------------------------------------------------
+;
+;	ROUTINE DE RALENTISSEMENT DU SHIP
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	All
+;
+ralentisseur:
+	ld	a,(ralenti)
+	inc	a
+	and	1
+	ld	(ralenti),a
+	ret
+
+;-------------------------------------------------------
+;
+;	ROUTINE DE CLIPPING
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,BC,DE,HL
+;
+clipper:
+	ld	a,(stick)
+	rlca
+	ld	e,a
+	ld	d,0
+	ld	hl,clipper_tbl
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	ld	de,(speed)
+	jp	(hl)
+
+clipper_tbl:
+	dw	stick0
+	dw	stick1,stick2,stick3,stick4
+	dw	stick5,stick6,stick7,stick8
+
+stick0:
+	ld	a,2
+	ld	(ship_dir),a
+	ret
+stick1:
+	ld	hl,(spy)	;Y=Y-1
+	and	a
+	sbc	hl,de
+	ld	(spy),hl
+	jr	clipper_x
+stick2:
+	ld	hl,(spx)	;X=X+1
+	add	hl,de
+	ld	(spx),hl
+	ld	hl,(spy)	;Y=Y-1
+	and	a
+	sbc	hl,de
+	ld	(spy),hl
+	jr	clipper_x
+stick3:
+	ld	hl,(spx)	;X=X+1
+	add	hl,de
+	ld	(spx),hl
+	ld	a,2
+	ld	(ship_dir),a
+	jr	clipper_x
+stick4:
+	ld	hl,(spx)	;X=X+1
+	add	hl,de
+	ld	(spx),hl
+	ld	hl,(spy)	;Y=Y+1
+	add	hl,de
+	ld	(spy),hl
+	jr	clipper_x
+stick5:
+	ld	hl,(spy)	;Y=Y+1
+	add	hl,de
+	ld	(spy),hl
+	jr	clipper_x
+stick6:
+	ld	hl,(spx)	;X=X-1
+	and	a
+	sbc	hl,de
+	dec	hl
+	ld	(spx),hl
+	ld	hl,(spy)	;Y=Y+1
+	add	hl,de
+	ld	(spy),hl
+	jr	clipper_x
+stick7:
+	ld	hl,(spx)	;X=X-1
+	and	a
+	sbc	hl,de
+	dec	hl
+	ld	(spx),hl
+	ld	a,2
+	ld	(ship_dir),a
+	jr	clipper_x
+stick8:
+	ld	hl,(spx)	;X=X-1
+	and	a
+	sbc	hl,de
+	dec	hl
+	ld	(spx),hl
+	ld	hl,(spy)	;Y=Y-1
+	and	a
+	sbc	hl,de
+	ld	(spy),hl
+
+clipper_x:			;clipping de X
+	ld	hl,(spx)
+	bit	7,h
+	jr	z,clipper_x1	;SPX not <0
+	ld	hl,0
+	jr	clipper_x2
+clipper_x1:
+	ld	bc,224+1
+	and	a
+	sbc	hl,bc
+	jr	c,clipper_y	;SPX not >224
+	ld	hl,224
+clipper_x2:
+	ld	(spx),hl
+
+clipper_y:			;clipping de Y
+        ld      hl,(spy)
+	ld	bc,min_ship_y
+	and	a
+	sbc	hl,bc
+	jr	nc,clipper_y1	 ;SPY not < min_ship_y - 1
+	ld	hl,min_ship_y
+        ld      a,1
+        ld      (clip_Y_limit),a
+        jr      clipper_y2
+clipper_y1:
+	ld	hl,(spy)
+	ld	bc,max_ship_y+1
+        and     a
+        sbc     hl,bc
+	jr	c,clipper_end	;SPY not > max_ship_Y + 1
+        ld      hl,max_ship_y
+        ld      a,-1
+        ld      (clip_Y_limit),a
+clipper_y2:
+        ld      (spy),hl
+clipper_end:
+
+	ld	a,(clip_Y_limit)	;clipper of scroll Y
+	or	a
+	jp	z,shift_option
+	and	#80
+	jp	z,dec_Y_scr
+
+
+	ld	de,(speed)
+	ld	hl,(Scroller_y)
+	add	hl,de
+	ld	de,305
+	call	simrst20
+	jp	c,scr_Y_end    ;HL<305
+	ld	hl,304
+	jp	scr_Y_end
+
+dec_Y_scr:
+	ld	de,(speed)
+	ld	hl,(Scroller_y)
+	and	a
+	sbc	hl,de
+	jp	nc,scr_Y_end
+	ld	hl,0
+
+scr_Y_end:
+	ld	(Scroller_y),hl
+	srl	h			;divide by 2 :-)
+	rr	l
+	ld	(ScrollerB_y),hl
+	xor	a
+	ld	(clip_Y_limit),a
+
+shift_option:
+	ld	a,(option_mode) 	;options are not in "normal" mode
+	or	a
+	ret	nz
+;	 ld	 a,(spy)
+;	 cp	 min_ship_y
+;	 ret	 z
+;	 cp	 max_ship_y
+;	 ret	 z
+
+	ld	hl,(option_xy_tbl+62)	;pointe to end of option table
+	ld	a,(spx)
+	cp	h
+	jr	nz,shift_option0
+	ld	a,(spy)
+	cp	l
+	jr	z,shift_end
+shift_option0:
+	ld	hl,option_xy_tbl+2
+	ld	de,option_xy_tbl+0
+	ld	bc,31*2
+	ldir
+
+	ld	a,(spy)
+	ld	(option_xy_tbl+62),a
+	ld	a,(spx)
+	add	a,8
+	ld	(option_xy_tbl+63),a
+shift_end:
+	ret
+
+;---------------------------------------------------------------
+;
+;	16 bits compare between HL and DE
+;
+;	IN:	DE,HL
+;	OUT:	Carry=1 DE>HL
+;		Zero=1	DE=HL
+;	MOD:	AF
+;
+simrst20:
+	ld	a,h
+	sub	d
+	ret	nz
+	ld	a,l
+	sub	e
+	ret
+
+;---------------------------------------------------------------
+;
+;	DIVIDE 8/8 bits
+;
+;	IN:	E= dividende
+;		C= diviseur
+;	OUT:	A= resultat
+;	MOD:	AF,BC,DE
+;
+;div88:
+;	 xor	 a
+;	 ld	 b,8
+;boucle88:
+;	 rl	 e
+;	 rla
+;	 sub	 c
+;	 jr	 nc,$+3
+;	 add	 a,c
+;	 djnz	 boucle88
+;	 ld	 a,e
+;	 rla
+;	 cpl
+;	 ret
+
+;-------------------------------------------------------
+;
+;	GESTION DU SHIP
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+gest_ship:
+	call	ship_direction
+	ld	a,(spy)
+	dec	a
+	ld	(ship_data+0),a
+	ld	(ship_data+4),a
+	ld	a,(spx)
+	ld	(ship_data+2),a
+	add	a,16
+	ld	(ship_data+6),a
+
+	ld	a,(ship_dir)		;rotation du vaisseau
+	rlca
+	add	a,ship_sp
+	ld	(ship_data+1),a
+	inc	a
+	ld	(ship_data+5),a
+	ret
+
+;-------------------------------------------------------
+;
+;	CHECKING DU SHIP
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,BC,DE,HL
+;
+check_ship:
+	ld	a,(crash_flag)
+	or	a
+	jp	nz,check_ship1
+
+	ld	a,(spx)
+	add	a,8
+	ld	d,a
+	ld	a,(spy)
+	add	a,4
+	ld	e,a
+	call	check_colision
+
+	ld	a,(hl)			; tests 4 flags
+
+	ld	hl,(lineflag)
+	inc	e
+	res	5,e
+	add	hl,de
+	or	(hl)
+
+	ld	hl,(lineflag)
+	inc	e
+	res	5,e
+	add	hl,de
+	or	(hl)
+
+	ld	hl,(lineflag)
+	inc	e
+	res	5,e
+	add	hl,de
+	or	(hl)
+	ret	z			;pas de colision alors fin
+
+check_ship0:
+	ld	a,(spx) 	;compute stereo parameter of sound effect
+	rrca
+	rrca
+	rrca
+	rrca
+	and	#0f		;make sure result is: 0 <= result < 16
+	or	#80		;non interuptible sound effect
+	ld	b,a
+	ld	a,7		;sound effect number
+	call	Sound_Effect	;activate "explode" sound effect
+	ld	a,255		;set crash flag
+	ld	(crash_flag),a
+	ld	a,11*8+1
+	ld	(crash_counter),a
+
+	ld	a,(ship_data+2) 	;X position
+	ld	(crash_pos+0),a
+	ld	a,(ship_data+0) 	;Y position
+	ld	(crash_pos+1),a
+
+	ld	a,213			;fait disparaitre les sprites
+	ld	(ship_data+0),a
+	ld	(ship_data+4),a
+	ld	(option1_data+0),a
+	ld	(option2_data+0),a
+	ld	(fire_data+0),a
+	ld	(fire1_data+0),a
+	ld	(fire2_data+0),a
+	ld	(missile_data+0),a
+	ld	(missile1_data+0),a
+	ld	(missile2_data+0),a
+
+	ld	a,2			;stop fires enemys
+	ld	(ship_destroy),a
+
+	xor	a			;clear all weapons activity
+	ld	(fire_status),a
+	ld	(fire1_status),a
+	ld	(fire2_status),a
+	ld	(missile_stat0),a
+	ld	(missile_stat1),a
+	ld	(missile_stat2),a
+	ld	(fire_cnt0),a
+	ld	(fire_cnt1),a
+	ld	(fire_cnt2),a
+
+	ld	(speed_level),a 	;on perd tout son speed
+	call	set_speed
+	call	set_spd_stat
+
+	call	remove_weapon
+
+	ld	a,6			;lance animation de l'explosion
+	ld	hl,(crash_pos)
+	call	set_explode
+	ret
+
+check_ship1:
+	ld	a,(crash_counter)
+	dec	a
+	ld	(crash_counter),a
+	ret	nz
+
+	xor	a		;reset crash condition
+	ld	(crash_flag),a
+
+	call	dec_life	;life -1
+	call	screen_off
+
+	ld	a,(opl4_flag)	;Stop Music
+	or	a
+	call	z,Halt_Music
+	call	all_voice_off
+
+	call	get_pos
+	rlca
+	ld	l,a
+	ld	h,0
+	ld	de,re_start_tbl
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)			;DE = re_start x
+	ex	de,hl			;HL = re_start x
+
+	call	set_start_pos
+	call	init_movetbl
+	call	reset_enemy
+
+	ld	a,1
+	call	WriteFE
+	ld	hl,(save_pos_ship)
+	ld	(position_ship),hl
+
+	call	set_scroll
+	call	put_all_sp
+
+	ld	b,60
+	call	wait_a_while
+
+	ld	a,(opl4_flag)
+	or	a
+	call	z,Cont_Music
+
+	call	screen_on
+	ret
+
+crash_pos:
+	dw	0
+crash_flag:
+	db	0		;<>0 -> space ship crashed
+crash_counter:
+	db	0
+
+re_start_tbl:
+	dw	re_start0, re_start1, re_start2, re_start3, re_start4
+	dw	re_start5
+
+re_start0:	dw	16*8,16*8,	8*8,8*8,	106,48
+re_start1:	dw	2816,64,	2816/2,64/2,	112,88
+
+re_start2:	dw	5440,64,	5440/2,64/2,	112,128
+re_start3:	dw	7360,128,	7360/2,128/2,	160,144
+re_start4:	dw	9280,128,	9280/2,128/2,	144,136
+re_start5:	dw	11648,128,	11648/2,128/2,	128,96
+
+remove_weapon:
+	ld	a,(option_status)	;nombre d'option -1
+	or	a
+	jr	z,remove_weap0		;deja a zero
+	call	remove_opt
+	call	set_opt_stat
+	ret
+remove_weap0:
+	ld	a,(missile_status)
+	or	a
+	jr	z,remove_weap1
+	dec	a
+	ld	(missile_status),a
+	call	set_miss_stat
+	ret
+remove_weap1:
+	ld	a,(fire_type)
+	or	a
+	ret	z
+	dec	a
+	ld	(fire_type),a
+	call	change_fire
+	ret
+
+;-------------------------------------------------------
+;	CHANGE LE TYPE DE TIR ET AFFICHE LE STATUS
+;	EN BAS DE L'ECRAN
+;
+change_fire:
+	ld	l,a
+	ld	h,0
+	ld	de,fire_type_tbl
+	add	hl,de
+	ld	a,(hl)
+	ld	(fire_data+1),a
+	ld	(fire1_data+1),a
+	ld	(fire2_data+1),a
+	ld	a,(fire_type)
+	ld	l,a
+	ld	h,0
+	ld	de,fire_stat_tbl
+	add	hl,de
+	ld	a,(hl)
+	ld	(weapon_data+1*8+1),a
+	inc	a
+	ld	(weapon_data+1*8+5),a
+	ld	a,211-16
+	ld	(weapon_data+1*8+0),a
+	ld	(weapon_data+1*8+4),a
+	ret
+
+fire_type_tbl:
+	db	18,19,20
+fire_stat_tbl:
+	db	38,40,48
+
+;-----------------------------------------------
+;	REDUIT LE NOMBRE D'OPTION
+;
+remove_opt:
+	ld	a,(option_mode)
+	or	a
+	jr	z,remove_opt0
+	xor	a
+	ld	(option_mode),a
+	ret
+remove_opt0:
+	ld	a,(option_status)
+	or	a
+	ret	z
+	dec	a
+	ld	(option_status),a
+	ret
+
+;-------------------------------------------------------
+;	INITIALISE LES ATTRIBUTS MAXI EN FONTION
+;	DU SHIP
+;
+init_ship_weapon:
+	ld	a,(ship_type)
+	rlca
+	ld	l,a
+	ld	h,0
+	ld	de,ship_weap_tbl
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ld	a,(de)
+	ld	(fire_max),a
+	inc	de
+	ld	a,(de)
+	ld	(missile_max),a
+	inc	de
+	ld	a,(de)
+	ld	(field_max),a
+	inc	de
+	ld	a,(de)
+	ld	(opt_type_max),a
+
+	xor	a
+	ld	(fire_type),a		;gun
+	ld	(missile_status),a	;no missile
+	ld	(option_status),a	;no option
+	ld	(force_field),a 	;no force field
+
+	ld	a,(fire_type)
+	call	change_fire
+	call	set_opt_stat
+	call	set_miss_stat
+	call	set_shd_stat
+	call	set_spd_stat
+	ret
+
+ship_weap_tbl:	dw	ship_tbl0, ship_tbl1, ship_tbl2, ship_tbl3
+ship_tbl0:	db	2,1,1,1
+ship_tbl1:	db	1,2,2,2
+ship_tbl2:	db	1,1,3,3
+ship_tbl3:	db	2,2,0,4
+
+
+;---------------------------------------------------------------
+;	ON A ATTRAPE UNE GELLULE
+;
+;	IN:	A= type de gellule
+;	OUT:	none
+;	MOD:	AF,DE,HL
+;
+gellule:
+	rlca
+	ld	l,a
+	ld	h,0
+	ld	de,gellule_list
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	jp	(hl)
+
+gellule_list:	dw	speed_up,fire_up,missile_up,option_up
+		dw	shield_up,bigbang_up
+
+speed_up:
+	ld	a,(speed_level)
+	cp	2
+	ret	z
+	inc	a
+	ld	(speed_level),a
+	call	set_speed
+	call	set_spd_stat
+	ld	a,4
+	ld	b,#88
+	call	Sound_Effect
+	ret
+
+set_speed:
+	ld	a,(speed_level)
+	rlca
+	ld	l,a
+	ld	h,0
+	ld	de,speed_tbl
+	add	hl,de
+	ld	a,(hl)
+	ld	(ralenti_flag),a
+	inc	hl
+	ld	a,(hl)
+	ld	(speed),a
+	xor	a
+	ld	(speed+1),a
+	ld	(ralenti),a
+	ret
+
+speed_tbl:
+	db	1,1, 0,1, 0,2
+
+shield_up:
+	ld	a,(field_max)
+	ld	b,a
+	ld	a,(force_field)
+	cp	b
+	ret	z
+	inc	a
+	ld	(force_field),a
+	ld	l,a
+	ld	h,0
+	ld	de,field_cnt_tbl
+	add	hl,de
+	ld	a,(hl)
+	ld	(field_counter),a
+	call	set_shd_stat
+	ld	a,3
+	ld	b,#88
+	call	Sound_Effect
+	ret
+
+field_cnt_tbl:
+	db	0,3,5,9
+
+bigbang_up:
+	ret
+
+fire_up:
+	ld	a,(fire_max)
+	ld	b,a
+	ld	a,(fire_type)
+	cp	b
+	ret	z
+	inc	a
+	ld	(fire_type),a
+	call	change_fire
+	xor	a
+	ld	b,#88
+	call	Sound_Effect
+	ret
+
+missile_up:
+	ld	a,(missile_max)
+	ld	b,a
+	ld	a,(missile_status)
+	cp	b
+	ret	z
+	inc	a
+	ld	(missile_status),a
+	ld	a,1
+	ld	b,#88
+	call	Sound_Effect
+	call	set_miss_stat
+	ret
+
+option_up:
+	ld	a,(option_status)
+	cp	2
+	jr	z,option_up1
+	inc	a
+	ld	(option_status),a
+	ld	a,2
+	ld	b,#88
+	call	Sound_Effect
+	call	set_opt_stat
+	ret
+option_up1:
+	ld	a,(opt_type_max)
+	ld	b,a
+	ld	a,(option_mode)
+	cp	b
+	ret	z
+	ld	a,b
+	ld	(option_mode),a
+	ld	a,2
+	ld	b,#88
+	call	Sound_Effect
+	call	set_opt_stat
+	ret
+
+;-------------------------------------------------------
+;	AFFICHE LE STATUS DES OPTIONS
+;
+set_opt_stat:
+	ld	a,(option_status)
+	or	a
+	jr	z,set_opt_stat0
+	ld	a,50
+	ld	(weapon_data+3*8+1),a
+	inc	a
+	ld	(weapon_data+3*8+5),a
+	ld	a,211-16
+	ld	(weapon_data+3*8+0),a
+	ld	(weapon_data+3*8+4),a
+	ret
+set_opt_stat0:
+	ld	a,213
+	ld	(weapon_data+3*8+0),a
+	ld	(weapon_data+3*8+4),a
+	ret
+
+;-------------------------------------------------------
+;	AFFICHE LE STATUS DES MISSILES
+;
+set_miss_stat:
+	ld	a,(missile_status)
+	or	a
+	jr	z,set_miss_stat0
+	dec	a
+	ld	l,a
+	ld	h,0
+	ld	de,miss_stat_tbl
+	add	hl,de
+	ld	a,(hl)
+	ld	(weapon_data+2*8+1),a
+	inc	a
+	ld	(weapon_data+2*8+5),a
+	ld	a,211-16
+	ld	(weapon_data+2*8+0),a
+	ld	(weapon_data+2*8+4),a
+	ret
+set_miss_stat0:
+	ld	a,213
+	ld	(weapon_data+2*8+0),a
+	ld	(weapon_data+2*8+4),a
+	ret
+miss_stat_tbl:
+	db	34,36
+
+;-------------------------------------------------------
+;	AFFICHE LE STATUS DU SHIELD
+;
+set_shd_stat:
+	ld	a,(force_field)
+	or	a
+	jr	z,set_shd_stat0
+	dec	a
+	ld	l,a
+	ld	h,0
+	ld	de,shd_stat_tbl
+	add	hl,de
+	ld	a,(hl)
+	ld	(weapon_data+4*8+1),a
+	inc	a
+	ld	(weapon_data+4*8+5),a
+	ld	a,211-16
+	ld	(weapon_data+4*8+0),a
+	ld	(weapon_data+4*8+4),a
+	ret
+set_shd_stat0:
+	ld	a,213
+	ld	(weapon_data+4*8+0),a
+	ld	(weapon_data+4*8+4),a
+	ret
+shd_stat_tbl:
+	db	32,52,54
+
+;-------------------------------------------------------
+;	AFFICHE LE STATUS DU SPEED
+;
+set_spd_stat:
+	ld	a,(speed_level)
+	or	a
+	jr	z,set_spd_stat0
+	dec	a
+	ld	l,a
+	ld	h,0
+	ld	de,spd_stat_tbl
+	add	hl,de
+	ld	a,(hl)
+	ld	(weapon_data+1),a
+	inc	a
+	ld	(weapon_data+5),a
+	ld	a,211-16
+	ld	(weapon_data+0),a
+	ld	(weapon_data+4),a
+	ret
+set_spd_stat0:
+	ld	a,213
+	ld	(weapon_data+0),a
+	ld	(weapon_data+4),a
+	ret
+
+spd_stat_tbl:
+	db	42,58
+
+;---------------------------------------------------------------
+;	GESTION DU SHIELD
+;
+;	IN:	None
+;	OUT:	None
+;	MOD:	???
+;
+gest_shield:
+	ret
+
+
+;---------------------------------------------------------------
+;	GET RESTART POINT FROM SCROLL POSITION
+;
+;	IN:	None
+;	OUT:	A= restart position (0.....5)
+;	MOD:	BC,DE,HL,IX
+;
+get_pos:
+	ld	bc,3
+	ld	hl,(Scroller_x)
+	ld	ix,position_tbl
+get_pos0:
+	ld	e,(ix+0)
+	ld	d,(ix+1)
+	call	simrst20
+	jr	c,get_pos1
+	add	ix,bc
+	ld	a,(ix+0)
+	and	(ix+1)
+	cp	255
+	jr	nz,get_pos0
+get_pos1:
+	ld	a,(ix+2)
+	ret
+
+position_tbl:
+	dw	2816
+	db	0
+	dw	5440
+	db	1
+	dw	7360
+	db	2
+	dw	9280
+	db	3
+	dw	11648
+	db	4
+	dw	#FFFF	;fin de liste
+	db	5
+
+;---------------------------------------------------------------
+;	PRESET SCROLLER POSITION
+;
+;	IN:	HL= point to data table
+;	OUT:	None
+;	MOD:	BC,DE,HL
+;
+set_start_pos:
+	ld	de,Scroller_x		;set scroller restart position
+	ld	bc,8
+	ldir
+
+	ld	de,spy			;set ship restart position
+	ld	bc,4
+	ldir
+
+	ld	de,64
+	push	de
+	ld	bc,10
+	ld	hl,10
+	call	init_		;init screen plane A & B
+	pop	de
+	ret
+
+;---------------------------------------------------------------
+;	INITILISEATION OF OPTION MOVE TABLE
+;
+;	IN:	HL= point to the data
+;	OUT:	None
+;	MOD:	BC,DE,HL
+;
+init_movetbl:
+	ld	a,(spx)
+	ld	d,a
+	ld	a,(spy)
+	ld	e,a
+	call	preset_movetbl
+	ret
+
+;---------------------------------------------------------------
+;	PRESET OPTION MOVE TABLE
+;
+;	IN:	D= X position
+;		E= Y position
+;	OUT:	None
+;	MOD:	BC,DE,HL
+;
+preset_movetbl:
+	ld	b,32			;preset option move table
+	ld	hl,option_xy_tbl
+preset_move0:
+	ld	(hl),e
+	inc	hl
+	ld	(hl),d
+	inc	hl
+	djnz	preset_move0
+	ret
+
+;---------------------------------------------------------------
+;	CHECK COLISION ROUTINE
+;
+;	IN:	D= X position
+;		E= Y position
+;	OUT:	C= ox ; B= oy, HL= flag adress
+;	MOD:	AF,BC,DE,HL
+;
+check_colision:
+	ld	a,(Scroller_x)	       ; osons !)
+	add	a,d
+	rra		; div8
+	rra
+	rra
+	and	01Fh
+	ld	c,a
+
+	ld	a,(Scroller_y)
+	add	a,e
+	rra		; div8
+	rra
+	rra
+	and	01Fh
+	ld	b,a
+
+	ld	l,0
+	or	a	; hl = A*32
+	rra
+	rr	l
+	rra
+	rr	l
+	rra
+	rr	l
+	ld	h,a
+
+	ld	de,scnflg
+	add	hl,de
+
+	ld	(lineflag),hl
+
+	ld	d,0
+	ld	e,c
+	add	hl,de
+	ret
+
+lineflag:
+	defw	0
+
+;-------------------------------------------------------
+;
+;	SHIP DIRECTION ROUTINE (animation UP/DOWN)
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,BC,HL
+;
+ship_direction:
+	ld	a,(stick)
+;	 or	 a
+;	 ret	 z
+	ld	c,a
+	ld	b,0
+	ld	hl,ship_dir_tbl
+	add	hl,bc
+	ld	b,(hl)
+	ld	a,(ship_dir)
+	add	a,b
+	bit	7,a
+	jr	nz,ship_direc0	;negatif
+	cp	5
+	jr	c,ship_direc1	;<5
+	ld	a,4
+	jr	ship_direc1
+ship_direc0:
+	xor	a
+ship_direc1:
+	ld	(ship_dir),a
+	ret
+
+ship_dir_tbl:
+	db	0,-1,-1,0,+1,+1,+1,0,-1
+
+;-------------------------------------------------------
+;
+;	DECREMENT LIFE COUNT
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+dec_life:
+	ld	a,(life)
+	or	a
+	ret	z
+	dec	a
+	ld	(life),a
+	ld	a,(life_bcd)
+	dec	a
+	daa
+	ld	(life_bcd),a
+	ret
+
+
+;-------------------------------------------------------
+;
+;	INCREMENT LIFE COUNT
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+inc_life:
+	ld	a,(life)
+	cp	99
+	ret	z
+	inc	a
+	ld	(life),a
+	ld	a,(life_bcd)
+	inc	a
+	daa
+	ld	(life_bcd),a
+	ret
+
+;-------------------------------------------------------
+;
+;	GESTION DES VIES (mise a jour de l'affichage)
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,BC,HL
+;
+gest_life:
+	ld	a,(life_bcd)		;unite
+	and	15
+	rlca
+	ld	b,a
+	rlca
+	add	a,b
+	add	a,176
+	ld	(life_buffer+0),a
+	ld	a,187			;set DX
+	ld	(life_buffer+4),a
+	ld	hl,life_buffer
+	ld	bc,#1020
+	call	v9990_cmd
+
+	ld	a,(life_bcd)
+	and	#f0
+	rrca
+	rrca
+	rrca
+	rrca
+
+	rlca
+	ld	b,a
+	rlca
+	add	a,b
+	add	a,176			;set SX
+	ld	(life_buffer+0),a
+	ld	a,181			;set DX
+	ld	(life_buffer+4),a
+	ld	hl,life_buffer
+	ld	bc,#1020
+	call	v9990_cmd
+	ret
+
+life_buffer:
+	dw	000		;SX
+	dw	024		;SY
+	dw	187		;DX
+	dw	009		;DY
+	dw	006		;NX
+	dw	007		;NY
+	db	000		;ARG
+	db	%00011100	;LOP
+	db	255		;WM0-7	0=enable SCA write  1=disable
+	db	000		;WM8-15 0=enable SCB write  1=disable
+	db	#40		;LMMM CMD
+
+;-------------------------------------------------------
+;
+;	INIT FIRE
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,BC
+;
+fire_init:
+	ld	a,(fire_status)
+	or	a
+	jr	nz,fire_option1
+
+	ld	a,(fire_cnt0)
+	or	a
+	jp	nz,fire_option1
+
+	ld	a,(spx)
+	add	a,32-4			;32
+	jr	c,fire_option1		;fire out of screen, so quitting
+	ld	(fire_data+2),a
+	ld	b,a
+	ld	a,(spy)
+	add	a,6
+	ld	(fire_data+0),a
+	ld	a,255			;fire is in progress
+	ld	(fire_status),a
+	ld	a,256/fire_speed -1		      ;load wait counter
+	ld	(fire_cnt0),a
+	ld	a,b			;calcul PAN POT setting
+	call	fire_sound
+
+fire_option1:
+	ld	a,(option_status)	;are there any options?
+	or	a
+	ret	z			;no option so quit
+	ld	a,(fire1_status)
+	or	a
+	jr	nz,fire_option2
+
+	ld	a,(fire_cnt1)
+	or	a
+	jp	nz,fire_option2
+
+	ld	a,(option1_data+2)
+	add	a,16-4
+	jr	c,fire_option2		;fire out of screen
+	ld	(fire1_data+2),a
+	ld	a,(option1_data+0)
+	add	a,5
+	ld	(fire1_data+0),a
+	ld	a,255			;fire in progress
+	ld	(fire1_status),a
+	ld	a,256/fire_speed -1		      ;load wait counter
+	ld	(fire_cnt1),a
+
+fire_option2:
+	ld	a,(option_status)	;is there an option 2?
+	and	2
+	ret	z			;no so quit
+	ld	a,(fire2_status)
+	or	a
+	ret	nz
+
+	ld	a,(fire_cnt2)
+	or	a
+	ret	nz
+
+	ld	a,(option2_data+2)
+	add	a,16-4
+	ret	c			;fire out of screen
+	ld	(fire2_data+2),a
+	ld	a,(option2_data+0)
+	add	a,5
+	ld	(fire2_data+0),a
+	ld	a,255			;fire in progress
+	ld	(fire2_status),a
+	ld	a,256/fire_speed -1		      ;load wait counter
+	ld	(fire_cnt2),a
+	ret
+
+fire_sound:
+	rrca
+	rrca
+	rrca
+	rrca
+	and	#0f			;bit 7=0 pas prioritaire
+	ld	b,a
+	ld	a,(fire_type)
+	ld	l,a
+	ld	h,0
+	ld	de,fire_snd_tbl
+	add	hl,de
+	ld	a,(hl)
+	call	Sound_Effect
+	ret
+
+fire_snd_tbl:
+	db	5
+	db	6
+	db	6
+
+;-------------------------------------------------------
+;
+;	INIT MISSILE
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+missile_init:
+	ld	a,(missile_stat0)
+	or	a
+	jr	nz,missile_opt1
+	ld	a,(spx)
+	add	a,08
+	ld	(missile_data+2),a
+	ld	a,(spy)
+	add	a,08
+	cp	212
+	jr	nc,missile_opt1 	;missile out of screen, so quitting
+	ld	(missile_data+0),a
+	ld	a,255			;missile is in progress
+	ld	(missile_stat0),a
+	ld	a,missile_d
+	ld	(missile_data+1),a
+
+missile_opt1:
+	ld	a,(option_status)	;are there any options?
+	or	a
+	ret	z			;no option so quit
+	ld	a,(missile_stat1)
+	or	a
+	jr	nz,missile_opt2
+	ld	a,(option1_data+2)
+	ld	(missile1_data+2),a
+	ld	a,(option1_data+0)
+	add	a,08
+	cp	212
+	jr	nc,missile_opt2 	;missile out of screen, so quitting
+	ld	(missile1_data+0),a
+	ld	a,255			;fire in progress
+	ld	(missile_stat1),a
+	ld	a,missile_d
+	ld	(missile1_data+1),a
+
+missile_opt2:
+	ld	a,(option_status)	;is there an option 2?
+	and	2
+	ret	z			;no so quit
+	ld	a,(missile_stat2)
+	or	a
+	ret	nz
+	ld	a,(option2_data+2)
+	ld	(missile2_data+2),a
+	ld	a,(option2_data+0)
+	add	a,08
+	cp	212
+	ret	nc			;missile out of screen, so quitting
+	ld	(missile2_data+0),a
+	ld	a,255			;fire in progress
+	ld	(missile_stat2),a
+	ld	a,missile_d
+	ld	(missile2_data+1),a
+	ret
+
+;-------------------------------------------------------
+;
+;	GESTION DU COMPTEUR DES "FIRE"
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+fire_counter:
+	ld	a,(fire_cnt0)
+	or	a
+	jp	z,fire_count0
+	dec	a
+	ld	(fire_cnt0),a
+fire_count0:
+	ld	a,(fire_cnt1)
+	or	a
+	jp	z,fire_count1
+	dec	a
+	ld	(fire_cnt1),a
+fire_count1:
+	ld	a,(fire_cnt2)
+	or	a
+	ret	z
+	dec	a
+	ld	(fire_cnt2),a
+	ret
+
+;-------------------------------------------------------
+;
+;	GESTION DU FIRE
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+gest_fire:
+	ld	a,(fire_status)
+	or	a
+	jr	z,gest_fire1		;next one
+
+	ld	a,(fire_data+2)
+	add	a,fire_speed
+	ld	(fire_data+2),a
+	jr	nc,gest_fire1		;next one
+	ld	a,213
+	ld	(fire_data+0),a
+	xor	a
+	ld	(fire_status),a
+
+gest_fire1:
+	ld	a,(option_status)
+	or	a
+	jr	z,gest_fire3		;no option fire to handle
+	ld	a,(fire1_status)	;fire 1 in progress?
+	or	a
+	jr	z,gest_fire2		;no, so next one
+
+	ld	a,(fire1_data+2)
+	add	a,fire_speed
+	ld	(fire1_data+2),a
+	jr	nc,gest_fire2		;next one
+	ld	a,213
+	ld	(fire1_data+0),a
+	xor	a
+	ld	(fire1_status),a
+
+gest_fire2:
+	ld	a,(option_status)
+	and	2
+	jr	z,gest_fire3		;no option fire to handle
+	ld	a,(fire2_status)	;fire 2 in progress?
+	or	a
+	jr	z,gest_fire3		;nore more fire
+
+	ld	a,(fire2_data+2)
+	add	a,fire_speed
+	ld	(fire2_data+2),a
+	jr	nc,gest_fire3		;next one
+	ld	a,213
+	ld	(fire2_data+0),a
+	xor	a
+	ld	(fire2_status),a
+gest_fire3:
+	ret
+
+;-------------------------------------------------------
+;
+;	CHECKING DU FIRE
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+check_fire:
+	ld	a,(fire_status)
+	or	a
+	jr	z,check_fire1		 ;next one
+
+	ld	a,(fire_data+2)
+	add	a,8
+	ld	d,a
+	ld	a,(fire_data+0)
+	add	a,4
+	ld	e,a
+	call	check_colision
+	ld	a,(hl)
+	or	a
+	jr	z,check_fire1		 ;next one
+	ld	a,213
+	ld	(fire_data+0),a
+	xor	a
+	ld	(fire_status),a
+	ld	(fire_cnt0),a
+
+check_fire1:
+	ld	a,(option_status)
+	or	a
+	jr	z,check_fire3		 ;no option fire to handle
+	ld	a,(fire1_status)	;fire 1 in progress?
+	or	a
+	jr	z,check_fire2		 ;no, so next one
+	ld	a,(fire1_data+2)
+	add	a,8
+	ld	d,a
+	ld	a,(fire1_data+0)
+	add	a,4
+	ld	e,a
+	call	check_colision
+	ld	a,(hl)
+	or	a
+	jr	z,check_fire2		 ;next one
+	ld	a,213
+	ld	(fire1_data+0),a
+	xor	a
+	ld	(fire1_status),a
+	ld	(fire_cnt1),a
+
+check_fire2:
+	ld	a,(option_status)
+	and	2
+	jr	z,check_fire3		 ;no option fire to handle
+	ld	a,(fire2_status)	;fire 2 in progress?
+	or	a
+	jr	z,check_fire3		 ;nore more fire
+	ld	a,(fire2_data+2)
+	add	a,8
+	ld	d,a
+	ld	a,(fire2_data+0)
+	add	a,4
+	ld	e,a
+	call	check_colision
+	ld	a,(hl)
+	or	a
+	jr	z,check_fire3		 ;next one
+	ld	a,213
+	ld	(fire2_data+0),a
+	xor	a
+	ld	(fire2_status),a
+	ld	(fire_cnt2),a
+check_fire3:
+	ret
+
+;-------------------------------------------------------
+;
+;	GESTION DES MISSILES
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+gest_missile:
+	ld	a,(missile_status)	;mode bombe ou missile?
+	cp	1
+	jp	z,gest_bombe		;on est en mode bombe
+
+	ld	a,(missile_stat0)	;missile actif?
+	or	a
+	jr	z,gest_missile1 	;non, alors suivant
+
+
+	ld	a,(missile_data+2)	;X
+	add	a,missile_speedx
+	ld	(missile_data+2),a
+	jr	c,gest_miss0		;on sort de l'ecran
+	ld	a,(miss0_stat)		;le missile est au sol ou en l'air?
+	or	a
+	jr	nz,gest_missile1	;le missile est au sol
+
+	ld	a,(missile_data+0)	;Y
+	add	a,missile_speedy
+	ld	(missile_data+0),a
+	cp	212
+	jr	c,gest_missile1
+gest_miss0:
+	ld	a,213
+	ld	(missile_data+0),a
+	xor	a
+	ld	(missile_stat0),a
+
+gest_missile1:				;gestion du missile de l'option 1
+	ld	a,(option_status)
+	or	a
+	jr	z,gest_miss_end
+	ld	a,(missile_stat1)
+	or	a
+	jr	z,gest_missile2
+
+	ld	a,(missile1_data+2)	;X
+	add	a,missile_speedx
+	ld	(missile1_data+2),a
+	jr	c,gest_miss1
+	ld	a,(miss1_stat)
+	or	a
+	jr	nz,gest_missile2
+	ld	a,(missile1_data+0)
+	add	a,missile_speedy
+	ld	(missile1_data+0),a
+	cp	212-6
+	jr	c,gest_missile2
+gest_miss1:
+	ld	a,213
+	ld	(missile1_data+0),a
+	xor	a
+	ld	(missile_stat1),a
+
+gest_missile2:				;gestion du missile de l'option 2
+	ld	a,(option_status)
+	and	2
+	jr	z,gest_miss_end
+	ld	a,(missile_stat2)
+	or	a
+	jr	z,gest_miss_end
+
+	ld	a,(missile2_data+2)	;X
+	add	a,missile_speedx
+	ld	(missile2_data+2),a
+	jr	c,gest_miss2
+	ld	a,(miss2_stat)
+	or	a
+	jr	nz,gest_miss_end
+	ld	a,(missile2_data+0)	;Y
+	add	a,missile_speedy
+	ld	(missile2_data+0),a
+	cp	212-6
+	jr	c,gest_miss_end
+gest_miss2:
+	ld	a,213
+	ld	(missile2_data+0),a
+	xor	a
+	ld	(missile_stat2),a
+
+gest_miss_end:
+	ret
+
+;
+;	MODE BOMBE
+;
+gest_bombe:
+	ld	a,(missile_stat0)
+	or	a
+	jr	z,gest_bombe1		 ;next one
+
+	ld	a,(missile_data+2)	;X
+	add	a,missile_speedx
+	ld	(missile_data+2),a
+	jr	c,gest_bomb0
+	ld	a,(missile_data+0)	;Y
+	add	a,missile_speedy
+	ld	(missile_data+0),a
+	cp	212
+	jr	c,gest_bombe1
+gest_bomb0:
+	ld	a,213
+	ld	(missile_data+0),a
+	xor	a
+	ld	(missile_stat0),a
+
+gest_bombe1:				;gestion de la bombe de l'option 1
+	ld	a,(option_status)
+	or	a
+	jr	z,gest_bombe_end
+	ld	a,(missile_stat1)
+	or	a
+	jr	z,gest_bombe2
+
+	ld	a,(missile1_data+2)	;X
+	add	a,missile_speedx
+	ld	(missile1_data+2),a
+	jr	c,gest_bomb1
+	ld	a,(missile1_data+0)
+	add	a,missile_speedy
+	ld	(missile1_data+0),a
+	cp	212-6
+	jr	c,gest_bombe2
+gest_bomb1:
+	ld	a,213
+	ld	(missile1_data+0),a
+	xor	a
+	ld	(missile_stat1),a
+
+gest_bombe2:				;gestion de la bombe de l'option 1
+	ld	a,(option_status)
+	and	2
+	jr	z,gest_bombe_end
+	ld	a,(missile_stat2)
+	or	a
+	jr	z,gest_bombe_end
+
+	ld	a,(missile2_data+2)	;X
+	add	a,missile_speedx
+	ld	(missile2_data+2),a
+	jr	c,gest_bomb2
+
+	ld	a,(missile2_data+0)	;Y
+	add	a,missile_speedy
+	ld	(missile2_data+0),a
+	cp	212-6
+	jr	c,gest_bombe_end
+gest_bomb2:
+	ld	a,213
+	ld	(missile2_data+0),a
+	xor	a
+	ld	(missile_stat2),a
+
+gest_bombe_end:
+	ret
+
+
+;-------------------------------------------------------
+;
+;	CHECKING DES MISSILES
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,DE,HL,BC
+;
+check_missile:
+	ld	a,(missile_status)	;mode bombe ou missile?
+	cp	1
+	jp	z,check_bombe		;on est en mode bombe
+
+	ld	a,(missile_stat0)	;missile 0 actif?
+	or	a
+	jr	z,chek_missile1 	;si non -> next one
+
+; test sous le missile
+	ld	a,(missile_data+2)	;X
+	ld	d,a
+	ld	a,(missile_data+0)	;Y
+	add	a,6
+	ld	e,a
+	call	check_colision		;calcul ADD dans la table des flags
+	ld	a,(hl)
+	or	a
+	jr	z,chk_miss0		;si rien en dessous -> test suivant
+	ld	a,1
+chk_miss0:
+	ld	(miss0_stat),a
+	ld	b,missile_d
+	add	a,b
+	ld	(missile_data+1),a
+
+;test a droite du missile
+	ld	a,(missile_data+2)	;X
+	add	a,6
+	ld	d,a
+	ld	a,(missile_data+0)	;Y
+	ld	e,a
+	call	check_colision		;calcul ADD dans la table des flags
+	ld	a,(hl)			;y a t-il quelquechose a droite?
+	or	a
+	jr	nz,chk_miss1		;oui, alors detruit le missile
+
+;test a droite et en dessous
+	ld	a,(missile_data+2)	;X
+	add	a,8
+	ld	d,a
+	ld	a,(missile_data+0)	;Y
+	add	a,8
+	ld	e,a
+	call	check_colision		;calcul ADD dans la table des flags
+	ld	a,(hl)			;y a t-il quelque chose ?
+	or	a
+	jr	z,chek_missile1 	;si non -> next one
+chk_miss1:
+	ld	a,213			;efface missile 0
+	ld	(missile_data+0),a
+	xor	a			;missile inactive
+	ld	(missile_stat0),a
+
+chek_missile1:				;test sur missile de l'option 1
+	ld	a,(option_status)	;option active?
+	or	a
+	jp	z,check_missile_end	;non -> end of procedure
+	ld	a,(missile_stat1)
+	or	a
+	jr	z,chek_missile2
+
+	ld	a,(missile1_data+2)	 ;X
+	ld	d,a
+	ld	a,(missile1_data+0)	 ;Y
+	add	a,6
+	ld	e,a
+	call	check_colision		;calcul ADD dans la table des flags
+	ld	a,(hl)
+	or	a
+	jr	z,chk_miss2
+	ld	a,1
+chk_miss2:
+	ld	(miss1_stat),a
+	ld	b,missile_d
+	add	a,b
+	ld	(missile1_data+1),a
+
+	ld	a,(missile1_data+2)	 ;X
+	add	a,6
+	ld	d,a
+	ld	a,(missile1_data+0)	 ;Y
+	ld	e,a
+	call	check_colision		;calcul ADD dans la table des flags
+	ld	a,(hl)
+	or	a
+	jr	nz,chk_miss3
+
+	ld	a,(missile1_data+2)	;X
+	add	a,8
+	ld	d,a
+	ld	a,(missile1_data+0)
+	add	a,8
+	ld	e,a
+	call	check_colision
+	ld	a,(hl)
+	or	a
+	jr	z,chek_missile2 	;next one
+chk_miss3:
+	ld	a,213
+	ld	(missile1_data+0),a
+	xor	a
+	ld	(missile_stat1),a
+	ld	(miss1_stat),a
+
+chek_missile2:				;test sur missile de l'option 2
+	ld	a,(option_status)	;option 2 active?
+	and	2
+	jp	z,check_missile_end	;non -> end of procedure
+	ld	a,(missile_stat2)
+	or	a
+	jr	z,check_missile_end
+
+	ld	a,(missile2_data+2)	 ;X
+	ld	d,a
+	ld	a,(missile2_data+0)	 ;Y
+	add	a,6
+	ld	e,a
+	call	check_colision		;calcul ADD dans la table des flags
+	ld	a,(hl)
+	or	a
+	jr	z,chk_miss4
+	ld	a,1
+chk_miss4:
+	ld	(miss2_stat),a
+	ld	b,missile_d
+	add	a,b
+	ld	(missile2_data+1),a
+
+	ld	a,(missile2_data+2)	 ;X
+	add	a,6
+	ld	d,a
+	ld	a,(missile2_data+0)	 ;Y
+	ld	e,a
+	call	check_colision		;calcul ADD dans la table des flags
+	ld	a,(hl)
+	or	a
+	jr	nz,chk_miss5
+
+	ld	a,(missile2_data+2)	;X
+	add	a,8
+	ld	d,a
+	ld	a,(missile2_data+0)	;Y
+	add	a,8
+	ld	e,a
+	call	check_colision
+	ld	a,(hl)
+	or	a
+	jr	z,check_missile_end	    ;next one
+chk_miss5:
+	ld	a,213
+	ld	(missile2_data+0),a
+	xor	a
+	ld	(missile_stat2),a
+	ld	(miss2_stat),a
+
+check_missile_end:
+	ret
+
+;
+;	MODE BOMBE
+;
+check_bombe:
+	ld	a,(missile_stat0)	;missile 0 actif?
+	or	a
+	jr	z,chek_bombe1	      ;si non -> next one
+
+	ld	a,(missile_data+2)	;X
+	add	a,8
+	ld	d,a
+	ld	a,(missile_data+0)	;Y
+	add	a,8
+	ld	e,a
+	call	check_colision		;calcul ADD dans la table des flags
+	ld	a,(hl)
+	or	a
+	jr	z,chek_bombe1	      ;pas de flags -> next one
+	ld	a,213			;efface missile 0
+	ld	(missile_data+0),a
+	xor	a			;missile inactive
+	ld	(missile_stat0),a
+
+chek_bombe1:
+	ld	a,(option_status)	;option active?
+	or	a
+	jr	z,check_bombe_end     ;non -> end of procedure
+	ld	a,(missile_stat1)
+	or	a
+	jr	z,chek_bombe2
+
+	ld	a,(missile1_data+2)	;X
+	add	a,8
+	ld	d,a
+	ld	a,(missile1_data+0)
+	add	a,8
+	ld	e,a
+	call	check_colision
+	ld	a,(hl)
+	or	a
+	jr	z,chek_bombe2	      ;next one
+	ld	a,213
+	ld	(missile1_data+0),a
+	xor	a
+	ld	(missile_stat1),a
+
+chek_bombe2:
+	ld	a,(option_status)	;option 2 active?
+	and	2
+	jr	z,check_bombe_end     ;non -> end of procedure
+	ld	a,(missile_stat2)
+	or	a
+	jr	z,check_bombe_end
+
+	ld	a,(missile2_data+2)	;X
+	add	a,8
+	ld	d,a
+	ld	a,(missile2_data+0)	;Y
+	add	a,8
+	ld	e,a
+	call	check_colision
+	ld	a,(hl)
+	or	a
+	jr	z,check_bombe_end	  ;next one
+	ld	a,213
+	ld	(missile2_data+0),a
+	xor	a
+	ld	(missile_stat2),a
+
+check_bombe_end:
+	ret
+
+;-------------------------------------------------------
+;
+;	GESTION DES OPTIONS
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,HL
+;
+gest_option:
+	ld	a,(option_status)
+	or	a
+	ret	z			;no option activated
+
+	ld	a,(opt_cnt)
+	inc	a
+	and	63
+	ld	(opt_cnt),a
+
+	call	get_opt1_xy
+	ld	a,(hl)
+	ld	(option1_data+0),a
+	inc	hl
+	ld	a,(hl)
+	ld	(option1_data+2),a
+
+	ld	a,(option_status)
+	and	2
+	ret	z
+	call	get_opt2_xy
+	ld	a,(hl)
+	ld	(option2_data+0),a
+	inc	hl
+	ld	a,(hl)
+	ld	(option2_data+2),a
+	ret
+
+get_opt1_xy:
+	ld	a,(option_mode)
+	or	a
+	jr	nz,get_opt1_xy0
+	ld	hl,option_xy_tbl+32
+	ret
+get_opt1_xy0:
+	dec	a
+	rlca
+	ld	l,a
+	ld	h,0
+	ld	de,opt1_xy_tbl
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ld	a,(opt_cnt)
+	and	%00111000
+	rrca
+	rrca
+	ld	l,a
+	ld	h,0
+	add	hl,de
+	ld	b,(hl)
+	inc	hl
+	ld	e,(hl)
+	bit	7,e
+	jr	z,get_opt1_xy1
+	ld	d,255
+	jp	get_opt1_xy2
+get_opt1_xy1:
+	ld	d,0
+get_opt1_xy2:
+	ld	hl,(spx)
+	add	hl,de
+	ld	a,h
+	or	a
+	ld	a,212
+	jr	nz,get_opt1_xy5
+	ld	a,l
+	ld	(option_yx+1),a
+
+	ld	e,b
+	bit	7,e
+	jr	z,get_opt1_xy3
+	ld	d,255
+	jp	get_opt1_xy4
+get_opt1_xy3:
+	ld	d,0
+get_opt1_xy4:
+	ld	hl,(spy)
+	add	hl,de
+	ld	a,h
+	or	a
+	ld	a,212
+	jr	nz,get_opt1_xy5
+	ld	a,l
+get_opt1_xy5:
+	ld	(option_yx+0),a
+	ld	hl,option_yx
+	ret
+
+option_yx:	db	0,0
+
+opt_cnt:	db	0
+
+opt1_xy_tbl:
+	dw	opt1_tbl0, opt1_tbl1, opt1_tbl2, opt1_tbl3
+
+opt1_tbl0:	db	-32,0, -16,-32, 16,-32, 32,0
+		db	32,16, 16,48, -16,48, -32,16
+
+opt1_tbl1:	db	-08,0, -12,0, -16,0, -20,0
+		db	-24,0, -20,0, -16,0, -12,0
+
+opt1_tbl2:	db	-08,0, -12,0, -16,0, -20,0
+		db	-24,0, -20,0, -16,0, -12,0
+
+opt1_tbl3:	db	-08,0, -12,-4, -16,-8, -20,-12
+		db	-24,-16, -20,-12, -16,-8, -12,-4
+
+get_opt2_xy:
+	ld	a,(option_mode)
+	or	a
+	jr	nz,get_opt2_xy0
+	ld	hl,option_xy_tbl+0
+	ret
+get_opt2_xy0:
+	dec	a
+	rlca
+	ld	l,a
+	ld	h,0
+	ld	de,opt2_xy_tbl
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ld	a,(opt_cnt)
+	and	%00111000
+	rrca
+	rrca
+	ld	l,a
+	ld	h,0
+	add	hl,de
+	ld	b,(hl)
+	inc	hl
+	ld	e,(hl)
+	bit	7,e
+	jr	z,get_opt2_xy1
+	ld	d,255
+	jp	get_opt2_xy2
+get_opt2_xy1:
+	ld	d,0
+get_opt2_xy2:
+	ld	hl,(spx)
+	add	hl,de
+	ld	a,h
+	or	a
+	ld	a,212
+	jr	nz,get_opt2_xy5
+	ld	a,l
+	ld	(option_yx+1),a
+
+	ld	e,b
+	bit	7,e
+	jr	z,get_opt2_xy3
+	ld	d,255
+	jp	get_opt2_xy4
+get_opt2_xy3:
+	ld	d,0
+get_opt2_xy4:
+	ld	hl,(spy)
+	add	hl,de
+	ld	a,h
+	or	a
+	ld	a,212
+	jr	nz,get_opt2_xy5
+	ld	a,l
+get_opt2_xy5:
+	ld	(option_yx+0),a
+	ld	hl,option_yx
+	ret
+
+opt2_xy_tbl:
+	dw	opt2_tbl0, opt2_tbl1, opt2_tbl2, opt2_tbl3
+
+opt2_tbl0:
+		db	32,16, 16,48, -16,48, -32,16
+		db	-32,0, -16,-32, 16,-32, 32,0
+opt2_tbl1:
+		db	08,0, 12,0, 16,0, 20,0
+		db	24,0, 20,0, 16,0, 12,0
+
+opt2_tbl2:
+		db	24,0, 20,0, 16,0, 12,0
+		db	08,0, 12,0, 16,0, 20,0
+
+opt2_tbl3:
+		db	08,0, 12,-4, 16,-8, 20,-12
+		db	24,-16, 20,-12, 16,-8, 12,-4
+
+
+;-------------------------------------------------------
+;
+;	ADD (DE) TO THE SCORE
+;
+;	IN:	DE = value to add to the score (D & E = 00h to 0Ah)
+;	OUT:	none
+;	MOD:	AF,DE
+;
+score_plus:
+	ld	a,(score+4)		;10
+	add	a,e
+	cp	10
+	ld	(score+4),a
+	ld	e,0
+	jr	c,score_plus1
+	sub	9
+	ld	e,a
+	xor	a
+	ld	(score+4),a
+score_plus1:
+	ld	a,(score+3)		;100
+	add	a,e
+	add	a,d
+	cp	10
+	ld	(score+3),a
+	ld	e,0
+	jr	c,score_plus2
+	sub	9
+	ld	e,a
+	xor	a
+	ld	(score+3),a
+score_plus2:
+	ld	a,(score+2)		;1 000
+	add	a,e
+	cp	10
+	ld	(score+2),a
+	ld	e,0
+	jr	c,score_plus3
+	sub	9
+	ld	e,a
+	xor	a
+	ld	(score+2),a
+score_plus3:
+	ld	a,(score+1)		;10 000
+	add	a,e
+	cp	10
+	ld	(score+1),a
+	ld	e,0
+	jr	c,score_plus4
+	sub  9
+	ld	e,a
+	xor	a
+	ld	(score+1),a
+score_plus4:
+	ld	a,(score+0)	       ;100 000
+	add	a,e
+	cp	10
+	ld	(score+0),a
+	jr	c,score_plus_end
+	xor	a
+	ld	(score+0),a
+score_plus_end:
+	ret
+
+;-------------------------------------------------------
+;
+;	GESTION DU SCORE (mise a jour de l'affichage)
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,BC,HL
+;
+gest_score:
+	ld	a,(score+5)		;1
+	and	15
+	rlca
+	rlca
+	rlca
+	add	a,score_fonte_x 	;set SX
+	ld	(score_buffer+0),a
+	ld	a,219			;set DX
+	ld	(score_buffer+4),a
+	ld	hl,score_buffer
+	ld	bc,#1020
+	call	v9990_cmd
+
+	ld	a,(score+4)		;10
+	and	15
+	rlca
+	rlca
+	rlca
+	add	a,score_fonte_x 	;set SX
+	ld	(score_buffer+0),a
+	ld	a,211			;set DX
+	ld	(score_buffer+4),a
+	ld	hl,score_buffer
+	ld	bc,#1020
+	call	v9990_cmd
+
+	ld	a,(score+3)		;100
+	and	15
+	rlca
+	rlca
+	rlca
+	add	a,score_fonte_x 	;set SX
+	ld	(score_buffer+0),a
+	ld	a,203			;set DX
+	ld	(score_buffer+4),a
+	ld	hl,score_buffer
+	ld	bc,#1020
+	call	v9990_cmd
+
+	ld	a,(score+2)		;1 000
+	and	15
+	rlca
+	rlca
+	rlca
+	add	a,score_fonte_x 	;set SX
+	ld	(score_buffer+0),a
+	ld	a,195			;set DX
+	ld	(score_buffer+4),a
+	ld	hl,score_buffer
+	ld	bc,#1020
+	call	v9990_cmd
+
+	ld	a,(score+1)		;10 000
+	and	15
+	rlca
+	rlca
+	rlca
+	add	a,score_fonte_x 	;set SX
+	ld	(score_buffer+0),a
+	ld	a,187			;set DX
+	ld	(score_buffer+4),a
+	ld	hl,score_buffer
+	ld	bc,#1020
+	call	v9990_cmd
+
+	ld	a,(score+0)		;100 000
+	and	15
+	rlca
+	rlca
+	rlca
+	add	a,score_fonte_x 	;set SX
+	ld	(score_buffer+0),a
+	ld	a,179			;set DX
+	ld	(score_buffer+4),a
+	ld	hl,score_buffer
+	ld	bc,#1020
+	call	v9990_cmd
+	ret
+
+score_buffer:
+	dw	score_fonte_x	;SX
+	dw	score_fonte_y	;SY
+	dw	160		;DX
+	dw	000		;DY
+	dw	008		;NX
+	dw	008		;NY
+	db	000		;ARG
+	db	%00001100	;LOP
+	db	255		;WM0-7	0=enable SCA write  1=disable
+	db	000		;WM8-15 0=enable SCB write  1=disable
+	db	#40		;LMMM CMD
+
+;-------------------------------------------------------
+;
+;	PUT ALL
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,BC,HL
+;
+put_all_sp:
+	xor	a			;set VRAM add 3FE00
+	out	(vdp+4),a
+	out	(vdp+3),a		;LSB add
+	ld	a,#fe			;center add
+	out	(vdp+3),a
+	ld	a,3			;3 bits MSB add
+	out	(vdp+3),a
+
+	ld	bc,4*125		;125 sprites!! :-)
+	ld	hl,all_sp_data
+put_all_sp0:
+	ld	a,(hl)
+	out	(vdp+0),a
+	inc	hl
+	dec	bc
+	ld	a,b
+	or	c
+	jr	nz,put_all_sp0:
+	ret
+
+;---------------------------------------------------------------
+;
+;	SPRITE ANIMATION ROUTINE
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF,BC
+;
+sprite_anim:
+	ld	a,25		;set sprite generator at #08000
+	out	(vdp+4),a
+
+	ld	a,(spr_anim)
+	inc	a
+	and	63
+	ld	(spr_anim),a
+	and	#f0
+	rrca
+	rrca
+	rrca
+	ld	b,a
+	add	a,6
+	out	(vdp+3),a
+
+	ld	a,b
+	rrca
+	add	a,3
+	ld	(score_buffer+3),a
+	ld	(score_buffer+7),a
+	ld	(life_buffer+3),a
+	ld	(life_buffer+7),a
+	ret
+
+;routine universelle de test joystick
+;copie des routine d5h et d8h du bios
+;legerement modifiee pour retourner le flag z a 1 si rien n'est appuye
+;
+;by slayerman from ABYSS
+
+;*******************************************************************
+;
+;	lecture des joystick (port 0, 1, 2) voir #d5 du bios
+;
+;*******************************************************************
+rd_stk: dec	a
+	jp	m,keybrd    ;saut si clavier (port 0)
+	call	sel_stk 	;selection du port joystick
+	ld	hl,stick_tbl1
+end_stk:
+	and	#0f
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	or	a		;position le flag z si rien de nouveau ;-)
+	ret
+
+keybrd: call	rd_stk0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	hl,stick_tbl2
+	jr	end_stk
+sel_stk:			;selection du port joystick 1 ou 2
+	ld	b,a		;numero de port dans b
+	ld	a,#0f
+	call	rd_psgport
+	djnz	port2
+
+	and	#df		;joystick port 1
+	or	#03
+	jp	rd_stick
+
+port2	and	#af		;joystick port 2
+	or	#03
+rd_stick:
+	out	(#a1),a
+	call	rd_joy
+	ret
+rd_joy:
+	ld	a,#0e
+rd_psgport:
+	out	(#a0),a
+	in	a,(#a2)
+	ret
+rd_stk0:			;lit joystick port 0
+	in	a,(#aa)
+	and	#f0
+	add	a,8
+	out	(#aa),a
+	in	a,(#a9)
+	ret
+
+stick_tbl1:
+	defb	0,5,1,0,3,4,2,3,7,6,8,7,0,5,1,0
+stick_tbl2:
+	defb	0,3,5,4,1,2,0,3,7,0,6,5,8,1,7,0
+
+;*********************************************************
+;
+;	lecture des switch fire voir #d8 du bios
+;
+;*********************************************************
+rd_stg:
+	dec	a
+	jp	m,kbd_stg	;si strig 0 saute
+	push	af
+	and	1
+	call	sel_stk
+	pop	bc
+	dec	b
+	dec	b
+	ld	b,#10
+	jp	m,stg1
+	ld	b,#20
+stg1:	and	b
+stg2:	sub	1
+	sbc	a,a
+	or	a		;positionne le flag z si pas d'appui
+	ret
+
+kbd_stg:
+	call	rd_stk0
+	and	1
+	jr	stg2
+
+;---------------------------------------------------------------
+;
+;	SEND VDP COMMAND TO V9990
+;
+;	IN:	HL = add of data to send
+;		B  = number of data
+;		C  = number of first register
+;
+;	OUT:	none
+;	MOD:	AF,BC,HL
+;
+v9990_cmd:
+	call	wait_ce
+	ld	a,c			;send datas
+	out	(vdp+4),a
+	ld	c,vdp+3
+	otir
+	ld	a,52			;send command
+	out	(vdp+4),a
+	outi
+	ret
+
+wait_ce:
+	in	a,(vdp+5)		;test CE bit
+	and	%00000001
+	jr	nz,wait_ce		;VDP not ready
+	ret
+
+;***************************************
+;
+;	ATTEND UNE LIGNE
+;
+;***************************************
+waitline:
+	ld	b,a		;numero de la ligne dans B
+	ld	a,10
+	out	(#64),a
+	ld	a,b
+	out	(#63),a
+
+wait_li:
+	in	a,(#66) 		;wait Line Interupt
+	and	2
+	jp	z,wait_li
+	ld	a,7
+	out	(#66),a
+	ret
+
+;-------------------------------------------------------
+;
+;	WAIT FOR VSYNC
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+wait_vsync:
+	in	a,(vdp+5)
+	and	%01000000
+	jp	nz,wait_vsync
+wait_vsync0:
+	in	a,(vdp+5)
+	and	%01000000
+	jp	z,wait_vsync0
+	ret
+
+;---------------------------------------------------------------
+;
+;	SET SCREEN ON
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+screen_on:
+	ld	a,8
+	or	%11000000
+	out	(vdp+4),a
+	in	a,(vdp+3)
+	or	#80
+	out	(vdp+3),a
+	ret
+
+;---------------------------------------------------------------
+;
+;	SET SCREEN OFF
+;
+;	IN:	none
+;	OUT:	none
+;	MOD:	AF
+;
+screen_off:
+	ld	a,8
+	or	%11000000
+	out	(vdp+4),a
+	in	a,(vdp+3)
+	and	#7f
+	out	(vdp+3),a
+	ret
+
+an00:	dw	000		;SX
+	dw	112+256 	;SY
+	dw	160		;DX
+	dw	000+256 	;DY
+	dw	048		;NX
+	dw	008		;NY
+	db	000		;ARG
+	db	%00001100	;LOP
+	db	255		;WM0-7	0=enable SCA write  1=disable
+	db	000		;WM8-15 0=enable SCB write  1=disable
+	db	#40		;LMMM CMD
+
+*i	crtl
+*i	xtzyscrl
+enemy:
+*i	prg-enem
+
+fin	equ	$
+
+

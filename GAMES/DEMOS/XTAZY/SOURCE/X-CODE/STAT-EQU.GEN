@@ -1,0 +1,112 @@
+;*S 14,Q-,B 0,N
+stat_equ0:	equ	#f975
+
+play_busy:	equ	#f975	; status:   0 = not playing
+				;	 255 = playing
+songdata_bank1: equ	#f976	; mapperbank with song data
+songdata_bank2: equ	#f977	; mapperbank with song data
+songdata_bank3: equ	#f978	; mapperbank with song data
+songdata_adres: equ	#f979	; address of song data
+play_pos:	equ	#f97b	; current position
+play_step:	equ	#f97c	; current step
+status: 	equ	#f97d	; 3 status bytes (0 = off)
+step_buffer:	equ	#f980	; decrunched step, played next int
+load_buffer:	equ	#f998
+
+musmod		equ	load_buffer+3
+dest_page	equ	musmod+1
+f_r800		equ	dest_page+1
+m_r800		equ	f_r800+1
+
+replayer_bank	equ	m_r800+1
+
+opl4_flag	equ	replayer_bank+1
+
+bank_FD 	equ	opl4_flag+1
+bank_FE 	equ	bank_FD+1
+
+score		equ	bank_FE+1
+
+pat_map_bank	equ	score+6
+
+sceneA_bank1	equ	pat_map_bank+1
+
+sceneB_bank1	equ	sceneA_bank1+14
+
+Scroller_x	equ	sceneB_bank1+5
+Scroller_y	equ	Scroller_x+2
+
+ScrollerB_x	equ	Scroller_y+2
+ScrollerB_y	equ	ScrollerB_x+2
+
+
+stick:		equ	ScrollerB_y+2
+strig:		equ	stick+1
+spr_anim:	equ	strig+1
+
+scrollA_spd:	equ	spr_anim+1
+scrollB_spd:	equ	scrollA_spd+2
+scrollA_cnt:	equ	scrollB_spd+2
+scrollB_cnt:	equ	scrollA_cnt+1
+
+clip_Y_limit:	equ	scrollB_cnt+1
+clipB_Y_limit:	equ	clip_Y_limit+1
+
+speed:		equ	clip_Y_limit+1
+ship_dir:	equ	speed+2
+spy:		equ	ship_dir+1
+spx:		equ	spy+2
+
+fire_status:	equ	spx+2
+fire1_status:	equ	fire_status+1
+fire2_status:	equ	fire1_status+1
+
+missile_stat0:	equ	fire2_status+1
+missile_stat1:	equ	missile_stat0+1
+missile_stat2:	equ	missile_stat1+1
+miss0_stat:	equ	missile_stat2+1
+miss1_stat:	equ	miss0_stat
+miss2_stat:	equ	miss1_stat
+
+option_status:	equ	miss2_stat+1
+
+option_mode:	equ	option_status+1
+option_xy_tbl:	equ	option_mode+1
+
+life:		equ	option_xy_tbl+(2*32)
+life_bcd:	equ	life+1
+invincible:	equ	life_bcd+1
+
+slow_motion:	equ	invincible+1
+slow_cnt:	equ	slow_motion+1
+
+missile_status: equ	slow_cnt+1
+fire_type:	equ	missile_status+1
+
+stage_number:	equ	fire_type+1
+
+ship_spd_cnt:	equ	stage_number+1
+
+force_field:	equ	ship_spd_cnt+1
+field_counter:	equ	force_field+1
+
+ship_type:	equ	field_counter+1
+
+fire_max:	equ	ship_type+1
+missile_max:	equ	fire_max+1
+field_max:	equ	missile_max+1
+opt_type_max:	equ	field_max+1
+
+ralenti:	equ	opt_type_max+1
+ralenti_flag:	equ	ralenti+1
+speed_level:	equ	ralenti_flag+1
+
+
+fire_cnt0:	equ	speed_level+1
+fire_cnt1:	equ	fire_cnt0+1
+fire_cnt2:	equ	fire_cnt1+1
+
+stick_port:	equ	fire_cnt2+1
+
+stat_equ1:	equ	stick_port
+

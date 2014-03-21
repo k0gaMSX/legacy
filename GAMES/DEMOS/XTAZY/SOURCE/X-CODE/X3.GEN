@@ -1,0 +1,844 @@
+;*S 14,q-,g 0,b 0
+
+; a = nﬂ sons
+; b = si bit 128 alors non interrup ; 4 bits de poid f = stereo (x/16).
+; call Sound_effect
+
+
+;	X-ANIME BY ABYSS.
+
+	defb	0feh
+	defw	start
+	defw	end
+	defw	start
+
+	org	0c000h
+
+start:	ld	a,8		; Si "SPACE" alors end.
+	call	141h
+	ld	c,a
+	and	1
+	or	a
+	ret	z
+
+	ld	a,c		; Si "INS" alors bang!.
+	and	4
+	or	a
+	jr	nz,str
+
+	ld	a,1
+	ld	(bang),a
+
+str	halt
+
+	ld	b,3
+retour0:push	bc
+
+	ld	hl,str_spr	; Display sprites (attributs)
+	ld	de,07600h
+	ld	bc,128
+	call	05ch
+
+	pop	bc
+	djnz	retour0
+
+	ld	a,0
+	ld	(caps),a
+
+	ld	a,5
+	ld	bc,07000h
+	call	pal
+
+
+
+	ld	a,0		; Numero du personnage.
+	ld	e ,128		; Coordonnee Y de 0 a  255.
+	ld	hl,01024	; Coordonees X de 0 a 1024.
+	call	action
+
+
+
+	ld	a,5
+	ld	bc,02703h
+	call	pal
+
+	ld	a,(caps)
+	or	a
+	jr	z,zero
+
+	in	a,(0aah)
+	and	%10111111
+	jr	un
+
+zero:	in	a,(0aah)
+	or	040h
+
+un:	out	(0aah),a
+
+	ld	hl,str_spr	; Display sprites (attributs)
+	ld	de,07600h
+	ld	bc,128
+	call	05ch
+
+	jr	start
+
+pal:	di
+	out	(099h),a
+	ld	a,080h+16
+	out	(099h),a
+
+	ld	a,b
+	out	(09ah),a
+	ld	a,c
+	out	(09ah),a
+	ei
+
+	ret
+
+
+; Routine attribution d'un personnage et d'animations de tous les autres.
+
+;or	 a		 ; Demande un personnage, zero aucun.
+;	 jp	 z,z_life
+;
+;	 ld	 hl,z_life	 ; Cherche une place dans la zone de vie(s).
+;
+;	 ex	 af,af'          ; Sauve le numero du personnage.
+;
+;loopsch:ld	 a,(hl)
+;	 cp	 0c9h		 ; Si Ret alors place de libre juste apres
+;	 jr	 z,yes_ret	 ; le dernier personnage.
+;
+;	 cp	 018h		 ; Si Jr xxxx. alors autre traitement.
+;	 jr	 z,yes_jr
+;
+;
+;yes_ret:ld	 (hl),018h	 ; Met un JR +00 (saut a l'adresse libre).
+;	 inc	 hl
+;	 ld	 (hl),000h
+;
+;	 push	 hl		 ; Met un RET a la fin de la routine personnage.
+;	 ld	 de,26		 ; Comme c'est le dernier personnage alors ont.
+;	 add	 hl,de		 ; met un RET.
+;
+;	 ld	 (hl),0c9h
+;	 pop	 hl
+;
+;	 inc	 hl		 ; Adrs trouvee puis initialisee.
+;	 jr	 found_s	 ; Adresse de la place libre dans HL.
+;
+;yes_jr: inc	 hl
+;
+;	 ld	 a,(hl) 	 ; Si le jr saute a +0 alors la place n'est
+;	 or	 a		 ; Libre, ont continue la recherche.
+;	 jr	 nz,no_zer
+;
+;	 ld	 de,26
+;	 add	 hl,de
+;
+;	 jr	 loopsch	 ; Boucle pour la prochaine place a teste.
+;
+;no_zer: ld	 (hl),0 	 ; Le personnage d'avant doit sauter vers le
+;	 inc	 hl		 ; nouveau et le nouveau vers le suivant.
+;
+;	 push	 hl		 ; Calcul le saut vers le personnage suivant.
+;	 ld	 de,26
+;	 add	 hl,de
+;
+;	 sub	 27
+;	 ld	 (hl),a
+;	 pop	 hl		 ; Adresse de la place libre dans HL.
+;
+;
+;found_s:push	 hl		 ; Adresse de la place libre dans IX.
+;	 pop	 ix
+;
+;	 ex	 de,hl		 ; Copy le programme du personnage dans
+;	 ld	 hl,s_life	 ; la place libre.
+;	 ld	 bc,25
+;	 ldir
+;
+;	 ld	 de,dat_per	 ; Calcul l'adresse des datas du personnage.
+;	 ld	 l,a
+;	 ld	 h,0
+;
+;	 add	 hl,hl
+;	 add	 hl,de		 ; Adresse des datas du personnage dans
+;
+;	 ld	 e,(hl)
+;	 inc	 hl
+;	 ld	 d,(hl)
+;	 ex	 de,hl		 ; Position a l'adresse des datas du personnage.
+;
+;
+;	 ld	 a,(hl) 	 ; Nombre de vie(s).
+;	 ld	 (ix +1),a
+;	 inc	 hl
+;
+;	 ex	 af,af'
+;
+;
+;	 ret
+
+action: ld	ix,z_life	; Test s'il y a un personnage dans la chaine.
+
+	ld	e,(ix +00)	; Adresse a zero = non.
+	ld	d,(ix +01)
+
+	ld	a,e
+	or	d
+	ret	z		; Retour s'il c'est non.
+
+	add	ix,de		; Saut a la prochaine adresse si oui.
+
+loop_an:push	ix
+	call	anime		; Anime le personnage en question.
+	pop	ix
+
+	ld	e,(ix +13)	; Test s'il y en a un autre.
+	ld	d,(ix +14)
+
+	add	ix,de
+
+	ld	a,e
+	or	d
+	jr	nz,loop_an	; nz alors ont continue...
+
+	xor	a		; Bigbang a zero.
+	ld	(bang),a
+	ret			; Pas d'autre alors retour.
+
+; Traitement du bigbang.
+
+anime:	ld	a,(ix +3)	; Pas de condition alors pas de bigbang.
+	or	  (ix +4)
+	jr	z,nobang
+
+	ld	a,(bang)	; Pas de bigbang.
+	or	a
+	jr	z,nobang
+
+	ld	h,0
+	ld	l,(ix)
+	ld	de,datbang
+
+	dec	l
+	add	hl,hl
+	add	hl,de
+
+	ld	e,(hl)		; Adresse des conditions du bigbang.
+	inc	hl
+	ld	d,(hl)
+
+	ld	a,e		; Adresse a 0 alor pas de bigbang.
+	or	d
+
+	call	nz,chg_sequence
+
+nobang:
+
+; Routine animation d'images.
+
+	ld	l,(ix +5)	; IY Position dans la table des sprites.
+	ld	h,(ix +6)	; IX Position du pers. dans la zone de vies.
+	push	hl
+	pop	iy
+
+	ld	b,(ix +12)	; Duree d'apparition d'une image.
+	djnz	no_chg
+
+	ld	l,(ix +09)	; Sequence data address.
+	ld	h,(ix +10)
+
+	ld	e,(hl)		; Si b=0 alors lit l'adrs de la sequence image.
+	inc	hl		; Adresse de l'image + son compteur.
+	ld	d,(hl)
+	inc	hl
+
+	ld	a,e		; Si adr = 0 alors saut a une autre image.
+	or	d
+	jr	nz,jmp01
+
+	ld	e,(hl)		; Recupere dans DE l'adresse du saut.
+	inc	hl
+	ld	d,(hl)
+
+	ex	de,hl		; Adresse du saut dans HL.
+
+	ld	e,(hl)		; Nouvelle adresse de l'image + compteur.
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+				; Change sequence data address.
+jmp01:	ld	(ix +09),l
+	ld	(ix +10),h
+
+	ld	a,(de)
+	ld	b,a		; Nouvelle duree d'apparition d'une image.
+	inc	de
+
+	ld	l,(ix +5)	; IY Position dans la table des sprites.
+	ld	h,(ix +6)
+
+	push	hl
+	pop	iy
+
+	push	iy
+	push	bc
+
+	ld	b,(ix +2)
+
+	ld	a,(de)
+	inc	de
+	or	a
+	jr	nz,jmpspr
+
+loopspr:ld	a,(de)		; Met dans la table des sprites pointee par IY.
+	inc	de		; Les numeros d'images pointees DE.
+
+	ld	(iy +2),a
+	inc	iy
+	inc	iy
+	inc	iy
+	inc	iy
+
+	djnz	loopspr
+	jr	end_im
+
+jmpspr: ld	a,(de)		; Met dans la table des sprites pointee par IY.
+
+loopsp2:ld	(iy+2),a	; Les numeros d'images pointees DE.
+	add	a,4
+
+	inc	iy
+	inc	iy
+	inc	iy
+	inc	iy
+
+       djnz    loopsp2
+
+end_im: pop	bc
+	pop	iy
+
+no_chg: ld	(ix +12),b
+
+
+; Routine mouvement de sprites.
+
+	ld	l,(ix +07)	; move sequence address.
+	ld	h,(ix +08)
+
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ld	b,(ix +11)	; Duree du mouvement.
+	djnz	no_mov
+
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	dec	hl
+
+	ld	a,e
+	or	d
+	jr	nz,jmp02
+
+	inc	hl
+	inc	hl
+
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+
+	ex	de,hl
+
+jmp02:	ld	(ix +07),l	; change address mov.
+	ld	(ix +08),h
+
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+
+	ld	a,(de)
+	ld	b,a
+
+no_mov: ld	(ix +11),b
+
+	ex	de,hl
+	push	iy
+	inc	hl
+
+	ld	b,(ix +02)	 ; Nbr de sprite(s) dans B'.
+
+;	 ld	 a,(hl) 	 ; Slow command.
+;	 srl	 a
+;	 srl	 a
+;	 and	 (ix -5)
+;	 ld	 c,a
+
+	ld	a,(hl)		; Mouvement 1 ou 2.
+;	 and	 3
+
+	cp	2		; Selection du type de mouvement.
+	jr	z,move3
+
+	inc	hl
+
+	cp	1
+	jr	z,move2
+
+
+; Premiere routine de mouvements.
+
+
+loop_mv:			; Coordonnee Y.
+	ld	a,(scrl_sp +1)	; Deplacement du personnage + scrolling.
+	add	a,(iy)
+	add	a,(hl)		; HL adition pour mov du personnage.
+	ld	(iy),a		; IY coordonnee Y dans la table des sprites.
+
+slowY1: inc	hl
+	inc	iy
+				; Coordonnee X.
+	ld	a,(scrl_sp +0)	; Deplacement du personnage + scrolling.
+	add	a,(iy)
+	add	a,(hl)		; HL adition pour mov du personnage.
+	ld	(iy),a		; IY coordonnee Y dans la table des sprites.
+
+	inc	hl		; prochaine donnee pour prochain sprite.
+	inc	iy
+	inc	iy
+	inc	iy
+
+	djnz	loop_mv
+	jr	end_mv
+
+
+; Deuxieme routine de mouvements.
+
+
+move2:	;ld	 de,0		 ; Slow command.
+	;ld	 a,c
+	;or	 a
+	;jr	 nz,loopmv2
+
+	ld	d,(hl)
+	inc	hl
+	ld	e,(hl)
+
+
+loopmv2:ld	a,(scrl_sp +1)	; Coordonnee Y.
+	add	a,(iy)
+	add	a,d
+	ld	(iy),a
+
+	inc	iy
+	ld	a,(scrl_sp +0)	; Coordonnee X.
+	add	a,(iy)
+	add	a,e
+	ld	(iy),a
+
+	inc	iy
+	inc	iy
+	inc	iy
+
+	djnz	loopmv2
+	jr	end_mv
+
+; Troisieme routine de mouvements.
+
+move3:	dec	hl		; Mouvements par datas.
+	ld	a,(hl)		; Calcul l'adresse du mouvement Y,X.
+	sub	(ix +11)	 ; Adresse + (temp * 2).
+	inc	hl
+	inc	hl
+
+	ex	de,hl
+	ld	l,a
+	ld	h,0
+	add	hl,hl
+	add	hl,de
+
+;	 ld	 de,0		 ; Slow command.
+;	 ld	 a,c
+;	 or	 a
+;	 jr	 nz,loopmv3
+
+	ld	d,(hl)		; Y.
+	inc	hl
+	ld	e,(hl)		; X.
+
+loopmv3:ld	a,(scrl_sp +1)	; Coordonnee Y.
+	add	a,(iy)
+	add	a,d
+	ld	(iy),a
+
+	inc	iy
+	ld	a,(scrl_sp +0)	; Coordonnee X.
+	add	a,(iy)
+	add	a,e
+	ld	(iy),a
+
+	inc	iy
+	inc	iy
+	inc	iy
+
+	djnz	loopmv3
+
+end_mv: pop	iy
+
+
+; Condition
+
+
+	ld	e,(ix +03)	; Adresse des conditions.
+	ld	d,(ix +04)
+
+	ld	a,e
+	or	d
+	jr	z,end_cd
+
+	ex	de,hl		; adresse a lire si la condition est vrai.
+	ld	c,(hl)
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+	ex	de,hl
+
+	ld	(adrcond),bc
+
+	ld	c,0		; Compteur.
+
+loop_cd:ld	a,(de)		; 255 = end, sinon mode
+	inc	de
+
+	cp	255
+	jr	z,end_cd
+
+;	cp	1		; mode.
+;	jr	z,xxxxh
+
+	ld	a,(de)		; Numero du sprite a teste dans la tbl des spr.
+	inc	de
+
+	ex	de,hl		; Offset conditions.
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	push	hl		; sauve "DE".
+
+	ld	l,a		; Numero du sprite
+	ld	h,0
+
+	add	hl,hl		; Multiplie par quatre.
+	add	hl,hl
+
+	push	de
+	ld	de,str_spr	; Table des sprites
+	add	hl,de		; Adresse du sprite a tester.
+	pop	de
+
+	ld	b,(ix +2)
+
+	push	iy		; IY position du personnage dans la table.
+loopcd2:push	hl
+
+	ld	a,(iy+0)	; Yprs -Yspr
+	sub	(hl)
+	jr	nc,no_neg
+
+	neg
+	cp	16
+	jr	nc,not_tch
+
+	jr	tch_Y
+
+no_neg: cp	e		; 8
+	jr	nc,not_tch
+
+
+tch_Y:	inc	hl
+
+	ld	a,(iy+1)	; Xprs -Xspr
+	sub	(hl)
+	jr	nc,no_neg2
+
+	neg
+	cp	16
+	jr	nc,not_tch
+
+	jr	tch_X
+
+no_neg2:cp	d		; 8
+	jr	nc,not_tch
+
+tch_X:	call	touched
+
+	ld	a,1
+	ld	(caps),a
+
+not_tch:inc	iy
+	inc	iy
+	inc	iy
+	inc	iy
+
+	pop	hl
+	djnz	loopcd2
+
+	pop	iy
+	pop	de
+	inc	c
+
+	jr	loop_cd
+end_cd: ret
+
+; Resultats d'un contact entre un personnage avec un ou plusieur sprites
+
+touched:push	de		; Un sprite a ete touche...
+
+	ld	de,(adrcond)	; Adresse de la chaine des conditions.
+	ld	l,c		; plus le numero du test.
+	ld	h,0
+	add	hl,hl
+	add	hl,de
+
+	ld	e,(hl)		; Adresse de la chaine des resultats.
+	inc	hl
+	ld	d,(hl)
+
+	call	chg_sequence
+
+	pop	de
+
+	ld	a,(hl)		; 0= continue les conditions.
+	or	a
+	ret	z
+
+	pop	hl
+	pop	hl
+	pop	hl
+	pop	hl
+	ret
+
+chg_sequence:
+
+	ex	de,hl
+
+	ld	e,(hl)		; nouvelle sequence image.
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ld	a,d
+	cp	255
+	jr	z,no_sim
+
+	ld	(ix +09),e
+	ld	(ix +10),d
+
+	push	hl
+	ex	de,hl
+
+	ld	e,(hl)		; Timer de la nouvelle sequence image.
+	inc	hl
+	ld	d,(hl)
+
+	ld	a,(de)
+	ld	(ix +12),a
+	pop	hl
+
+no_sim	ld	e,(hl)		; nouvelle sequence du deplacement.
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ld	a,d
+	cp	255
+	jr	z,no_sde
+
+	ld	(ix +07),e
+	ld	(ix +08),d
+
+	push	hl
+	ex	de,hl
+
+	ld	e,(hl)		; Timer de la nouvelle sequence du deplacement.
+	inc	hl
+	ld	d,(hl)
+
+	ld	a,(de)
+	ld	(ix +11),a
+	pop	hl
+
+no_sde: ld	e,(hl)		; Nouvelle adresse des conditions
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+
+	ld	(ix +3),e
+	ld	(ix +4),d
+
+	ret
+
+caps:	defb	0		; Utilise pour tester les conditions.
+bang:	defb	0
+
+scrl_sp:defw	00000h
+adrcond:defw	00000h
+;slow_mv:defw	 00000h
+
+
+; Identite des personnages.
+;
+;
+;dat_per:defw	 00000h 			 ; Inutilisee.
+;	 defw	 pers01
+;
+;pers01: defw	 00402h,side01,move01,cond01
+;
+
+; liste des perssonages a detruires au moment du bigbang.
+
+datbang:defw	 c3_00, c3_00, c3_00, c3_00	; Adresse a 0 = pas de b-bang.
+	defw	00000h,00000h,00000h,00000h	; il y a autant d'adr que de
+						; personnages.
+
+; Datas des animations des personnages.
+
+side01: defw	pic01,pic02,pic03,0,side01	; Picture sequence address.
+side02: defw	pic04,pic05,pic06,0,side02
+side03: defw	pic07,0,side03
+
+pic01:	defb	064,1,01*4			; Timing, mode, picture.
+pic02:	defb	064,1,02*4
+pic03:	defb	064,1,03*4
+
+pic04:	defb	032,1,04*4
+pic05:	defb	032,1,05*4
+pic06:	defb	032,1,06*4
+
+pic07:	defb	001,1,10*4	; test pour le bigbang
+
+; Data des deplacements
+
+move01: defw	mv01,mv02,mv03,mv04,0,move01
+move02: defw	mv09,0,move02
+move03: defw	mv10,0,move03
+
+mv01:	defb	032,1, 00,+01		; Time, mode, Y, X.	; Mode1.
+mv02:	defb	016,1,+01,-01
+mv03:	defb	016,1,-01,-01
+mv04:	defb	032,1, 00,+01
+
+mv09:	defb	003,2
+	defb	+01,-01, +00,-01, +00,-01, +00,-1		; Mode2.
+
+mv10:	defb	000,1			; test pour le bigbang
+
+; Conditions des personnages.
+					; X et Y = offset of conditions.
+cond00: defw	00000h	; Pas de condition.
+	defb	255
+
+cond01: defw	chg01			; adrs, mod, nﬂspr, Y, X, end/mod
+	defb	0, 8, 8, 16,255
+chg01:	defw	c3_00
+c1_00:	defw	side02,move02,00000h,1	; 0ffffh = aucun changements.
+					; 1 ne pas continuer les tests.
+cond02: defw	chg02
+	defb	0, 8, 8, 16,255
+chg02:	defw	c3_00
+c2_00:	defw	side01,move01,00000h,0
+
+c3_00:	defw	side03,move03,00000h,1	; test pour le bigbang.
+
+; Table des attributs.
+
+str_spr:defb	064	,032	,00*4,0  ; Nﬂdu spr *4 (V9958).
+	defb	064	,016	,01*4,0
+	defb	064+16	,032	,02*4,0
+	defb	064+16	,016	,03*4,0
+
+	defb	064	,240	,04*4,0
+	defb	064	,224	,05*4,0
+	defb	064+16	,240	,06*4,0
+	defb	064+16	,224	,07*4,0
+
+	defb	064	,128	,08*4,0
+	defb	128+48	,0	,09*4,0
+	defb	212	,0	,10*4,0
+	defb	212	,0	,11*4,0
+
+	defb	212	,0	,12*4,0
+	defb	212	,0	,13*4,0
+	defb	212	,0	,14*4,0
+	defb	212	,0	,15*4,0
+
+	defb	128	,032	,16*4,0  ; Nﬂdu spr *4 (V9958).
+	defb	128	,016	,17*4,0
+	defb	128+16	,032	,18*4,0
+	defb	128+16	,016	,19*4,0
+
+	defb	064	,240-64 ,20*4,0
+	defb	064	,224-64 ,21*4,0
+	defb	064+16	,240-64 ,22*4,0
+	defb	064+16	,224-64 ,23*4,0
+
+
+	defb	212	,0	,24*4,0
+	defb	212	,0	,25*4,0
+	defb	212	,0	,26*4,0
+	defb	212	,0	,27*4,0
+	defb	212	,0	,28*4,0
+	defb	212	,0	,29*4,0
+	defb	212	,0	,30*4,0
+end_spr:defb	212	,0	,31*4,0
+
+
+; Zone de vie des personnages.
+; La taille de cette zone varie en fonction du nombre de personnages.
+
+z_life: defw	00002h		; adrs indicant le debut de la zone (0= rien)
+
+	defb	1		; numero de personnage.
+	defw	0402h		; nbr de sprite(s), nbr de vie(s).
+	defw	cond01		; Zero pas de conditions.
+	defw	str_spr +00	; Position du personnage dans la table des spr.
+	defw	move01		; Adresse du deplacement actuel.
+	defw	side01		; Adresse de l'image actuel.
+	defw	00120h		; B = temp image, temp deplacement personnage.
+	defw	0000fh		; Saut au prochain personnage.
+
+	defb	2		; numero de personnage.
+	defw	0402h		; nbr de sprite(s), nbr de vie(s).
+	defw	cond02		; Zero pas de conditions.
+	defw	str_spr +16	; Position du personnage dans la table des spr.
+	defw	move02		; Adresse du deplacement actuel.
+	defw	side02		; Adresse de l'image actuel.
+	defw	00103h		; B = temp image, temp deplacement personnage.
+	defw	0000fh		; Saut au prochain personnage.
+
+	defb	1		; numero de personnage.
+	defw	0402h		; nbr de sprite(s), nbr de vie(s).
+	defw	cond01		; Zero pas de conditions.
+	defw	str_spr +64	; Position du personnage dans la table des spr.
+	defw	move01		; Adresse du deplacement actuel.
+	defw	side02		; Adresse de l'image actuel.
+	defw	00120h		; B = temp image, temp deplacement personnage.
+	defw	0000fh		; Saut au prochain personnage.
+
+	defb	2		; numero de personnage.
+	defw	0402h		; nbr de sprite(s), nbr de vie(s).
+	defw	cond02		; Zero pas de conditions.
+	defw	str_spr +80	; Position du personnage dans la table des spr.
+	defw	move02		; Adresse du deplacement actuel.
+	defw	side02		; Adresse de l'image actuel.
+	defw	00103h		; B = temp image, temp deplacement personnage.
+	defw	00000h		; Saut au prochain personnage.
+
+end:
+

@@ -1,0 +1,717 @@
+*S 14,B 0,G 0
+;,Q+,W,T
+
+*i spdata
+*i stat-equ
+*i zone
+
+; datas exchange for names
+
+none:		equ	 0
+jump:		equ	 0
+jump2:		equ	-2
+dead:		equ	-1
+mode0:		equ	 0
+mode1:		equ	 1
+mode2:		equ	 2
+deads:		equ	 0
+no_chg: 	equ	-1
+stop:		equ	 1
+cont:		equ	 0
+end_test:	equ	-1
+sound:		equ	254 * 256
+birth:          equ     253 * 256
+
+
+set_screen:	macro	@test, @number, @Y_pos, @X_pos
+		defw	@test
+		defb	@number
+		defw	@Y_pos, @X_pos
+                endm
+
+;*L+
+		org	#8000
+
+		dw	position_datas
+		dw	position_datas
+		dw	personages_dat
+		dw	auxiliary_Y
+		dw	data_bigbang
+		dw	square_data
+		dw	collision_data
+
+
+position_datas:
+		set_screen	256, 13, 064, 256-32		; ship1
+		set_screen	256, 13, 100, 256-32		; ship2
+
+		set_screen	280, 15, 120, 280-32		; ship7
+		set_screen	280, 15, 140, 280-32		; ship8
+
+		set_screen	512, 01, 100, 512-32		; ship3
+		set_screen	512, 01, 150, 512-32		; ship4
+
+		set_screen	768, 11, 064, 768-32		; ship5
+		set_screen	768, 11, 096, 768-32		; ship6
+
+		set_screen	790, 04, 338, 1000		; crystal 1
+		set_screen	846, 05, 300, 1056		; crystal 3
+
+		set_screen	900, 10, 128, 900-32		; ship7
+		set_screen	900, 10, 140, 900-32		; ship8
+
+		set_screen	1120-210, 04, 312, 1120 	; crystal 1
+		set_screen	1142, 05, 360, 1352		; crystal 3
+
+		set_screen	1384-210, 02, 360, 1384 	; crystal 1
+		set_screen	1648-210, 05, 296, 1648 	; crystal 3
+
+		set_screen	1680-210, 04, 288, 1680 	; crystal 1
+		set_screen	1712-210, 04, 280, 1712 	; crystal 1
+
+		set_screen	1773-255, 17, 216, 1773 	; embrion
+		set_screen	1776-255, 17, 240, 1776 	; embrion
+		set_screen	1782-255, 17, 264, 1782 	; embrion
+		set_screen	1784-255, 17, 200, 1784 	; embrion
+		set_screen	1786-255, 17, 232, 1786 	; embrion
+		set_screen	1792-255, 17, 192, 1792 	; embrion
+		set_screen	1796-255, 17, 208, 1796 	; embrion
+		set_screen	1804-255, 17, 248, 1804 	; embrion
+
+		set_screen	1996-210, 05, 300, 1976 	; embrion
+		set_screen	2000-210, 03, 295, 2024 	; crystal
+
+		defw	00	; zero = read end
+
+
+; personality of personage
+
+personages_dat: dw	none		; personage data address
+		dw	personage01	; ship1
+		dw	personage02	; crystal
+		dw	personage03
+		dw	personage04
+		dw	personage05
+		dw	personage06	; explose
+		dw	personage07
+		dw	personage08	; option
+		dw	personage08	; option  --> personage09
+		dw	personage10	; ship2
+		dw	personage11	; ship3
+		dw	personage08	; option  --> personage12
+		dw	personage13	; ship4
+		dw	personage08	; option  --> personage14
+		dw	personage15	; ship5
+		dw	personage08	; option  --> personage16
+		dw	personage17	; embrion
+		dw	personage18	; fire
+
+					; parameters of personage
+personage01:	db	%10000000
+		db	002h
+		dw	cond01, move01, side01
+		db	+00,+00,   +00,+16
+
+personage02:	db	%10000000
+		db	007h
+		dw	cond02, move04, side02
+		db	+00,+00
+		db	+16,+00, +16,+16
+		db	+32,+00, +32,+16
+		db	+48,+00, +48,+16
+
+personage03:	db	%10000000
+		db	005h
+		dw	cond02, move02, side02
+		db	+00,+00
+		db	+16,+00, +16,+16
+		db	+32,+00, +32,+16
+
+personage04:	db	%10000000
+		db	003h
+		dw	cond02, move02, side02
+		db	+00,+00
+		db	+16,+00, +16,+16
+
+personage05:	db	%10000000
+		db	002h
+		dw	cond02, move05, side03
+		db	+00,+00, +16,+00
+
+personage06:	db	%10000000
+		db	003h
+		dw	none  , move06, side06
+		db	+00,+00, +08,+10, +08,+04
+
+personage07:	db	%10000000
+		db	003h
+		dw	none  , move06, side07
+		db	+00,-04, -04,+08, +10,+10
+
+personage08:	db	%10000000
+		db	001
+		dw	cond03, move06, side08
+		db	+00,+00
+
+personage10:	db	%10000000
+		db	002h
+		dw	cond04, move01, side01
+		db	+00,+00,   +00,+16
+
+personage11:	db	%10000000
+		db	002h
+		dw	cond05, move01, side01
+		db	+00,+00,   +00,+16
+
+personage13:	db	%10000000
+		db	002h
+		dw	cond06, move01, side01
+		db	+00,+00,   +00,+16
+
+personage15:	db	%10000000
+		db	002h
+		dw	cond07, move01, side01
+		db	+00,+00,   +00,+16
+
+personage17:	db	%10000000
+		db	1
+		dw	cond08, move07, side15
+		db	+00,+00
+
+personage18:	db	%11000000	; personage in ECO mode
+		db	1
+		dw	none		; none
+		dw	none		; result of div
+		dw	pic19		; animes
+
+		db	+00,+00
+
+; bigbang data
+					; if address zero then no bigbang
+
+data_bigbang:	dw	 none,	none,  none,  none
+		dw	 none,	none,  none,  none
+		dw	 none,	none,  none,  none
+
+; patterns animations datas
+					; patterns sequence address
+
+side01: 	dw	pic01,	   jump,     side01
+side02: 	dw	pic04,	   jump,     side02
+side03: 	dw	pic05,	   jump,     side03
+
+;side05:	 dw	pic07,	sound+07, birth+07,	dead
+
+side06: 	dw	pic08
+		dw	sound+07
+		dw	pic09, pic10, pic11
+		dw	birth+07
+		dw	pic12, pic13, pic14
+		dw	dead
+
+side07: 	dw	pic08, pic09, pic10, pic11
+		dw	pic12, pic13, pic14
+		dw	dead
+
+side08: 	dw	pic15, jump, side08
+
+side09: 	dw	pic08
+		dw	sound+07
+		dw	pic09, pic10, pic11
+		dw	birth+07
+		dw	pic12, pic13
+		dw	birth+08
+		dw	pic14
+		dw	dead
+
+side10: 	dw	pic08
+		dw	sound+07
+		dw	pic09, pic10, pic11
+		dw	birth+07
+		dw	pic12, pic13
+		dw	birth+09
+		dw	pic14
+		dw	dead
+
+side11: 	dw	pic08
+		dw	sound+07
+		dw	pic09, pic10, pic11
+		dw	birth+07
+		dw	pic12, pic13
+		dw	birth+12
+		dw	pic14
+		dw	dead
+
+side13: 	dw	pic08
+		dw	sound+07
+		dw	pic09, pic10, pic11
+		dw	birth+07
+		dw	pic12, pic13
+		dw	birth+14
+		dw	pic14
+		dw	dead
+
+side14: 	dw	pic08
+		dw	sound+07
+		dw	pic09, pic10, pic11
+		dw	birth+07
+		dw	pic12, pic13
+		dw	birth+16
+		dw	pic14
+		dw	dead
+
+side15		dw	pic16,pic17,pic18,pic17,jump,side15
+
+; patterns sequences
+					; timing, mode, picture, pal + plan
+
+pic01:		db	064, mode1, 04, 80h
+pic02:		db	064, mode1, 04, 80h
+pic03:		db	064, mode1, 04, 80h
+
+pic04:		db	064, mode1, 80, %00100000
+pic05:		db	032, mode1, 88, %00100000
+
+pic07:		db	001, mode1, 04, 80h
+
+pic08:		db	08, mode0, 66,80h, 00,90h, 00,90h
+pic09:		db	08, mode0, 65,80h, 00,90h, 66,80h
+pic10:		db	08, mode0, 64,80h, 66,80h, 65,80h
+pic11:		db	08, mode0, 65,80h, 65,80h, 64,80h
+pic12:		db	08, mode0, 66,80h, 64,80h, 65,80h
+pic13:		db	08, mode0, 00,90h, 65,80h, 66,80h
+pic14:		db	08, mode0, 00,90h, 66,80h, 00,90h
+
+pic15:		db	01, mode1, 21,80h
+
+pic16:		db	16,mode0, 112,%11000000
+pic17:		db	16,mode0, 113,%11000000
+pic18:		db	16,mode0, 114,%11000000
+
+pic19:		db	%11100000
+		db	4,67,4,68,4,69,4,70,4,69,4,68,0
+		dw	pic19 +1
+
+; motions animations datas
+					; motions sequence address
+
+move01: 	dw	mv01, mv02, mv03, jump,move01
+
+move04: 	dw	mv04, mv04, mv04
+		dw	mv04, mv04, mv04
+move02: 	dw	mv04, mv04, mv04
+		dw	mv04, mv04, mv04
+		dw	mv04, mv04, mv04
+move03: 	dw	mv05, jump, move03
+
+move05: 	dw	mv06, mv06, mv06, mv06
+		dw	mv06, mv06, mv06, mv06
+
+move06: 	dw	mv07, jump, move06
+
+move07: 	dw	mv08, jump, move07
+
+; motions sequences
+					; time, mode, Y, X
+
+mv01:		db	255, mode1, +00, +01
+mv02:		db	255, mode1, +00, +01
+mv03:		db	255, mode1, +00, +01
+
+mv04:		db	010, mode2
+		db	-01,+00
+		db	+00,+00
+		db	-01,+00
+		db	+00,+00
+		db	-01,-01
+		db	+00,+00
+		db	-01,-00
+		db	+00,+00
+		db	-01,-00
+		db	+00,+00
+		db	-01,-01
+
+mv05:		db	001, mode1, +00, +00
+mv07:		db	001, mode1, +00, +00, +00, +00
+
+mv06:		db	007, mode2
+		db	-01,+00
+		db	+00,+00
+		db	-01,-01
+		db	+00,+00
+		db	-01,+00
+		db	+00,+00
+		db	-01,-01
+		db	+00,+00
+
+mv08:		db	48, mode2
+		db	+01,+00, +00,+00, +00,+00, +00,+00
+		db	+00,+00, +00,+00, +00,+00, +00,+00
+		db	+01,+00, +00,+00, +00,+00, +00,+00
+		db	+00,+00, +00,+00, +00,+00, +00,+00
+		db	+01,+00, +00,+00, +00,+00, +00,+00
+		db	+00,+00, +00,+00, +00,+00, +00,+00
+
+		db	-01,+00, +00,+00, +00,+00, +00,+00
+		db	-00,+00, +00,+00, +00,+00, +00,+00
+		db	-01,+00, +00,+00, +00,+00, +00,+00
+		db	-00,+00, +00,+00, +00,+00, +00,+00
+		db	-01,+00, +00,+00, +00,+00, +00,+00
+		db	-00,+00, +00,+00, +00,+00, +00,+00
+
+
+;mv09:		 db	 003, mode2
+;		 db	 +01,-01, +00,-01, +00,-01, +00,-1
+
+;mv10:		 db	 000, mode1, +00, -00
+
+
+; tests datas of personages
+					; address, mode, sprite, end/mode
+cond01: 	dw	test_true_01
+		db	mode0, (fire_data - all_sp_data) /4
+		db	mode0, (fire1_data - all_sp_data) /4
+		db	mode0, (fire2_data - all_sp_data) /4
+		db	mode0, (missile_data - all_sp_data) /4
+		db	mode0, (missile1_data - all_sp_data) /4
+		db	mode0, (missile2_data - all_sp_data) /4
+		db	mode0, (ship_data - all_sp_data) /4
+		db	mode0, (ship_data +4 - all_sp_data) /4
+		db	end_test
+
+cond02: 	dw	test_true_02
+		db	jump2
+		dw	cond01 + 2
+
+cond03: 	dw	test_true_03
+		db	mode0, (ship_data - all_sp_data) /4
+		db	mode0, (ship_data +4 - all_sp_data) /4
+		db	end_test
+
+cond04: 	dw	test_true_04
+		db	jump2
+		dw	cond01 + 2
+
+cond05: 	dw	test_true_05
+		db	jump2
+		dw	cond01 + 2
+
+cond06: 	dw	test_true_06
+		db	jump2
+		dw	cond01 + 2
+
+cond07: 	dw	test_true_07
+		db	jump2
+		dw	cond01 + 2
+
+cond08: 	dw	test_true_08
+		db	jump2
+		dw	cond01 + 2
+
+cond09: 	dw	test_true_09
+		db	jump2
+		dw	cond01 + 2
+
+cond10: 	dw	test_true_10
+		db	jump2
+		dw	cond01 + 2
+
+cond11: 	dw	test_true_11
+		db	jump2
+		dw	cond01 + 2
+
+
+test_true_01:	dw	c3_00,c3_00,c3_00,c3_00,c3_00,c3_00,c5_00,c5_00
+test_true_02:	dw	c4_00,c4_00,c4_00,c4_00,c4_00,c4_00,c4_00,c4_00
+test_true_03:	dw	c6_00, c6_00
+
+test_true_04:	dw	c7_00,c7_00,c7_00,c7_00,c7_00,c7_00,c5_00,c5_00
+test_true_05:	dw	c8_00,c8_00,c8_00,c8_00,c8_00,c8_00,c5_00,c5_00
+test_true_06:	dw	c9_00,c9_00,c9_00,c9_00,c9_00,c9_00,c5_00,c5_00
+
+test_true_07:	dw	c10_00,c10_00,c10_00,c10_00,c10_00,c10_00,c5_00,c5_00
+test_true_08:	dw	c11_00,c11_00,c11_00,c11_00,c11_00,c11_00,c5_00,c5_00
+test_true_09:	dw	c12_00,c12_00,c12_00,c12_00,c12_00,c12_00,c5_00,c5_00
+test_true_10:	dw	c13_00,c13_00,c13_00,c13_00,c13_00,c13_00,c5_00,c5_00
+
+test_true_11:	dw	c5_00,c5_00,c5_00,c5_00,c5_00,c5_00,c5_00,c5_00
+
+
+; datas changes if testing is true
+					; pat, mov, test, (stop/cont)
+
+c3_00:		dw	side09, move06,   none,stop
+c4_00:		dw	no_chg, no_chg, cond02,cont
+c5_00:		dw	side06, move06,   none,stop
+c6_00:		dw	deads,	 none,	 none,stop
+c7_00:		dw	side10, move06,   none,stop
+c8_00:		dw	side11, move06,   none,stop
+c9_00:		dw	side13, move06,   none,stop
+c10_00: 	dw	side14, move06,   none,stop
+c11_00: 	dw	side15, move07, cond09,stop
+c12_00: 	dw	side15, move07, cond10,stop
+c13_00: 	dw	side15, move07, cond11,stop
+
+
+; offset for sprites tests
+
+square_data:		;Ys -Yd  Xs -Xd
+		db	+02,+13,+08,+08 +2  ;0		; ships sprites
+		db	+04,+06,+00,+16
+		db	+02,+13,+08,+08 +2
+		db	+05,+08,+00,+16
+		db	+02,+13,+08,+08 +2
+		db	+05,+08,+00,+16
+		db	+02,+13,+08,+08 +2
+		db	+05,+08,+00,+16
+		db	+02,+13,+08,+08 +3  ;8
+		db	+04,+08,+00,+16
+
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+
+		db	+02,+10,+01,+10     ;15 	; option for main ship
+
+		db	+00,+10,+00,+07     ;16 	; missile
+		db	+01,+05,+00,+11
+
+		db	+07,+08,+00,+09     ;18 	; fire
+		db	+07,+08,+00,+16     ;19 	; laser
+		db	+04,+12,+00,+16     ;20 	; laser2
+		db	+04,+10,+02,+12     ;21 	; option for eat
+
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16 ;24
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16 ;32
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16 ;40
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16 ;48
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16 ;56
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16 ;64
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16 ;72
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+
+		db	+05,+12,+00,+10 ;80	; grand crystal haut gauche
+		db	+00,+17,+03,+11
+		db	+11,+06,+00,+03
+		db	+08,+00,+06,+10
+		db	+00,+17,+00,+05
+		db	+00,+17,+10,+06
+		db	+00,+17,+00,+10
+		db	+00,+12,+04,+10
+
+		db	+14,+02,+00,+02 ;88
+		db	+00,+16,+04,+04
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16 ;96
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16 ;104
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16 ;112
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16 ;120
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+		db	+00,+16,+00,+16
+;125
+
+collision_data: dw	list00,list01,list01,list01
+		dw	list01,list01,list00,list00
+		dw	list02,list03,list01,list01
+		dw	list04,list01,list05,list01
+		dw	list06,list01
+
+list00: 	dw	none
+
+list01: 	dw	write00 	; personage1-?
+		db	(fire_data - all_sp_data) /4
+		dw	write01
+		db	(fire1_data - all_sp_data) /4
+		dw	write02
+		db	(fire2_data - all_sp_data) /4
+		dw	write03
+		db	(missile_data - all_sp_data) /4
+		dw	write04
+		db	(missile1_data - all_sp_data) /4
+		dw	write05
+		db	(missile2_data - all_sp_data) /4
+		dw	write06
+		db	(ship_data - all_sp_data) /4
+		dw	write06
+		db	(ship_data +4 - all_sp_data) /4
+		dw	none
+
+list02: 	dw	write07 	; personage8
+		db	(ship_data - all_sp_data) /4
+		dw	write07
+		db	(ship_data +4 - all_sp_data) /4
+		dw	none
+
+list03: 	dw	write08 	; personage9
+		db	(ship_data - all_sp_data) /4
+		dw	write08
+		db	(ship_data +4 - all_sp_data) /4
+		dw	none
+
+list04: 	dw	write09 	; personage9
+		db	(ship_data - all_sp_data) /4
+		dw	write09
+		db	(ship_data +4 - all_sp_data) /4
+		dw	none
+
+list05: 	dw	write10 	; personage9
+		db	(ship_data - all_sp_data) /4
+		dw	write10
+		db	(ship_data +4 - all_sp_data) /4
+		dw	none
+
+list06: 	dw	write11 	; personage9
+		db	(ship_data - all_sp_data) /4
+		dw	write11
+		db	(ship_data +4 - all_sp_data) /4
+		dw	none
+
+write00:	dw	fire_data
+		db	212
+		dw	fire_status
+		db	0
+		dw	fire_cnt0
+		db	0
+		dw	none
+
+write01:	dw	fire1_data
+		db	212
+		dw	fire1_status
+		db	0
+		dw	fire_cnt1
+		db	0
+		dw	none
+
+write02:	dw	fire2_data
+		db	212
+		dw	fire2_status
+		db	0
+		dw	fire_cnt2
+		db	0
+		dw	none
+
+write03:	dw	missile_data
+		db	212
+		dw	missile_stat0
+		db	0
+		dw	none
+
+write04:	dw	missile1_data
+		db	212
+		dw	missile_stat1
+		db	0
+		dw	none
+
+write05:	dw	missile2_data
+		db	212
+		dw	missile_stat2
+		db	0
+		dw	none
+
+write06:	dw	ship_destroy
+		db	1
+		dw	none
+
+write07:	dw	getting_option
+		db	2
+		dw	none
+
+write08:	dw	getting_option
+		db	3
+		dw	none
+
+write09:	dw	getting_option
+		db	1
+		dw	none
+
+write10:	dw	getting_option
+		db	4
+		dw	none
+
+write11:	dw	getting_option
+		db	0
+		dw	none
+
+auxiliary_Y:	defs	125 * 2
+

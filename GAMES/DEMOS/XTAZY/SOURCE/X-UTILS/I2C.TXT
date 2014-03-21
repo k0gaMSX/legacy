@@ -1,0 +1,343 @@
+ssous
+        PUSH    PSW                     ; noter C
+        MOV     R6,#8                   ; charger le compteur de bits
+I2CGET1:
+        SETB    C
+        LCALL   I2CDOBIT                ; lire un bit sur le bus I2C
+        RLC     A           ; le faire entrer dans l'accu par rotation
+        MOV     R7,A                    ; sauvegarder l'accumulateur
+        MOV     A,I2C_STAT  ; v‚rifier si d‚passement du temps
+        ANL     A,#I2C_TO
+        JNZ     I2CGET2                 ; oui -> saut
+        MOV     A,R7                    ; r‚cup‚rer l'accumulateur
+        DJNZ    R6,I2CGET1              ; et reprendre la boucle
+
+        POP     PSW                     ; r‚cup‚rer l'ancien bit C
+        LJMP    I2CDOBIT          ; l'‚crire sur le bus (Ack / NoAck)
+
+I2CGET2:
+        POP     PSW          ; vider la pile
+        RET                  ; et retour (erreur signal‚e dans I2C_STAT)
+
+;-------------------------------------------------------------------------
+;                                                                        :
+;  Routine I2CDOBIT                                                      :
+;                                                                        :
+;  Fonction :                                                            :
+;  Emet un bit sur le bus I2C (avec une impulsion d'horloge). Lit SDA.   :
+;  En ‚criture, C contient le bit … ‚crire. En lecture C doit ˆtre mis   :
+;  … 1. Au retour, C contient le bit lu.                                 :
+;  La routine accepte les demandes d'‚tat d'attente par les esclaves au  :
+;  moyen de la ligne SCL. Toutefois l'allongement maximal ne peut durer  :
+;  que 4 x (I2C_CMAX) cycles. I2C_CMAX est la variable qui contient le   :
+;  temps d'attente maximal. Un d‚passement de ce temps lŠve le drapeau   :
+;  Time-Out dans l'octet d'‚tat I2C.                                     :
+;                                                                        :
+;  Entr‚e :                                                              :
+;  C         -  bit … ‚crire (1 en lecture)                              :
+;  I2C_CMAX  -  temps d'attente maximal du bus I2C                       :
+;                                                                        :
+;  Sortie :                                                              :
+;  C         -  bit lu (ignorer en ‚criture)                             :
+;                                                                        :
+;  Cons‚quences :                                                        :
+;  R7, modification ‚ventuelle de I2C_STAT                               :
+;                                                                        :
+;  Occupation de la pile (sans l'adresse de retour) :                    :
+;  n‚ant                                                                 :
+;                                                                        :
+;  Temps d'ex‚cution (CALL exclu) :                                      :
+;  Meilleur cas (pas d'attente)  :  14 cycles                            :
+;  Chaque attente dure :            4 cycles                             :
+;  Pire des cas (Time-Out)  :  environ 4 x (I2C_CMAX)                    :
+;                                                                        :
+;  Remarque :                                                            :
+;  La routine sous cette forme fonctionne jusqu'… 14,4 MHz. Pour des     :
+;  fr‚quences d'horloge plus ‚lev‚es, le d‚lai entre SDA et SCL est trop :
+;  court, modifier le code ici.                                          :
+;                                                                        :
+;-------------------------------------------------------------------------
+I2CDOBIT:
+        MOV     PI2C_SDA,C              ; SDA … 1
+        MOV     R7,I2C_CMAX             ; charger le compteur R7
+                                        ; d‚passement de temps
+        SETB    PI2C_SCL                ; SCL … 1
+
+I2CDOB1:
+        JB      PI2C_SCL,I2CDOB2        ; si SCL = 1 -> saut
+        DJNZ    R7,I2CDOB1              ; sinon boucler (un autre occupant
+                                        ; du bus retient SCL … 0,
+                               ; par exemple pour cr‚er un ‚tat d'attente)
+        ORL     I2C_STAT,#I2C_TO        ; si compteur d‚borde -> lever
+                                ; drapeau d‚passement dans l'octet d'‚tat
+        RET                             ; et retour
+
+I2CDOB2:
+        NOP                             ; 3 NOPs en guise de retard
+        NOP                             ; (suffisants jusqu'… 14,4 MHz)
+        NOP
+        MOV     C,PI2C_SDA              ; lire SDA
+        CLR     PI2C_SCL                ; rabaisser SCL
+        RET                             ; et retour
+
+
+                :
+;  Cons‚quences :                                                        :
+;  PI2C_SDA & PI2C_SCL sont hauts aprŠs ex‚cution                        :
+;                                                                        :
+;  Occupation de la pile (sans l'adresse de retour) :                    :
+;  n‚ant                                                                 :
+;                                                                        :
+;  Temps d'ex‚cution (CALL exclu) :                                      :
+;  10 cycles                                                             :
+;                                                                        :
+;  Remarque :                                                            :
+;  La routine sous cette forme fonctionne jusqu'… 14,4 MHz. Pour des     :
+;  fr‚quences d'horloge sup‚rieures, le d‚lai entre les fronts montants  :
+;  de SCL et SDA est trop court. Il faut donc modifier le code ici.      :
+;-------------------------------------------------------------------------
+I2CSTOP:
+        CLR     PI2C_SDA                ; abaisse SDA (par pr‚caution)
+        SETB    PI2C_SCL                ; lŠve SCL
+        NOP                             ; 5 NOP en guise de retard
+        NOP                             ; (suffit jusqu'… 14,4 MHz)
+        NOP
+        NOP
+        NOP
+        SETB    PI2C_SDA                ; maintenant abaisse aussi SDA
+        RET
+
+;-------------------------------------------------------------------------
+;                                                                        :
+;  Routine I2CSEND                                                       :
+;                                                                        :
+;  Fonction :                                                            :
+;  Emet un octet I2C. Utilise pour cela la routine I2CDOBIT. Voir cette  :
+;  routine pour les d‚tails bit … bit. R‚agit au d‚passement de temps.   :
+;  Autorise l'esclave … demander des temps d'attente. L'acquiescement    :
+;  de l'esclave se trouve dans C et dans l'octet d'‚tat I2C_STAT.        :
+;                                                                        :
+;  Entr‚e :                                                              :
+;  accu      -  octet … ‚mettre                                          :
+;  I2C_CMAX  -  variable qui contient la dur‚e maximale de l'attente     :
+;               (pour I2CDOBIT)                                          :
+;                                                                        :
+;  Sortie :                                                              :
+;  C         -  0  =  l'octet est re‡u  (1 sinon)                        :
+;                                                                        :
+;  Cons‚quences :                                                        :
+;  A,R6,R7, modification de I2C_STAT                                     :
+;                                                                        :
+;  Occupation de la pile (sans l'adresse de retour) :                    :
+;  2 octets                                                              :
+;                                                                        :
+;  Temps d'ex‚cution (CALL exclu) :                                      :
+;  Au mieux (pas d'attente, avec/sans Ack)  :  224/225 cycles            :
+;                                                                        :
+;  Remarque :                                                            :
+;  La fr‚quence d'horloge maximale de cette routine d‚pend de I2CDOBIT.  :
+;  Avec une horloge … 12 MHz, la fr‚quence d'horloge du bus est de       :
+;  40,18 kHz dans le meilleur des cas (pas d'attente).                   :
+;                                                                        :
+;-------------------------------------------------------------------------
+I2CSEND:
+        CLR     PI2C_SCL                ; voir Clock ci-dessous
+        MOV     R6,#8                   ; charge le compteur de bits
+I2CSEND2:
+        RLC     A                       ; aller chercher le bit actuel
+        LCALL   I2CDOBIT                ; le placer sur le bus I2C
+        MOV     R7,A                    ; sauvegarder l'accu
+        MOV     A,I2C_STAT              ; v‚rifier si d‚passement temps
+        ANL     A,#I2C_TO
+        JNZ     I2CSEND3                ; oui -> saut (casse-toi)
+        MOV     A,R7                    ; r‚cupŠre l'accumulateur
+        DJNZ    R6,I2CSEND2             ; et re-boucle
+
+        SETB    C
+        LCALL   I2CDOBIT                ; lire acquiescement
+        ANL     I2C_STAT,#-I2C_ACK
+        JNC     I2CSEND3                ; si Acknowledge -> ok
+        ORL     I2C_STAT,#I2C_ACK       ; sinon lever le drapeau dans
+I2CSEND3:                               ; l'octet d'‚tat
+        RET                             ; et ciao bello
+
+;-------------------------------------------------------------------------
+;                                                                        :
+;  Routine I2CSBLOK                                                      :
+;                                                                        :
+;  Fonction :                                                            :
+;  Emet sur le bus I2C un bloc de donn‚es d'un tampon en RAM interne.    :
+;  L'accumulateur contient la longueur du bloc, R0 le d‚but du tampon.   :
+;  La routine v‚rifie, avant l'‚mission de chaque octet, l'octet d'‚tat  :
+;  I2C_STAT. En cas d'erreur ou de d‚faut d'acquiescement, le transfert  :
+;  est interrompu.  La routine appelante peut alors v‚rifier I2C_STAT.   :
+;  Le registre R0 contient le nombre des octets non transmis, 0 si le    :
+;  transfert a ‚t‚ men‚ … bien.                                          :
+;  La routine utilise lors de l'ex‚cution la routine I2CSEND.            :
+;                                                                        :
+;  Entr‚e :                                                              :
+;  accu      -  nombre des octets … transmettre                          :
+;  R0        -  adresse du tampon                                        :
+;  I2C_CMAX  -  variable qui indique la dur‚e maximale de l'attente      :
+;               (pour I2CSEND & I2CDOBIT)                                :
+;                                                                        :
+;  Sortie :                                                              :
+;  I2C_STAT  -  ‚tat des routines du  bus I2C                            :
+;  R0        -  nombre des octets non transmis (0 si tout est ok)        :
+;                                                                        :
+;  Cons‚quences :                                                        :
+;  A,R6,R7                                                               :
+;                                                                        :
+;  Occupation de la pile (sans l'adresse de retour) :                    :
+;  5 octets                                                              :
+;                                                                        :
+;-------------------------------------------------------------------------
+I2CSBLOK:
+        ADD     A,R0                    ; calcule l'adresse de fin du
+        PUSH    ACC                     ; bloc … tansf‚rer et
+                                        ; le ssauvegarde
+
+;-------------------------------------------------------------------------
+;  La boucle I2CSBLK2 se d‚roule jusqu'… ce que tous les octets soient   :
+;  transmis ou qu'une erreur se produise ou d‚faut d'acquiescement       :
+;-------------------------------------------------------------------------
+
+I2CSBLK2:
+        MOV     A,I2C_STAT              ; qu‚rir l'octet d'‚tat
+        ANL     A,#I2C_BUSY+I2C_TO+I2C_ACK      ; v‚rifier si erreur
+        JNZ     I2CSBLK3                ; oui -> sortie
+
+        POP     ACC                     ; v‚rifier si tous les octets
+        PUSH    ACC                     ; ont ‚t‚ transmis
+        XRL     A,R0
+        JZ      I2CSBLK3                ; si oui, tire-toi
+
+        MOV     A,@R0                   ; tirer un octet du tampon
+        LCALL   I2CSEND                 ; l'‚mettre sur le bus I2C
+        INC     R0                      ; avancer le pointeur du tampon
+        SJMP    I2CSBLK2                ; retourner au d‚but de la boucle
+
+I2CSBLK3:
+        POP     ACC                     ; r‚cup‚rer l'adresse sauvegard‚e
+        CLR     C                       ; soustraire l'adresse atteinte
+        SUBB    A,R0                    ; r‚sultat nul si tous les octets
+                                        ; ont ‚t‚ ‚mis, sinon nombre de
+                                        ; ceux qui restent
+        RET                             ; et sortir
+
+;-------------------------------------------------------------------------
+;                                                                        :
+;  Routine I2CGET                                                        :
+;                                                                        :
+;  Fonction :                                                            :
+;  Lit un octet sur le bus I2C. Utilise … cette fin la routine I2CDOBIT. :
+;  Voir l… les d‚tails bit … bit. R‚agit au d‚passement de temps.        :
+;  Accepte les demandes d'‚tat d'attente de l'esclave. L'octet peut ˆtre :
+;  suivi d'un aquiescement (C=0) ou non (C=1).                           :
+;                                                                        :
+;  Entr‚e :                                                              :
+;  C         -  neuviŠme bit (effectivement ‚mis)                        :
+;  I2C_CMAX  -  temps d'attente maximal (pour I2CDOBIT)                  :
+;                                                                        :
+;  Sortie :                                                              :
+;  accu      -  octet lu                                                 :
+;                                                                        :
+;  Cons‚quences :                                                        :
+;  R6,R7, ‚ventuellement modification de I2C_STAT                        :
+;                                                                        :
+;  Occupation de la pile (sans l'adresse de retour) :                    :
+;  3 octets                                                              :
+;                                                                        :
+;  Temps d'ex‚cution (CALL exclu) :                                      :
+;  Au mieux (sans attente)  :  230 cycles                                :
+;                                                                        :
+;  Remarque :                                                            :
+;  La fr‚quence d'horloge maximale de cette routine d‚pend de I2CDOBIT.  :
+;  Avec une horloge … 12 MHz, la fr‚quence d'horloge du bus est de       :
+;  39,13 kHz dans le meilleur des cas (pas d'attente).                   :
+;                                                                        :
+;-------------------------------------------------------------------------
+I2CGET:
+        CLR     PI2C_SCL                ; voir  Clock ci-dessous
+        PUSH    PSW                     ; noter C
+        MOV     R6,#8                   ; charger le compteur de bits
+I2CGET1:
+        SETB    C
+        LCALL   I2CDOBIT                ; lire un bit sur le bus I2C
+        RLC     A           ; le faire entrer dans l'accu par rotation
+        MOV     R7,A                    ; sauvegarder l'accumulateur
+        MOV     A,I2C_STAT  ; v‚rifier si d‚passement du temps
+        ANL     A,#I2C_TO
+        JNZ     I2CGET2                 ; oui -> saut
+        MOV     A,R7                    ; r‚cup‚rer l'accumulateur
+        DJNZ    R6,I2CGET1              ; et reprendre la boucle
+
+        POP     PSW                     ; r‚cup‚rer l'ancien bit C
+        LJMP    I2CDOBIT          ; l'‚crire sur le bus (Ack / NoAck)
+
+I2CGET2:
+        POP     PSW          ; vider la pile
+        RET                  ; et retour (erreur signal‚e dans I2C_STAT)
+
+;-------------------------------------------------------------------------
+;                                                                        :
+;  Routine I2CDOBIT                                                      :
+;                                                                        :
+;  Fonction :                                                            :
+;  Emet un bit sur le bus I2C (avec une impulsion d'horloge). Lit SDA.   :
+;  En ‚criture, C contient le bit … ‚crire. En lecture C doit ˆtre mis   :
+;  … 1. Au retour, C contient le bit lu.                                 :
+;  La routine accepte les demandes d'‚tat d'attente par les esclaves au  :
+;  moyen de la ligne SCL. Toutefois l'allongement maximal ne peut durer  :
+;  que 4 x (I2C_CMAX) cycles. I2C_CMAX est la variable qui contient le   :
+;  temps d'attente maximal. Un d‚passement de ce temps lŠve le drapeau   :
+;  Time-Out dans l'octet d'‚tat I2C.                                     :
+;                                                                        :
+;  Entr‚e :                                                              :
+;  C         -  bit … ‚crire (1 en lecture)                              :
+;  I2C_CMAX  -  temps d'attente maximal du bus I2C                       :
+;                                                                        :
+;  Sortie :                                                              :
+;  C         -  bit lu (ignorer en ‚criture)                             :
+;                                                                        :
+;  Cons‚quences :                                                        :
+;  R7, modification ‚ventuelle de I2C_STAT                               :
+;                                                                        :
+;  Occupation de la pile (sans l'adresse de retour) :                    :
+;  n‚ant                                                                 :
+;                                                                        :
+;  Temps d'ex‚cution (CALL exclu) :                                      :
+;  Meilleur cas (pas d'attente)  :  14 cycles                            :
+;  Chaque attente dure :            4 cycles                             :
+;  Pire des cas (Time-Out)  :  environ 4 x (I2C_CMAX)                    :
+;                                                                        :
+;  Remarque :                                                            :
+;  La routine sous cette forme fonctionne jusqu'… 14,4 MHz. Pour des     :
+;  fr‚quences d'horloge plus ‚lev‚es, le d‚lai entre SDA et SCL est trop :
+;  court, modifier le code ici.                                          :
+;                                                                        :
+;-------------------------------------------------------------------------
+I2CDOBIT:
+        MOV     PI2C_SDA,C              ; SDA … 1
+        MOV     R7,I2C_CMAX             ; charger le compteur R7
+                                        ; d‚passement de temps
+        SETB    PI2C_SCL                ; SCL … 1
+
+I2CDOB1:
+        JB      PI2C_SCL,I2CDOB2        ; si SCL = 1 -> saut
+        DJNZ    R7,I2CDOB1              ; sinon boucler (un autre occupant
+                                        ; du bus retient SCL … 0,
+                               ; par exemple pour cr‚er un ‚tat d'attente)
+        ORL     I2C_STAT,#I2C_TO        ; si compteur d‚borde -> lever
+                                ; drapeau d‚passement dans l'octet d'‚tat
+        RET                             ; et retour
+
+I2CDOB2:
+        NOP                             ; 3 NOPs en guise de retard
+        NOP                             ; (suffisants jusqu'… 14,4 MHz)
+        NOP
+        MOV     C,PI2C_SDA              ; lire SDA
+        CLR     PI2C_SCL                ; rabaisser SCL
+        RET                             ; et retour
+
+
