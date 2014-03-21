@@ -1,0 +1,638 @@
+MESCC v1.01
+
+Mike's Enhanced Small C Compiler for Z80 and CP/M
+
+Copyright (c) 1999-2007 Miguel I. Garcia Lopez
+
+http://pag-per.servicam.com/migl/amstradpcw
+email: evamiguel@servicam.com
+
+Albal (Valencia), Spain.
+
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+
+See copying for more details.
+
+Last update: 19:59 27/05/07.
+
+OVERVIEW
+========
+
+MESCC is a subset of the standard C language.
+
+It was based on the version 1.7 (Oct. 1985) of Small C by Ron Cain, Mike Bernson's
+and John Hill, but now only a little (if any) of the original source code is present.
+
+This compiler can be compiled by itself.
+
+This is not a C language manual, only a brief description of MESCC.
+
+The present document assume that you have some knowledge about C programming language.
+
+OPTIONS
+=======
+
+Usage: cc [name[.typ] [options]]
+
+If no options are entered, a help summary will be displayed on screen.
+
+Options:
+
+-PRG          Out normal file ---- Type=ZSM
+-LIB          Out library file --- Type=LIB
+-ASM          Out assembler file - Type=ZSM
+-O:name[.typ] File name for output
+-Cflag        C source as comments?
+-Eflag        Pause on errors?
+-Aflag        Define code for argc & argv[]?
+-E:number     Max. number of errors to abort
+-L:letnum     Letter and start number for labels
+-S:size       Mininum stack size
+
+Default options are: (flag is + for YES, - for NO)
+
+        -PRG -C- -A+ -E+ -E:50 -L:A0 -S:512
+        Input file type is .c
+        Output file name is the same as input
+
+NOTE: All programs must include the runtime file mescc.h first.
+
+Examples:	cc hello
+		cc myprog.c -s:2048 -lz1000
+
+Then, if you want to generate a COM file, the compiler output (Z80 assembler)
+must be assembled with ZSM.COM to generate a HEX file.
+
+The HEX file output must be converted to a COM file with HEXTOBIN.COM
+(or, if you prefer, with LOAD.COM or HEXCOM.COM, both supplied with
+CP/M).
+
+Example:	cc hello.c
+		zsm hello.ccz
+		hextobin hello.zsm hello.com
+
+See ZSM.DOC for details about the assembler.
+
+In theory, you can use any Z80 assembler (and linker) if the assembler output of the
+compiler is compatible.
+
+There is an optimizer that analizes the assembler output of the compiler: ccopt.
+
+Usage: ccopt name.typ [-td]
+
+Options:
+
+-td	Set the temporary drive. Optional.
+
+Examples:	ccopt code.zsm -tm
+		ccopt hello.zsm
+
+SUPPORTED TYPES
+===============
+
+char		1 byte.
+		Can be signed (-128 to 127) or unsigned (0 to 255).
+		By default is signed.
+
+int		2 bytes.
+		Can be signed (-32768 to 32767) or unsigned (0 to 65535).
+		By default is signed.
+
+Pointers	2 bytes.
+
+Arrays		Size of type * number of items.
+		Arrays of pointers are not supported.
+
+Examples:
+
+char ch, *ptr;		A char and a pointer to char.
+unsigned char c;	A unsigned char.
+int i, *ptr_i;		A int and a pointer to int.
+unsigned int ui;	A unsigned int.
+char str[10];		An array of 10 char, 10 bytes.
+unsigned int ui[5];	An array of 5 int, 10 bytes.
+
+As the compiler not supports arrays of pointers, the arguments of the
+function main can be as follows:
+
+main(argc, argv)
+int argc, argv[];
+{
+	char *ptr;
+
+	ptr=argv[1]; /* This is the first parameter */
+
+	...
+}
+
+You can manage 'arrays of pointers' to a similar manner:
+
+unsigned array[3];
+
+array[0]="First";
+array[1]="Second";
+array[2]="Third";
+
+int i;
+
+for(i=0; i<3; ++i)
+	puts(array[i]);
+
+CONSTANTS
+=========
+
+Decimal integer		Examples: 32, -1, 456.
+Hexadecimal integer	Examples: 0x12, 0xF3, 0xAA34
+Character constants	Examples: 'A', '12', '\t'
+
+STRINGS
+=======
+
+Examples:		"This is a text"
+			"Text with a newline\n"
+
+NAMES
+=====
+
+Variables and function names should consist of not more than
+11 alpha-numeric characters.
+The '_' character is considered an alphabetic character,
+and the first character can't be numeric.
+
+ESCAPE SEQUENCES
+================
+
+Can be included in character constants or strings.
+
+\n	Newline, 10 decimal.
+\t	Tab, 9 decimal.
+\r	Carriage line, 13 decimal.
+\b	Backspace, 8 decimal.
+\a	Alarm, 7 decimal.
+\f	Formfeed, 12 decimal.
+\0	Null, 0 decimal.
+
+The characters ', " and \ can be included in character constants or strings with:
+
+\'	'
+\"	"
+\\	\
+
+Examples:	'\0'
+		'\n'
+		'\''
+		"\aError: Can't open"
+		"Filename: \"%s\".\n"
+
+SUPPORTED STATEMENTS
+====================
+
+for(init, cond, incr) statement;
+while(cond) statement;
+do statement; while(cond);
+switch(cond) case statements;
+if(cond) statement; else statement;
+continue;
+break;
+return;
+return expr;
+
+A statement can be only one statement or two or more
+statements enclosed in brackets.
+
+Examples:
+
+for(i=0; i<10; ++i)
+	printf("Line number %d.\n", i);
+
+while(i!=100)
+{
+	if(read()==0)
+		continue;
+	i=useroption();
+}
+
+do
+{
+	read();
+	i=useroption();
+} while(i!=100);
+
+swith(i)
+{
+	case 10 : option10(); break;
+	case 11 : option11(); break;
+	default : optionerr(); break;
+}
+
+if(i)
+	nonzero();
+else
+	zero();
+
+return 32;
+
+OPERATORS AND PRECEDENCE
+========================
+
+! ~ ++ -- - * &	right to left
+* / %		left to right
++ -		left to right
+<< >>		left to right
+< <= > >=	left to right
+== !=		left to rigth
+&		left to rigth
+^		left to right
+|		left to right
+&&		left to right
+||		left to right
+?:		right to left
+=  -= += *= %=	right to left
+/= &= ^= |=
+
+PREPROCESSOR
+============
+
+#define name string
+
+	Examples: #define BYTE unsigned char
+		  #define TITLE "My program"
+
+#undef name
+
+	Examples: #undef BYTE
+
+#include filename
+
+	Examples: #define "stdio.lib"
+		  #define <2nd_mod.c>
+
+#if value
+#ifdef name
+#ifndef name
+#else
+#endif
+
+	Examples: #ifndef WORD
+		  #define unsigned int
+		  #endif
+
+		  #if PCW
+			machine="Amstrad PCW";
+		  #endif
+
+#asm
+#endasm
+
+	Example: #asm
+		 quit:
+			JP 0
+		 #endasm
+
+ABOUT THE SOURCE CODE OF MESCC
+==============================
+
+The source code of MESCC is written in MESCC code. That's is: A subset of C language
+in Kernighan & Ritchie style, not ANSI.
+
+Then, it can be compiled by itself.
+
+To compile by itself, you must compile the file make_cc.c with MESCC.
+
+See make_cc.c for more details.
+
+The source code uses some extern library functions as fopen, fgetchar, etc.,
+that are available as part of standard library of MESCC.
+
+In addition, you can try to compile it in Turbo C or PCC - Personal C Compiler for MSDOS,
+but only experimentaly.
+
+See main.h for more information.
+
+LINKING MESCC OUTPUT TO MACHINE CODE
+====================================
+
+If a function is called: fn(arg1, arg2, arg3), the compiler pushes the
+values of arg1, arg2  and arg3 on the stack in the order that they are listed
+and then generates a call to a label "fn".
+Values should be returned in HL, and 8 bit signed values should be sign
+extended to 16 bits, and the simplest way to do this is to put the value
+into A and call the routine 'ccsxt' in the library mescc.h which will do
+this for you.
+The stack must be restored to its previous state before returning.
+The last argument will still be in HL when a function is entered,
+so if a function has only one argument there is no need to get it off
+the stack.
+The functions printf, fprintf, sprintf, scanf, fscanf and sscanf, have
+an additional value pushed on the stack, to say the function how many
+parameteres are.
+Machine code functions can be put between #asm and #endasm directives.
+
+LIBRARIES
+=========
+
+mescc.h		Runtime. All programs must include this file first.
+alloc.h		Memory allocation functions.
+conio.h		Console I/O functions.
+cpm.h		CP/M specific functions.
+ctype.h		Test and character conversion functions.
+fileio.h	Stream file I/O functions.
+fprintf.h	Formatted output to file.
+mem.h		Memory functions.
+printf.h	Formatted output to console.
+sprintf.h	Formatted output to memory.
+string.h	String functions.
+xprintf.h	Support library for printf, fprint and sprintf.
+
+The new style of C functions declaration is not supported, and the type of
+parameters are indicated only for information.
+Also, the type 'void' is not supported, only is specified for information.
+
+[S] means that function is C standard (or near).
+
+alloc.h
+-------
+
+Dinamic memory management functions.
+
+void *malloc(unsigned int size) [S]
+
+	Allocate 'size' bytes of memory. Return pointer to memory,
+	or 0 if not enough memory.
+
+void free(void *ptr) [S]
+
+	Free memory pointed by 'ptr'.
+
+conio.h
+-------
+
+Console I/O functions.
+
+All functions send a LF as CR/LF.
+
+int getch(void) [S]
+
+	Get character from keyboard without echo to screen.
+
+int getchar(void) [S]
+
+	Get character from keyboard with echo to screen.
+
+int putchar(int ch) [S]
+
+	Write character in screen.
+
+int puts(char *str) [S]
+
+	Write string and LF in screen.
+
+cpm.h
+-----
+
+CP/M functions. Read the CP/M manual for more information about input/output parameters.
+
+void setdma(void *ptr)
+
+	Set DMA address.
+
+int makefile(void *fcb)
+
+	Make file.
+
+int killfile(void *fcb)
+
+	Erase file.
+
+int renfile(void *fcb)
+
+	Rename file.
+
+int openfile(void *fcb)
+
+	Open file.
+
+int closefile(void *fcb)
+
+	Close file.
+
+int findfile(void *fcb)
+
+	Find file.
+
+int findnext(void)
+
+	Find next file.
+
+int readseq(void *fcb)
+
+	Read file, sequential mode.
+
+int writeseq(void *fcb)
+
+	Write file, sequential mode.
+
+int bdos_a(int c,int de)
+
+	Call BDOS function, return register A value.
+
+int setfcb(char *fname, char *fcb)
+
+	Set fcb from string that contains a file name.
+
+ctype.h
+-------
+
+Test and conversion character functions.
+
+int isalpha(char ch) [S]
+
+	Test for alphabetic. Return nonzero if yes, zero if not.
+
+int isdigit(char ch) [S]
+
+	Test for decimal digit. Return nonzero if yes, zero if not.
+
+int isxdigit(char ch) [S]
+
+	Test for hexadecimal digit. Return nonzero if yes, zero if not.
+
+int isalnum(char ch) [S]
+
+	Test for alpabetic or decimal digit. Return nonzero if yes, zero if not.
+
+int isupper(char ch) [S]
+
+	Test for upper case character. Return nonzero if yes, zero if not.
+
+int islower(char ch) [S]
+
+	Test for lower case character. Return nonzero if yes, zero if not.
+
+int toupper(char ch) [S]
+
+	Convert 'ch' to upper case character.
+
+int tolower(char ch) [S]
+
+	Convert 'ch' to lower case character.
+
+fileio.h
+--------
+
+Stream file I/O functions.
+
+All functions converts a CR/LF to a LF on input, and a LF to CR/LF on output,
+only in text mode.
+
+On binary mode, no conversion is done.
+
+FILE *fopen(char *fname, char *fmode) [S]
+
+	Open file.
+	Mode can be: 'r' for read in text mode, 'rb' for binary mode.
+                     'w' for write in text mode, 'wb' for binary mode.
+	Return a FILE pointer, or NULL if can't be opened.
+
+int fclose(FILE *fp) [S]
+
+	Close file. Return NULL, or EOF if can't be closed.
+
+int fgetc(FILE *fp) [S]
+
+	Read a character. Return character value, of EOF if end of file or errors.
+
+int fputc(int ch, FILE *fp) [S]
+
+	Write a character. Return character value, or EOF if errors.
+
+int feof(FILE *fp) [S]
+
+	Test for end of file. Return nonzero if true, zero if false.
+
+int ferror(FILE *fp) [S]
+
+	Test for error. Return nonzero if true, zero if false.
+
+int fread(char *ptr, int size, int nobj, FILE *fp) [S]
+
+	Read 'nobj' objects of 'size' bytes each. Return number of objects read.
+
+int fwrite(char *ptr, int size, int nobj, FILE *fp) [S]
+
+	Write 'nobj' objects of 'size' bytes each. Return number of objects writed.
+
+int remove(char *fname) [S]
+
+	Delete file. Return nonzero if errors.
+
+int rename(char *oldname, char *newname) [S]
+
+	Rename file. Return nonzero if errors.
+
+fprintf.h
+---------
+
+Formatted output to stream file.
+
+int fprintf(FILE *fp, char *fmt, arg1, arg2, ...) [S]
+
+	Return number or characters writed, or -1 on errors.
+	See printf.h for more information.
+
+mem.h
+-----
+
+Memory functions.
+
+char *memset(char *dst, char data, int count) [S]
+
+	Set 'count' bytes in 'dst' memory pointer to 'data'.
+
+char *memcpy(char *dst, char *src, int count) [S]
+
+	Copy 'count' bytes, from 'src' to 'dst' memory pointers.
+
+int memcmp(char *mem1, char *mem2, int count) [S]
+
+	Compare 'count' bytes in 'mem1' and 'mem2' memory pointers.
+	Return <1 if *mem1 is lower than *mem2, 0 if equal, or
+	>1 ir *mem1 is upper than *mem2.
+
+printf.h
+--------
+
+Formatted output to console.
+
+int printf(char *fmt, arg1, arg2, ...) [S]
+
+	% character in format, acts as follows (<> means, optional):
+
+	%<-><0><width><type>
+
+	-	Left alignment, else right alignment.
+	0	Fill with zeroes in right alignment.
+	width	Width for alignment. If width if less than width of
+		argument, output is done without alignment.
+ 	type	d	Signed decimal integer.
+		u	Unsigned decimal integer.
+		x	Hexadecimal integer.
+		s	String.
+		c	Character.
+
+sprintf.h
+---------
+
+Formatted output to memory.
+
+int sprintf(char *dst, char *fmt, arg1, arg2, ...) [S]
+
+	See printf.h for more information.
+
+string.h
+--------
+
+String functions. All strings must be zero terminated.
+
+int strlen(char *str) [S]
+
+	Return length of string.
+
+char *strcpy(char *dst, char *src) [S]
+
+	Copy string 'src' into 'dst'.
+
+char *strcat(char *dst, char *src) [S]
+
+	Copy string 'src' at the end of 'dst'.
+
+char *strupr(char *str)
+
+	Converts string into upper case characters.
+
+int strcmp(char *str1, char *str2) [S]
+
+	Compare two strings.
+	Return <1 if *str1 is lower than *str2, 0 if equal, or
+	>1 ir *str1 is upper than *str2.
+
+char *strchr(char *str, char ch) [S]
+
+	Search 'ch' in 'str'. Returns a pointer, or 0 if not encountered.
+
+int atoi(char *s) [S]
+	
+	Converts a string containing a decimal number to a integer value.
+	Supported + and - signs.
