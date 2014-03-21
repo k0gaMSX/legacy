@@ -1,0 +1,120 @@
+/*
+Sieve of Eratosthenes benchmark from BYTE, Sep. '81, pg. 186.
+modified for SIL compiler 7/86 (note 'for' loops.)
+
+Update log: 
+
+Lee Bradley, Sysop, Z-Node #12, 665-1100
+
+2/28/91 -  v 1.0 Revived (probably deleted) code which shows count.
+6/19/91 -  v 1.1 Renamed i variable to i1. ZASM doesn't like ld (i),hl
+8/12/92 -  v 1.2 Added compiler toggle to print primes. Should 
+                 turn off for standard use.
+11/4/92 -  v 1.2 Added comments about compilation, assembly, linkage 
+                 etc. Introduced a couple of #defines. Added line
+                 which puts out a new line after user hits 
+                 return in response to "Hit return to do 10 
+                 iterations."
+
+To compile, optimize with SOP, translate to Z80 mnemonics with 
+XIZ, assemble and link with ZASM and PROLINK, use:
+
+A>SIL SIEVE12 N E P1000
+A>SOP SIEVE12
+A>XIZ SIEVE12
+
+NOTE !!! At this stage, change the MACLIB directive to one that 
+is ZASM-compatible, ie.
+with the asterisk in column 1: *MACLIB SILZ80.LIB
+
+A>ZASM SIEVE12
+A>PROLINK
+*ORIGIN 100
+*LINK SIEVE12
+*SEARCH SILLIB
+*EXIT
+
+Observations: The resulting .COM file is about 10K! Even when I 
+added a DATA directive (ZASM's DSEG equivalent) in front of 
+FLAGS: DEFS 1FFFH, it did not help. PROLINK puts the data segment 
+*in front of* the main program code when you don't have a DATA 
+directive and *between* the main program code and the code 
+supporting the externals when you do have a DATA directive. There 
+does not appear to be a way to tell PROLINK where to locate the 
+data segment.
+
+I *was* able to reduce the .COM file size down to about 2K by 
+using the non-public domain linker ZML. To get ZML to work, 
+however, I found I had to shorten all external names that were 7 
+characters long (like PUTCHAR, CCGCHAR etc.) to 6 characters. The 
+SLR assembler has a /6 option which causes .REL files to have 6 
+character symbols. ZASM does not have this luxury.
+
+*/
+
+#define TRUE 1
+#define FALSE 0
+#define SIZE 8190
+#define SIZEPL 8191
+#define COMMA 44
+#define BELL 7
+#define CR 13
+#define LF 10
+
+/*
+   the following compiler toggle should be turned off for standard use.
+*/
+
+#toggle noisy off
+
+char      flags[SIZEPL];
+int       i1,prime,k,count,iter;
+
+main()
+{
+	putstr("Hit return to do 10 iterations: ");
+	getchar();
+	putchar(CR); putchar(LF);
+
+	for (iter = 1; iter <= 10; iter++;)
+	{
+		count = 0;
+		for (i1 = 0; i1 <= SIZE; i1++;)
+			flags[i1] = TRUE;
+		for (i1 = 0; i1 <= SIZE; i1++;)
+		{
+			if (flags[i1])
+			{
+				prime = i1 + i1 + 3;
+                                #ifon noisy
+                                if (iter == 10)
+                                {
+                                      prtdec(prime);
+                                      putchar(COMMA);
+                                }   
+                                #endif
+                                k = i1 + prime;
+				while (k <= SIZE)
+				{
+					flags[k] = FALSE;
+					k = k + prime;
+				}
+				count++;
+			}
+		}
+	}
+	putchar(BELL);
+	prtdec(count);
+        puts(" primes found.");
+	putchar(CR); putchar(LF);
+	puts("Done");
+	bdos(0,0);
+}
+
+prtdec(n)		/* print decimal number */
+int n;
+{
+char ibfr[6];
+	putstr(itoa(n,ibfr));
+}
+

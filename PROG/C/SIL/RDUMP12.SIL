@@ -1,0 +1,264 @@
+/*
+RDUMP.SIL - file record dump utility
+
+Version 1.1 modifications by Bruce Morgen, 5/7/92
+
+Made RDUMP into a ZCPR3 utility by creating Z3HDR.REL and using this 
+linkage order:
+
+LINK RDUMP=Z3HDR,RDUMP,SILLIB[S]                   ... or
+ZML RDUMP=Z3HDR,RDUMP,SILLIB/                      ... or
+SLRNK /A:100/V,Z3HDR,RDUMP,SILLIB/S,RDUMP/N/E
+
+To create a Type 4(!) RDUMP, use ZML like so:
+ZML RDUMP.COM=Z3HDR,RDUMP,SILLIB/,T4LDR/P
+
+Version 1.2 - 11/9/92 - Lee Bradley
+
+Under Z-System, usage display now shows invocation name (via external file 
+control block). Changed usage display message slightly. Eliminated all 
+labels in Z3HDR save zentry. Changed function showtype slightly. Changed a 
+few variable names.
+
+Added debug compiler toggle.
+
+Made ZASM-compatible; Changed a PUBLIC declaration to an ENTRY declaration.
+
+To compile, optimize, and translate to Z80 mnemonics
+
+A>SIL RDUMP N E P1000
+A>SOP RDUMP
+A>XIZ RDUMP
+
+NOTE WELL!!!!
+
+If you are using the SLR assembler, you will have to change the MACLIB 
+SILZ80 directive to MACLIB SILZ80.LIB. If you are using the ZASM assembler, 
+you will have to change the MACLIB SILZ80 directive to *MACLIB SILZ80 where 
+the * is in column 1. If you are using the SLR assembler, you must use the 
+/6 option (for 6 character symbols). ZMAC does not have this option and you 
+will have to shorten all externals that are 7 characters to 6 characters. 
+ZASM does this for you.
+*/
+
+#toggle debug off
+#include bdos.def    /* bdos words */
+#define VER "1.2"
+
+#asm
+	entry $memry                    ; like public, but ZASM-compatible
+	jmp entry			; past versions
+	db '11/09/92 lrb',13,10
+	db '05/07/92 b/m',13,10
+oldstk:	db '07/25/86 evd',26
+$memry:	ds 2
+
+entry:	lhld $memry			; stack above program
+	lxi d,128			; about twice what we need
+	dad d
+	sspd oldstk
+	sphl
+#endasm
+
+main()
+{
+char *dma, *fcb, *fcb2;
+int recnum, size;
+int *z3envp;
+char *z3env;
+
+	fcb = @5c;   /* cp/m fcb addrs */
+	fcb2 = @6d;
+	z3envp = zentry+9; z3env = *z3envp; /* get z3 environment address */
+     	
+	#ifon debug
+	putstr("Z3 environment address = ");
+	byte(z3env/256); byte(z3env%256); 
+	puts("");
+	#endif
+
+	if ((*(fcb+1)==' ')|(*(fcb+1)=='/')|search('?',fcb,12)) /* legal? */
+	{
+		putstr("RDUMP   Version "); putstr(VER);
+		if (z3env>0)
+			showtype();
+		else
+			puts("");
+		puts("Usage:");
+                if (z3env>0)
+			showname();
+		else
+ 			putstr("RDUMP");
+  		putstr(" {d");
+		if (z3env>0)
+			putstr("ir");
+		putstr(":}ufn {{+/-}offset}");
+		quit();
+	}
+
+	if (z3env>0)
+	{
+		bdos(getsetuser,*(fcb+13));		/* set Z3 user area */
+   	}
+	bdos(getfilesize,fcb);				/* get file size */
+	size = *(fcb+33) + *(fcb+34) * 256;
+
+	bdos(setdma,dma=128);				/* set dma addr */
+
+	recnum = 0;					/* init rec num */
+	if (*fcb2!=' ')					/* check offset */
+	{
+		if (*fcb2=='+')
+			fcb2++;				/* + offset spec */
+
+		if (*fcb2=='-')
+			recnum = size-atoi(fcb2+1);	/* - offset */
+		else
+			recnum = atoi(fcb2);		/* + offset */
+
+		if (recnum>=size)
+		{
+			puts("offset overflow");
+			quit();
+		}
+	}
+
+	*(fcb+33) = recnum%256;				/* set random rec */
+	*(fcb+34) = recnum/256;
+	*(fcb+35) = 0;
+
+	if (bdos(openfile,fcb)==255)		        /* try to open */
+	{
+		puts("open error");
+		quit();
+	}
+
+	if (recnum)					/* chk offset */
+		bdos(readrandom,fcb);			/* read random */
+
+	while (readnxt(fcb)==0)				/* seq reads */
+	{
+		recdmp(dma,128*recnum,recnum);
+		recnum = recnum+1;
+		puts("");
+	}
+
+	quit();
+
+}
+quit()
+{
+#asm
+	lspd oldstk			; compiler will add a RET
+#endasm
+}
+
+showtype()
+{
+char *type;
+
+        type = zentry+8;
+ 	putstr(" (Type ");
+	putchar(*type+'0');
+	putstr(" at ");
+	byte(zentry/256);
+	byte(zentry%256);
+	puts("h)");
+}
+
+showname()
+{
+int i, *z3envp, *efcbp;
+char *efcb;
+
+        z3envp = zentry+9; efcbp = *z3envp + @24; /* get ext fcb ptr */
+
+	#ifon debug
+     	putstr("External FCB address pointer is ");
+    	byte(efcbp/256); byte(efcbp%256);
+	#endif
+
+     	efcb = *efcbp; /* get external fcb */
+
+     	#ifon debug
+     	puts(""); putstr("External FCB address is ");
+     	byte(efcb/256); byte(efcb%256); puts("");
+     	#endif
+
+     	i = 1;
+        putstr("   ");
+     	while ((*(efcb+i)&@7f)!=' ') { /* mask off hi bit */
+               	putchar(*(efcb+i)&@7f);
+                i++;
+     	}
+}
+
+readnxt(fcb)				/* read next record */
+char *fcb;
+{
+	return(bdos(readnextrec,fcb));
+}
+
+recdmp(ptr,adr,rec)			/* hex dump @ptr for one record */
+char *ptr;
+int adr,rec;
+{
+int i,j;
+
+	putstr("Rec ");				/* rec# & header */
+	prtdec(rec);
+	puts("  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F");
+
+	for (j = 0 ; j < 128 ; j = j+16;)		/* addr per line */
+	{
+		putstr("    ");
+		byte(adr/256);
+		byte(adr%256);
+		putstr(": ");
+
+		for (i = 0 ; i < 16 ; i++;)	/* 16 data bytes */
+		{
+			byte(ptr[i]);
+			putchar(' ');
+			if (bdos(constat,0))	/* try break */
+				quit();
+		}
+
+		for (i = 0 ; i < 16 ; i++;)	/* ascii for data */
+		{
+			if ((ptr[i] >= ' ') & (ptr[i] <= '~'))
+				putchar(ptr[i]);
+			else
+				putchar('.');
+		}
+
+		ptr = ptr+16;			/* end line adj */
+		adr = adr+16;
+		puts("");
+	}
+}
+
+prtdec(n)				/* print decimal number */
+int n;
+{
+char tmp[6];
+	putstr(itoa(n,tmp));
+}
+
+byte(c)					/* hex byte print */
+char c;
+{
+	nybl(c>>4);
+	nybl(c&15);
+}
+
+nybl(c)					/* hex nybble print */
+char c;
+{
+	c = c+'0';
+	if (c>'9')
+		c = c+7;
+	putchar(c);
+}
+
+

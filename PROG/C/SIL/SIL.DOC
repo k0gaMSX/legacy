@@ -1,0 +1,918 @@
+
+                                 SIL
+                              Reference
+                                Guide
+
+                           Digilog, Inc.'s
+                   Systems Implementation Language
+
+                      SIL Compiler Documentation
+                          Rev. 1.5  (11-82)
+
+What is SIL?
+============
+
+SIL is a compiler for an extended subset of the C programming 
+language, suitable for use in systems programming. It is a subset of C 
+in that only certain minimal features and data types are supported; it 
+is extended in that certain features have been added to make it more 
+useful in a Z80 systems programming environment. Code produced by SIL 
+is quite system independent; it can run as easily (or as difficultly) 
+on AOS as CP/M, or with no host operating system at all. It is 
+recursive; sadly, version 1.4 is no longer romable directly, although 
+it could be made so for that "special" application.
+
+I will make no attempt to describe C here. Refer to the book by 
+Kernighan and Ritchie called "The C Programming Language" for an 
+introduction to what C is all about.
+
+SIL users, take note; version 1.4 and later versions use a different 
+parameter passing scheme from previous versions; therefore, any 
+routines coded in assembler must do one of the following:
+
+   - exit thru an implied SIL return instruction, which will remove 
+any passed parameters from the stack; or,
+
+   - pop all passed parameters from the stack before returning to the 
+caller.
+
+Failure to observe the above will result in your program attempting to 
+execute code in that elusive 65th k of memory we call the twilight 
+zone.
+
+SIL 1.5 supports a few enhancements which you may find useful. They 
+are explained in detail below; in brief they are:
+
+   -a case statement called SWITCH
+
+   -conditional compilation using toggles
+
+   -automatic externalization of undefined functions (enabled by an 
+optional parameter)
+
+   -some minor tightening up of error conditions
+
+   -readable string constants in the output file
+
+   -2 new library functions, PEEKW and POKEW
+
+   -TurboDOS option parameter to abort a DO file on errors
+
+Files You May Need
+==================
+
+There are several files needed to make up a SIL development 
+environment, besides the normal system utilities (ED, PIP, etc.).  
+These are as follows:
+
+	SIL.COM		- the compiler
+	SOP.COM		- the output optimizer
+	RMAC.COM	- the assembler
+	LINK.COM	- the linker
+	LIB.COM		- the librarian
+	SILLIB.REL	- a mandatory external SIL intrinsics library
+	SILZ80.LIB	- macro library needed for assembler
+	CPMDIO.REL	- CP/M interface routines library
+
+See the appropriate utility manuals; the CP/M system manuals might 
+also be of some help.
+
+(Note: If you don't have RMAC/LINK, you may use other similar tools. I 
+used SLR and SLRNK. M80/L80 will work. In the list above, SIL.COM and 
+SILLIB.REL are required. SOP.COM, the librarian LIB.COM, SILZ80.LIB 
+and CPMDIO.REL are optional. (lrb))
+
+SIL Operation
+=============
+
+The SIL compiler is invoked by the CP/M statement:
+
+	SIL <filename>
+
+where <filename> may or may not have a drive prefix. No file type 
+extension should be given; the compiler looks for <filename>.SIL as 
+the source file. Output of the compiler is a file called 
+<filename>.ASM, suitable for input to the RMAC macro assembler. SIL 
+source lines are included as comments in the output file (unless the 
+'n' parameter is given), along with any error messages.
+
+Caution: Inclusion of the file type (.SIL) will cause the .SIL source 
+file to be over-written with the generated .ASM file.
+
+The <parameter list> is any of the following compiler options.  
+Multiple parameters are separated by spaces.
+
+Additional parameters are:
+
+  A - designates compiler output file.
+  B - causes SIL output to be 8080-compatible code.
+  C - causes SIL to verify function calls with parameters.
+  E - externalizes any undefined procedures.
+  N - inhibits inclusion of SIL source lines as comments.
+  P - sets the literal/define pool space.
+  Q - causes string literals to be created in readable form.
+  S - causes the global/define table to be written to disk.
+  T - causes the compiler to abort a 'DO' file process on errors.
+
+The "A" or "a" parameter is used to designate the filename of the 
+compiler output file if the default output destination file 
+<filename>.ASM is not desired. The parameter is used as follows:
+
+	SIL <filename> A<output filename>
+
+The output file is still assigned as type .ASM.
+
+Option "B" forces SIL (and the corresponding version of SOP) to emit 
+8080 compatible code.
+
+Option "C" allows the user some debug capability; when this option is 
+specified, SIL emits code that verifies that the correct number of 
+parameters are passed on every function call. If an incorrect number 
+of parameters is passed, an error message is printed along with the 
+address of the called routine, and the address of the offending call 
+instruction. Note that a special hack is required to use this option; 
+before the first procedure of the program is executed, the A-register 
+must contain the number of parameters to that procedure (usually 0 if 
+the first procedure is main).
+
+Option "E" automatically makes any undefined procedures external, thus 
+obviating the need for a long list of external library procedure 
+declarations at the start of each program. If the optional is not 
+given, any undefined procedures not declared external will generate an 
+error.
+
+The "N" or "n" parameter may be given to the compiler to inhibit the 
+inclusion of SIL source text in the output assembler file. The 
+parameter is used as follows:
+
+  SIL <filename> N
+
+To change the size of the literal/define pool use the "p" or "P" 
+option. For example, if a pool size of 1k is desired:
+
+	SIL <filename> P400
+
+Increasing the pool size may be necessary when compiling files with a 
+large number of literals and/or strings.
+
+Option "Q" will force string literals to be dumped at the end of the 
+program in readable form; ie., DB 'THIS IS A STRING',0. This is given 
+as an option only because the old form of DB 20H,53H, etc., must still 
+be used for programs which use the single quote character "'" in 
+strings.
+
+To write the global/define table to disk, use the parameter "s" or 
+"S". The name of the file written is <filename>.SYM.
+
+The "T" parameter causes the compiler to abort a TurboDOS 'DO' file 
+process (if one has been invoked) when errors are detected. This 
+prevents any further processing (such as RMAC and LINK) from 
+occurring, which would serve no useful purpose until the errors are 
+corrected.
+
+These parameters may be given in any order. Example:
+
+  SIL <filename> Q S N P1000 T ATEST
+
+The next step is to assemble the ASM file with RMAC, and to link the 
+assembled file into an executable binary file with LINK. If the file 
+is destined for execution in a non-CP/M environment, a utility such as 
+CPMAOS is then used to place it in the appropriate environment.
+
+A sample sequence of commands follows.
+
+	SIL B:XYZ		; compiles a file called XYZ.SIL
+				; on drive B: into a file called
+				; XYZ.ASM on drive B:.
+				; During the compilation,
+				; names of functions are echoed
+				; to the screen as they are
+				; encountered, along with any
+                                ; compile error messages.
+	A Clean Compile!	; Message from the compiler
+				; indicating no errors were found.
+	SOP B:XYZ		; An optional command which will
+				; improve some of the code emitted
+				; by the compiler
+                                ; probably not worth it for small files.
+        RMAC B:XYZ $AB RB SZ PZ ; Assembly of the file into B:XYZ.REL.
+	LINK B:XYZ,SILLIB[S]	; Links the compiled file to
+				; needed intrinsics.
+
+The result of the above is a file ORG'd at 100H, presumably suitable 
+for execution under CP/M. Use the "L" linker option to generate 
+modules ORG'd at other addresses.
+
+When assembling the output file, RMAC will require the MACRO library 
+file SILZ80.LIB for programs that are to be executed in a Z80 
+environment.
+
+Note that this example could be extended to include other application 
+libraries or compiled REL files, and other linker options.
+
+Note also that, due to some simple-mindedness on the part of LINK, you 
+may have to give the SILEXT library name twice, as follows:
+
+	LINK B:PORKER,SILLIB[S],SILLIB[S]
+
+To use SOP, commands may take one of two variations. If one file is 
+given, then the extension ".ASM" is understood, and the resulting file 
+is located on the same drive as the original file. For example:
+
+	SOP B:WHATAPIG
+
+If two filenames are given (to direct the sopped file to another 
+drive), then the full names of each file must be given. For example:
+
+	SOP B:BLAT1500.ASM C:BLAT1500.ASM
+
+SOP will abort processing upon receipt of control 'C'.
+
+SIL Limitations
+===============
+
+The following restrictions apply to SIL, as distinct from full C.
+
+- Variable names are significant only in the first 8 characters (first 
+6 for external or public names). They must start with a letter and 
+consist of letters or digits only (no underscores). Upper and lower 
+case are not distinct.
+
+- Only char and int data types are supported (int is 16-bit unsigned, 
+a la the PL/M ADDRESS type). Structures, unions, floats, longs, etc. 
+are not supported (maybe someday).
+
+- Only 1 level of indirection is supported, ie., a declaration such as
+
+	char ****pc;
+
+which establishes a pointer to a pointer to a pointer to a pointer to 
+a character, is invalid. In my experience, 99 and 44/100ths of all 
+pointer uses are only 1 level deep; multiple levels are easily 
+achieved thru the appropriate explicit code.
+
+- The C type switch/case statements are not supported. However, a 
+similar capability exists with the SWITCH statement (see below).
+
+- The only valid preprocessor directives are as follows:
+
+	#define
+	#include (1 level only)
+	#asm
+	#endasm
+	#toggle
+	#ifon
+	#ifoff
+	#endif
+
+- Binary operators supported are as follows:
+
+	+, -, *, /, %(mod), ^(xor), |(or), &(and),
+	>, <, ==, !=, <=, >=, <<(shift left), >>(shift right),
+	=(assignment).
+
+Since = is a true operator, expressions like
+
+	a=b=c=0;
+or
+	xry[alpha=(beta-gamma)] = xfunc(a,(b=c-d));
+
+are quite valid.
+
+- Unary operators supported are:
+
+	++, --, *, ~, !, -, &.
+
+- Labels (for use with the GO statement) must be declared, and are 
+local within a procedure (no global labels allowed). They must occur 
+with a leading colon. Example:
+
+	func()
+	{	label xx,yy,zz;
+		.
+		.
+		go yy;
+	:xx
+		.
+		.
+	:yy
+	}
+
+- Only 1-dimensional arrays are supported.
+
+- No I/O statements exist. (Use library functions)
+
+- The syntax of the FOR statement in SIL has been modified very 
+slightly to make it a bit easier to compile. In standard C, a typical 
+FOR statement might look as follows:
+
+	for (i=0; i<100; i++)
+
+In SIL, a semi-colon after the last phrase is needed, as follows:
+
+	for (i=0; i<100; i++;)
+
+SIL Enhancements
+================
+
+The following features describe enhancements to SIL apart from 
+standard C:
+
+- The #toggle directive establishes a compile-time toggle and assigns 
+that toggle a value, ie.
+
+	#toggle <toggle name> on/off
+
+Examples:
+
+	#toggle alpha on
+	#toggle beta off
+
+An existing toggle may be set on and off as many times as desired, but 
+the #toggle directive may not be placed within a function.
+
+- The #ifon and #ifoff directives use the toggles established with 
+#toggle for purposes of conditional compilation. Conditional 
+toggles may be nested as deeply as desired, although there must be an 
+#endif for every #if. #if<on/off> may be outside or inside a function.
+
+Example:
+
+	#toggle benice on
+	.
+	.
+	#ifon benice
+	wrlstr("HAVE A NICE DAY!");
+	#endif
+
+	#ifoff benice
+	wrlstr("HAVE A ROTTEN DAY!");
+	#endif
+
+- The #asm, #endasm directives allow in-line assembler code anywhere 
+in a program.
+
+- A command for multi-way decisions called SWITCH exists. The general 
+format of SWITCH is as follows:
+
+	switch <expression> {
+
+	case <expression>:
+		.
+	case <expression>:
+		.
+			 }
+
+	else {
+		.
+	  }
+
+The first expression is evaluated and stored, and then each case is 
+checked for a match. If a match is found, then the code between that 
+case and the next case is executed. Cases may be in any order; note 
+that they do not run into each other, as in the C switch statement. 
+The else clause is optional and is executed if none of the cases match.
+
+Example:
+
+ switch coninp()-'0' {
+
+	case 0:	reboot();
+	case 1: proc1();
+		x=x+3;
+
+	case 2-z: proc2();
+			}
+ else {
+	wrlstr("Not in explicit cases!");
+	z=z-x(19);}
+
+Note that the continue and break statements are usable here; continue 
+takes control back to the first code after the computation of the 
+switch value, while break takes control out of case evaluation 
+altogether.
+
+- In addition to while, do/while, and for statements, a do/until 
+statement of obvious function is implemented. A varient of do 
+available is do/forever, which loops infinitely until a break or 
+return statement is executed.
+
+- Hex constants are available; they are denoted by a preceding @-sign, 
+eg., @C3.
+
+- Global (not within a function) variables may be declared public 
+or external. (Default condition is referred to as local). If they are 
+not external, then they may be declared as preset to some starting 
+value. This variant on the declaration syntax is as follows:
+
+	<char/int> <public/external> <preset> <variable list>;
+
+ eg:
+	char public x;
+	int external cout, sum, tie5;
+	char preset c1, c2, ary[100];
+	int public preset bigint[5];
+
+If the variable(s) is(are) preset, then it is up to the programmer to 
+accurately define (at the assembler level) the existence of the 
+variables concerned (the compiler will emit code to make the variables 
+public). If the variable is local and not preset, the compiler will 
+set it up automatically.
+
+-Functions may be declared public by following the function name by 
+the word "public" in the function declaration, eg.,
+
+	myfunc public (a1, a2)
+	char a1, a2;
+	{. . .}
+
+- Functions may be declared external by setting up a dummy declaration 
+with no parameters or body, as follows:
+
+	search external();
+
+Obviously, the function must be really declared in some other module, 
+to be found at link time.
+
+- Non-external functions may also be declared non-recursive. This 
+will cause local variables to be stored in a heap area (not on the 
+stack), reducing the code needed to access them to the same amount 
+needed for global variables. This does, however, sacrifice the 
+recursive/reentrant nature of that particular function.
+
+ Example:
+
+	myfunc public static(a)
+	char a;
+
+	mynewfunc static()
+
+Local variables for static functions are stored in an area known as 
+CCHEAP. Normally, CCHEAP is located at the end of the compiled 
+program; if this has to be changed (if, for example, the program will 
+be run from PROM), CCHEAP may be declared as if it were any normal 
+variable, and the compiler will suppress automatic generation of the 
+heap. Note that a comment at the end of the compiled program output 
+tells how large the heap must be.
+
+ Example:
+
+	char external ccheap[1];
+
+would enable a prom-based program to reference a heap defined 
+elsewhere at link time.
+
+SIL FUNCTIONS
+=============
+
+- Several useful functions are provided with SILLIB, as listed below. 
+These must be declared as external if they are to be used (see above), 
+and are called as though they were local functions declared as follows:
+
+--Alpha returns true if c is an upper or lower case alphabetic.
+
+	alpha(c)
+	char c;
+
+--An returns the alphanumeric status of the input character 
+(1=alphanumeric, 0=not alphanumeric).
+
+  an(c)
+  char c;
+
+--Aparse returns the number of parameters in the command line and puts 
+a pointer to each parameter in the array (command line starts at @80).
+
+  aparse(array)
+  int *array;
+
+--Cmndfcb returns the default fcb made up by CP/M when a program is 
+loaded. This fcb then can be used for file operations as though it 
+had been made up by the cmndline and setfcb functions.
+
+  cmndfcb(fcb)
+  char *fcb;
+
+--Cmndline returns a pointer to the input string in the CP/M command 
+line (in normal SIL format).
+
+  cmndline(s)
+  char *s;
+
+--Digit returns a true value if c is a numeric character.
+
+	digit(c)
+	char c;
+
+--Fill fills a block of memory len bytes long from address start with 
+char c. It returns the next address to fill.
+
+	fill(c,start,len)
+ 	char c,*start;
+	int len;
+
+--Highb returns the upper 8 bits of a 16-bit value as a character.
+
+  highb(value)
+  int value;
+
+--Inp returns the result of an input instruction from the desired port.
+
+  inp(port)
+  int port;
+
+--Lowb returns the lower 8 bits of a 16-bit value as a character.
+
+  lowb(value)
+  int value;
+
+--Move moves a block of memory len bytes long up from address source 
+to address dest. It returns the next address to be moved into. This 
+function uses the Z80 LDIR instruction.
+
+	move(source,dest,len)
+	char *source,*dest;
+	int len;
+
+--Movedn moves a block of memory len bytes long down from address 
+source to address dest. It returns the next address to be moved into. 
+This function uses the Z80 LDDR instruction.
+
+	movedn(source,dest,len)
+	char *source,*dest;
+	int len;
+
+--Outp outputs the given character to the given port.
+
+  outp(port,c)
+  int port;
+  char c;
+
+--Peek returns the value of the byte at the given address. This is 
+handy to use when constructing a pointer to a byte for temporary 
+purposes would be clumsy.
+
+  peek(adrs)
+  char *adrs;
+
+--Peekw returns the 16-bit value whose LSB is at <adrs>, MSB at 
+<adrs>+1.
+
+	peekw(adrs)
+	int *adrs;
+
+--Poke places the input character at the input address, and returns 
+the old contents of the input address. It can be used in the same sort 
+of situation as peek above.
+
+  poke(adrs,c)
+  char *adrs,c;
+
+--Pokew places the 16-bit value LSB at <adrs>, MSB at <adrs>+1.
+
+	pokew(adrs,val);
+	int *adrs,val;
+
+--Search returns a pointer to the next character after c from address 
+start. If c is not found before length len is exhausted, a 0 is 
+returned.
+
+	search(c,start,len)
+	char c,*start;
+	int len;
+
+--Setfcb sets the given file name into the given fcb and clears out 
+the other fcb areas. The file name may have a drive designation and 
+type extension as in normal command usage.
+
+  setfcb(file,fcb)
+  char *file,*fcb;
+
+--Strcat concatenates the source string behind the destination string.
+
+	strcat(dest,source)
+	char *dest,*source;
+
+--Strcmp returns a true value if string s1 is the same as string s2.
+
+	strcmp(s1,s2)
+	char *s1,*s2;
+
+--Strcpy copies the source string to the destination string.
+
+	strcpy(dest,source)
+	char *dest,*source;
+
+--Strlen returns the length of a string.
+
+	strlen(string)
+	char *string;
+
+--Struc forces all lower-case letters in a string to upper case.
+
+	struc(string)
+	char *string;
+
+--Uc returns the upper case value of c. 
+
+	uc(c)
+	char c;
+
+CP/M INTERFACE ROUTINES
+=======================
+
+- The library CPMDIO contains CP/M interface routines for those 
+programs destined to run under CP/M. Again, these routines must be 
+declared external at compile time, and the library must be linked (in 
+fact, it must be the last item linked) at link time. The CP/M 
+function number used by each routine is given in parentheses. The 
+included routines are:
+
+ allvec()	return address of allocation vector (#27).
+
+ break()	get console break status (#11).
+
+ close(fcb)	close the file represented by the input fcb (#16).
+ char *fcb;
+
+ coninp()	direct console input (direct BIOS call).
+
+ conout(c)	direct console output of character c
+ char c;    (direct BIOS call).
+
+ curdsk()	return current disk number (#25).
+
+ delete(fcb)	delete the named file from the directory (#19).
+ char *fcb;
+
+ filatt(fcb)	set file attributes (#30).
+ char *fcb;
+
+ filsiz(fcb)	compute file size (#35).
+ char *fcb;
+
+ getdpb() 	returns address of current disk parameter block (#31).
+
+ getio()	read system iobyte (#7).
+
+ getusr()	returns current user code (#32).
+
+ logvec()	return the logged-in drive vector (#24).
+
+ make(fcb)	create a file (#22).
+ char *fcb;
+
+ memptr()	returns the first unsed byte address after your program.
+
+ open(fcb)	open a file represented by the input fcb (#15).
+ char *fcb;
+
+ rdbuf(s)	read console buffer into string. Byte 0 of string
+ char *s;	must have max length, byte 1 returned with input
+		length (#10).
+
+ rdcon()	returns a console character (#1).
+
+ rdran(fcb)	read random sector (#33).
+ char *fcb;
+
+ rdrdr()	reads a character from the reader device (#3).
+
+ rdseq(fcb)	read next sequential sector from the file (#20).
+ char *fcb;
+
+ rdstat()	read console status (direct BIOS call).
+
+ reboot()	reboots to CP/M (#0).
+
+ rename(fcb)	rename a file (#23).
+ char *fcb;
+
+ resdrv(d)	reset drives in bit vector (#37).
+ int d;
+
+ reset()	reset disk system (#13).
+
+ rovec()	return read/only vector (#29).
+
+ sear(fcb)	search the directory for the first match of
+ char *fcb;	the file named in the input fcb (#17).
+
+ searn(fcb)	search the directory for the next match (#18).
+ char *fcb;
+
+ select(d)	select a disk (#14).
+ int d;
+
+ setdma(adrs)	set the default dma address (#26).
+ char *adrs;
+
+ setio(c)	set system iobyte (#8).
+ char c;
+
+ setrec(fcb)	set random record position (#36).
+ char *fcb;
+
+ setusr(u)	set current user code (#32).
+ int u;
+
+ vers()	        get system version number (#12).
+
+ wpdisk()	write protect current disk (#28).
+
+ wrcon(c)	write a character to the console (#2).
+ char c;
+
+ wrlst(c)	write a character to the list device (#5).
+ char c;
+
+ wrlstr(s)	write string terminated with 0 to console.
+ char *s;
+
+ wrpun()	write a character to the punch device (#4).
+
+ wrran(fcb)	write random sector (#34).
+ char *fcb;
+
+ wrranz(fcb)	write random with zero fill (#40).
+ char *fcb;
+
+ wrseq(fcb)	write next sequential sector to the file (#21).
+ char *fcb;
+
+ wrstr(s)	write string terminated with '$' to console (#9).
+ char *s;
+
+ See the CP/M interface guide for a detailed explanation of all 
+ these function calls.
+
+ Example using link:
+
+  	LINK B:MYPROG,SILLIB[S],CPMDIO
+
+ Note that the S parameter is not used with CPMDIO.
+	
+Notes for SIL Users
+===================
+
+- In many ways, SIL is quite simple-minded. Thus, functions could be 
+declared in any order; "main" need not be first. However, execution 
+starts at the top of the program (ie., the first code in the first 
+function) and works its way down. Note that SIL does not mind at all 
+if you reference a function that does not exist, although he does care 
+about such variable references.
+
+- It is very important for the stack to have a valid value at the 
+start of the program. Therefore, if it is not set up automatically at 
+run time, the stack pointer should be given a valid value (in 
+assembler) before the first function.
+
+ Example:
+
+  char stack[200];
+  #asm
+    LXI SP,stack+200
+  #endasm
+
+- Global variables can be accessed directly by name in assembler; 
+defines cannot. Recursive local variables are a bit of a pain to 
+access in assembler, although just naming the variable in SIL will 
+load it into the HL registers, eg.,
+
+	xyz(a)
+	char a;
+	{
+	 a;	/* move a to register L */
+#asm
+		MOV	A,L
+		OUT	CPORT
+#endasm
+	}
+
+- RMAC will be very confused if you give any global variables any of 
+the following names:
+
+	A, B, C, D, E, H, L, PSW, SP
+
+so don't do it.
+
+Local variables are maintained on the stack or on the heap, so it's ok 
+to use such names there.
+
+- Function values are returned in the HL register pair; thus, an 
+assembler routine can easily return a value, eg.,
+
+	inport()
+	{
+  #asm
+	 IN	CONTROLPORT
+	 MOV	L,A
+	 MVI	H,0		; clear upper bits
+  #endasm
+	}
+
+- Routines located at absolute locations can be called directly, with 
+or without parameters, eg.,
+
+	#define EDITOR @23F0
+	.
+	.
+	EDITOR();
+
+- Function names/routine addresses can be passed as parameters, placed 
+into variables, or whatever, in order to access the functions more 
+easily. One way to take advantage of this feature is to make a preset 
+switch array and index into it with a status to find the routine to 
+call, eg.,
+
+	int preset swtch[5];
+	.
+	.
+	swtch[getstatus()](param1, param2); /* function call */
+	.
+	.
+#asm
+swtch:	DW	FUNC1	; can be assembler, SIL, or 
+      ; absolute address routines
+	DW	FUNC2
+	DW	FUNC3
+	etc.
+#endasm
+
+- Parameters passed to functions are on the stack; therefore, if you 
+need to directly access parameters in assembly language, the easiest 
+thing to do is 1)pop the return address, 2)pop the parameters, 3)push 
+back the parameters if you are going to return thru SIL (ie., don't 
+include a RET instruction, the closing bracket of the function will 
+cause SIL to perform the return), and 4)do something meaningful with 
+the data you just got. The parameters need not be pushed back onto 
+the stack (item 3 above) if the RET instruction is explicitly 
+included. System Note: If the return is performed thru SIL, a 
+special library function (CCAHAK) is called which clears the 
+parameters from the stack and returns to the calling routine.
+
+- Labels starting with CC are reserved for compiler use.
+
+- Remember that the SIL and assembler levels are distinct; you, 
+therefore, may have to establish certain values both as equates, for 
+assembler routines, and as defines for SIL.
+
+- The best way to figure out what SIL is doing is to play with it.
+
+Optimization Tricks, Hacks, and assorted Fol-de-rol
+===================================================
+
+- Use x=y=expression; instead of x=expression; y=expression;
+
+- Use global or static local data instead of recursive local data 
+whenever possible.
+
+- Use a defined hex value instead of a negated constant whenever 
+possible, eg.,
+
+	#define MINUS1 @FFFF
+	.
+	.
+	a = MINUS1;
+
+instead of
+
+	a = -1;
+
+- DO-WHILE and DO-UNTIL are somewhat more efficient than WHILE. DO- 
+FOREVER is best of all, if applicable.
+
+- A test for a variable being true can be the variable itself, eg.,
+
+	if (a)
+
+is the same as (and better than)
+
+	if (a>0)  or  if (a!=0)
+
+Since all constant strings are terminated by 0, this makes a handy end- 
+of-string test. For example, consider the following function which 
+copies the string at address s1 to the string at address s2.
+
+	strcpy(s1,s2)
+	char *s1,*s2;
+	{
+	 do; /* a null statement */
+	 while(*s2++ = *s1++);
+	}
+
+- Variable assignments within expressions are always more efficient, 
+eg.,
+
+	char *pc;
+	*(pc=getptr()) = 'Z';
+
+is better (if less obvious) than
+
+	char *pc;
+	pc = getptr();
+	*pc = 'Z';
+
+
+Edited 3/21/91 by Lee Bradley (minor edits and reformatting.)
+

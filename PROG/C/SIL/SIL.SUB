@@ -1,0 +1,44 @@
+;
+; SUBMIT file to create a .COM file from a .SIL file.
+; NOTE: Do NOT put .SIL extension on input file name.
+;
+; Updated 11/4/92 Lee Bradley
+;
+; Depending on what assembler and linker you are using, you will
+; need to comment out / uncomment appropriate lines.
+; You will need the files SILLIB.REL and SILZ80.LIB and possibly
+; BDOS.DEF and CPMDIO.REL online, plus SIL.COM, SOP.COM, XIZ.COM and
+; your assembler and linker. ZASM.COM and PROLINK are active 
+; below. Other .REL files may be needed, like Z3HDR.REL.
+;
+SIL $1 N E P1000
+; Next step is optional and is the output optimizer
+SOP $1
+; Next step translates 8080 mnemonics to Z80 mnemonics
+; XLATE2 $1
+XIZ $1
+;
+; ==> NOTE!! May need to make some changes to the .Z80 file at this
+; ==> point with your editor. If using ZASM, the MACLIB SILZ80 
+; ==> directive needs to be changed to *MACLIB SILZ80.LIB, with the
+; ==> * in column 1. Change the ZDE below to your editor.
+;
+ZDE $1.Z80
+; Next step assembles the .Z80 code
+; RMAC $1 $$PZ SZ
+; SLR $1/6
+; ZMAC $1
+ZASM $1
+; Next step links the code
+; LINK $1[$$SZ],SILLIB[S],SILLIB[S],CPMDIO
+; SLRNK $1/A:100,SILLIB/S,CPMDIO,$1/N/E
+; ZML $1.COM=$1,SILLIB/
+PROLINK
+; ==> ProLink's prompt is an *
+; typical responses to the * are shown below
+; *ORIGIN 100
+; *LINK PGMNAME
+; *SEARCH SILLIB
+; *OUTFIL PGMNAME
+; *EXIT
+

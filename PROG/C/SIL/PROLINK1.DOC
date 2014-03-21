@@ -1,0 +1,737 @@
+
+                          ProLink (TM)
+
+                      Microsoft Compatible
+                         Linkage Editor
+
+                       Copyright (C) 1985
+                               by
+                     NightOwl Software, Inc.
+
+  ProLink software and User's Guide written by Ronald G. Fowler
+
+Prolink Table of Contents
+
+       Copyright, trademarks, warranty, and license........  2
+1.     Overview ...........................................  4
+2.     Getting started ....................................  5
+2.1       Command Lines....................................  5
+2.2       Syntax Conventions ..............................  6
+2.3       Expressions and Symbols..........................  6
+2.4       Filenames .......................................  7
+3.     Basic linkage editing ..............................  8
+3.1       The ORIGIN command ..............................  8
+3.2       The LINK command ................................  8
+3.3       The SEARCH command ..............................  9
+3.4       Automatic library search.........................  9
+3.5       The LOAD command ................................ 10
+3.6       Starting over: the RESET command ................ 10
+3.7       Giving up entirely: the ABORT command ........... 10
+3.8       Naming the output file: the OUTFIL command ...... 11
+3.9       Closing the edit: EXIT and CLOSE commands ....... 11
+4.     Automating the process: the READ command ........... 13
+4.1       Comments in READ files .......................... 13
+5.     ProLink query commands ............................. 15
+5.1       The HELP command ................................ 15
+5.2       The STAT command ................................ 15
+5.3       The EVAL command ................................ 15
+5.4       The DUMP command ................................ 15
+6.     Symbols and ProLink ................................ 17
+6.1       The SYMFIL command .............................. 17
+6.2       The SYMBOL command .............................. 17
+6.3       Undefined symbols: the UNDEF command ............ 17
+6.4       Multiply defined symbols: the MULDEF command .... 18
+6.5       Unreferenced symbols: the UNREF command ......... 18
+6.6       Sorting the symbols: the SORT command ........... 18
+6.7       The DEFINE and REDEF commands ................... 18
+6.8       The PURGE command ............................... 19
+6.9       The WRSYM command ............................... 19
+6.10      Special symbols ................................. 20
+6.10.1         $MEMRY, ?MEMRY ............................. 20
+6.10.2         ?BEG?, ?END? ............................... 20
+6.11      Re-defineable symbols ........................... 21
+7.     Advanced applications .............................. 22
+7.1       Modifying the image: the PATCH command .......... 22
+7.2       Ignoring undefined externals: the $X option ..... 23
+7.2.1          The SEED command ........................... 24
+7.3       Modular add-ons: the RESOLVE command ............ 24 
+7.4       The SETLOC command .............................. 27 
+8.     ProLink error messages ............................. 28
+
+Appendices:
+
+A1.    Appendix 1: the LINKMAP rel-file dump utility ...... 29
+A2.    Appendix 2: Format of ProLink object files ......... 30
+
+Copyright Notice
+----------------
+
+ProLink  software package and User's Guide are copyright (C) 1985 
+by NightOwl Software, Inc. All Rights reserved worldwide.
+
+No  part of this publication or the ProLink software package  may 
+be reproduced,  transcribed, transmitted, stored in any retrieval 
+system,  or  translated  into  any language without  the  express 
+written consent of NightOwl Software,  Inc.,  Route 1 Box 7, Fort 
+Atkinson, WI.
+
+Trademark Notice
+----------------
+
+"CP/M",  "RMAC",  "LINK-80"  and "DDT" are trademarks of  Digital 
+Research,  Pacific  Grove,  CA.  "Macro-80"  and "Microsoft"  are 
+trademarks  of Microsoft Corporation.  "Intel" is a trademark  of 
+Intel  Corporation.  "Zilog" and "Z80" are trademarks  of  Zilog, 
+Inc. 
+
+"ProLink" is a trademark of NightOwl Software, Inc.
+
+Warranty
+--------
+
+NightOwl Software,  Inc.,  makes no representations or warranties 
+with respect to the contents of this User's Guide or the  ProLink 
+software package,  and specifically disclaims any implied warran
+ties  of  merchantability  or fitness for a  particular  purpose.  
+NightOwl Software,  Inc.  shall under no circumstances be  liable 
+for  consequential  damages or related expenses,  even if it  has 
+been notified of the possibility of such damages.
+
+Some states do not allow the exclusion of implied warranties,  so 
+the  above exclusion may not apply to you.   This warranty  gives 
+you  specific  legal rights and you may also  have  other  rights 
+which vary from state to state.
+
+NightOwl software does warrant the diskette on which the software 
+is furnished,  to be free from defects in materials and  workman
+ship  under  normal use for a period of sixty (60) days from  the 
+date of delivery to you,  as evidenced by a copy of your receipt.  
+NightOwl  Software's entire liability and your  exclusive  remedy 
+shall  be the replacement of any diskette(s) not meeting NightOwl 
+Software's limited warranty.
+
+NightOwl  Software reserves the right to revise this  publication 
+and  the ProLink software from time to time without obligation to 
+notify any person of such revisions.
+
+Single computer license
+-----------------------
+
+The  ProLink software package provided with this User's Guide  is 
+furnished under a license and may be used only in accordance with 
+the license terms described below.   Your use of the software  or 
+this  User's Guide shall be deemed to constitute your  acceptance 
+of the terms of this license.
+
+1) You may use ProLink only on a single computer or CPU.
+2) You may copy ProLink only for backup or modification purposes 
+   in support of your use of ProLink on a single computer or CPU.
+3) You may not remove any copyright, trademark or other notice or  
+   product identification from your ProLink diskette and you must 
+   reproduce  and  include  any such notice  or  product  identi
+   fication on any copy of ProLink.
+
+.he Prolink User's Guide: Overview
+
+                           1. Overview
+
+ProLink  is  a  Microsoft-format  linkage  editor  for  computers 
+employing  the Z80 microprocessor and running CP/M and compatible 
+operating systems.
+
+ProLink is a command-driven linker,  and provides an  interactive 
+environment  for  the generation of object program  modules.   In 
+addition to the basic link and library search  commands,  ProLink 
+provides  an  array of commands for symbol file  control,  object 
+module  placement,  "hot-patching" the  object  image,  automatic 
+operation from batch execution files, "add-on" modules, and more.
+
+ProLink is an in-memory single pass linkage editor,  and is  thus 
+quite fast; it is intended strictly for assembly-language modules 
+(rather than "high-level" compiler output, which is NOT supported 
+by ProLink) and supports all Microsoft-format relocation bases. 
+
+.he Prolink User's Guide: Getting Started
+
+                       2.  Getting Started
+
+This  section  deals  with the  "basics"  of  operating  ProLink: 
+commands and command lines,  syntax conventions employed in  this 
+User's Guide, expressions and symbols, and filenames.  
+
+2.1 Command lines
+
+-----------------------------------------------------------------
+
+ProLink takes its input entirely from command lines; each command 
+line represents a particular task (command) that you want ProLink 
+to execute.  For example, to link together the files BASE.REL and 
+SUPPORT.REL, the line
+
+                        LINK BASE,SUPPORT     
+
+might be used.  The command ("LINK", always the first "word" of a 
+command  line)  tells Prolink what you want done,  and  BASE  and 
+SUPPORT  are arguments to the command.   Arguments generally tell 
+Prolink what files (or symbols, or numbers) that the command will 
+work  with,  but occasionally they MODIFY what the command  does, 
+and hence might sometimes be called "optional  arguments".   Note 
+that  "arguments" and "optional arguments" can sometimes be mixed 
+on a single command line.
+
+When ProLink is initially invoked (by typing PROLINK at the  CP/M 
+command prompt),  you may optionally specify a command line to be 
+executed  when  ProLink loads.   For example,  from CP/M  command 
+level, you might type
+
+                      PROLINK LINK FOO;EXIT
+
+Note that everything after "PROLINK" is an input command line  to 
+ProLink,  and  is  executed  just as if you had typed it  at  the 
+ProLink command prompt.   All ProLink commands are valid from the 
+CP/M command line; when any such command line is completed (or if 
+no  command line is entered) you'll see the ProLink input  prompt 
+(the '*' character), which is ProLink's signal that it's ready to 
+accept another line of input. (Note that an "EXIT" command in the 
+input  stream,  as  is given in the  example  above,  will  cause 
+ProLink  to write its output file and return immediately to CP/M, 
+without prompting you for any additional input).
+
+As you can see from the example above,  ProLink accepts  multiple 
+commands on a line.   Simply separate them with a semicolon,  and 
+ProLink  will execute them logically as if they had actually been 
+typed in separately.
+
+Note  that  the maximum length of a ProLink command line  is  128 
+characters,  and  this  includes any multiple commands  within  a 
+single  physical line of input (note that a command line  entered 
+with  ProLink from your operating system command level may have a 
+smaller maximum -- for example,  some versions of ZCPR allow only 
+an  80 character input line.   This does not change  the  maximum 
+length that ProLink will accept at its command level, however).
+
+2.2 Syntax Conventions
+
+-----------------------------------------------------------------
+
+Throughout this User's Guide, we'll be using a common "shorthand" 
+for describing each of ProLink's commands.  These conventions are 
+those  commonly used in software documentation (in  BASIC  inter
+preters, etc.).  In general, argument types are enclosed in angle 
+brackets;  for  example,  a filename argument to the LINK command 
+will be described as
+
+                        LINK <filename>.
+
+When using the command, don't type in the angle brackets; replace 
+the  text within the angle brackets with a real argument.   Thus, 
+an actual LINK command might be entered as
+
+                          LINK TESTPROG
+
+Similarly,  square brackets will be used to denote optional items 
+(again, don't type in the square brackets).  To continue our LINK 
+example, an optional second argument might be given in the syntax 
+description as
+
+                  LINK <filename>[,<filename>]
+
+which  means  that an optional second  filename  is  allowed,  if 
+prefixed by a comma.
+
+An  elipsis  ("...") indicates that any number of  arguments  are 
+allowed  (generally limited only by the maximum length of a  com
+mand  line,  which  is 128 characters).   Thus,  the full  syntax 
+description for LINK is
+
+                LINK <filename>[,<filename>] ...
+
+which indicates that more optional filenames may be entered.
+                    
+
+2.3. Expressions and Symbols
+
+-----------------------------------------------------------------
+
+Many ProLink  commands take a numeric argument (i.e., an argument 
+that  evaluates  as a number).   Such an argument  is  called  an 
+expression,  and  is  referred  to as  "<expression>"  in  syntax 
+charts.
+
+ProLink expressions are integer numbers;  the components (and the 
+result  of evaluation) are unsigned 16-bit integers.   Valid  op
+erators  are "+",  "-",  "*" and "/"  (add,  subtract,  multiply, 
+divide).   Symbol names (from any linked modules already in  mem
+ory)  may also be included.   Thus,  the following are legal  ex
+pressions:
+
+                            PATCH+3
+                            NMEMPL/4
+                            6*8+9
+
+Note that the multiplication and division operators are evaluated 
+first;  hence,  in the third example,  the result is 57, not 102.  
+The  order of evaluation may be modified by placing  parentheses' 
+around  the terms that are to be evaluated first.   Thus,  in the 
+second example, we could have
+
+                             6*(8+9)
+
+to  get  a  result of 102.   Parentheses may  be  nested  to  any 
+reasonable level:
+
+                     ((NMEMPL+3)/(6+9)+1)/8
+
+It  is important to note that numeric constants are considered to 
+be  hexadecimal as a default.   To avoid confusion with  symbols, 
+all  constants  beginning  with  letters 'A'  to  'F'  should  be 
+preceeded with a leading zero (thus,  0FFA1, not FFA1; the latter 
+would be interpreted by ProLink as a symbol).   You can specify a 
+decimal number by preceeding the number with a pound sign  ("#"); 
+thus  the constant 10 is 10 hex,  or 16 decimal,  while #10 is 10 
+decimal, or 0A hex.
+
+
+2.4 Filenames
+
+-----------------------------------------------------------------
+
+Generally, filenames used by ProLink are fully in accordance with 
+the specifications for CP/M, with the following enhancement:
+
+Any  file specification may be preceeded with a user  number,  as 
+long  as  a  colon separates the file name from  the  user  spec
+ification.  This  holds true whether or not a drive specification 
+is  also  present (this is often called the "ZCPR  style"  naming 
+convention).  Thus the following are legal filenames:
+
+                          B3:OBJECT.REL
+                          C:MXO-SM13.HEX
+                          3:SYSLIB.REL
+.heProLink User's Guide: Basic Linkage Editing
+
+                    3. Basic Linkage Editing
+
+This  section  deals with the minimal subset of ProLink  commands 
+needed to do simple program linking.  This is the basic "core" of 
+ProLink,  and the commands detailed here are the ones you're most 
+likely to use over and over.
+
+3.1 The ORIGIN command
+
+-----------------------------------------------------------------
+
+ORIGIN  is used to set the beginning address of your output file.  
+By  setting an ORIGIN,  you change the EXECUTION ADDRESS  of  the 
+output  code,  but NOT its position in the output file (that  is, 
+the first byte of output still occupies the first position in the 
+output file).
+
+If you don't specify an ORIGIN address,  ProLink will default  to 
+100H.   You  should  be aware that ProLink's default origin  will 
+include a 3-byte jump field at 100H that is filled in with a jump 
+to your program's entry point at linkage time.  If you change the 
+origin,  ProLink will not generate this jump instruction, and the 
+code segment (CSEG) of your first module must begin your program.
+
+Occasionally,  you'll  want to defeat this jump-field generation, 
+even when loading programs at 100H (for example,  Echelon's ZCPR3 
+utilities  must start at exactly 100H,  without the jump  field).  
+You can do this by explicitly setting the origin:
+
+                           ORIGIN 100
+
+Note  that  the ORIGIN command cannot be used after  any  program 
+loading  has  started (either with the LINK  or  LOAD  commands).  
+Once  the  load has started,  the origin cannot be changed  again 
+until the currently-loaded file is either written out, or aborted 
+(with the RESET command)
+
+3.2 The LINK command 
+
+-----------------------------------------------------------------
+
+The  most  fundamental  command  of ProLink's  set  is  the  LINK 
+command.  Its syntax is:
+
+        LINK <module-name>[,<module-name>] ...
+
+Thus, to link a single file (say, FOO.REL):
+
+                            LINK FOO
+
+(Note that the filetype, if not specified, defaults to REL).  You 
+can link several files with one LINK command:
+
+                 LINK FOO,MATHPAK,IOPACK,FORMAT
+
+Multiple link commands may be used instead, with the same result:
+
+     LINK FOO
+     LINK MATHPAK
+     LINK IOPACK
+     LINK FORMAT
+
+Note  that all files entered as arguments to the LINK command are 
+unconditionally linked into the object file,  even if the subject 
+files contain multiple modules.
+
+The LINK command will print the name of each module on the screen 
+(in  columnar  format)  as that module's  linkage  is  completed, 
+UNLESS  you're  linking  from a READ file with  the  '$E'  option 
+active (see chapter 5 for more information on READ files).
+
+3.3 The SEARCH command
+
+-----------------------------------------------------------------
+
+The  syntax  for the SEARCH command is identical to that  of  the 
+LINK command.   The difference is that SEARCH treats the argument 
+file(s) as libraries (i.e.,  collections of modules).  Only those 
+modules  from  the  library files needed  to  satisfy  unresolved 
+references  are actually linked into the file;  the remainder are 
+bypassed.
+
+Generally,  you'll  use the SEARCH command after one or more LINK 
+commands,  to "pull in" often-used routines from your library  of 
+code modules.  For example,
+
+                      LINK DBSEARCH,FNPARS
+                          SEARCH SYSLIB
+
+In this example,  DBSEARCH.REL and FNPARS.REL are unconditionally 
+linked  into  the  output file,  and SYSLIB.REL is  searched  for 
+needed subroutines to satisfy unresolved references from DBSEARCH 
+and FNPARS.
+
+Although  a detailed treatment of library files and their use  is 
+outside  the  scope of this discussion,  it should be noted  that 
+library files can be constructed from the librarian supplied with 
+your assembler (LIB-80 with Microsoft's MACRO-80  assembler,  LIB 
+with Digital Research's RMAC assembler).
+
+3.4 Automatic library search
+
+-----------------------------------------------------------------
+
+If   your   assembler   supports   a   library-search   pseudo-op 
+(e.g.,  ".REQUEST"  in Microsoft's MACRO-80  assembler),  ProLink 
+will automatically search all such requested libraries just prior 
+to closing the output file (with the CLOSE or EXIT commands).  To 
+use  this feature,  the requested libraries must be available  on 
+the current drive, in the current user area.
+
+3.5 The LOAD command
+
+-----------------------------------------------------------------
+
+The LOAD command is used to load Intel "hex" format files, binary 
+"image" files, or symbol files.  Its syntax is as follows:
+
+     LOAD <filename.typ>[,<filename.typ>] ...
+
+LOAD uses the filetype to distinguish "hex",  binary,  and symbol 
+files.   If you specify HEX as a filetype, LOAD will consider the 
+file  to be composed of Intel hex format records,  and will  load 
+your  file  using the rules specified for that  format.   If  you 
+specify no filetype at all, LOAD will append "HEX" to the name as 
+a filetype, and look for a hex file to load.
+
+If  you specify "SYM" as a filetype,  LOAD will load symbols into 
+its  internal  symbol table.   The file thus loaded  must  be  in 
+accordance  with the MAC/SID symbol format,  as generated by  the 
+MAC  assembler (and many other commercial products).   Note  that 
+symbol  files  written by ProLink are fully ompatible  with  this 
+format; thus, SYM files written by ProLink may be safely reloaded 
+in a later ProLink session,  or used under Digital Research's SID 
+or ZSID debuggers.
+
+Any filetype other than HEX or SYM (or blank) will be  considered 
+an "image" file.   Typically these are COM files, but can also be 
+overlay files,  or even ASCII text files.  Image files are loaded 
+into  memory starting at the current PC value (viewable with  the 
+STAT command,  and changeable with the SETLOC command),  and must 
+fit in available memory
+
+Some LOAD examples:
+
+LOAD MEX112.COM,MXO-KP41 <-- Load MEX112.COM, overlay with
+                              KP41 hardware overlay
+LOAD MYPROG.SYM          <-- Loads a symbol file
+LOAD DBSRCH              <-- Loads DBSRCH.HEX
+
+
+3.6 Starting over: the RESET command
+
+-----------------------------------------------------------------
+
+During a linkage session,  you might find that you want to  start 
+over for some reason.   The RESET command will restore ProLink to 
+its  start-up state;  any program currently being linked will  be 
+removed from memory,  and ProLink's internal variables (including 
+the default value of ORIGIN) will be reset.
+
+The RESET command takes no command line arguments.
+
+3.7 Giving up entirely: the ABORT command
+
+-----------------------------------------------------------------
+
+The  ABORT command exits the current session,  without writing  a 
+file or otherwise disturbing anything on the disk.
+
+The ABORT command takes no command line arguments.
+
+3.8 Naming the output file: the OUTFIL command
+
+-----------------------------------------------------------------
+
+The  OUTFIL  command  is used to specify a name for  your  output 
+file.  Its syntax is as follows:
+
+                        OUTFIL <filename>
+
+The filename may contain a drive specification.
+
+If you omit the OUTFIL command, ProLink will build an output name 
+using  the name of your first input file:  it will use the  first 
+eight characters of that name,  stripping off the filetype  (gen
+erally  "REL") and forming a filetype of "COM".   Thus,  if  your 
+linkage looked like this:
+
+                        LINK FILE1,FILE2
+                          SEARCH SYSLIB
+
+ProLink would link FILE1.REL,  FILE2.REL,  search SYSLIB.REL, and 
+write  an  output file named FILE1.COM.   But if your program  is 
+actually a database searching utility,  you might want to give it 
+a more descriptive name:
+
+                         OUTFIL DBSEARCH
+
+or
+
+                        OUTFIL B:DBSEARCH
+
+
+3.9 Closing the edit: EXIT and CLOSE commands
+
+-----------------------------------------------------------------
+
+Up until this point,  all of the commands we've looked at have to 
+do  with building the output file in memory.   To actually  write 
+the output file, either the EXIT or CLOSE command is used.
+
+EXIT is the "normal" method of ending the linkage;  it writes the 
+output file, and exits to CP/M.
+
+CLOSE will write the output file in the same way, but, instead of 
+exiting to CP/M,  ProLink will do an automatic RESET command  and 
+return to command level.   Thus, you're ready for another linkage 
+session.
+
+The  syntax is identical for CLOSE and EXIT,  and is  illustrated 
+here for CLOSE:
+
+                       CLOSE [<filename>]
+
+The  optional  filename  overrides any name that  may  have  been 
+specified with the OUTFIL command. 
+
+Both  EXIT and CLOSE will print a list of any unresolved  symbols 
+(if any remain unresolved), as well as a list of multiply-defined 
+symbols (if multiply defined symbols exist).   Following any such 
+list,  ProLink  will  print  a one-line  message  containing  the 
+starting and ending addresses, followed by the size of the output 
+file (in 256-byte pages).
+
+.he ProLink User's Guide: the READ command
+
+        4. Automating the process: the READ command
+
+Complex  applications  making full use of ProLink  features  will 
+result  in a lot of typing during the typical edit-assemble-link-
+debug cycle.   In such circumstances,  it is advisable to use  an 
+editor  to  make a file of ProLink commands,  then use  the  READ 
+command to execute these commands.
+
+The syntax of the READ command is as follows:
+
+                      READ <filename> [$E]
+
+ProLink  will then take its input from the specified  file.  Note 
+that,  if no filetype is specified,  ProLink will look for a file 
+of type "LNK".   Thus,  you should create READ files with a "LNK" 
+filetype.
+
+Normally, ProLink will not echo the command lines it is executing 
+from a READ file.   However,  the "$E" option will override this, 
+and  each command will be displayed on your screen just prior  to 
+its  execution (this is especially useful when "debugging" a READ 
+file).
+
+A READ file may contain any valid ProLink command EXCEPT  another 
+READ command (i.e., READ files may not be nested).
+
+ProLink  will  abort  a  read-file in progress  if  an  error  is 
+detected during the course of execution.
+
+4.1 Comments in READ files
+
+-----------------------------------------------------------------
+
+You  can place a comment within a READ file (or at command  level 
+from the keyboard,  for that matter) by placing a period (".") in 
+the  first  character position of a line.   Thus,  the  following 
+lines are valid comments:
+
+     . HARDB.LNK: generates Harris version of DB.COM
+     . The following line should be omitted in final version
+
+The comment specifier may also be present as the first  character 
+of a multiple command line:
+
+            LINK MAIN,SORT ;.include the SORT module
+            SEARCH SYSLIB  ;.look through SYSLIB for subroutines
+
+There are two special forms of comment lines that are interpreted 
+by ProLink:
+
+                 .+   <-- turns command-echo on
+                 .-   <-- turns command-echo off
+
+These command-line echo specifiers override any "$E" option given 
+on the READ command line.
+
+.he ProLink User's Guide: ProLink Query Command
+
+                    5. ProLink Query Commands
+
+ProLink  provides a number of commands that may be used to  query 
+the system for various information.
+
+5.1 The HELP command
+
+-----------------------------------------------------------------
+
+HELP prints a list of available commands on the  screen.   Useful 
+as  a  memory jogger,  but it doesn't give any information  about 
+command  syntax.   You'll have to refer to the User's  Guide  for 
+that.
+
+HELP does not take any command line arguments.
+
+5.2 The STAT command
+
+-----------------------------------------------------------------
+
+STAT  may  be  used to display the status of the linkage  at  any 
+particular  time.    STAT  prints  information  such  as   output 
+filename,   symbol  filename,   state  of  the  linkage,   memory 
+statistics, etc.
+
+STAT does not take any command line arguments.
+
+5.3 The EVAL command
+
+-----------------------------------------------------------------
+
+EVAL is a general-purpose expression evaluator.  Its syntax is
+
+              EVAL <expression>[,<expression>] ...
+
+EVAL  is  most useful for determining symbol values,  but it  can 
+also come in handy for doing quick arithmetic calculations.
+
+EVAL  prints  its  result both in hexadecimal  and  decimal  (the 
+decimal value is printed with a leading pound sign).
+
+5.4 The DUMP command
+
+-----------------------------------------------------------------
+
+DUMP  displays memory from the image under construction,  in  the 
+DDT-style  combined  hex  and ASCII.   The syntax  for  the  DUMP 
+command is
+
+              DUMP [<start-adrs>] [+][<end-address>]
+
+If no start or end address is entered, DUMP will display from the 
+previous  ending  DUMP  address  (or the  program  origin  if  no 
+previous DUMP has been performed) for a length of 128 bytes.   If 
+a start-address is entered without an ending address,  128  bytes 
+will be displayed.  The ending address prefixed with the optional 
+'+'  specifier causes the end-address to be considered a count of 
+bytes to display, rather than an actual ending address.
+
+Note that "D" is a shorthand synonym for "DUMP".
+
+.he ProLink User's Guide: Symbols and ProLink
+
+                     6. Symbols and ProLink
+
+Symbols are an integral part of the linkage process,  and ProLink 
+provides a number of commands for manipulating symbols and symbol 
+files.
+
+6.1 The SYMFIL command 
+
+-----------------------------------------------------------------
+
+SYMFIL  is  used to specify a symbol file name,  to turn  on  the 
+symbol  file  (ProLink,  as a default,  does not write  a  symbol 
+file), and to control the "X" symbol option.  Its syntax is
+
+              SYMFIL [<filespec>] [$ON] [$OFF] [$X]
+
+At least one of the four optional arguments must be present,  and 
+no  more than one of the "$" options may be present in  a  single 
+command line.
+
+The  <filespec>  field is used to change the name of  the  symbol 
+file written by ProLink;  just specifying the name, however, does 
+not  cause ProLink to write a symbol file:  the "$ON" option must 
+be used for this.
+
+If  no filespec is entered,  ProLink will generate its own  name, 
+using  the first eight characters of the output file  name,  with 
+"SYM" appended as the filetype.
+
+The "$X" option toggles the x-symbol option on and off;  for more 
+information on the x-symbol option, see section 7.2.
+
+Some examples of the SYMFIL command are:
+
+SYMFIL DBSEARCH.SYM $ON  <-- set name, enable symbol file
+SYMFIL $X                <-- enable x-symbol option
+SYMFIL $ON               <-- enable symfil, use default filename
+
+6.2 The SYMBOL command
+
+-----------------------------------------------------------------
+
+The SYMBOL command is used to display the current symbol table on 
+the terminal.  Note that "SYMBOLS" is a synonym for "SYMBOL", and 
+that the command takes no command line arguments.
+
+6.3 Undefined symbols: the UNDEF command
+
+-----------------------------------------------------------------
+
+The  UNDEF  command  may  be  used at any  time  to  display  all 
+undefined  symbols on the terminal.   An automatic UNDEF is  done 
+when the output file is written, if any undefined symbols exist.
+
+UNDEF takes no command line arguments.
+
+6.4 Multiply defined symbols: the MULDEF command
+
+-----------------------------------------------------------------
+
+The  MULDEF  command  is used  to  display  any  multiply-defined 
+symbols  on the terminal.   An automatic MULDEF is done when  the 
+output file is written, if any multiply-defined symbols exist.
+
+MULDEF takes no command line arguments.
+
+

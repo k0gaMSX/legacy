@@ -1,0 +1,729 @@
+
+6.5 Unreferenced symbols: the UNREF command
+
+-----------------------------------------------------------------
+
+The UNREF command displays on the terminal a list of symbols that 
+are  defined,  but not referenced.   This is useful for detecting 
+blocks  of code that are no longer referenced globally  (if  they 
+are not referenced in the module in which they are defined,  they 
+may  then  be safely deleted).   Such symbols,  if referenced  in 
+their local modules, may have their global attribute removed.
+
+UNREF takes no command line arguments.
+
+6.6 Sorting the symbols: the SORT command
+
+-----------------------------------------------------------------
+
+As a default,  ProLink does not sort its symbols, but writes them 
+in  the  order  in which they  are  encountered.   Some  symbolic 
+debuggers require a sorted symbol table, and you can use the SORT 
+command to accomplish this.
+
+SORT uses a simple bubble sort, and may take long periods of time 
+with  large symbol tables.   You may safely stop the sort at  any 
+time  with a control-C from the keyboard,  without damage to  the 
+symbol table.
+
+SORT takes no command line options.
+
+The DEFINE and REDEF commands
+
+-----------------------------------------------------------------
+
+Occasionally, you might find the need to add your own symbols, or 
+redefine  existing ones.   The DEFINE and REDEF commands  provide 
+this  capability.   Both  commands  take the  same  command  line 
+syntax, which we'll specify only for DEFINE, as follows:
+
+                DEFINE <symbol-name> <expression>
+
+The  DEFINE  command requires that the symbol-name  specified  be 
+either non-existant,  or non-defined; the latter implies that the 
+symbol can exist in the table by virtue of previous references by 
+other modules,  but that it must not yet be defined.  If <symbol-
+name> IS defined,  the DEFINE command will draw an error message, 
+and  the  symbol's value will not be changed.   Note that  if  no 
+references exist,  DEFINE will create a new entry for the symbol, 
+and then define it with a value specified by <expression>.
+
+The  REDEF  command requires that the argument symbol-name be  an 
+existing, defined symbol; if it is non-existant (or not defined), 
+the REDEF command cause an error message,  but no new symbol will 
+be  created.   If <symbol-name> is found,  the old value will  be 
+lost,  and  the  new value (specified by  <expression>)  will  be 
+substituted in its place.
+
+6.8 The PURGE command
+
+-----------------------------------------------------------------
+
+The  PURGE  command  is used to delete symbols  from  the  symbol 
+table.  Its syntax is
+
+             PURGE <symbol-name>[,<symbol-name>] ...
+
+PURGE  will delete each of the symbols from the  list,  including 
+any  references to the symbol (i.e.,  if you PURGE a symbol,  you 
+remove  not only its definition,  but any references ProLink  has 
+formed  for  the symbol.   So unless you load  new  modules  with 
+references  to  a purged symbol AFTER a purge,  ProLink will  not 
+issue  a  "not-defined"  diagnostic  when  the  output  file   is 
+written).
+
+PURGE  will  print a "not-found" message for any symbols  in  the 
+list that it can't locate; this will not, however, stop the PURGE 
+command: it will continue with any remaining symbols in the list.
+
+ 
+6.9 The WRSYM command
+
+-----------------------------------------------------------------
+
+The  WRSYM command writes out the current symbol table to a  disk 
+file.  It takes an optional filename argument:
+
+                       WRSYM [<filename>]
+
+Note  that if a <filename> spec is present,  this name  overrides 
+any  filename  specified by the SYMFIL command (which is used  if 
+<filename>  is omitted).   Also,  a filename specified  to  WRSYM 
+changes any SYMFIL-specified name; thus, the following sequence:
+
+                         SYMFIL FOO.SYM $ON
+                         WRSYM  FUB.SYM
+                         CLOSE
+
+will never write FOO.SYM, but will instead write FUB.SYM from the 
+WRSYM  command,  then delete and re-write FUB.SYM when the  CLOSE 
+command is issued.
+
+6.10 Special symbols
+-----------------------------------------------------------------
+
+ProLink  supports  several special symbols,  that may  be  freely 
+referenced  in  object  modules.   All four are for  purposes  of 
+defining limits in the completed output file:  the first pair are 
+for L80 and LINK80 compatiblity,  and the second pair are a  more 
+"kosher" way of referencing the output file boundaries.
+
+6.10.1 $MEMRY and ?MEMRY
+
+-----------------------------------------------------------------
+
+$MEMRY  is a special variable name recognized by most  Microsoft-
+compatible linkers,  and must be a 2-byte storage area within any 
+of  the  linked  object modules.   On encountering  this  symbol, 
+ProLink  will insert the first free memory address at  this  word 
+location.  Thus, a "main" module may include
+
+                          PUBLIC $MEMRY
+                          ....
+                          $MEMRY: DS 2
+
+The  base address of free memory is then available to all  object 
+modules by performing
+
+                           LHLD $MEMRY
+
+The same discussion relates to the symbol '?MEMRY';  this  symbol 
+is  used  by the Digital Research LINK-80 linker (and  DR's  PL/I 
+language compilers) instead of $MEMRY.
+
+6.10.2 ?BEG? and ?END?
+
+-----------------------------------------------------------------
+
+While  the above technique is useful for determining the location 
+of  free  memory,  we feel it is flawed  in  design,  because  it 
+requires  the  linker  to modify the binary image of  the  output 
+file.  We felt that a technique more consistant with the use of a 
+linkage  editor  was required,  so ProLink supports  two  special 
+symbols  that  are defined by ProLink (and so should be  used  in 
+your object modules only to determine memory limits).
+
+The symbol '?BEG?' contains the base address of the linked output 
+image; '?END?' contains the ending address (which is actually the 
+base of the "free" area).  Thus, rather than loading a word value 
+from  memory to locate the base of the free area (as is done with 
+$MEMRY and ?MEMRY), you simply reference ?END?.  For example,
+
+                        EXTRN ?END?,?BEG?
+                        LXI H,?END?
+                        LXI D,?BEG?
+
+In this example, HL obtains the end of linked program, and DE the 
+beginning.
+
+6.11 Re-defineable symbols
+
+-----------------------------------------------------------------
+
+ProLink supports a special kind of symbol, called a re-defineable 
+symbol.   Such  a symbol may be defined more than once,  and each 
+succeeding definition definition will map to a unique symbol.
+
+Re-defineable symbols always end with the special character  '@'; 
+the  first definition of such a symbol maps the '@' character  to 
+the character 'A',  the second to 'B',  and so on.  This lets you 
+have  multiple  (and  likely,  similar)  modules,  each  with  an 
+identical  entry name,  say "TRMDR@" (one might be for an  ADM3A, 
+another for a Hazeltine 1500, etc).  The first module encountered 
+with  such a name will be redefined by ProLink to have  the  name 
+"TRMDRA",  the second,  "TRMDRB", etc.  Each module might have an 
+initialization  entry  point with a  re-defineable  symbol;  thus 
+"TINIT@" would be re-defined by ProLink as TINITA, TINITB, etc.
+
+In this example, you could add on as many terminal drivers as you 
+like, simply by including them in your LINK command list.
+
+You  can reference these symbols from within other modules simply 
+by referencing them with their re-mapped name; this is especially 
+useful when used with ProLink's RESOLVE command,  which lets  you 
+reference  symbols freely,  without worrying about whether or not 
+they  actually exist.   To continue our example,  let's say  that 
+your  mainline  code module has  a  mass-initialization  section, 
+which  is responsible for initializing every other module in  the 
+program;  it contains a routine with a global name of UNDF, which 
+simply  returns  (intended  for  use with  the  command  "RESOLVE 
+UNDF").  Your initialization section might look like this:
+
+     EXTRN TINITA,TINITB,TINITC,TINITD
+;
+     CALL  TINITA        ;initialize all possible terminal dvrs
+     CALL  TINITB
+     CALL  TINITC
+     CALL  TINITD
+     RET
+
+If your LINK command list then contains only two terminal  driver 
+modules (AND you've issued a "RESOLVE UNDF" command),  the actual 
+object code generated by ProLink would look like this:
+
+     CALL  TINITA
+     CALL  TINITA
+     CALL  UNDF
+     CALL  UNDF
+     RET
+
+.heProLink User's Guide: Advanced Applications
+
+                    7. Advanced Applications
+
+7.1 Modifying the image: the PATCH command
+
+-----------------------------------------------------------------
+
+Once  your program is loaded,  and resident in ProLink's  memory, 
+you  can make changes to the generated image by using  the  PATCH 
+command.  The syntax of the PATCH command is as follows:
+
+   PATCH [<adrs-expression>]=<patch-value>[,<patch-value>] ...
+
+The  <adrs-expression>  specifies  where to  begin  patching  the 
+image;  usually,  this  expression  will be given relative  to  a 
+global  symbol name (e.g.,  CMDTBL+3).   <adrs-expression> is NOT 
+optional on the first PATCH command of a session; after that, the 
+PATCH  command  will remember where the  last  patch  ended,  and 
+continue  patching at the next successive location (unless a  new 
+address is specified by NOT omitting <adrs-expression>.
+
+Following  the  requisite  "equals"  sign is the  list  of  patch 
+values.   A  patch-value may be either a numeric expression or  a 
+string value.
+
+Numeric  expressions are generally considered to be  byte-values; 
+thus,  the  following  PATCH command will plug byte  values  into 
+successive locations:
+
+                PATCH SKWTBL=1,3,5,7,9,2,4,6,8,0A
+
+If  the numeric expression resolves to a value greater than  255, 
+however, PATCH will treat the value as a WORD value:
+
+               PATCH DISTBL=DUMPCM,LISTCM,LISTCM+1
+
+Generally,  you can freely mix byte and word values,  as long  as 
+there is no ambiguity in meaning:
+
+            PATCH CMDTBL=8,BACKSP,9,TAB,13,CRLF,10,LF
+
+If you're patching word values,  and the values are less than 256 
+(and thus, would otherwise by considered byte values by ProLink), 
+you  can  enclose  them in square brackets to  force  ProLink  to 
+treat them as words:
+
+         PATCH DSPTBL=DUMPCM,[0],LISTCM,[5],LISTCM+1,[8]
+
+ASCII strings may be specified as patch-values, just by enclosing 
+them in double-quotes:
+
+    PATCH SOMESG="Copyright, 1985 by NightOwl Software, Inc."
+
+Again,  byte  expressions,  word expressions,  and strings may be 
+freely intermixed:
+
+           PATCH CMDTBL="DUMP",DUMPCM,"GOTO",GOTOCM,0
+           PATCH SOMESG="Version 1.0",0,NXTMSG
+
+When  patching long strings,  you can improve clarity in  a  READ 
+file  by  taking advantage of the fact that the patch-address  is 
+optional after the first PATCH command.  For example,
+
+PATCH SOMESG="ProLink Version 1.0",0D,0A
+PATCH       ="Copyright (C) 1985 by NightOwl Software, Inc.",0
+
+Generally,  you  should use the PATCH command only after all  the 
+object modules have been loaded, and all global symbols are fully 
+resolved.   The  reason  for this is that symbol  references  are 
+maintained  by ProLink througout its memory image of your program 
+as  linked lists.   Prior to patching any values,  PATCH  insures 
+that  all of these references are resolved,  and that all  linked 
+lists  are  reduced  to  their final  values.   In  the  case  of 
+undefined symbols,  however, these lists cannot be reduced (since 
+the  symbols  may be later resolved with another LINK  or  SEARCH 
+command),  and thus PATCH must leave these lists in  memory.   If 
+you  patch one of these references and then later issue a LINK or 
+SEARCH command that resolves such a symbol reference,  unexpected 
+results may occur.
+
+7.2 Ignoring undefined externals: the $X option
+
+-----------------------------------------------------------------
+
+ProLink  provides a feature that can be useful  in  disassembling 
+REL modules.   This feature can be invoked by specifying the "$X" 
+option to the SYMFIL command (eg, SYMFIL $X or SYMFIL FOO.SYM $X)
+anytime  during  the  linkage editing session.   The  "X"  option 
+status is displayed by the STAT command.
+
+Here's  how it works:  when your program is written to disk (with 
+either  the EXIT or the CLOSE command),  and its symbol  file  is 
+being generated,  ProLink will force-define each undefined exter
+nal reference, and give it a unique value known as the SEED value 
+(see  the  SEED command for more information on the seed  value).  
+Each such forced definition will increment the seed value by one; 
+thus all unresolved externals become resolved to unique values.
+
+When the symbol file is written to the disk, these force-resolved 
+symbols are written with a pound-sign appended to the name.   Now 
+typically, the output and symbol files will be used as input to a 
+disassembler  (we  highly recommend the public-domain  DASM  dis
+assembler  for  this  use);  when your  disassembler  writes  its 
+source-code  file,  it's a simple matter to locate these  special 
+symbols with your text editor,  remove the '#' character from the 
+end of the name, and declare the symbol as external with an EXTRN 
+statement.
+
+You  should  be aware that this technique breaks  down  when  the 
+module being disassembled contains an "external plus offset" type 
+of reference.  For example,
+
+                          EXTRN DECOUT
+                               ...
+                          CALL DECOUT+1
+
+will  generate  such  a reference.   These  references  will  not 
+resolve uniquely with the $X option.  You can, however, find such 
+references with the LINKMAP utility (provided with ProLink),  and 
+make the fixes manually with a text editor.
+
+7.2.1 The SEED command
+
+-----------------------------------------------------------------
+
+Generally,  the SEED value used with the 'X' option of the SYMFIL 
+command (see description in the preceeding section) is set to the 
+value of the symbol ?END?  plus one.   You can use the SEED  com
+mand,  however,  to  provide your own starting SEED value.    The 
+syntax of the SEED command is as follows:
+
+                        SEED <expression>
+
+where <expression> is the initial value you want to use for seed.
+
+7.3 Modular add-ons: the RESOLVE command
+
+-----------------------------------------------------------------
+
+ProLink  supports a modular programming contruct that,  while  it 
+must be used with great care, encourages the use of "add-on" code 
+blocks  that  may be added or removed at will,  and thus  produce 
+custom  or  specialized versions of your  programs,  without  the 
+cumbersome  and error-prone conditional assembly techniques  that 
+have traditionally been used for this purpose.  This construct is 
+embodied in the RESOLVE command.
+
+First, the syntax of the RESOLVE command:
+
+                      RESOLVE <symbol-name>
+
+Basicly,  the  RESOLVE command specifies a symbol that is used to 
+resolve ALL otherwise undefined globals, at the conclusion of the 
+linkage  editing session.   Let's take a look at how this may  be 
+useful.
+
+Let's say you're developing a terminal program,  that allows your 
+keyboard  and terminal to act as a terminal for another computer, 
+through  a  serial port (and perhaps through a  modem  and  phone 
+line).   The simplest (and hence least expensive) version of your 
+program  simply  reads incoming characters from the serial  line, 
+and  displays them on your screen,  and reads your  keyboard  for 
+characters and sends them out the modem.
+
+Now  let's say that you want to develop separate but succeedingly 
+more  capable  (and probably,  more expensive) versions  of  your 
+program, with the additional capabilities of logging the incoming 
+data to a disk file and echoing these characters on the  printer.  
+Thus, there can be four versions of your program:
+
+                        Terminal program
+               Terminal program with printer echo
+             Terminal program with disk-file logging
+    Terminal program with printer echo and disk-file logging
+
+Using  traditional  techniques,  you'd likely generate  a  single 
+source file,  with conditional assembly to generate the necessary 
+code.  The mainline code might look something like this:
+
+TERMLOOP: CALL SERVICE$KEYBOARD   ;read kbd, if char, send out
+          CALL SERVICE$MODEM      ;get char to A unless cy=clr
+          JNC  TERMLOOP           ;jump if no char
+          CALL CHROUT             ;display character
+          IF   PRECHO             ;maybe echo on printer
+          CALL LISTOUT            ;list output
+          ENDIF
+          IF   DISKFILE           ;mabe echo to disk file
+          CALL DISKOUT            ;disk output 
+          ENDIF
+          JMP  TERMLOOP
+
+To  create any of the four versions requires that the source file 
+be  edited  to  set the  proper  equates,  the  re-assembled  and 
+relinked.   With ProLink,  however, only the linkage process must 
+be repeated.   Typically,  you'd unconditionally call LISTOUT and 
+DISKOUT (after declaring them as externals):
+
+          EXTRN LISTOUT,DISKOUT
+          ...
+          CALL LISTOUT
+          CALL DISKOUT
+          JMP  TERMLOOP
+
+You'd  also  provide  a routine (in your  mainline  module,  most 
+likely) that simply returns:
+
+     PUBLIC UNDF
+     UNDF: RET
+
+Then,  with  the  DISKOUT  routine contained in  a  module  named 
+DISK.REL,and  the LISTOUT routine contained in  LISTOUT.REL,  you 
+can  generate  custom  versions with just a  few  simple  ProLink 
+commands.  For example, the full blown terminal program:
+
+RESOLVE UNDF               ;.force-resolve undeclared externals
+LINK TERMINAL,DISK,LISTOUT ;.link the three modules
+
+(actually,  the  RESOLVE command is not actually needed  in  this 
+first example,  since all externals to TERMINAL.REL are present).  
+To generate only the list-echo version:
+
+RESOLVE UNDF              ;.force-resolve undeclared externals
+LINK TERMINAL,DISK        ;.link only mainline and disk code
+
+Note that in the latter example, the call to LISTOUT (which is an 
+undefined  symbol,  since  the LIST.REL module,  in which  it  is 
+defined,  is not included in the linkage list) resolves to a call 
+to UNDF, which harmlessly returns.
+
+You  can redesign the UNDF routine to pass back some  information 
+to the caller:
+
+          UNDF: STC
+          RET
+
+Thus,  a  call  to  an  external  that  isn't  defined  might  be 
+considered to have failed if the caller gets a carry back:
+
+          CALL LISTOUT
+          JC   NOLIST$PRESENT
+
+A  better  way to determine if an external  routine  is  actually 
+present might be
+
+          LXI  H,LISTOUT
+UNDTST:   LXI  D,UNDF
+          MOV  A,E
+          SUB  L
+          MOV  A,D
+          SBB  H
+          STC
+          RZ
+          CMC
+          RET
+
+Note  the use of the entry point UNDTST ...  it's an example of a 
+routine  that  might  be  called (with  an  external  in  HL)  to 
+determine  if  an  external routine is  actually  present.   This 
+example code would return carry=1 if the routine is absent.
+
+These  have  been rather simple examples of the kind of use  that 
+may be made of the RESOLVE command ...  the possible applications 
+are limited only by your imagination.
+
+We should note,  however,  before we close this discussion,  that 
+the RESOLVE command should only be used after your code design is 
+complete; it's very easy to lose an external that MUST be present 
+when  this command is used.   Further,  you should avoid  STORING 
+into an external location, unless there is NO chance that the ex-
+ternal might be undefined (since the stored values would  destroy 
+your UNDF routine).
+
+7.4 The SETLOC command
+
+-----------------------------------------------------------------
+
+The  SETLOC  command is used to change the value of the  location 
+counter.  The syntax of SETLOC is
+
+                       SETLOC <expression>
+
+Generally,  the location counter should be considered the  "next" 
+load  address;  at  start-up,  its  value is the same  as  ORIGIN 
+(if you specified an origin;  if not, the default origin is 100H, 
+but  the location counter is set to 103H,  to leave room for  the 
+ProLink-generated  jump to your program's  entry  point).   After 
+using  one of the LINK,  SEARCH or LOAD commands to load a module 
+into  memory,  ProLink will move the location counter up  to  the 
+first  free memory cell AFTER the loaded module.   The next LINK, 
+SEARCH or LOAD command will then begin loading immediately  after 
+the first.
+
+Using  the SETLOC command,  however,  you may freely change  this 
+"next-load" location.   You might move it backward, to overload a 
+new  module in an area of an old.   Or you can move  it  forward, 
+creating a "hole" in the generated image.   An example of how the 
+former  might be useful would be the following patch  code,  gen
+erated totally by ProLink (most likely, as part of a READ file):
+
+     LOAD MAINLINE,FPARSE     ;.load our program modules
+     DEFINE QQORIG ?END?      ;.unlikely symbol name to hold end
+     SETLOC ?END?+200         ;.move location counter up 200H
+     SEARCH SYSLIB            ;search our library for subrtns
+     PATCH QQORIG=2A,MYSTAT   ;install patch code
+     PATCH =3E,01,C3,DISPAT
+     PATCH RESET+2B=C3,QQORIG ;now place the patch inside prog
+
+From  this example,  you can see how we first loaded the  program 
+modules,  then  defined the free area as a special variable named 
+"QQORIG".   This saves the address of the "hole" (or patch  area, 
+in this application) into a specially defined variable.   Then we 
+used  SETLOC  to  move the next load address up  200H  bytes  (to 
+reserve  plenty  of room for patches),  searched our library  for 
+needed subroutines,  then installed the patch code in the  "hole" 
+we  created  and  named QQORIG.   Finally,  we "spliced"  a  jump 
+instruction to our patch area into the working code,  02BH  bytes 
+after the global named "RESET".
+
+You  should be aware that this technique is not at all limited to 
+things  like code patches;  in fact,  one of the uses  envisioned 
+is  dynamically  built command-driven  programs,  using  ProLink-
+created  "command  tables",  and  modularly  constructed  command 
+handler modules.
+
+.he Prolink User's Guide: ProLink Error Messages
+
+                    8. ProLink Error Messages
+
+Most  of the error messages generated by ProLink are quite  self-
+explanatory (e.g., "disk full", "out of memory", etc.).  However, 
+a few are a bit cryptic in the interests of brevity,  and will be 
+described more fully in this section.
+
+"Format  error in REL file" - the module you are linking  doesn't 
+appear  to  ProLink to be a Microsoft-compatible  object  module.  
+Usually happens most often when your disk file has been trashed.
+
+"Second common larger" - ProLink is a one-pass linkage editor (as 
+is Microsoft's L80);  one of the consequences of the compact  and 
+"quick"  single-pass  linkage process is the fact that the  first 
+occurance  of a COMMON area must be the  largest,  since  ProLink 
+allocates the space for a common area on its first occurance.  If 
+this  rule isn't followed,  and a second,  larger definition of a 
+named  common area is encountered,  ProLink will abort with  this 
+error message.
+
+"Unsupported relocation type in REL file" - this message will not 
+usually occur unless you're loading an object module generated by 
+certain  compilers.   As  mentioned in  the  "overview"  section, 
+ProLink is an assembly-language-only tool, and leaves unsupported 
+a  small  portion of the Microsoft relocatable  format,  normally 
+used only by high-level language compilers.
+
+"Loading below program origin" - once an origin exists,  no  mod-
+ule should attempt to force code to load below that origin.  Note 
+that  this  can  only  be done in  relocatable  modules  by  code 
+generated  in the ASEG (absolute) location counter;  HEX  modules 
+can draw this error,  however, when they contain hex-load records 
+that load below the established origin.
+
+"Internal  Error"  - you should NEVER see this one!   If you  do, 
+and  can duplicate the problem,  please write down all  pertinent 
+details  and  forward them,  with  applicable  code  modules,  to 
+NightOwl Software,  at the address listed in the opening pages of 
+this User's Guide.  Please call first to co-ordinate disk formats 
+for any code modules you'll be supplying.
+
+.he ProLink User's Guide: Appendix 1 - LINKMAP
+
+          Appendix 1: The LINKMAP rel-file dump utility
+
+LINKMAP  is a simple utility to dump MicroSoft REL files  to  the 
+console  in a form similar to that of DUMP.COM,  but with a  DDT-
+like ASCII-display at the end of each line.  In addition, LINKMAP 
+displays the various other Microsoft REL data in a compact form.
+
+The syntax is simple:
+
+		LINKMAP <filename> [<modulename>]
+				   |            |
+				   |            |
+				    \          /
+				      Optional
+
+FILENAME should be a standard Microsoft-format REL file,  and may 
+be  composed of multiple modules.   If no filetype is  specified, 
+the type REL is assumed.
+
+If  <modulename>  is entered,  then LINKMAP will assume that  the 
+file is a library of modules, and will display only the specified 
+module (someday,  this syntax may be modified to allow a range of 
+modules).
+
+LINKMAP buffers an entire module in memory before displaying  it, 
+so there is a noticeable delay when listing large modules.
+
+Notation:
+
+The  following  notational  character set is used by  LINKMAP  to 
+imply relocation base information:
+
+	Blank        ( ) : Absolute segment
+	Single Quote (') : Code segment-relative
+	Double Quote (") : Data segment-relative
+	Excl. Mark   (!) : Common-relative
+
+.he ProLink User's Guide: Appendix 2 - ProLink object file format
+
+      Appendix 2:Format of ProLink-compatible object files
+
+This  section  details the format  of  ProLink-compatible  object 
+files  (commonly  knows  as the "Microsoft  REL  format").   This 
+information  will not be needed by most users,  but  is  included 
+here as a reference.
+
+For efficiency of storage, the Microsoft format consists of a bit 
+stream;  fields  within  the bit stream are not aligned  on  byte 
+boundaries, except at the end of a module.
+
+There  are  two types of load fields:  absolute and  relocatable, 
+indicated by the first bit of the field:  if the first bit is  0, 
+the  succeeding eight bits are loaded as an absolute byte (at the 
+"current" location counter - the current location counter is then 
+incremented).  If the first bit is 1, then the following two bits 
+specify the TYPE of the relocatable field, as follows:
+
+     00 Special LINK field, described below
+     01 Code-relative: following 16 bits must load at the current
+        location counter  AFTER  adding  the base  of the current 
+        code segment.
+     02 Data-relative: following 16 bits must load at the current
+        location counter  AFTER adding  the  base of  the current
+        data segment.
+     03 Common relative:  following  16 bits load at  the current
+        location  counter AFTER adding  the base  of the  current 
+        common segment (as select by special rel field #1).
+
+The special fields (prefixed by the bit code 100) have:
+
+     - a 4-bit control field (the "type" of the field)
+     - An optional 'A' field (the "address" field)
+     - An optional 'B' field (the "symbol" field)
+
+Thus, a SPECIAL link field might be represented as follows:
+
+100 <ctrl> [<rb><value>] [<len><symbol>]
+           |           | |             |
+           |           | |             |
+           \ A field  /   \ B field   /
+
+<ctrl>  (4  bits) defines the type of the special field  (defined 
+below). <rb> is the 2-bit relocation base of the A-field value:
+
+     00 - The value is absolute (ASEG)
+     01 - The value is code-relative (CSEG)
+     02 - The value is data-relative (DSEG)
+     03 - The value is common-relative
+
+<value> is the 16-bit value field, and must be biased by the 
+        relocation base in the <rb> field (0 if ASEG, code-
+        base if CSEG, data-base if DSEG, current-common base
+        if common-relative).
+
+<len> is the 3-bit length of the symbol field; its value is
+      the length of the succeeding symbol field
+
+<symbol> is the symbol name, consisting of successive 8-bit
+      values (characters) that comprise the symbol name.
+      The length of <symbol> is defined by <len>.
+
+The <ctrl> field types are as follows:
+
+- items with a "B" field only:
+
+0:  Entry symbol: used for library search
+1:  Select common block: B field holds common name
+2:  Define module name: B field holds the name of the module
+3:  Library search B field has filename, linker appends REL
+4:  Extension link type not supported by ProLink
+
+- items with both an "A" and a "B" field:
+
+5:  Define common size
+6:  Chain external: "A" field is the head of a linked list, 
+    each node of which exists in the address field of an ex-
+    ternal reference.  "B" field is the name of the external
+    symbol.
+7:  Define entry point: "A" field has address, "B" the name.
+
+- items with an "A" field only:
+
+8:  External minus offset: not supported by ProLink
+9:  External plus offset: the current location counter is an
+    external reference that must be added to the "A" field.
+    The name of the symbol referenced is contained in the "B"
+    field.  Since the reference is part of a linked list (of
+    the chained external), the current location counter and the
+    offset value (the "A" field) must be stored, and processing
+    deferred, until all chains are filled in (at the conclu-
+    sion of the linkage).
+10: Define data segment size: size is the "A" field
+11: Set location counter: to value of "A" field
+12: Chain address: "A" field is the head of a linked list; all
+    entries in the chain must be replaced with the current value
+    of the location counter.
+13: Define code segment size: size is the "A" field
+14: End module (note this forces input to a byte boundary).
+
+- item with neither an "A" or "B" field:
+
+15: End file
+
+The only known type of "extension" item (#4,  above) is generally 
+used  only  with the Microsoft COBOL compiler,  and is  thus  not 
+supported by ProLink.   The "external minus offset" item,  #8, is 
+also  used only by Microsoft language compilers;  it,  too is not 
+supported by ProLink.
+
+

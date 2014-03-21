@@ -1,0 +1,266 @@
+
+                          SIL Compiler Info
+                           October 10, 1985
+
+by Mike Mosko, K3RL
+
+PURPOSE
+=======
+
+The purpose of this document is to provide an overview of what the SIL 
+compiler is and to maintain a list of known bugs or problems as they 
+are determined. Any other hints or suggestions will be voiced in this 
+document as well. I will attempt to update this information 
+periodically in order to keep it current. Bug reports, suggestions or 
+whatever can be sent to me directly. The address is:
+
+   Mike Mosko
+   519 East Station Ave.
+   Coopersburg, PA 18036
+
+Note: No replies will be made unless a self-addressed-stamped-envelope 
+is provided.
+
+DOCUMENTATION
+=============
+
+All  documents associated with SIL have been created with WordStar. 
+Therefore, you can print these documents with the Print facility in 
+WordStar or by any other simple means. Note that the special 
+characters or DOT commands used by WordStar are imbedded in the DOC 
+files.
+
+(Note: I have re-formatted this document. (lrb))
+
+OVERVIEW
+========
+
+SIL (Systems Implementation Language) is an extended subset of the 'C' 
+programming language. It was developed for implementing many system 
+utilities and proprietary operating systems at Digilog, Inc. SIL was 
+originally conceived by Andy Erlanger and Mike Buckley who developed 
+it from the Caine compiler which appeared in Dr. Dobb's Journal many 
+years ago and expanded it into what is now know as SIL version 1.5. 
+Since SIL is not copyrighted, it was decided to release it into the 
+Public Domain. There seems to be few (if any) good 'C' compilers in 
+the Public Domain; SIL just might be useful to those who want to 
+tinker with 'C' without investing in a true 'C' compiler. SIL is 
+surprisingly efficient in code generation and execution. I have not 
+tried any bench mark programs such as the sieve program; I'll leave 
+that to some industrious soul. The documentation file provided 
+(SIL.DOC) describes the differences from SIL and true 'C' and the 
+library functions.
+
+REQUIREMENTS
+============
+
+You will require the following files and utilities:
+
+*  SIL.COM     - the SIL compiler
+   RMAC.COM    - Digital Research Inc.'s Relocatable Assembler
+   LINK.COM    - Digital Research Inc.'s Linker
+*  SILLIB.REL  - SIL function library in relocatable format
+*  CPMDIO.REL  - SIL linkage library to CP/M functions
+*  SILZ80.LIB  - Macro library for assembling Z80 mnemonics
+
+Note: Files marked with an asterisk (*) are provided with the SIL 
+distribution package.
+
+THE SIL COMPILER
+================
+
+The SIL compiler takes an ASCII source file as input and generates 
+true 8080-type Z80 or, optionally, 8080 assembly code as output. Note 
+that 8080-type means that the Intel mnemonic representation is 
+followed versus the Zilog mnemonics. This is good and bad. Good 
+because you can use the standard ASM, MAC or RMAC assemblers. Bad 
+because those of us who prefer Z80 mnemonics have to go back to the 
+8080 book to understand what's going on. Of course, at the time, there 
+really weren't any good true Z80 assemblers for CP/M-80; at least 
+until Microsoft's M80. Well, you shouldn't need to use assembly code 
+too often anyway.
+
+Originally, it was intended to have our own assembler and linker in 
+order to have a complete package, but since Digital Research provides 
+a nice relocatable assembler and linker, it was decided to scrap our 
+own. Therefore, in order to assemble the output file from the SIL 
+compiler, you will need DRI's RMAC and LINK utilities. The ASM and MAC 
+assemblers can be used, but accessing the CP/M and SIL libraries is 
+not possible. They can be used if the SIL program you are creating is 
+to be run standalone or you provide your own interface routines within 
+the program.
+
+The LIB utility is quite useful if you wish to make additional 
+function libraries or you wish to add to the current ones. Two 
+function libraries are included with the SIL  distribution package. 
+They are: SILLIB.REL and CPMDIO.REL. SILLIB.REL contains several 
+useful functions such as peek and poke a byte or word, input or output 
+to a port, move a block of data, fill a block of data, etc. CPMDIO.REL 
+contains the linkage routines to the CP/M function calls such as 
+console input and output. Incidentally, the SIL compiler is written in 
+SIL.
+
+SYSTEM NOTES 
+============
+
+Many limitations of SIL are described in the SIL Manual but are 
+spelled out again here for the sake of clarity and amplification.
+
+1. Only character (char) and integer (int) data types are supported.
+
+   char -  1 byte (8 bits)
+   int -  2 bytes (16 bits unsigned)
+
+2. Variable names are significant only in the first 8 characters.  
+External or publicly defined variables (or functions) are significant 
+to the first 6 characters. Underscores are not permissable. EX:
+
+   testfunction() is the same as testfunc()
+
+3. When issuing the compiler directive from the system prompt, DO NOT 
+include the file extent .SIL as part of the filename. EX:
+
+   DON'T:
+     SIL test.sil
+   DO:
+     SIL test
+
+Failure to follow this rule will cause the SIL compiler to output the 
+assembly code to the .SIL file instead of the .ASM file, and, if you 
+don't have a backup of your .SIL source file, you lose.
+
+4. The FOR statement in SIL requires a semicolon after the last 
+phrase. EX:
+   
+   DON'T:
+     for(i=0; i<10; i++)
+   DO:
+     for(i=0; i<10; i++;)
+
+5. If you use the 'E' parameter when compiling, all undefined 
+procedures will automatically be made external. However, if the 
+function is not found during link time, the procedure address will be 
+0 and thus cause a call to location 0 when the procedure is executed. 
+Take note, in a CP/M environment, this causes a warm boot.
+
+6. Define a stack large enough to handle your program. Usually a stack 
+of 50 is large enough to handle a program which DOES NOT use recursive 
+procedures and does not use many levels of nested procedures. 
+Recursive programs have been known to use stacks as large as 200 and 
+up. If strange things occur, first try a larger stack.
+
+BUGS
+====
+
+The following list describes the known bugs to date. Those marked 
+"Unconfirmed" mean that the problem has been reported but a sample 
+program with the bug is not available. Therefore, it may not be 
+reproducable in some situations.
+
+1. Problem: Incorrect jump address generated when using the GO 
+statement. Unconfirmed.
+
+Date: August 1983
+
+Description: When using the GO statement from within several nested 
+while or for loops and jumping to outside the outer loop, the compiler 
+will sometimes create a jump to an address immediately following or 
+preceeding the correct address. This problem is not well defined in 
+that it does not occur in all situations. It has not been determined 
+exactly what sequence will cause this problem.
+
+Solution: Don't use the GO statement in nested loops (some would argue 
+that a true structured program should never have GO statements, but 
+then they never had to generate efficient code either) or try it first 
+and if it bombs, rewrite it.
+
+2. Problem: Break statement does not exit a for loop properly.  
+Unconfirmed.
+
+Date: August 1983
+
+Description: When using a break statement to break out of a for loop,  
+control may not be passed to the statement immediately following the 
+for loop definition. Control will remain within the for loop.
+
+Solution: Use a do or while loop or a GO statement with a label.
+
+3. Problem: Preset syntax is not recognized properly when used in a 
+string of variable definitions. Unconfirmed.
+
+Date: August 1983
+
+Description: For example, cannot use the form:
+
+     char public 
+        test1,
+        test2,
+        preset test3;
+
+Solution: Provide the variable type when using the preset syntax.  
+Using the above example, change to the following form:
+
+     char public
+        test1,
+        test2;
+     char public preset test3;
+
+4. Problem: The 'continue' statement does not conform to the 'C' 
+definition in a 'for' loop.
+
+Date: May 1984
+
+Description: When a 'continue' statement is used within a 'for' loop, 
+the statement execution continues at the top of the loop but the 'for' 
+loop variable is not incremented.
+
+   ex:
+     for (i=30; i<36; i++;)
+        { 
+        if ( (i>39) | (i<41) ) continue;
+        conout(i);
+        }
+   
+When 'i' is greater than 39 the 'if' statement will be true and 
+exectution will continue at the top of the for loop. The 'i' variable 
+will not be incremented and this becomes an infinite loop.
+
+Solution: Either use a 'go' statement with a label at the end of the 
+for loop structure, or use a unary increment on the loop variable 
+prior to executing the continue statement. The example shown above 
+would then become:
+
+  1)   
+   label loopend;
+     for (i=30; i<36; i++;)
+        { 
+        if ( (i>39) | (i<41) ) go loopend;
+        conout(i);
+   :loopend
+        }
+or
+
+  2)   
+     for (i=30; i<36; i++;)
+        { 
+        if ( (i>39) | (i<41) ) { i++; continue; }
+        conout(i);
+        }
+
+SUPPORT
+=======
+
+I do not support this compiler in any way; you use it at your own 
+risk. That is, you're not paying to use the compiler so don't expect 
+to get support for the same price. However, I will try to maintain 
+bugs, suggestions, etc., via this document. If possible, any known 
+bugs will be corrected and enhancements included in later versions of 
+the SIL compiler.
+
+DISTRIBUTION
+============
+
+Note: This compiler is not to be sold or distributed without prior 
+approval. Any contribution for the development of this compiler will 
+be greatly appreciated.
+

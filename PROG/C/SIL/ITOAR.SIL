@@ -1,0 +1,39 @@
+itoar public static(i,asc,how)		/* rtns pointer to 'how' radix value */
+int i;
+char asc[],*how;
+{
+int size, div, tmp;
+
+	for (tmp=0 ; tmp<=16 ; tmp++;)
+		asc[tmp] = ' ';		/* clear array for binary size */
+
+	switch uc(*how)			/* upper case radix symbol */
+	{
+		case 'B' :	size = 16;	/* binary */
+				div  =  2;
+
+		case 'O' :	size =  6;	/* octal */
+				div  =  8;
+
+		case 'H' :	size =  4;	/* hex */
+				div  = 16;
+
+	}	else	{	size =  5;	/* else decimal */
+				div  = 10;
+			}
+
+	tmp = size-1;
+	do					/* fill array top down */
+	{
+		asc[tmp] = i%div + '0';
+		if (asc[tmp] > '9')
+			asc[tmp] = asc[tmp] + 39;	/* for hex a-f */
+		i = i/div;				/* next value */
+		tmp--;					/* next entry */
+	}
+	while (i > 0);
+
+	asc[size] = 0;				/* mark string end */
+	return(asc);				/* return pointer */
+}
+

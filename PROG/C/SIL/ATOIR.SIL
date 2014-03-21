@@ -1,0 +1,33 @@
+atoir public static(str,how)	/* return int val from 'how' radix string */
+char *str,*how;
+{
+int i,mul;
+char tmp;
+
+	while ( *str++ == ' ')	;		/* skip lead space */
+	*str--;					/* then back up */
+
+	i = 0;					/* init value */
+	switch uc(*how)				/* upper case radix symbol */
+	{
+		case 'B' :	mul =  2;	/* binary */
+		case 'O' :	mul =  8;	/* octal */
+		case 'H' :	mul = 16;	/* hex */
+	}	else	 {	mul = 10;	/* decimal */
+			 }
+
+	while ( (tmp=*str++) >= '0')		/* num - alpha */
+	{
+		tmp = uc(tmp);			/* upper case */
+
+		if (tmp >= 'A')
+			tmp = tmp - '7';	/* A-F hex */
+		else
+			tmp = tmp - '0';	/* 0-9 */
+
+		i = mul * i + tmp;		/* convert */
+	}
+	return(i);
+
+}
+
