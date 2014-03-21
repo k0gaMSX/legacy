@@ -1,0 +1,754 @@
+;**************************************************************
+;routine de gestion des differents types de mosntres
+;**************************************************************
+NBMST:	DB	0
+
+GESTMONSTER:
+	LD HL,(DEBUTECR)		; Y A T'IL UN NOUVEAU MONSTRE
+	LD DE,(NEXTMONSTER)		; A TRAITER ?
+	CALL SIMRST20			; RST #20
+        CALL Z,NEWMONSTER
+	XOR A
+	LD (NBMST),A
+        LD IX,CURMONSTER
+LOOPMST:
+        LD A,(IX+11)			; LE MONSTRE EST T'IL ENCORE
+        OR A				; A TRAITER
+        CALL Z,PUT212			; SI NON, LE FAIRE DISPARAITRE
+        LD A,(IX+11)
+        OR A
+        JP Z,SUIVANT			; ET TRAITER LE MONSTRE SUIVANT
+
+	LD A,(IX+4)			; TESTER LE TYPE DE SPRITE
+	OR A				; A TRAITER
+	CALL Z,MSTYPE0
+	LD A,(IX+4)
+	CP 1
+	CALL Z,MSTYPE1
+        LD A,(IX+4)
+        CP 2
+        CALL Z,MSTYPE2
+	LD A,(IX+4)
+        cp 3
+        CALL Z,MSTYPE3			;PLATE-FORME
+	LD A,(IX+4)
+	CP 4
+	CALL Z,MSTYPE4
+        LD A,(IX+4)
+        CP 255
+        CALL Z,MSTYPE_MORT
+
+SUIVANT:
+	LD DE,16
+	ADD IX,DE
+	LD A,(NBMST)
+	INC A
+	LD (NBMST),A
+	CP 3
+	JP NZ,LOOPMST
+        LD IX,CURMONSTER
+        LD IY,TABLE_MST
+
+        LD B,3
+LOADMST:
+	LD A,(IX+8)
+	LD (IY),A
+	LD A,(IX+2)
+	LD (IY+2),A
+	LD A,(IX+3)
+	LD (IY+3),A
+        LD A,(IX+5)
+	AND %10000000
+	JP Z,VA_GAUCHE
+	LD (IY+1),1		;SI VA A DROITE
+RE_VA:
+        LD DE,16
+        ADD IX,DE
+        LD DE,4
+	ADD IY,DE
+        DJNZ LOADMST
+	RET
+
+VA_GAUCHE:
+	LD (IY+1),0
+	JP RE_VA
+
+;********************************************************************
+;
+;	TABLE DES 3 MONSTRES
+;
+TABLE_MST:	DS	14
+
+;  TRAITEMENT DE MONSTRE DE TYPE 0
+MSTYPE0:
+	LD L,(IX+14)
+	LD H,(IX+15)
+	LD A,(HL)
+	CP "*"
+	CALL Z,REMSTSAUT
+        INC HL
+	LD (IX+14),L
+	LD (IX+15),H
+	add a,(ix+3)
+        LD (IX+3),A
+	ld a,(DEPSPR)
+        add a,(ix+2)
+	add a,(ix+5)
+        CP 8
+        CALL C,HORSECRAN
+        LD (IX+2),A
+	RET
+
+MSTYPE1:
+	CALL CHUTEMST		;EFFECTUER LES TEST
+	LD A,(IX+3)		;POUR SUIVRE LE RELIEF
+	add	a,(ix+6)	;OSONS!
+	LD (IX+3),A
+	LD A,(IX+5)
+	AND 128
+	CALL Z,DROITEMST
+	LD A,(IX+5)
+	AND 128
+	CALL NZ,GAUCHEMST
+	ld	a,(DEPSPR)	;OSONS!
+	add	a,(ix+2)
+	add	a,(ix+5)
+        CP 8
+	CALL C,HORSECRAN	; ET SORTIE SI NECESSAIRE
+        LD (IX+2),A
+	RET
+
+MSTYPE2:
+        LD A,(IX+2)
+        CP 128+16
+	CALL C,TOMBEMST 	; SI XMST<128, IL TOMBE
+	LD A,(IX+3)		;POUR SUIVRE LE RELIEF
+	add	a,(ix+6)
+	LD (IX+3),A
+	ld	a,(DEPSPR)	;OSONS!
+	add	a,(ix+2)
+	add	a,(ix+5)
+        LD (IX+2),A
+	RET
+
+MSTYPE3:
+	DEC (IX+14)
+	CALL Z,CHANGE_SENS
+	ld	a,(DEPSPR)	;OSONS!
+	add	a,(ix+2)
+	add	a,(ix+5)
+        CP 8
+	CALL C,HORSECRAN	; ET SORTIE SI NECESSAIRE
+        LD (IX+2),A
+	RET
+
+MSTYPE4:
+	LD A,(IX+5)
+	CP 1
+	CALL Z,DRMST4
+	LD A,(IX+5)
+	CP -1
+	CALL Z,GAMST4
+	ld	a,(DEPSPR)	;OSONS!
+	add	a,(ix+2)
+	add	a,(ix+5)
+        CP 8
+	CALL C,HORSECRAN	; ET SORTIE SI NECESSAIRE
+        LD (IX+2),A
+	RET
+
+DRMST4:
+	CALL DROITEMST
+	ld	a,(SCROLLX)
+	and	#0f
+	ld	c,a
+	ld	a,(ix+5)
+	add	a,(ix+2)
+	add	a,c
+	add	a,15-3
+	and	#f0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	c,a
+
+	ld	a,(ix+3)
+	add	a,17
+	and	#f0
+	rrca
+	rrca
+	rrca
+	ld	b,a
+
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	AND %10000000
+	JP Z,OBSTMST
+
+	LD A,(IX+5)
+	add	a,(ix+2)
+        LD B,A
+        LD A,(DEPSPR)
+        ADD A,B
+        CP 240
+        JP NC,OBSTMST
+	RET
+
+GAMST4:
+	CALL GAUCHEMST
+	ld	a,(SCROLLX)
+	and	#0f
+	ld	c,a
+	ld	a,(ix+5)
+	add	a,(ix+2)
+	add	a,c
+	sub	5
+	and	#f0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	c,a
+
+	ld	a,(ix+3)
+	add	a,17
+	and	#f0
+	rrca
+	rrca
+	rrca
+	ld	b,a
+
+	LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	AND %10000000
+	JP Z,OBSTMST
+	RET
+
+CHANGE_SENS:
+	LD A,(IX+5)
+	NEG
+	LD (IX+5),A
+	LD A,(IX+15)
+	LD (IX+14),A
+	RET
+
+MSTYPE_MORT:
+	LD A,(IX+3)
+	CP 185				;AVANT 192
+	JP NC,HORSECRAN
+	LD L,(IX+14)
+	LD H,(IX+15)
+	LD A,(HL)
+
+	CP "*"
+	JP Z,TREAT_CHUTE
+
+        INC HL
+	LD (IX+14),L
+	LD (IX+15),H
+	add	a,(ix+3)
+	LD (IX+3),A		; C'EST FAIT
+	ld	a,(DEPSPR)	;OSONS l'optimisation!
+	add	a,(ix+2)
+	add	a,(ix+5)
+        CP 8
+	CALL C,HORSECRAN	; ET SORTIE SI NECESSAIRE
+        LD (IX+2),A
+	RET
+
+TREAT_CHUTE:
+	CALL MORT_CHUTE 	;EFFECTUER LES TEST
+	LD A,(IX+3)		;POUR SUIVRE LE RELIEF
+	add	a,(ix+6)
+	LD (IX+3),A
+	LD A,(IX+2)		;MISE A JOUR DE LA POSITION EN X
+	LD B,A
+	LD A,(DEPSPR)		; AVEC AUSSI LA MAJ PAR RAPPORT
+	ADD A,B 		; AU SCROLLING
+        LD B,A
+        LD A,(IX+5)
+        ADD A,B
+        CP 8
+	CALL C,HORSECRAN	 ; ET SORTIE SI NECESSAIRE
+        LD (IX+2),A
+	RET
+
+MORT_CHUTE:
+        LD A,(TMPMST_M)
+        INC A
+        LD (TMPMST_M),A
+	AND %00000001
+	RET Z
+	inc	(ix+6)
+	RET
+
+TMPMST_M:	DB	0
+
+DROITEMST:
+	ld	a,(SCROLLX)
+	and	#0f
+	ld	c,a
+	ld	a,(ix+5)
+	add	a,(ix+2)
+	add	a,c
+	add	a,15-3
+	and	#f0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	c,a
+
+	ld	a,(ix+3)
+	add	a,15
+	and	#f0
+	rrca
+	rrca
+	rrca
+	ld	b,a
+
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	AND %10000000
+	JP NZ,OBSTMST
+
+	LD A,(IX+5)
+	add	a,(ix+2)
+        LD B,A
+        LD A,(DEPSPR)
+        ADD A,B
+        CP 240
+        JP NC,OBSTMST
+	RET
+
+GAUCHEMST:
+	ld	a,(SCROLLX)
+	and	#0f
+	ld	c,a
+	ld	a,(ix+5)
+	add	a,(ix+2)
+	add	a,c
+	sub	3
+	and	#f0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	c,a
+
+	ld	a,(ix+3)
+	add	a,15
+	and	#f0
+	rrca
+	rrca
+	rrca
+	ld	b,a
+
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	AND %10000000
+	JP NZ,OBSTMST
+	RET
+
+OBSTMST:
+	LD A,(IX+5)
+        NEG
+	LD (IX+5),A
+	RET
+
+CHUTEMST:
+	ld	a,(SCROLLX)
+	and	#0f
+	ld	c,a
+	ld	a,(ix+5)
+	add	a,(ix+2)
+	add	a,c
+	add	a,12-3
+	and	#f0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	c,a
+
+	ld	a,(ix+3)
+	add	a,(ix+6)
+	add	a,16
+	and	#f0
+	rrca
+	rrca
+	rrca
+	ld	b,a
+
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	AND %10000000
+	JP NZ,STOPMST	      ; SI ON NE TROUVE PAS D'OBSTACLE
+
+; MEME TEST MAIS PLUS A GAUCHE
+	ld	a,(SCROLLX)
+	and	#0f
+	ld	c,a
+	ld	a,(ix+5)
+	add	a,(ix+2)
+	add	a,c
+	sub	3
+	and	#f0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	c,a
+
+	LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	AND %10000000
+	JP NZ,STOPMST	      ; SI ON NE TROUVE PAS D'OBSTACLE
+
+NEXTCHT:
+        LD A,(TMPMST)
+        INC A
+        LD (TMPMST),A
+	AND %00000001
+	RET Z
+	inc	(ix+6)
+        RET
+
+STOPMST:
+        LD A,(IX+3)
+	add	a,(ix+6)
+        AND %11110000
+        LD (IX+3),A
+	ld	(ix+6),0
+	RET
+
+TMPMST: 	DB	0
+TMPMST2:	DB	0
+
+TOMBEMST:
+	ld	a,(SCROLLX)
+	and	#0f
+	ld	c,a
+	ld	a,(ix+5)
+	add	a,(ix+2)
+	add	a,c
+	add	a,15-3
+	and	#f0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	c,a
+
+	ld	a,(ix+3)
+	add	a,(ix+6)
+	add	a,16
+	and	#f0
+	rrca
+	rrca
+	rrca
+	ld	b,a
+
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	AND %10000000
+	JP NZ,ECRAMST	      ; SI ON NE TROUVE PAS D'OBSTACLE
+
+; MEME TEST MAIS PLUS A GAUCHE
+	ld	a,(SCROLLX)
+	and	#0f
+	ld	c,a
+	ld	a,(ix+5)
+	add	a,(ix+2)
+	add	a,c
+	sub	3
+	and	#f0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	c,a
+
+	LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	AND %10000000
+	JP NZ,ECRAMST	      ; SI ON NE TROUVE PAS D'OBSTACLE
+
+NEXTCHT2:
+        LD A,(IX+14)
+        INC A
+        LD (IX+14),A
+        AND %00000001
+	RET Z
+	inc	(ix+6)
+        RET
+
+ECRAMST:
+	ld	(ix+11),0
+	RET
+
+REMSTSAUT:
+	LD A,(IX+12)
+	LD (IX+14),A
+	LD A,(IX+13)
+	LD (IX+15),A
+	LD L,(IX+14)
+	LD H,(IX+15)
+	LD A,(HL)
+	RET
+
+PUT212:
+	ld	(ix+3),212
+	RET
+
+HORSECRAN:
+	ld	(ix+3),212
+	ld	(ix+11),0
+	RET
+
+NEWMONSTER:
+	XOR A
+	LD (CPTPLACE),A
+	LD IX,CURMONSTER
+
+LOOPPLACE:
+	LD A,(IX+11)
+	OR A
+	JP NZ,NEXTPLACE
+
+TROUVEPLACE:
+	PUSH IX
+	POP DE
+	LD HL,(NEXTMONSTER+2)
+	LD BC,16
+	LDIR
+	LD IX,(NEXTMONSTER+2)
+	LD DE,16
+	ADD IX,DE
+	LD L,(IX)
+	LD H,(IX+1)
+	LD (NEXTMONSTER),HL
+	LD (NEXTMONSTER+2),IX
+	RET
+
+CPTPLACE:	DB	0
+
+NEXTPLACE:
+	LD DE,16
+	ADD IX,DE
+	LD A,(CPTPLACE)
+	INC A
+	LD (CPTPLACE),A
+	CP 3
+	RET Z
+	JP LOOPPLACE
+
+NEXTMONSTER:	DW	#8010	;DR POUR COMPARAISON
+		DW	0	; ADR OU EST MONSTRE
+SAVEMONST:	DS	50
+CURMONSTER:	DS	50
+
+TASMONSTER:	DB	212,0,80,0
+		DB	212,0,80,0
+		DB	212,0,80,0
+
+
+;******************************************************
+;  routine de gestion de detection des collisions
+;******************************************************
+DETECMST:
+	XOR A			;initialise le compteur
+	LD (NBMST),A		;du nbre de monstres a tester
+	LD IX,CURMONSTER	;pointe sur la table des monstres courants
+DETECLOOP:
+	LD A,(IX+11)			; MONSTRE A TESTER
+        OR A				; OUI OU NON (si mort, pas de test)
+        JP Z,DSUIVANT			; ET TRAITER LE MONSTRE SUIVANT
+        ld a,(IX+4)
+        CP 3				; SI PLATE FORM ALORS PAS DE TESTS
+        JP Z,DSUIVANT
+        LD A,(IX+8)
+        OR A
+        CALL Z,TST_TYPE0
+        LD A,(IX+8)
+        CP 1
+        CALL Z,TST_TYPE0
+        LD A,(IX+8)
+        CP 5
+        CALL Z,TST_TYPE3
+        LD A,(IX+8)
+        CP 3
+        CALL Z,TST_TYPE3
+        LD A,(IX+8)
+        CP 2
+        CALL Z,TST_TYPE2
+        
+DSUIVANT:
+	LD DE,16			; traitement du monstre suivant
+	ADD IX,DE
+	LD A,(NBMST)
+	INC A
+	LD (NBMST),A
+	CP 3				; max 3 monstres a tester
+	JP NZ,DETECLOOP
+	RET
+
+TST_TYPE0:
+	LD A,(IX+2)
+	ADD A,12
+	LD B,A				; si diff de coordonee en x
+        LD A,(X)			; est < 16 alors, faire le
+	CP B
+	RET NC
+	LD A,(IX+2)
+	LD B,A
+	LD A,(X)
+	ADD A,12
+	CP B
+	RET C
+	JP TEST2Y
+
+TST_TYPE2:
+	LD A,(IX+2)
+	ADD A,30
+	LD B,A				; si diff de coordonee en x
+        LD A,(X)			; est < 16 alors, faire le
+	CP B
+	RET NC
+	LD A,(IX+2)
+	LD B,A
+	LD A,(X)
+	ADD A,16
+	CP B
+	RET C
+	JP TEST3Y
+
+TST_TYPE3:
+	LD A,(IX+2)
+	LD B,A				; si diff de coordonee en x
+        LD A,(X)			; est < 16 alors, faire le
+	SUB B				; test pour coord en y
+	BIT 7,A
+	CALL NZ,INV
+	CP 16
+	CALL C,COLLIS3
+	RET 
+
+COLLIS3:
+	LD A,(IX+3)
+	LD B,A				; si diff de coordonee en x
+        LD A,(Y)			; est < 16 alors, faire le
+	SUB B				; test pour coord en y
+	BIT 7,A
+	CALL NZ,INV
+	CP 16
+	JP C,TUEMKID
+	RET 
+
+TEST2Y: LD A,(IX+3)
+        SUB 8					
+	LD B,A
+	LD A,(Y)			; si diff coord en y < 16
+        ADD A,16
+        CP B
+        RET C
+        LD A,(IX+3)
+        ADD A,16
+        LD B,A
+        LD A,(Y)
+	SUB 8
+	CP B
+	RET NC
+	JP COLLISION
+
+TEST3Y: LD A,(IX+3)
+	LD B,A				; si diff de coordonee en x
+        LD A,(Y)			; est < 16 alors, faire le
+	SUB B				; test pour coord en y
+	BIT 7,A
+	CALL NZ,INV
+	CP 16
+	CALL C,COLLIS2
+	RET 
+
+COLLISION:
+        LD A,(IX+4)			; idem si le monstre est en train de
+        CP 255				; mourir (sequence dispa monstre)
+        RET Z
+	LD A,(OPY)			; si dep horizontal, alors
+	OR A				; pas de mort de monstre (a revoir)
+	JP Z,COLLISBIS			; SI GO >
+RECOLLIB:        
+        LD A,(IX+3)
+        LD B,A
+        LD A,(Y)
+        ADD A,12			; C'ETAIT 16
+        CP B				; SI TOMBE A COTE
+        JP NC,TUEMKID			
+	LD A,(OPY)			; si mkid est en train de
+        RLCA				; tomber sur le monstre -->
+        JP C,TUEMKID	        	; il le tue
+        LD A,1
+        LD (OPSCORE),A
+	JP TUEMONSTRE
+COLLISBIS:
+	LD A,(ONFLOOR)
+	OR A
+	JP NZ,TUEMKID
+	JP RECOLLIB
+
+;	traitement si c'est le monstre qui tue m kid
+;	ici.
+TUEMKID:
+	LD A,(INVINCIB)
+	CP 1
+	RET Z
+	JP LESSLIFE
+	RET
+
+COLLIS2:
+        LD A,(IX+4)			; idem si le monstre est en train de
+        CP 255				; mourir (sequence dispa monstre)
+        RET Z
+        
+	LD A,(OPY)			; si dep horizontal, alors
+	OR A				; pas de mort de monstre (a revoir)
+	JP Z,TUEMKID
+        	
+	LD A,(IX+3)
+	LD B,A
+	LD A,(Y)
+	CP B
+	JP NC,TUEMKID
+	LD A,(OPY)			; si mkid est en train de
+        RLCA				; tomber sur le monstre -->
+        JP C,TUEMKID	        	; il le tue
+        LD A,2
+        LD (OPSCORE),A
+	JP TUEMONSTRE
+
+TUEMONSTRE:
+	ld	(ix+11),255
+	ld	(ix+4),255
+	LD HL,JMPMST2		;POINTE SUR VECTEUR DE SAUT/2
+        LD (IX+14),L
+        LD (IX+15),H
+	CALL REBOND		;Mkid rebondi sur la tete du monstre
+
+	ld	bc,#0005
+	call	SET_FX
+
+	RET
+INV:	NEG
+	RET
+
+

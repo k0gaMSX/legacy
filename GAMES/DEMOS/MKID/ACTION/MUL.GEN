@@ -1,0 +1,1489 @@
+*q+,s 14
+
+*i	sysadd
+*i	bios
+*i	doscmd
+*i	macro
+
+;zone RAM de F975 a FAF5
+
+stg_nb		equ	#f975
+m_live		equ	stg_nb+1
+stk_nb		equ	m_live+1
+musmod		equ	stk_nb+1
+fx_mod		equ	musmod+1
+dest_page	equ	fx_mod+1
+f_r800		equ	dest_page+1
+m_r800		equ	f_r800+1
+chips		equ	m_r800+1
+busply		equ	chips+1
+fading		equ	busply+1
+fadspd		equ	fading+1
+muspge		equ	fadspd+1
+musadr		equ	muspge+1
+pos		equ	musadr+2
+step		equ	pos+1
+UNL_LIFE:	equ	step+1
+INVINCIB:	equ	UNL_LIFE+1
+hz_sel: 	equ	INVINCIB+1
+time_limit:	equ	hz_sel+1
+
+
+STRMUS	equ	#4000
+MUSINT	equ	STRMUS+3
+STPMUS	equ	MUSINT+3
+CNTMUS	equ	STPMUS+3
+HLTMUS	equ	CNTMUS+3
+smpadr	equ	HLTMUS+3
+
+	org	#c000
+
+	jp	start
+	jp	WriteFC ;c003
+	jp	WriteFD ;c009
+	jp	WriteFE ;c00c
+
+	jp	ReadFC	;c00f
+	jp	ReadFD	;c012
+	jp	ReadFE	;c015
+
+prg1:	jp	pltldr	;c018	       ;palette loader
+prg2:	jp	vdp_cmd ;c01b	      ;vdp_cmd
+prg3:	jp	ldirvm1 ;c01e	      ;ram_vram
+
+setfx_hook:
+	jp	SETSFX
+
+	jp	start_music	;c021
+	jp	stop_music
+	jp	halt_music
+	jp	cont_music
+
+;---------------------------------------------------------------
+;	STAGE LOADER POUR M-KID
+;
+;BY SLAYERMAN from F.U.C / ABYSS
+;dated 22/06/95.
+;last modification: 08/06/95
+
+;*********************************************************************
+;
+;	CA COMMENCE ICI ;-)
+;
+;*********************************************************************
+
+start:
+	call	InitMapRouts
+	call	Init_Hook
+
+	di
+
+	ld	hl,SETSFX
+	ld	(setfx_hook+1),hl
+
+	ld	hl,MAIN_A
+	ld	(Sfx_Hook+1),hl
+	ld	a,#c3
+	ld	(Sfx_Hook),a
+
+	ld	a,(f_r800)
+	or	a
+	call	nz,setr800	;si R800 alors mode R800 ROM
+
+	ld	a,4
+	call	WriteFE
+
+	jp	mb1_4	      ;force MB1.4
+
+	in	a,(#c4)		;make sure OPL4 is connected
+	cp	255
+	jp	z,mb1_4
+
+	ld	hl,mbwave	;load MB WAVE for OPL4
+	ld	de,#8000
+	call	diskld
+	jr	no_mus
+
+mb1_4:
+	ld	hl,mbplay	;load MB replayer
+	ld	de,#8000
+	call	diskld
+	call	srcchp
+no_mus:
+	ld	a,1
+	call	WriteFE
+
+
+stg_handler:
+	ld	a,(stg_nb)	;cherche la list de fichier du stage
+	cp	255
+	jp	z,password
+	rlca
+	ld	l,a
+	ld	h,0
+	ld	de,stage_tbl
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+
+	push	hl		;get screen number
+	call	setscreen
+	CALSLT	exttbl,disscr		;trun display off
+	pop	hl
+	inc	hl
+
+scan:	ld	a,(hl)
+	or	a
+	jp	z,ram_load
+	cp	1
+	jp	z,vram_load
+	cp	2
+	jp	z,vram_crunch
+	cp	3
+	jp	z,plt_ld
+	cp	4
+	jp	z,mbk_ld
+	cp	5
+	jp	z,vram_data
+	cp	6
+	jp	z,sc5_load
+	cp	7
+	jp	z,stg_ld
+	cp	8
+	jp	z,see_load
+	cp	255
+	jp	nz,scan_error
+
+	ld	a,5
+	ld	(muspge),a
+
+	CALSLT	exttbl,enascr		;trun display on
+	call	#4000			;call game routine
+	call	stop_music
+	call	SEE_EX
+	CALSLT	exttbl,disscr		;trun display off
+	jp	stg_handler
+
+scan_error:
+	di
+	halt
+
+;---------------------------------------------------------------
+;
+;	RAM LOADER
+;
+ram_load:			;LOAD program or data
+	inc	hl
+	ld	a,(hl)		;page
+	push	hl
+	call	WriteFE
+	pop	hl
+	inc	hl
+	ld	d,(hl)		;add de destination dans DE
+	inc	hl
+	ld	e,(hl)
+	inc	hl		;add du nom de fichier dans HL
+	push	hl
+	call	diskld
+	ld	a,1		;restore mapper page1
+	call	WriteFE
+	pop	hl
+	ld	de,12
+	add	hl,de		;next one
+	jp	scan
+
+;---------------------------------------------------------------
+;
+;	VRAM LOADER (SRB fornat)
+;
+vram_load:			;LOAD uncruched grafic data
+	inc	hl
+	ld	a,(hl)		;page de destination
+	ld	(dest_page),a
+	inc	hl
+	push	hl
+	call	imgld
+	pop	hl
+	ld	de,12
+	add	hl,de		;next one
+	jp	scan
+
+;---------------------------------------------------------------
+;
+;	VRAM CRUNCHED LOADER
+;
+vram_crunch:			;LOAD crunched grafic data
+	di
+	halt
+
+;---------------------------------------------------------------
+;
+;	PALETTE LOADER
+;
+plt_ld: inc	hl		;LOAD palette data
+	push	hl
+	ld	de,#8000
+	call	diskld
+	ld	hl,#8000	;send palette 0 to VDP
+	call	pltldr
+	pop	hl
+	ld	de,12
+	add	hl,de		;next one
+	jp	scan
+
+;---------------------------------------------------------------
+;
+;	MB1.4  SAMPLE KIT LOADER
+;
+mbk_ld:
+	ld	de,13
+	ld	a,(musmod)
+	or	a
+	jr	z,Sample_Not_Ld
+
+	inc	hl
+	push	hl
+	ld	a,(f_r800)
+	or	a
+	call	nz,setz80	;si R800 passage en Z80 pour loader MBK
+	pop	hl
+	push	hl
+
+	call	ReadFD
+	ld	(mb_kit),a
+	ld	a,4
+	call	WriteFD
+
+	call	mkload
+
+	ld	a,(mb_kit)
+	call	WriteFD
+
+	ld	a,(f_r800)	;restore R800 mode if Turbo R
+	or	a
+	call	nz,setr800
+	pop	hl
+	ld	de,12
+Sample_Not_Ld:
+	add	hl,de		;next one
+	jp	scan
+
+;---------------------------------------------------------------
+;
+;	VRAM DATA LOADER
+;
+vram_data:
+	inc	hl
+	ld	a,(hl)		;set destination page
+	ld	(dest_page),a
+	inc	hl
+	push	hl
+	ld	de,#8000
+	call	diskld
+	pop	hl
+	ld	de,12
+	add	hl,de
+	ld	d,(hl)		;add destination
+	inc	hl
+	ld	e,(hl)
+	inc	hl
+	ld	b,(hl)		;lenght of data
+	inc	hl
+	ld	c,(hl)
+	push	hl
+	ld	hl,#8007	;send to VRAM
+	call	ldirvm1
+	pop	hl
+	inc	hl		;next one
+	jp	scan
+
+;---------------------------------------------------------------
+;
+;	SCREEN 5 LOADER (SR5 format)
+;
+sc5_load:			;Load imqge screen 5
+	inc	hl
+	ld	a,(hl)		;set destination page
+	ld	(dest_page),a
+	inc	hl
+	push	hl
+	call	imgld2
+	pop	hl
+	ld	de,14
+	add	hl,de
+	jp	scan
+
+;---------------------------------------------------------------
+;
+;	STAGE LOADER
+;
+stg_ld: inc	hl		;LOAD palette data
+	push	hl
+	ld	de,#8000
+	call	diskld
+	ld	hl,#8007
+	ld	de,#8000
+	ld	bc,6144
+	ldir
+	pop	hl
+	ld	de,12
+	add	hl,de		;next one
+	jp	scan
+
+;---------------------------------------------------------------
+;
+;	SEE LOADER
+;
+see_load:			;LOAD a SEE file
+	ld	de,16
+
+	ld	a,(fx_mod)
+	or	a
+	jr	z,no_fx_load
+
+	ld	a,(see_not_use)
+	or	a
+	jr	z,no_fx_load
+
+	inc	hl
+	ld	a,(hl)		;page
+	push	hl
+	call	WriteFE
+	pop	hl
+	inc	hl
+	ld	d,(hl)		;add de destination dans DE
+	inc	hl
+	ld	e,(hl)
+	inc	hl		;add du nom de fichier dans HL
+
+	push	hl
+	push	de
+	call	diskld
+	ld	a,1		;restore mapper page1
+	call	WriteFE
+	pop	de
+
+	ex	de,hl		;initialise le module charge
+	ld	(SEEADR),hl
+	call	SEE_IN		;initialise SEE
+	pop	hl
+	jp	c,password
+
+	ld	de,12
+no_fx_load:
+	add	hl,de		;next one
+	jp	scan
+
+see_not_use:
+	db	1
+
+;-----------------------------------------------------------------
+;
+;	SET SCREEN ROUTINES
+;
+setscreen:
+	ld	a,(hl)
+	cp	5
+	jp	z,screen5
+
+	ld	a,0		;set COLOR 255,0,0
+	ld	(#f3ea),a
+	ld	a,1
+	ld	(#f3eb),a
+	ld	a,255
+	ld	(#f3e9),a
+	CALSLT	exttbl,chgclr
+
+	ld	a,8			;set screen 8
+	CALSLT	exttbl,chgmod
+
+	di
+	ld	a,26		;mode YAE/YJK + mask scrolling
+	out	(#99),a
+	ld	a,#80+25
+	out	(#99),a
+
+	ld	a,(#ffe7)	;sprite on
+	and	253
+	ld	(#ffe7),a
+	out	(#99),a
+	ld	a,#88
+	out	(#99),a
+
+	ld	a,(#f3e0)	;sprite size 16*16
+	and	%11111110
+	or	2
+	ld	(#f3e0),a
+	out	(#99),a
+	ld	a,#81
+	out	(#99),a
+
+	ld	a,(#ffe8)	;screen 212 lines
+	or	#80
+	ld	(#ffe8),a
+	out	(#99),a
+	ld	a,#89
+	out	(#99),a
+	ret
+
+screen5:
+	ld	a,0		;set COLOR 255,0,0
+	ld	(#f3ea),a
+	ld	a,0
+	ld	(#f3eb),a
+	ld	a,15
+	ld	(#f3e9),a
+	CALSLT	exttbl,chgclr
+
+	ld	a,5		;set screen 5
+	CALSLT	exttbl,chgmod
+
+	di
+	ld	a,(#ffe7)	;sprite on
+	and	253
+	ld	(#ffe7),a
+	out	(#99),a
+	ld	a,#88
+	out	(#99),a
+
+	ld	a,(#f3e0)	;sprite size 16*16
+	and	%11111110
+	or	2
+	ld	(#f3e0),a
+	out	(#99),a
+	ld	a,#81
+	out	(#99),a
+
+	ld	a,(#ffe8)	;screen 212 lines
+	or	#80
+	ld	(#ffe8),a
+	out	(#99),a
+	ld	a,#89
+	out	(#99),a
+	ret
+
+;---------------------------------------------------------------
+;
+;	PASSWORD ROUTINE
+;
+password:			;PASSWORD & fin (retour au DOS prompt)
+	ld	a,(SEESTA)	;si SEE installe
+	and	1
+	call	nz,SEE_EX	;alors remove SEE
+
+	call	test_r800
+	ld	a,(f_r800)
+	or	a
+	call	nz,setr800
+
+	di
+	ld	hl,Old_Int
+	ld	de,#FD9F
+	ld	bc,5
+	ldir
+
+	ld	hl,msx_plt
+	call	pltldr
+
+	ld	a,4		;set COLOR 15,4,7
+	ld	(#f3ea),a
+	ld	a,7
+	ld	(#f3eb),a
+	ld	a,15
+	ld	(#f3e9),a
+	CALSLT	exttbl,chgclr
+
+	ld	a,0		;set screen 0
+	CALSLT	exttbl,chgmod
+	CALSLT	exttbl,enascr	;trun display on
+	ei
+	jp	#0000		;DOS return
+
+msx_plt:
+	db	#00,#00, #00,#00, #11,#06, #33,#07
+	db	#17,#01, #27,#03, #51,#01, #26,#06
+	db	#71,#01, #73,#03, #61,#06, #64,#06
+	db	#11,#04, #65,#02, #55,#05, #77,#07
+
+;***********************************************************************
+;
+;	FILE LIST
+;
+fcb:	defs	37
+
+mbplay: db	0,"MBPLAY2 COM"
+mbwave: db	0,"MBWAVE  COM"
+
+
+
+Init_Hook:
+	di
+	ld	hl,#fd9f
+	ld	de,Old_Int
+	ld	bc,5
+	ldir
+
+	ld	hl,New_Int
+	ld	(#fd9f+1),hl
+	ld	a,#c3
+	ld	(#fd9f+0),a
+	ret
+
+New_Int:
+	ld	a,(musmod)
+	or	a
+	jr	z,New_Int1
+
+	call	Music_Hook
+
+New_Int1:
+	ld	a,(fx_mod)
+	or	a
+	jr	z,Old_Int
+
+	call	Sfx_Hook
+
+Old_Int:
+	ret
+	ret
+	ret
+	ret
+	ret
+
+Music_Hook:
+	ret
+	ret
+	ret
+	ret
+	ret
+
+
+Sfx_Hook:
+	ret
+	ret
+	ret
+	ret
+	ret
+
+int_music:
+	di
+	call	ReadFD		;sauve pages mapper 4000 et 8000
+	ld	(MB_page1),a
+	call	ReadFE
+	ld	(MB_page2),a
+
+	ld	a,4		;install page mapper MB
+	call	WriteFD
+
+	call	MUSINT		;call music interuption
+
+	ld	a,(MB_page1)	;restore pages mapper 4000 et 8000
+	call	WriteFD
+	ld	a,(MB_page2)
+	call	WriteFE
+	ret
+
+
+;----------------------------------------------------------------
+;
+;	INITIALISE Music_Hook & Start Replayer
+;
+start_music:
+	ld	a,(musmod)
+	or	a
+	ret	z
+
+	di
+	call	ReadFD		;sauve pages mapper 4000 et 8000
+	ld	(MB_page1),a
+	call	ReadFE
+	ld	(MB_page2),a
+
+	ld	a,4		;install page mapper MB
+	call	WriteFD
+
+	call	STRMUS		;call Start music
+
+	ld	hl,int_music
+	ld	(Music_Hook+1),hl
+	ld	a,#c3
+	ld	(Music_Hook+0),a
+
+	ld	a,(MB_page1)	;restore pages mapper 4000 et 8000
+	call	WriteFD
+	ld	a,(MB_page2)
+	call	WriteFE
+	ret
+
+;---------------------------------------------------------------
+;
+;	Reset Music_Hook & Stop Replayer
+;
+stop_music:
+	di
+	call	ReadFD		;sauve pages mapper 4000 et 8000
+	ld	(MB_page1),a
+	call	ReadFE
+	ld	(MB_page2),a
+
+	ld	a,4		;install page mapper MB
+	call	WriteFD
+
+	call	STPMUS		;call Stop music
+
+	ld	hl,#c9c9
+	ld	(Music_Hook),hl
+	ld	(Music_Hook+1),hl
+
+	ld	a,(MB_page1)	;restore pages mapper 4000 et 8000
+	call	WriteFD
+	ld	a,(MB_page2)
+	call	WriteFE
+	ret
+
+;---------------------------------------------------------------
+;
+;	Halt replayer
+;
+halt_music:
+	di
+	call	ReadFD		;sauve pages mapper 4000 et 8000
+	ld	(MB_page1),a
+	call	ReadFE
+	ld	(MB_page2),a
+
+	ld	a,4		;install page mapper MB
+	call	WriteFD
+
+	call	HLTMUS		;call halt music
+
+	ld	a,(MB_page1)	;restore pages mapper 4000 et 8000
+	call	WriteFD
+	ld	a,(MB_page2)
+	call	WriteFE
+	ret
+
+;----------------------------------------------------------------
+;
+;	Continue music replay
+;
+cont_music:
+	di
+	call	ReadFD		;sauve pages mapper 4000 et 8000
+	ld	(MB_page1),a
+	call	ReadFE
+	ld	(MB_page2),a
+
+	ld	a,4		;install page mapper MB
+	call	WriteFD
+
+	call	CNTMUS		;call continue music
+
+	ld	a,(MB_page1)	;restore pages mapper 4000 et 8000
+	call	WriteFD
+	ld	a,(MB_page2)
+	call	WriteFE
+	ret
+
+MB_page1:
+	defb	0
+MB_page2:
+	defb	0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;-----------------------------------------------------------------------
+; MAPPER2.GEN
+; Standard mapper routines
+; Runs under both DOS1 & DOS2
+; Use DOS2 mapper routines if present
+; Don't access the mapper directly, do everything
+; with these routines!!!
+
+; Call InitMapRouts first before using the other routines!
+
+; By Roderik Muit/Stefan Boer
+; Sunrise Magazine #16
+; (c) Stichting Sunrise 1995
+
+
+; Init mapper routines
+; Call once before using Read/Write routines!
+
+InitMapRouts:
+	LD	A,(#FB20)	; Not necessary
+	RRCA                    ;  under MSX-DOS
+	RET	NC		; No EXTBIOS
+
+	XOR	A
+	LD	DE,0402H	; ID/functionnr
+	CALL	#FFCA
+	OR	A
+	RET	Z		; No maprouts
+
+	LD	BC,18H
+	ADD	HL,BC		; Jumpadres PUT_P0
+	LD	DE,WriteFC	; Copy jumps
+	LD	C,3
+	LDIR
+	LD	DE,ReadFC
+	LD	C,3
+	LDIR
+	LD	DE,WriteFD
+	LD	C,3
+	LDIR
+	LD	DE,ReadFD
+	LD	C,3
+	LDIR
+	LD	DE,WriteFE
+	LD	C,3
+	LDIR
+	LD	DE,ReadFE
+	LD	C,3
+	LDIR
+	LD	DE,WriteFF
+	LD	C,3
+	LDIR
+	LD	DE,ReadFF
+	LD	C,3
+	LDIR
+	RET
+
+
+; Routines for writing the mapper (if DOS2 not present)
+; In : A = segmentnumber
+; Out: -
+; Changes: - (also when relinked to DOS2 routines)
+; Like DOS2 WriteFF has no effect. It is never allowed to
+; change page 3.
+
+WriteFC:
+	LD	(StoreFC),A
+	OUT	(#FC),A
+	RET
+
+WriteFD:
+	LD	(StoreFD),A
+	OUT	(#FD),A
+	RET
+
+WriteFE:
+	LD	(StoreFE),A
+	OUT	(#FE),A
+
+WriteFF:
+	RET
+	DW	0
+
+; DW 0 is necessary because there have to be 3 bytes
+; between WriteFF and ReadFC. (You can discuss the use
+; of relinking WriteFF, but never mind.)
+
+
+; Routines for reading the mapper
+; In : -
+; Out: A = segmentnumber
+; Changes: - (also when relinked to DOS2 routines)
+
+ReadFC:
+	LD	A,(StoreFC)
+	RET
+
+ReadFD:
+	LD	A,(StoreFD)
+	RET
+
+ReadFE:
+	LD	A,(StoreFE)
+	RET
+
+ReadFF:
+	LD	A,(StoreFF)
+	RET
+
+; storage space under DOS1
+
+StoreFF: DB	0
+StoreFE: DB	1
+StoreFD: DB	2
+StoreFC: DB	3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;---------------------------------------------------------------
+;
+;	SEE 3.10 REPLAYER
+;
+; File:SEE3PLAY.asm		Project:SEE v3.10 release A	Update:25/01/94
+; Sound Effect Driver v3.10a	coding:SHADOW			(c) FUZZY LOGIC
+; Replay a .SEE file (v3.xx only!)      Original version.
+;       You can still replay your version 3.00 files on this driver!!
+;
+;   * This source is 100% PUBLIC DOMAIN, and may never me sold for profit! *
+; The Z80 commands 'EI' and "'DI' are not used, except during H_TIMI set/reset
+; Uses ROM-BIOS: &h20 (RST) in the MAIN routine (check it, can be removed...)
+; If ye'r using DOS-2.xx then replace the "IN A,(#FE)" command in SETMAP:.
+;
+;+------------------------------------------------------------------------+
+
+;
+; Some space for you to fill... Anybody knows a joke?
+;
+
+;+--------------------------[ SEE header ]--------------------------------+
+H_TIMI:	EQU	#FD9F	;Hook_Timer Interrupt
+
+; Song structure OFFSETS
+xSEEID:	EQU	#00	;ID: "SEE3org", version number
+xHISPT: EQU	#08	;Highest used Start_pattern
+xHIPTA: EQU	#0A	;Higest used pattern+1_address
+xHISFX: EQU	#0C	;Highest used SFX
+x_____: EQU	#0E	;Unused
+xPOSTB:	EQU	#10	;Table with SFX start pattern
+xPATTS:	EQU	#0210	;Pattern data (max 1024 patts)
+
+
+;      [Vector Jump Table]
+see_tbl:
+	JP	SEE_IN	;Init SEE replayer
+	JP	SEE_EX	;Exit SEE replayer
+	JP	SETSFX	;Set a new sound effect
+	JP	CUTSFX	;Cut current sound effect
+SEEINT: JP	MAIN_A	;Main routine jumper (for own timing)
+
+;      [Vars]
+SEEADR:	DW	#8000	;Base address
+SEEMAP:	DB	1	;Mapper
+SEETID: DB	1	;Timer I.D.  0=SEE (uses "H_Timi")
+;			1=Own timing (from other ISR)
+SEESTA:	DB	0	;SEE status: b0: 1=SEE is installed
+;			b1: 1=SFX on (SFX status)
+;			b2: 1=Busy setting SFX
+SFXPRI:	DB	0	;SFX priority: 0=Overwrite, otherwise no effect
+;			can be set if the current one is
+;			still playing!
+SEEVOL:	DB	15	;Maximum Volume (makes real volume relative!)
+;+----------------------------------------------------------------------------+
+
+
+;+----- Init SEE -----+
+;Out: Carry,	1=not installed (no SEE3 file)
+;		0=succes fully installed
+SEE_IN:
+	LD	A,(SEESTA)	;See already installed?
+	AND	A		;[Cy:0]
+	RET	NZ		;Yup, so return
+
+;	LD	A,(SEEADR+1)    ;data in page 2 only!
+;	AND	#BF
+;	LD	(SEEADR+1),A
+
+;	CALL	SETMAP
+
+	LD	HL,(SEEADR)	;check file ("SEE3")
+	LD	BC,xSEEID
+	ADD	HL,BC
+	LD	DE,SEE_ID
+	LD	B,4
+SEEI_0:
+	LD	A,(DE)
+	CP	(HL)
+	SCF			;[Cy:1]
+	JP	NZ,RETURN	;not a SEE3 file!
+	INC	HL
+	INC	DE
+	DJNZ	SEEI_0
+
+	LD	DE,_HISPT	;copy header
+	LD	BC,8
+	LDIR
+
+	LD	A,#01
+	LD	(SEESTA),A	;[status: SEE on]
+	DEC	A
+	LD	(SFXPRI),A	;[Priority]
+
+	LD	A,(SEETID)	;Timing on H_TIMI?
+	AND	A		;[Cy:0]
+	JP	NZ,RETURN	;nope.
+
+; set SEE on Vblank Hook
+	DI
+	LD	HL,H_TIMI	;Store intr. hook
+	LD	DE,OLDVBL
+	LD	BC,5
+	LDIR
+	LD	DE,H_TIMI	;Set new intr. hook
+	LD	HL,NEWVBL
+	LD	BC,5
+	LDIR
+	EI
+	AND	A		;[Cy:0]
+	JP	RETURN
+
+NEWVBL:
+	JP	MAIN		;This is the new Vblank hook (H_TIMI)
+	RET
+	RET
+
+
+;+----- Exit SEE -----+
+SEE_EX:
+	LD	A,(SEESTA)	;See installed?
+	AND	A
+	RET	Z		;Nope, so return
+	XOR	A
+	LD	(SEESTA),A	;[status: SEE off]
+
+	CALL	PSGOFF
+
+	LD	A,(SEETID)	;Timing from H_TIMI?
+	AND	A
+	RET	NZ		;nope
+
+; reset SEE from Vblank hook
+	DI
+	LD	HL,OLDVBL	;Restore intr. hook
+	LD	DE,#FD9F
+	LD	BC,5
+	LDIR
+	EI
+	RET
+
+
+;+----- Set new Sound Effect -----+
+;In:   C, SFX nr
+;      B, priority (0, low / <>0, high)
+;Out:  Cy, 1=SFX not set -> A, error nr
+;			0, SFX doesn't excist
+;			1, previous SFX still playing (higher prior.)
+;			255, SFX not defined (OFF)
+SETSFX:
+	LD	A,B		;New Priority <>0 ?
+	AND	A
+	JR	NZ,SEFF_0
+	LD	A,(SFXPRI)	;Current SFX priority <>0?
+	AND	A
+	JR	Z,SEFF_0
+	LD	A,(SEESTA)	;SFX on?
+	AND	2		;[Cy:0]
+	SCF			;[Cy:1]
+	LD	A,1		;[error nr]
+	RET	NZ
+
+SEFF_0:
+;	 CALL	 SETMAP 	 ;Store and Set mapper
+
+	LD	A,(_HISFX)	;Max SFX?
+	CP	C
+	LD	A,0		;[error nr]
+	JP	C,RETURN	;Cy -> SFX doesn't excist
+
+	LD	L,C
+	LD	H,0
+	ADD	HL,HL		;Eff *2
+	LD	DE,(SEEADR)
+	ADD	HL,DE
+	LD	DE,xPOSTB
+	ADD	HL,DE
+	LD	E,(HL)		;Get start pattern
+	INC	HL
+	LD	D,(HL)
+	LD	A,D
+	CP	#FF		;in use?...
+	SCF			;[Cy:1]
+	JP	Z,RETURN	;...nope
+
+;All checks are done, now set SFX:
+	LD	A,C
+	LD	(SFX_NR),A
+	LD	A,B
+	LD	(SFXPRI),A
+
+	CALL	CUTSFX
+
+	LD	A,(SEESTA)	;status:
+	OR	#04		;b2: Busy setting SFX
+	LD	(SEESTA),A	;(no double SEE int while setting SFX)
+
+	LD	(PAT_NR),DE
+
+	CALL	C_PTAD
+
+	LD	HL,0
+	LD	(TEMPO),HL
+	LD	A,#03		;[status: b0: SEE on
+	LD	(SEESTA),A	;         b1: SFX on]
+	AND	A		;[Cy:0], succesfull
+	JP	RETURN
+
+
+;+----- Cut Sound Effect -----+
+CUTSFX:	LD	A,(SEESTA)
+	AND	1
+	RET	Z
+	LD	(SEESTA),A
+	JP	PSGOFF
+
+
+;+----- Main routine (timed) / Main.A from own timing -----+
+MAIN:	CALL	OLDVBL		;Call old Vblank first [Timing from H_timi]
+
+;["MAIN.A" from timing other than H_timi ("SEEINT")]
+MAIN_A: LD	A,(SEESTA)
+	BIT	0,A		;SEE on?
+	RET	Z		;...nope
+	BIT	1,A		;SFX on?
+	RET	Z		;...nope
+	BIT	2,A		;Busy setting new SFX?
+	RET	NZ		;...Yup!
+
+	LD	A,(TEMPO+1)
+	SUB	1
+	LD	(TEMPO+1),A
+	RET	NC
+	LD	A,(TEMPO+0)
+	LD	(TEMPO+1),A
+
+;	 CALL	 SETMAP
+	LD	HL,(PATADR)
+;<
+; The following piece'a code is only an xtra security. It's not realy necessary
+; if ye make correct SEE data! (check for a pattern overflow).
+; This will work as a little delay, and that's something we don't want!!
+; Besides it uses a ROM-BIOS routine, so you'd better remove it if
+; you've set page 0 to RAM and didn't include de RST vector jumps!
+;	 PUSH	 HL		 ;(HL=current pat adr)
+;	 LD	 HL,(SEEADR)	 ;[base adr]
+;	 LD	 DE,(_HIPTA)	 ;[hi pat adr offset]
+;	 ADD	 HL,DE
+;	 EX	 DE,HL
+;	 POP	 HL
+;
+;	 RST	 #20		 ; Max patt adr?
+;	 JR	 C,MAIN_0
+;
+;	 CALL	 CUTSFX 	 ;Pattern overflow!!
+;	 JP	 RETURN
+;>
+
+MAIN_0: LD	A,(_HALT)	;Halt counter
+	AND	A
+	JR	Z,MAIN_1
+
+	DEC	A
+	LD	(_HALT),A
+	AND	A
+	JP	NZ,RETURN
+	JR	MAIN_2		;previously a HALT event was done, now do PSG
+
+MAIN_1: CALL	yEVENT		;Do operation command
+
+MAIN_2: CALL	SETPSG		;Set PSG reg.
+	LD	(PATADR),HL
+	JP	RETURN
+
+
+;+----- Event Commands -----+
+yEVENT:	LD	A,(HL)		;Get event
+	LD	C,A
+	AND	#70
+	AND	A
+	RET	Z		;No command
+
+	CP	#10
+	JP	Z,EV_HLT	;Halt
+	CP	#20
+	JP	Z,EV_FOR	;Loop start
+	CP	#30
+	JP	Z,EV_NXT	;Loop next
+	CP	#40
+	JP	Z,EV_STR	;Continue Loop start
+	CP	#50
+	JP	Z,EV_RER	;Continue Loop next
+	CP	#60
+	JP	Z,EV_TEM	;Tempo
+	JP	EV_END		;End
+
+;- Halt "hlt:x"
+EV_HLT:	LD	A,C
+	AND	#0F
+	LD	(_HALT),A
+	POP	AF		;restore stack
+	JP	RETURN
+
+;- Loop start "for:x"
+EV_FOR:	PUSH	HL
+
+	LD	A,(LOOPNR)	;Inc loop nr
+	INC	A
+	AND	#03
+	LD	(LOOPNR),A
+
+	PUSH	HL
+	LD	HL,LOOPBF
+	LD	D,0
+	LD	E,A
+	ADD	HL,DE
+	ADD	HL,DE
+	ADD	HL,DE
+
+	LD	A,C
+	AND	#0F
+	LD	(HL),A		;set Counter
+	INC	HL
+	POP	DE
+	LD	(HL),E		;set Address
+	INC	HL
+	LD	(HL),D
+
+	POP	HL
+	RET
+
+;- Loop next "next"
+EV_NXT:	PUSH	HL
+
+	LD    A,(LOOPNR)
+	AND   #03
+
+	LD	HL,LOOPBF
+	LD	D,0
+	LD	E,A
+	ADD	HL,DE
+	ADD	HL,DE
+	ADD	HL,DE
+	DEC	(HL)		;Dec. counter
+	JR	Z,EV_N_0	;Z, loop end
+
+	INC	HL
+	LD	E,(HL)          ;get address
+	INC	HL
+	LD	D,(HL)
+
+	POP	HL
+	EX	DE,HL
+	RET
+
+;Loop done, now remove this loop
+EV_N_0: LD	A,(LOOPNR)	;Dec loopnr
+	DEC	A
+	AND	3
+	LD	(LOOPNR),A
+
+	POP	HL
+	RET
+
+;- Continue loop start "start"
+EV_STR:	LD	(CLPADR),HL	;Store Patt adr.
+	RET
+
+;- Continue loop next "rerun"
+EV_RER:	LD	HL,(CLPADR)
+	RET
+
+;- Tempo "tmp:x"
+EV_TEM:	LD	A,C
+	AND	#0F
+	LD	(TEMPO+0),A
+	LD	(TEMPO+1),A
+	RET
+
+;- Effect end " end "
+EV_END:	LD	A,1
+	LD	(SEESTA),A
+	POP	AF		;restore stack
+	JP	RETURN
+
+
+;+----- Set all PSG regs.-----+
+SETPSG:	LD	IX,PSGREG
+	LD	E,0		;Start reg.0
+	INC	HL		;[skip event byte]
+
+	LD	B,3		;First 6 reg. [sound frequency]
+STPS_0: PUSH	BC
+	LD	C,(HL)		;r# 0, 2 or 4
+	INC	HL
+	LD	B,(HL)		;r# 1, 3 or 5
+	BIT	7,(HL)		;check and handle Tuning
+	CALL	NZ,TUNWUP
+	BIT	6,(HL)
+	CALL	NZ,TUNWDW
+	INC	HL
+	LD	A,C
+	CALL	WRTPSG
+	LD	A,B
+	AND	#0F
+	CALL	WRTPSG
+	POP	BC
+	DJNZ	STPS_0
+
+	LD	A,(HL)		;r# 6 [Rustle frequency]
+	INC	HL
+	BIT	7,A
+	CALL	NZ,TUN_UP
+	BIT	6,A
+	CALL	NZ,TUN_DW
+	AND	#1F
+	CALL	WRTPSG
+
+	LD	A,(HL)		;r# 7 [channel control, ON/OFF]
+	AND	#3F
+	OR	#80		;bit 7 is necessary to write the PSG!!
+	INC	HL
+	CALL	WRTPSG
+
+	LD	B,3		;r# 8-10 [Volume]
+STPS_1: PUSH	BC
+	LD	A,(HL)
+	INC	HL
+	LD	C,A
+	AND	#1F
+	LD	B,A		;Save real volume..
+	BIT	4,A
+	JP	NZ,STPS_2	;Volume pattern is set.
+	BIT	7,C
+	CALL	NZ,TUN_UP
+	BIT	6,C
+	CALL	NZ,VOL_DW
+	LD	B,A		;Save real volume..
+	CALL	FIXVOL
+STPS_2:
+	CALL	WRTPSG
+	LD	(IX-1),B		;..Re-Write real volume to buffer (not fixed)
+	POP	BC
+	DJNZ	STPS_1
+
+	LD	B,3		;r# 11-13 [volume effect]
+STPS_3: LD	A,(HL)
+	INC	HL
+	CALL	WRTPSG
+	DJNZ	STPS_3
+	RET
+
+
+;Tuning
+;- byte
+TUN_UP:	ADD	A,(IX)		;Up
+	RET
+TUN_DW:	SUB	(IX)		;Down
+	NEG
+	RET
+;- word
+TUNWUP:	PUSH	HL
+	LD	L,(IX)
+	LD	H,(IX+1)
+	ADD	HL,BC
+	PUSH	HL
+	POP	BC
+	POP	HL
+	RET
+TUNWDW:	PUSH	HL
+	LD	L,(IX)
+	LD	H,(IX+1)
+	XOR	A
+	SBC	HL,BC
+	PUSH	HL
+	POP	BC
+	POP	HL
+	RET
+
+;Volume Down
+VOL_DW:	AND	#0F
+	LD	B,A
+	LD	A,(IX+0)
+	AND	#0F
+	SUB	B
+	RET	NC
+	XOR	A
+	RET
+
+
+;Make relative volume (depending on "SEEVOL")
+;In:  A, volume
+;Out: A, new volume [seevol - (15-volume)]
+FIXVOL:	AND	#0F
+	XOR	15
+	LD	C,A
+	LD	A,(SEEVOL)
+	AND	#0F
+	SUB	C
+	RET	NC
+	XOR	A
+	RET
+
+
+;Shut up PSG!
+PSGOFF:	LD	A,7
+	OUT	(#A0),A
+	LD	A,#3F .OR. #80
+	OUT	(#A1),A
+	RET
+
+
+;Write PSG (not ROM-BIOS compatible!)
+;In:   A, data
+;      E, port
+;     IX, PSG store table
+;Out:  E+1
+;     IX+1
+WRTPSG:	LD	(IX),A
+	INC	IX
+	PUSH	AF
+	LD	A,E
+	OUT	(#A0),A
+	INC	E
+	POP	AF
+	OUT	(#A1),A
+	RET
+
+
+;Calculate pattern address (only for "SEE3org" files)
+;In:  (PAT_NR), pattern nr (0-$3FF)
+;Out: (PATADR), pattern adr
+;           DE, pattern adr
+C_PTAD:	PUSH	AF
+	PUSH	HL
+	PUSH	BC
+	LD	HL,(SEEADR)
+	LD	BC,xPATTS
+	ADD	HL,BC
+	LD	BC,(PAT_NR)
+	LD	DE,15
+C_PA_0: LD	A,B
+	OR	C
+	JR	Z,C_PA_1
+	ADD	HL,DE
+	DEC	BC
+	JP	C_PA_0
+C_PA_1: LD	(PATADR),HL
+	EX	DE,HL
+	POP	BC
+	POP	HL
+	POP	AF
+	RET
+
+
+; When using DOS2, use other mapper routs (not: OUT (#FE),A / IN A,(#FE) !)
+
+;Store current mapper and Set SEE mapper
+SETMAP:	PUSH	AF
+	IN	A,(#FE)	;Store old mapper
+	LD	(OLDMAP),A
+	LD	A,(SEEMAP)	;Set SEE mapper
+	OUT	(#FE),A
+	POP	AF
+	RET
+
+
+;+----- Return from SEE-driver, restore map -----+
+RETURN:
+;	 PUSH	 AF
+;	 LD	 A,(OLDMAP)
+;	 OUT	 (#FE),A
+;	 POP	 AF
+	RET
+
+
+;+----------------------------< Work Area >-----------------------------------+
+SEE_ID: DB	"SEE3???",#10   ;ID + filetype + vers.nr
+TEMPO:	DB	0,0		;[Original, counter]
+PAT_NR:	DW	0		;Current pattern (0-1023) (temp)
+PATADR:	DS	2		;Current pattern address
+SFX_NR:	DB	0		;Current Sound Effect (0-255)
+_HALT:	DB	0		;Halt counter (0-15)
+LOOPNR:	DB	0		;Current loop number (0-3)
+LOOPBF:	DS	4*3		;[4 x Counter+Address]
+CLPADR:	DW	#00		;"Continue-loop" / "Restart" address
+
+;Copy from Song structure OFFSETS
+_SEEID:	DS	8		;"SEE3EDIT"
+_HISPT:	DS	2		;Highest used Start_pattern
+_HIPTA:	DS	2		;Higest used pattern+1_address
+_HISFX:	DS	2		;Highest used SFX
+_FLELN:	DS	2		;File length
+_POSTB:	DS	2		;Table with SFX start pattern
+_PATTS:	DS	2		;Pattern data (max 1024 patts)
+
+;       reg.	0 1 2 3 4 5 6 7 8 9 A B C D
+PSGREG:	DB	0,0,0,0,0,0,0,0,0,0,0,0,0,0	; - PSG port store buffer -
+
+OLDVBL:	DS	5		;Old Vblank Interrupt (H_timi)
+OLDMAP: DB	0		;Stored mapper (page 2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;---------------------------------------------------------------
+;
+;	INCLUDE SECTION
+;
+
+*i	divers
+*i	diskldr
+*i	r800
+*i	mbloader
+
+*i	mul-list
+
+	END
+
+                                                                                                                    

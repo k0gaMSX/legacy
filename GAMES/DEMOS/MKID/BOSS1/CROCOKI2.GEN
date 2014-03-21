@@ -1,0 +1,1663 @@
+*S	14
+
+
+; Crocokid 7/1995 ver 1.0 by F.GERARDIN-SLAYERMAN of (F.U.C).
+
+    ; Thank SLAYERMAN for source listing of interruptions.
+
+
+w_vdp:	macro	@valeur 		; VDP (@valeur) = A
+	out	(099h),a
+	ld	a,@valeur +080h
+	out	(099h),a
+	endm
+
+w2_vdp: macro	@valeur,@adress 	; VDP (@valeur) = @adress
+	ld	a,@adress
+	out	(099h),a
+	ld	a,@valeur +080h
+	out	(099h),a
+	endm
+
+wait:	macro	@loop		; Multiplie le temp d'animation par @loop.
+	ld	b,@loop
+bcl@$YM rr	h
+	rr	l
+	djnz	bcl@$YM
+	ld	a,l
+	endm
+
+wait2:	macro	@adress,@valeur ; Multiplie le temp d'affichage par ld b,x.
+	ld	hl,@adress
+	ld	a,(donnee)
+bcl@$YM rra
+	djnz	bcl@$YM
+	and	@valeur 	; Nombre de pages animees.
+	ld	d,0
+	ld	e,a
+	add	hl,de		; Donne l'adresse ou le nﬂde page est stockee.
+	endm
+
+locate: macro	@adress,@valeur ; Calcul la position d'un personnage.
+	push	af
+	xor	255
+	sub	@valeur
+	ld	@adress,a
+	pop	af
+	endm
+
+move:	macro	@adress1,@adress2      ; Incremente a partir de @adress1 +
+	ld	hl,@adress1	       ; @adress2 la position d'un personnage.
+	ld	bc,@adress2
+	add	hl,bc
+	ld	@adress1,hl
+	endm
+
+make:	macro	@adress,@valeur        ; Vdp commande.
+	ld	hl,@adress
+	ld	b,@valeur
+	call	cmmd
+	endm
+
+;	 defb	 0FEh
+;	 defw	 debut
+;	 defw	 fin
+;	 defw	 debut
+
+	org	00100h
+
+
+	;	INITIALISATION.
+
+	ld	a,5		; Screen 5
+	ld	ix,0005Fh
+	call	rom
+
+	di
+	ld	a,(0F3E0h)	; Ecran noir.
+	xor	64
+	ld	(0F3E0h),a
+	w_vdp	1
+	ei
+
+	ld	de,08000h	; Adresse de depart.
+	call	buff		; Set disk transfert address.
+
+load:	call	open		; Open file.
+
+	ld	hl,03C00h
+	ld	(taill),hl
+
+	call	read		; Random block read.
+	call	vram1
+
+	call	read
+	ld	de,03BC0h
+	call	vram2
+
+debut:	di
+
+				; Construction du decor.
+	make	line20,36	; Initialise les trois 1ere pages.
+	make	line21,36
+	make	line22,36
+	make	line23,36
+	make	line24,36
+	make	line25,36
+	make	line26,36
+
+	make	copy1,32	; Crocodile.
+	make	copy2,32
+	make	copy3,32
+
+	make	copy4,32	; Mkid.
+	make	copy5,32
+
+	make	line27,36	; Clear crocodile.
+
+	make	copy19,32
+	make	copy20,32
+	make	line28,36	; Clear.
+
+	make	copy6,32	; Decor.
+	make	line8,36
+	make	copy7,32
+	make	line9,36
+	make	copy8,32
+	make	line10,36
+
+	make	copy9,32	; Decor.
+	make	line11,36
+	make	copy10,32
+	make	line12,36
+	make	copy11,32
+	make	line13,36
+
+	make	copy12,32	; Decor.
+	make	line14,36
+	make	line17,36
+	make	copy13,32
+	make	line15,36
+	make	line18,36
+	make	copy14,32
+	make	line16,36
+	make	line19,36
+
+	make	copy15,32	; Tete dans le decor sur la page 3.
+	make	copy16,32
+	make	copy17,32
+	make	line29,36	; Clear.
+
+;	 make	 copy18,32	 ; Init la forme de la queue du crocodile.
+;	 ld	 hl,(anime_2)
+;	 call	 color		 ; Couleur de la queue du crocodile.
+;	 ld	 b,65		 ; Couleur suplementaire pour la rame.
+;	 ld	 c,098h
+;	 otir			 ; Data.
+
+	ld	a,(0FFE7h)	; Couleur zero redefinissable.
+	or	%00100000
+	w_vdp	8
+
+	ld	a,1		; Couleur de bordure d'ecran a 1.
+	w_vdp	7
+
+	xor	a
+	w_vdp	16
+	ld	hl,palette
+	ld	c,09Ah
+	ld	b,32
+	otir
+
+	ld	a,(0F3DFh)	; Registre d'ecriture 0.
+	or	%00010000	; Autorise les interruptions du scan hori.
+	ld	(0F3Dfh),a
+	w_vdp	0
+
+	ld	a,(0F3E0h)	; interdit les interruptions msx1.
+	and	%11011110	; sprites ordinaires.
+	or	%00000010	; sprites 16*16.
+	ld	(0F3E0h),a
+	w_vdp	1
+
+	ld	hl,038h 	; Deroute les interruptions.
+	ld	de,sav_int
+	ld	bc,03h
+	ldir
+
+;	 ld	 hl,new_int	 ; idem.
+;	 ld	 de,038h
+;	 ld	 bc,03h
+;	 ldir
+
+	w2_vdp	19,(ligne_0)	; Interrutpion msx2 en ligne 64.
+	w2_vdp	2,(anime_0)	; Page zero.
+
+	w2_vdp	15,1		; Registre status 1.
+
+	ld	a,(0FFFAh)	; Masque+scroll 1 plan.
+	or	%00000010
+	and	%11111110
+	w_vdp	25
+
+	xor	a		; Scrolling a zero.
+	call	scroll
+
+	w2_vdp	5,0EFh		; EFh Table des attributs de sprites.
+	w2_vdp	11,03h
+	w2_vdp	6,03Fh		; 3Fh Table des formes des sprites.
+
+	ld	a,(0F3E0h)	; Ecran allume.
+	xor	64
+	ld	(0F3E0h),a
+	w_vdp	1
+
+	ld	hl,0		; Animations a zero.
+	ld	(donnee),hl
+
+	ld	a,136		; Position du crocodile.
+	ld	(set0),a
+
+	ld	a,106
+	ld	(set1),a	; Position d'Mkid.
+
+	ld	a,4		; Vitesse d'animation de mkid.
+	ld	(time_1),a
+
+	ld	hl,0		; Crocodile vitesse 4.
+	ld	(cmd_0),hl
+
+	ld	hl,1		; Decor vitesse 1.
+	ld	(cmd_2),hl
+
+	ld	hl,no_ch0	; Systeme d'animation de la queue du crocodile.
+	ld	(chg_an0+1),hl
+	ld	hl,prg_an0
+	ld	(chg_an1+1),hl
+	ld	a,255
+	ld	(cmpt_an),a
+	ld	a,64
+	ld	(spr_y+1),a
+
+	ld	hl,prg_0
+	ld	(038h+1),hl
+
+	ei
+
+	;	PROGRAMME HORS DES INTERRUPTIONS.
+
+boucle: di
+	ld	a,%01000111
+	out	(0AAh),a
+	in	a,(0A9h)
+	and	16
+	jp	z,fin_prg
+	ei
+	jp	boucle
+
+	;	PROGRAMME SOUS INTERRUPTIONS.
+
+prg_0:	di				; Programme du decor nﬂ2.
+	ld	hl,prg_1		; Prepare la prochaine interruption.
+	ld	(038h+1),hl
+	w2_vdp	19,(ligne_1)
+	in	a,(099h)		; Registre status 1
+
+
+	ld	b,4			; Temp d'animation multiplie par 4.
+	wait2	anime_0,%00000011
+	w2_vdp	2,(hl)			; Modifie le nﬂ de page de l'ecran.
+
+	ld	hl,(donnee)		; Compteur d'interruptions pour les
+	inc	hl			; animations de pages d'ecrans.
+	ld	(donnee),hl
+
+	ei
+	ret
+
+
+prg_1:	di				; Programme du crocodile.
+	ld	hl,prg_2		; Prepare la prochaine interruption.
+	ld	(038h+1),hl
+	w2_vdp	19,(ligne_2)
+	in	a,(099h)		; Registre status 1
+
+	move	(depla_0),(cmd_0)	; Permet de deplace le crocodile.
+	wait	4			; Temp de deplacement multiplie par 4.
+	locate	(set0),123		; Abscisse du crocodile.
+
+	call	scroll			; Scrolling!.
+
+	ld	b,3			; Temp d'animation multiplie par 3.
+	wait2	anime_0,%00000011
+	w2_vdp	2,(hl)			; Modifie le nﬂ de page de l'ecran.
+	ei
+	ret
+
+
+prg_2:	di				; Programme de Mkid.
+	ld	hl,prg_3		; Prepare la prochaine interruption.
+	ld	(038h+1),hl
+	w2_vdp	19,(ligne_3)
+	in	a,(099h)		; Registre status 1
+
+	ld	a,(cmd_1+1)		; Surface autorisee pour Mkid.
+	rra
+	ld	a,(set1)
+	jr	c,right
+left:	cp	8
+	jr	nc,mov
+	jr	not_mov
+right:	cp	201
+	jr	c,mov
+
+not_mov:ld	hl,0
+	ld	(cmd_1),hl
+
+mov:	move	(depla_1),(cmd_1)	; Permet de deplace Mkid.
+	wait	6			; Temp de deplacement multiplie par 4.
+	locate	(set1),149		; Abscisse de Mkid.
+
+	call	scroll			; Scrolling!.
+
+	ld	a,(time_1)
+	ld	b,a			; Permet d'anime Mkid.
+	wait2	an_push,%00000011
+	w2_vdp	2,(hl)			; Modifie le nﬂ de page de l'ecran.
+
+	ld	hl,(cmd_1)		; Commande de ralentissement de Mkid.
+	ld	a,h
+	or	l
+	jr	z,nothing	; cmd = 0 alor pas de ralentissement.
+	cp	255
+	inc	hl		; Freine vers la droite.
+	jr	z,neg
+pos:	dec	hl		; Freine vers la gauche.
+	dec	hl
+neg:	ld	(cmd_1),hl
+
+nothing:
+	ld	a,0   ;*	; Mkid.
+	call	rd_stk		; call	  000D5h	  ; Lecture stick (0).
+	cp	3
+	jr	nz,no_psh3
+	ld	hl,-64		; Deplacement de un pixel par un.
+	ld	(cmd_1),hl
+
+no_psh3:cp	7
+	jr	nz,no_psh7
+	ld	hl,+64
+	ld	(cmd_1),hl
+
+no_psh7:ei
+	ret
+
+
+prg_3:	di				; Programme du decor nﬂ1.
+	ld	hl,prg_0		; Prepare la prochaine interruption.
+	ld	(038h+1),hl
+	w2_vdp	19,(ligne_0)
+	in	a,(099h)		; Registre status 1
+
+	move	(depla_2),(cmd_2)	; Deplace le decor nﬂ1 et nﬂ2.
+	wait	3			; Temp de deplacement multiplie par 3.
+	call	scroll			; Scrolling!.
+
+	ld	b,3			; Permet d'anime le decor.
+	wait2	anime_0,%00000011
+	w2_vdp	2,(hl)			; Modifie le nﬂ de page de l'ecran.
+
+	; Abscisse de la queue crocodile.
+
+	make	copy18,32		; Copie la forme de la queue du croco.
+
+ad_cl:	ld	hl,(00000h)		; copie couleur de la queue du croco.
+	call	color
+
+	ld	a,(set0)		; Image de la queue du crocodile.
+spr_y:	ld	b,64
+spr_x:	add	a,80			; Si la queue sort de l'ecran.
+	cp	-16
+	jr	nc,no_see
+	cp	+16
+	jr	nc,see
+
+no_see: ld	b,216
+see:	call	sprites
+
+;-------------------------------------------
+spirit: ld	bc,(set0)      ; Si la coordonnee du crocodile est petite
+	ld	a,c	       ; que Mkid. -> B= (set1) et C= (set0)
+	cp	b
+ 
+	ld	hl,(cmd_0)
+	jr	c,moins0
+
+plus0:	ld	a,c
+	cp	24
+	jr	c,moins1
+
+plus1:	ld	a,l
+	cp	+24
+	jr	z,stop
+	inc	hl
+	jr	stop
+
+moins0: ld	a,c
+	cp	-96
+	jr	nc,plus1
+
+moins1: ld	a,l
+	cp	-24
+	jr	z,stop
+	dec	hl
+stop:	ld	(cmd_0),hl
+
+;--------------------------------------------
+	ld	a,(cmpt_an)	; Duree d'animation.
+	dec	a
+	ld	(cmpt_an),a
+chg_an1:jp	z,no_chg
+chg_an0:jp	00000h		; Choix de l'animation.
+
+
+
+prg_an0:ld	hl,prg_an1	; Queue stable derriere le crocodile.
+	ld	(chg_an1+1),hl
+	ld	hl,no_ch1
+	ld	(chg_an0+1),hl
+	ld	a,15	 ;31
+	ld	(cmpt_an),a
+	jr	no_ch1
+no_ch0: ld	bc,00303h
+	ld	hl,anime_1
+	ld	de,anime_2
+	jp	no_chg
+
+prg_an1:ld	hl,prg_an2	; La queue se baisse.
+	ld	(chg_an1+1),hl
+	ld	hl,no_ch2
+	ld	(chg_an0+1),hl
+	ld	a,216
+	ld	(spr_y+1),a
+	ld	a,60
+	ld	(spr_x+1),a
+	ld	a,15		;31
+	ld	(cmpt_an),a
+no_ch1: ld	bc,00203h
+	ld	hl,anime_3
+	ld	de,anime_4
+	jp	no_chg
+
+prg_an2:ld	hl,prg_an3	; La queue disparait.
+	ld	(chg_an1+1),hl
+	ld	hl,no_ch3
+	ld	(chg_an0+1),hl
+	ld	a,138
+	ld	(spr_y+1),a
+	ld	a,15	 ;31
+	ld	(cmpt_an),a
+no_ch2: ld	bc,00303h
+	ld	hl,anime_5
+	ld	de,anime_6
+	jp	no_chg
+
+prg_an3:ld	hl,prg_an4	; La queue se leve devant le crocodile.
+	ld	(chg_an1+1),hl
+	ld	hl,no_ch4
+	ld	(chg_an0+1),hl
+	ld	a,63	;8
+	ld	(cmpt_an),a
+no_ch3: ld	bc,00203h
+	ld	hl,anime_9
+	ld	de,anime_10
+	jp	no_chg
+
+prg_an4:ld	hl,prg_an5	; La queue est stable.
+	ld	(chg_an1+1),hl
+	ld	hl,no_ch5
+	ld	(chg_an0+1),hl
+	ld	a,15
+	ld	(cmpt_an),a
+no_ch4:
+	ld	bc,00303h	;*
+	ld	hl,anime_13
+	ld	de,anime_14
+	jp	no_chg
+
+prg_an5:ld	hl,prg_an6	; La queue se baisse.
+	ld	(chg_an1+1),hl
+	ld	hl,no_ch6
+	ld	(chg_an0+1),hl
+	ld	a,216
+	ld	(spr_y+1),a
+	ld	a,15	;64
+	ld	(cmpt_an),a
+no_ch5: ld	bc,00203h
+	ld	hl,anime_11
+	ld	de,anime_12
+	jp	no_chg
+
+
+
+prg_an6:ld	hl,prg_an7
+	ld	(chg_an1+1),hl
+	ld	hl,no_ch7
+	ld	(chg_an0+1),hl
+	ld	a,64
+	ld	(spr_y+1),a
+	ld	a,80
+	ld	(spr_x+1),a
+	ld	a,31
+	ld	(cmpt_an),a
+no_ch6: ld	bc,00303h
+	ld	hl,anime_5
+	ld	de,anime_6
+	jp	no_chg
+
+prg_an7:ld	hl,prg_an0
+	ld	(chg_an1+1),hl
+	ld	hl,no_ch0
+	ld	(chg_an0+1),hl
+	ld	a,255
+	ld	(cmpt_an),a
+no_ch7: ld	bc,00303h
+	ld	hl,anime_7
+	ld	de,anime_8
+	jp	no_chg
+
+no_chg: ld	a,(cmpt_an)
+
+w2_bcl: rra
+	djnz	w2_bcl
+	and	c		; Nombre de pages animees.
+	ld	b,0
+	ld	c,a
+	add	hl,bc		; Donne l'adresse ou le nﬂde page est stockee.
+
+chg:	ld	a,(hl)
+	ld	(copy18+2),a
+
+	ex	de,hl
+	sla	c
+	add	hl,bc
+	ld	(ad_cl+1),hl
+	ei
+	ret
+
+
+donnee: defw	0	; Compteur d'interruption
+
+cmd_0:	defw	4	; Crocodile.	  <- commandes de deplacement + decor.
+cmd_1:	defw	0	; Mkid.
+cmd_2:	defw	1	; Decor.
+
+depla_0:
+	defw	0	; Crocodile.	  <- incrementations des personnages
+depla_1:		;		     + decor.
+	defw	0	; Mkid.
+depla_2:
+	defw	0	; Decor.
+
+set0:	defb	132	; Crocodile.	  <- positions des personnages.
+set1:	defb	106	; Mkid.
+
+time_1: defb	4
+cmpt_an:defb	0
+
+anime_0:defb	%00111111,%00011111,%00111111,%01011111
+an_push:defb	%00011111,%00111111,%01011111,%01111111
+
+
+ligne_0:defb	67
+ligne_1:defb	85
+ligne_2:defb	159
+ligne_3:defb	212
+
+
+palette:defw	0002h,0000h,0020h,0050h 	; Palette Data (0GRBh * 16)
+	defw	0373h,0574h,0250h,0130h
+	defw	0405h,0003h,0100h,0221h
+	defw	0360h,0777h,0570h,0332h
+
+
+spr_00: defb	60+00,200+00,000,0		; Queue du crocodile.
+spr_01: defb	60+00,200+00,004,0
+spr_02: defb	60+16,200+00,008,0
+spr_03: defb	60+16,200+00,012,0
+spr_04: defb	60+32,200+00,016,0
+spr_05: defb	60+32,200+00,020,0
+spr_06: defb	60+48,200+00,024,0
+spr_07: defb	60+48,200+00,028,0
+spr_08: defb	60+00,200+16,032,0
+spr_09: defb	60+00,200+16,036,0
+spr_10: defb	60+16,200+16,040,0
+spr_11: defb	60+16,200+16,044,0
+spr_12: defb	60+32,200+16,048,0
+spr_13: defb	60+32,200+16,052,0
+spr_14: defb	60+48,200+16,056,0
+spr_15: defb	60+48,200+16,060,0
+
+spr_16: defb	0A4h,126,064,0			; Position de la rame.
+spr_17: defb	0A4h,126,068,0
+spr_18: defb	0A4h,126+16,072,0
+spr_19: defb	0A4h,126+16,076,0
+
+spr_20: defb	216				; Coupe les sprite > 16.
+
+copy18: defw	000h,00300h+18,000h,003F0h,00100h,004h	; Table des formes.
+	defb	0,0,0D0h
+
+;	Ordonnee table des formes et adresse table des couleurs.
+
+anime_1:defb	+16,+12,+16,+20
+anime_2:defw	_5anime,_4anime,_5anime,_6anime
+
+anime_3:defb	+00,+00,+04,+08
+anime_4:defw	_1anime,_1anime,_2anime,_3anime
+
+anime_5:defb	+00,+00,+00,+00
+anime_6:defw	_1anime,_1anime,_1anime,_1anime
+
+anime_7:defb	+08,+04,+00,+00
+anime_8:defw	_3anime,_2anime,_1anime,_1anime
+
+
+anime_9:defb	+28,+24,+00,+00
+anime_10:defw	 _7anime,_8anime,_1anime,_1anime
+
+anime_11:defb	 +00,+00,+24,+28
+anime_12:defw	 _1anime,_1anime,_7anime,_8anime
+
+anime_13:defb	 +36,+32,+36,+40
+anime_14:defw	 _10anime,_9anime,_10anime,_11anime
+
+copy1:	defw	001h,00381h,084h,00059h,046h,047h   ; Crocodile
+	defb	0,0,090h
+copy2:	defw	048h,00381h,084h,00159h,046h,047h
+	defb	0,0,090h
+copy3:	defw	08Fh,00381h,084h,00259h,046h,047h
+	defb	0,0,090h
+
+line27: defw	000h,0381h,00100h,00047h	    ; Clear.
+	defb	99h,0,0C0h
+
+copy4:	defw	0D6h,00381h,06Ah,000A4h,026h,023h   ; Mkid.
+	defb	0,0,090h
+copy5:	defw	0D6h,003A5h,06Ah,001A4h,026h,023h
+	defb	0,0,090h
+copy19: defw	038h,003C8h,06Ah,002A4h,026h,027h
+	defb	0,0,090h
+copy20: defw	001h,003C8h,06Ah,003A4h,036h,027h
+	defb	0,0,090h
+
+line28: defw	000h,03C8h,00100h,00027h	    ; Clear.
+	defb	99h,0,0C0h
+
+copy6:	defw	000h,0032Ch,000h,00001h,055h,055h   ; Decor.
+	defb	0,0,090h
+copy7:	defw	055h,0032Ch,000h,00101h,055h,055h
+	defb	0,0,090h
+copy8:	defw	0AAh,0032Ch,000h,00201h,055h,055h
+	defb	0,0,090h
+line8:	defw	000h,0004Dh,019h,00002h
+	defb	0,0,080h
+line9:	defw	000h,0014Eh,019h,00002h
+	defb	0,0,080h
+line10: defw	000h,0024Fh,019h,00002h
+	defb	0,0,080h
+
+copy9:	defw	000h,0032Ch,055h,00001h,055h,55h   ; Decor.
+	defb	0,0,90h
+copy10: defw	055h,0032Ch,055h,00101h,055h,055h
+	defb	0,0,90h
+copy11: defw	0AAh,0032Ch,055h,00201h,055h,055h
+	defb	0,0,090h
+line11: defw	046h,0004Dh,028h,00002h
+	defb	0,0,080h
+line12: defw	046h,0014Eh,028h,00002h
+	defb	0,0,080h
+line13: defw	046h,0024Fh,028h,00002h
+	defb	0,0,080h
+
+copy12: defw	0AAh,0032Ch,0AAh,00001h,056h,055h   ; Decor.
+	defb	0,0,090h
+copy13: defw	055h,0032Ch,0AAh,00101h,056h,055h
+	defb	0,0,090h
+copy14: defw	000h,0032Ch,0AAh,00201h,056h,055h
+	defb	0,0,090h
+line14: defw	09Bh,0004Fh,028h,00002h
+	defb	0,0,080h
+line15: defw	09Bh,0014Eh,028h,00002h
+	defb	0,0,080h
+line16: defw	09Bh,0024Dh,028h,00002h
+	defb	0,0,080h
+line17: defw	0F0h,0004Dh,010h,00002h
+	defb	0,0,080h
+line18: defw	0F0h,0014Eh,010h,00002h
+	defb	0,0,080h
+line19: defw	0F0h,0024Fh,010h,00002h
+	defb	0,0,080h
+
+copy15: defw	0F6h,00311h+44,0F7h,00012h,00Ah,026h
+	defb	0,0,090h
+copy16: defw	0F6h,00311h+44,0F7h,00112h,00Ah,026h
+	defb	0,0,090h
+copy17: defw	0F6h,00311h+44,0F7h,00212h,00Ah,026h
+	defb	0,0,090h
+
+line29: defw	000h,032Ch,00100h,00055h	    ; Clear.
+	defb	99h,0,0C0h
+
+line20: defw	000h,0000h,00100h,00300h	    ;Initialisation des pages.
+	defb	99h,0,0C0h
+line21: defw	000h,0000h,00100h,00001h
+	defb	11h,0,0C0h
+line22: defw	000h,00D3h,00100h,00001h
+	defb	00h,0,0C0h
+line23: defw	000h,0100h,00100h,00001h
+	defb	11h,0,0C0h
+line24: defw	000h,01D3h,00100h,00001h
+	defb	00h,0,0C0h
+line25: defw	000h,0200h,00100h,00001h
+	defb	11h,0,0C0h
+line26: defw	000h,02D3h,00100h,00001h
+	defb	00h,0,0C0h
+
+
+	;	SOUS ROUTINES
+; Pas de DI, ces routines sont sous interruptions.
+
+
+sav_int:
+	defb	0,0,0,0,0	; Obligatoire 5 octets. (hook)
+;new_int:
+;	 jp	 deb_prg	 ; Obligatoire 5 octets. (hook)
+;	 nop
+;	 nop
+
+scroll: push	af		; Routine de scrolling.
+	rra
+	rra
+	rra
+	and	%00111111
+	w_vdp	26
+	pop	af
+	xor	7
+	and	7
+	w_vdp	27
+	ret
+
+cmmd:				; Lecture du bit ce du registre status 2.
+bit_ce: ld	a,02h		; R status 2.
+	w_vdp	15
+vdp_s2: in	a,(099h)
+	rrca
+	jr	c,vdp_s2
+	w2_vdp	15,1		; Registre status 1.
+	ld	a,b		; nﬂ du 1er registre dans le registre 17.
+	w_vdp	17
+	ld	a,02Fh
+	sub	b
+	ld	b,a
+	ld	c,09Bh
+	otir
+	ret
+
+
+
+color:	w2_vdp	14,%00000111	; Set Bits 14-16.  Place les coul de spr vram.
+	xor	a		; Bits 0-7.	    Sans le registre nﬂ45.
+	ld	b,a		; B=0.
+	out	(099h),a
+	ld	a,%01110100	; Bits 8-13. (Bit6 a 1= ecriture.) 
+	out	(099h),a
+				; hl= Table des couleurs des sprites en ram.
+	ld	c,098h
+	otir			; Data.
+	ret
+
+sprites:ld	(spr_00+1),a		; X des sprites 0-1.
+	ld	(spr_01+1),a
+	ld	(spr_02+1),a		; X des sprites 2-3.
+	ld	(spr_03+1),a
+	ld	(spr_04+1),a		; X des sprites 4-5.
+	ld	(spr_05+1),a
+	ld	(spr_06+1),a		; X des sprites 6-7.
+	ld	(spr_07+1),a
+	add	a,16
+	ld	(spr_08+1),a		; X des sprites 8-9.
+	ld	(spr_09+1),a
+	ld	(spr_10+1),a		; X des sprites 10-11.
+	ld	(spr_11+1),a
+	ld	(spr_12+1),a		; X des sprites 12-13.
+	ld	(spr_13+1),a
+	ld	(spr_14+1),a		; X des sprites 14-15.
+	ld	(spr_15+1),a
+
+	; Ordonnee de queue crocodile.
+
+	ld	a,b
+	ld	(spr_00),a		; Y des sprites 00-01.
+	ld	(spr_01),a
+	ld	(spr_08),a		; Y des sprites 08-09.
+	ld	(spr_09),a
+
+	add	a,16
+	ld	(spr_02),a		; Y des sprites 02-03.
+	ld	(spr_03),a
+	ld	(spr_10),a		; Y des sprites 10-11.
+	ld	(spr_11),a
+
+	add	a,16
+	ld	(spr_04),a		; Y des sprites 04-05.
+	ld	(spr_05),a
+	ld	(spr_12),a		; Y des sprites 12-13.
+	ld	(spr_13),a
+
+	add	a,16
+	ld	(spr_06),a		; Y des sprites 06-07.
+	ld	(spr_07),a
+	ld	(spr_14),a		; Y des sprites 14-15.
+	ld	(spr_15),a
+
+	ld	a,(set1)		; sprite pour la rame de Mkid.
+	add	a,0
+	ld	(spr_16+1),a		; X
+	ld	(spr_17+1),a		; X
+	ld	(spr_18+1),a		; X
+	ld	(spr_19+1),a		; X
+
+	call	vrm3
+
+	ld	b,73
+	ld	hl,spr_00	; Table des sprites en ram.
+
+	ld	a,%01110110	; Bits 8-13.
+;		   01111000
+	out	(099h),a
+	ld	c,098h
+	otir			; Data.
+	ret
+
+vrm3:	w2_vdp	14,%00000111	; Set Bits 14-16.   Place les sprites en vram.
+	xor	a		; Bits 0-7.	    Sans le registre nﬂ45.
+	out	(099h),a
+	ret
+
+vram2:	call	vrm2
+	ld	a,%01111100	; Bits 8-13.
+	jp	vrm
+
+vram1:	call	vrm2
+	ld	a,%01000000	; Bits 8-13.
+vrm:	out	(099h),a
+	ld	hl,08000h	; Buffer.
+
+	ld	b,03Ch
+loop:	push	bc
+	ld	b,0
+	ld	c,098h
+	otir			; Data.
+	pop	bc
+	djnz	loop
+	ei
+	ret
+
+vrm2:	di
+	w2_vdp	14,%00000110	; Set Bits 14-16.   1ere lecture en vram.
+	xor	a		; Bits 0-7.	    Sans le registre nﬂ45.
+	out	(099h),a
+	ret
+
+; By SLAYERMAN from F.U.C for M-KID game.
+; lecture des joystick (port 0, 1, 2) voir #D5 DU bios.
+; modifiee pour retourner le flag Z a 1 si rien n'est appuye.
+
+rd_stk: dec	a
+	jp	m,keybrd	; Saut si clavier (port 0).
+	call	sel_stk 	; Selection du port joystick.
+	ld	hl,stick_tbl1
+end_stk:
+	and	00Fh
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	or	a		; Position le flag Z si rien de nouveau ;-).
+	ret
+
+keybrd: call	rd_stk0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	hl,stick_tbl2
+	jr	end_stk
+
+sel_stk:			; Selection du port joystick 1 ou 2.
+	ld	b,a		; Numero de port dans B.
+	ld	a,00Fh
+	call	rd_psgport
+	djnz	port2
+
+	and	0DFh		; Joystick port 1.
+	or	003h
+	jp	rd_stick
+
+port2	and	0AFh		; Joystick port 2.
+	or	003h
+rd_stick:
+	out	(0A1h),a
+	call	rd_joy
+	ret
+
+rd_joy:
+	ld	a,00Eh
+rd_psgport:
+	out	(0A0h),a
+	in	a,(0A2h)
+	ret
+
+rd_stk0:			; Lit joystick port 0.
+	in	a,(0AAh)
+	and	0F0h
+	add	a,8
+	out	(0AAh),a
+	in	a,(0A9h)
+	ret
+
+stick_tbl1:
+	defb	0,5,1,0,3,4,2,3,7,6,8,7,0,5,1,0
+stick_tbl2:
+	defb	0,3,5,4,1,2,0,3,7,0,6,5,8,1,7,0
+
+
+; Lecture des switch fire voir 0D8h du bios.
+
+
+rd_stg:
+	dec	a
+	jp	m,kbd_stg	; Si strig 0 saute.
+	push	af
+	and	1
+	call	sel_stk
+	pop	bc
+	dec	b
+	dec	b
+	ld	b,010h
+	jp	m,stg1
+	ld	b,020h
+stg1:	and	b
+stg2:	sub	1
+	sbc	a,a
+	or	a		; Positionne le flag Z si pas d'appui.
+	ret
+
+kbd_stg:
+	call	rd_stk0
+	and	1
+	jr	stg2
+
+rom:	ld	iy,(0FCC1h)
+	jp	0001Ch
+subrom	ld	iy,(0FAF8h)
+	jp	0001Ch
+
+buff:	ld	c,01Ah	; lecture d'un fichiers video par F.GERARDIN.
+	jr	bdos	; coupe les interruptions.
+open:	ld	c,00Fh
+	jr	jump
+read:	ld	hl,01h
+	ld	c,027h
+jump:	ld	de,fcb
+bdos:	call	00005h
+error:	jp	nz,00000h
+	ret
+
+fcb:
+drive:	defb	0
+name:	defb	'CROCOTE2VRM'
+fcb_r:	defw	0
+taill:	defw	0		;Taille d'un enregistrement.
+taill2: defw	0		;Taille du fichier.
+	defs	15		;Quinze octets a zero.
+compt:	defs	4		;Compteur d'enregistrement.
+
+
+	;	TERMINE LE PROGRAMME ET COUPES LES INTERRUTIONS MSX2.
+
+
+fin_prg:
+
+	di
+
+	ld	a,(0F3E0h)	; Ecran noir.
+	xor	64
+	ld	(0F3E0h),a
+	w_vdp	1
+
+	ld	a,(0F3DFh)	; Registre d'ecriture 0.
+	and	%11101111	; Interruptions du scan horizontal coupee.
+	ld	(0F3DFh),a
+	w_vdp	0
+
+	ld	a,(0F3E0h)	; autorise les interruptions msx1.
+	or	%00100000
+	ld	(0F3E0h),a
+	w_vdp	1
+
+	ld	hl,sav_int	; Programme d'interruption restitue.
+	ld	de,038h
+	ld	bc,03h
+	ldir
+
+	w2_vdp	19,0		; Interrutpion msx2 en ligne 0.
+	w2_vdp	15,0		; Registre status 0.
+	w2_vdp	2,(0F3E0h)	; Page zero.
+
+	ld	a,(0FFFAh)	; Retire le masque.
+	and	%11111100
+	ld	(0FFFAh),a
+
+	w_vdp	25
+	xor	a		; Scrolling  a zero.
+	call	scroll
+
+	ei
+
+	xor	a		; Screen 0
+	ld	ix,0005Fh
+	call	rom
+
+	di
+	ld	a,(0F3E0h)	; Ecran allume.
+	xor	64
+	ld	(0F3E0h),a
+	w_vdp	1
+	ei
+
+	ret			; Retour au basic.
+
+
+; SPRITE Pattern Generate Table
+
+_1anime:
+
+;No.00
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.01
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.02
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.03
+	db	000h,000h,000h,000h,000h,000h,000h,00Dh
+	db	00Dh,00Dh,00Dh,00Dh,00Dh,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.04
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.05
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.06
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.07
+	db	000h,000h,000h,000h,000h,000h,000h,00Dh
+	db	00Dh,00Dh,00Dh,00Dh,00Dh,00Dh,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+
+_2anime
+
+;No.08
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.09
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.10
+	db	000h,000h,000h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,04Bh,04Bh,04Ah,04Ah,04Bh,04Bh,04Ah
+;No.11
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,00Ah,00Ah,00Dh,00Dh,00Dh,00Dh
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Dh,04Dh,04Fh,040h,040h,040h
+;No.12
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.13
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.14
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.15
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,00Ah,00Ah,00Ah,00Dh,00Dh,00Dh
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Dh,04Dh,04Dh,040h,040h,040h
+
+_3anime
+
+;No.16
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.17
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.18
+	db	000h,000h,000h,000h,000h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.19
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,00Ah,00Ah,00Ah,00Ah,00Dh,00Dh,000h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Dh,04Dh,04Dh,04Dh,040h,040h,040h
+;No.20
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.21
+	db	000h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.22
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.23
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,00Ah,00Ah,00Ah,00Ah,00Dh,00Dh,000h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Dh,04Dh,04Dh,04Dh,040h,040h,040h
+
+_4anime
+
+;No.24
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+
+;No.25
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.26
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,04Ah,04Ah
+;No.27
+	db	001h,001h,001h,00Ah,001h,001h,00Ah,00Ah
+	db	00Ah,00Ah,00Ah,00Ah,00Dh,00Dh,00Dh,00Dh
+;
+	db	04Ah,04Ah,04Ah,04Dh,04Ah,04Ah,04Dh,04Fh
+	db	04Dh,04Dh,04Dh,04Dh,04Fh,040h,040h,040h
+;No.28
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.29
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.30
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.31
+	db	001h,001h,001h,00Ah,001h,001h,00Ah,00Ah
+	db	00Ah,00Ah,00Ah,00Ah,00Ah,00Dh,00Dh,00Dh
+;
+	db	04Ah,04Ah,04Ah,04Fh,04Ah,04Ah,04Fh,04Dh
+	db	04Fh,04Dh,04Dh,04Dh,04Dh,040h,040h,040h
+
+_5anime
+
+;No.32
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.33
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.34
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,04Ah,04Ah
+;No.35
+	db	001h,001h,001h,00Ah,00Ah,001h,00Ah,00Ah
+	db	001h,00Ah,00Ah,00Ah,00Dh,00Dh,00Dh,000h
+;
+	db	04Ah,04Ah,04Ah,040h,04Dh,04Ah,04Dh,04Dh
+	db	04Ah,04Dh,04Dh,04Dh,04Fh,040h,040h,040h
+;No.36
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.37
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.38
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.39
+	db	001h,001h,001h,00Ah,00Ah,001h,001h,001h
+	db	00Ah,001h,00Ah,00Ah,00Ah,00Dh,00Dh,000h
+;
+	db	04Ah,04Ah,04Ah,04Fh,04Fh,04Ah,04Ah,04Ah
+	db	04Dh,04Ah,04Dh,04Dh,04Dh,040h,040h,040h
+
+_6anime
+
+;No.40
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.41
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.42
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,04Ah,04Ah
+;No.43
+	db	001h,001h,001h,001h,001h,00Ah,00Ah,00Ah
+	db	00Ah,00Ah,00Ah,00Ah,00Dh,00Dh,00Dh,000h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Dh,04Bh,04Dh
+	db	04Dh,04Dh,04Dh,04Dh,04Fh,040h,040h,040h
+;No.44
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.45
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.46
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.47
+	db	001h,001h,001h,00Ah,001h,001h,00Ah,001h
+	db	001h,00Ah,00Ah,00Ah,00Ah,00Dh,00Dh,000h
+;
+	db	04Ah,04Ah,04Ah,04Fh,04Ah,04Ah,04Fh,04Ah
+	db	04Ah,04Dh,04Fh,04Dh,04Dh,040h,040h,040h
+
+_7anime
+
+;No.00
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.01
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.02
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.03
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,00Ah,00Ah,00Ah,00Dh,00Dh,00Dh
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Dh,04Dh,04Dh,040h,040h,040h
+;No.04
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.05
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.06
+	db	000h,000h,000h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,04Bh,04Bh,04Ah,04Ah,04Bh,04Bh,04Ah
+;No.07
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,00Ah,00Ah,00Dh,00Dh,00Dh,00Dh
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Dh,04Dh,04Fh,040h,040h,040h
+
+_8anime
+
+;No.08
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.09
+	db	000h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.10
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.11
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,00Ah,00Ah,00Ah,00Ah,00Dh,00Dh,000h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Dh,04Dh,04Dh,04Dh,040h,040h,040h
+;No.12
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.13
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.14
+	db	000h,000h,000h,000h,000h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.15
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,00Ah,00Ah,00Ah,00Ah,00Dh,00Dh,000h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Dh,04Dh,04Dh,04Dh,040h,040h,040h
+
+_9anime
+
+;No.16
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.17
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.18
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.19
+	db	001h,001h,001h,001h,001h,001h,001h,00Ah
+	db	001h,00Ah,00Ah,00Ah,00Ah,00Dh,00Dh,00Dh
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Dh
+	db	04Ah,04Dh,04Dh,04Dh,04Dh,040h,040h,040h
+;No.20
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.21
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.22
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,04Ah,04Ah
+;No.23
+	db	001h,001h,001h,00Ah,001h,001h,00Ah,00Ah
+	db	00Ah,00Ah,00Ah,00Ah,00Dh,00Dh,00Dh,00Dh
+;
+	db	04Ah,04Ah,04Ah,04Dh,04Ah,04Ah,04Dh,04Fh
+	db	04Dh,04Dh,04Dh,04Dh,04Fh,040h,040h,040h
+
+_10anime
+
+;No.24
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.25
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.26
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.27
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	00Ah,001h,00Ah,00Ah,00Ah,00Dh,00Dh,000h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Dh,04Ah,04Dh,04Dh,04Dh,040h,040h,040h
+;No.28
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.29
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.30
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,04Ah,04Ah
+;No.31
+	db	001h,001h,001h,00Ah,00Ah,001h,00Ah,00Ah
+	db	001h,00Ah,00Ah,00Ah,00Dh,00Dh,00Dh,000h
+;
+	db	04Ah,04Ah,04Ah,040h,04Dh,04Ah,04Dh,04Dh
+	db	04Ah,04Dh,04Dh,04Dh,04Fh,040h,040h,040h
+
+_11anime
+
+;No.32
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.33
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.34
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+;No.35
+	db	001h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,00Ah,00Ah,00Ah,00Ah,00Dh,00Dh,000h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah,04Ah
+	db	04Ah,04Dh,04Fh,04Dh,04Dh,040h,040h,040h
+;No.36
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.37
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+;No.38
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,001h,001h,001h,001h,001h
+;
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,04Ah,04Ah
+;No.39
+	db	001h,001h,001h,001h,001h,00Ah,00Ah,00Ah
+	db	00Ah,00Ah,00Ah,00Ah,00Dh,00Dh,00Dh,000h
+;
+	db	04Ah,04Ah,04Ah,04Ah,04Ah,04Dh,04Bh,04Dh
+	db	04Dh,04Dh,04Dh,04Dh,04Fh,040h,040h,040h
+
+
+
+;No.40
+;	 db	 00Dh,00Dh,001h,001h,001h,001h,001h,001h
+;	 db	 001h,001h,001h,000h,000h,00Dh,008h,000h
+;
+;	 db	 040h,040h,040h,046h,046h,046h,040h,046h
+;	 db	 046h,046h,04Dh,040h,040h,040h,040h,040h
+; RAME
+;	 db	 000h,000h,0F0h,01Fh,0F8h,00Fh,000h,000h
+;	 db	 000h,000h,000h,000h,000h,002h,000h,000h
+;	 db	 080h,004h,000h,0C0h,07Eh,0E3h,07Eh,066h
+;	 db	 062h,062h,03Ch,000h,000h,000h,010h,000h
+;
+;	 db	 000h,000h,000h,0F0h,00Fh,000h,000h,000h
+;	 db	 000h,000h,010h,000h,000h,000h,000h,000h
+;	 db	 000h,000h,000h,000h,0C0h,03Eh,000h,03Ch
+;	 db	 03Ch,03Ch,000h,000h,000h,000h,000h,000h
+
+clr_ram:
+
+	db	001h,001h,001h,001h,001h,001h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+
+	db	040h,046h,046h,046h,046h,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+
+	db	000h,00Dh,00Dh,001h,001h,001h,001h,001h
+	db	001h,001h,001h,001h,000h,000h,00Dh,000h
+
+	db	040h,040h,040h,040h,046h,046h,046h,04Dh
+	db	046h,046h,046h,04Dh,040h,040h,040h,040h
+
+frm_ram:
+
+	db	0C0h,0BFh,061h,03Fh,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,0FCh,087h,0FEh,003h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+
+	db	000h,040h,03Fh,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,0FCh,003h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+
+	db	000h,000h,000h,0F0h,01Fh,0F8h,00Fh,000h
+	db	000h,000h,000h,000h,000h,000h,002h,000h
+	db	000h,080h,004h,000h,0C0h,07Eh,0E3h,07Eh
+	db	066h,062h,062h,03Ch,000h,000h,000h,000h
+
+	db	000h,000h,000h,000h,0F0h,00Fh,000h,010h
+	db	000h,000h,000h,010h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,0C0h,03Eh,000h
+	db	03Ch,03Ch,03Ch,000h,000h,000h,000h,000h
+
+fin:	equ	$
+

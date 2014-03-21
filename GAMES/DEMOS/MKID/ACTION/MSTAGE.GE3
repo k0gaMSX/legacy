@@ -1,0 +1,472 @@
+GEST_FLECHE:
+	LD A,(STAT_FLECH)		; SI DEJA UNE FLECHE
+	CP 1				; ALORS ON LA DEPLACE
+	JP Z,MOV_FLECHE
+	CALX	5,0,1,1,0,0
+	CALY	0,0,0,1,0,0
+	LD HL,(DEBUTECR)
+        ADD HL,BC
+        INC HL
+        LD A,(HL)
+        CP 164
+        JP Z,FOUHEAD1
+        INC HL
+        LD A,(HL)
+        CP 164
+        JP Z,FOUHEAD2
+        INC HL
+        LD A,(HL)
+        CP 164
+        JP Z,FOUHEAD3
+        INC HL
+        LD A,(HL)
+        CP 164
+        JP Z,FOUHEAD4
+        INC HL
+        LD A,(HL)
+        CP 164
+        JP Z,FOUHEAD5
+        INC HL
+        LD A,(HL)
+        CP 164
+        JP Z,FOUHEAD6
+        RET
+        
+;******************************
+;  a REVOIR
+;******************************        
+	CALX	5,0,1,1,0,0
+	CALY	0,0,2,1,0,0
+	LD HL,(DEBUTECR)
+        ADD HL,BC
+        INC HL
+        LD A,(HL)
+        CP 164
+        JP Z,FOUHEAD1
+        INC HL
+        LD A,(HL)
+        CP 164
+        JP Z,FOUHEAD2
+        INC HL
+        LD A,(HL)
+        CP 164
+        JP Z,FOUHEAD3
+        INC HL
+        LD A,(HL)
+        CP 164
+        JP Z,FOUHEAD4
+        INC HL
+        LD A,(HL)
+        CP 164
+        JP Z,FOUHEAD5
+        INC HL
+        LD A,(HL)
+        CP 164
+        JP Z,FOUHEAD6
+	RET
+FOUHEAD1:
+	LD e,0
+	JP FOUND_HEAD
+FOUHEAD2:
+	LD e,16
+	JP FOUND_HEAD
+FOUHEAD3:
+	LD e,32
+	JP FOUND_HEAD
+FOUHEAD4:
+	LD e,48
+	JP FOUND_HEAD
+FOUHEAD5:
+	LD e,64
+	JP FOUND_HEAD
+FOUHEAD6:
+	LD e,80
+	JP FOUND_HEAD
+
+FOUND_HEAD:
+	LD A,(X)
+        LD B,A
+        LD A,(OPX)
+        ADD A,B
+        ADD A,8-3
+        LD B,A
+        LD A,(SCROLLX)
+        LD D,A
+        ADD A,B
+        ADD A,E
+	AND #f0
+        SUB D
+        add a,8
+	LD (X_FL),A
+	LD A,(Y)
+	AND #f0
+	ADD A,8
+	LD (Y_FL),A
+	LD A,1
+	LD (STAT_FLECH),A
+	RET
+
+STAT_FLECH:	DB	0
+X_FL:		DB	0
+Y_FL:		DB	212
+
+MOV_FLECHE:
+	LD A,(DEPSPR)
+	LD B,A
+	LD A,(X_FL)
+	CP 4
+	JP C,FIN_FL		; si fleche sort de l'ecran, plus de fleche
+	SUB 2
+	ADD A,B
+	LD (X_FL),A		; mise a jour pos en X
+	LD (TABLE_MST+12),A
+	LD A,(Y_FL)
+	LD (TABLE_MST+13),A
+
+	LD A,(X_FL)
+	ADD A,12
+	LD B,A				; si diff de coordonee en x
+        LD A,(X)			; est < 16 alors, faire le test
+	CP B
+	RET NC
+	LD A,(X_FL)
+	LD B,A
+	LD A,(X)
+	ADD A,12
+	CP B
+	RET C
+	JP COL_FL
+
+COL_FL: LD A,(Y_FL)
+        ADD A,4
+        LD B,A
+	LD A,(Y)			; si diff coord en y < 16
+        ADD A,16
+        CP B
+        RET C
+        LD A,(Y_FL)
+        ADD A,8
+        LD B,A
+        LD A,(Y)
+	CP B
+	RET NC
+	JP TUEMKID
+
+FIN_FL: LD A,212
+	LD (Y_FL),A
+	LD (TABLE_MST+13),A
+	XOR A
+	LD (STAT_FLECH),A
+	RET
+
+INITALL:
+	CALL SCREEN_OFF
+	LD A,9				; 3 VIES 2,1,0
+        LD (NB_VIE),A
+;	 XOR A
+        LD (NB_VIE+1),A
+        LD HL,AJOUT_VCOP
+        CALL XMMM
+        CALL AFFI_VIE			; COPIE DES 3 TETES DANS LE BANDEAU
+        XOR A
+        LD (SCROLLX),A
+	LD HL,#8000
+	LD (RESADR),HL
+	call	ini_fleche	;init forme et couleur de la fleche
+
+	CALL INISCORE
+        CALL INIDIAM
+	LD HL,F_RS
+	CALL CHG_MARSP
+        call INITIME
+	CALL INI_FIRE
+        LD A,21
+        LD (X),A
+        LD A,80
+        LD (Y),A
+        XOR A
+        LD (COIN),A
+        LD HL,#8000
+        LD (DEBUTECR),HL
+        CALL MAKESTAGE			; affichage du premier ecran.
+        CALL MAKE_COPY			; affichage premiere tranche
+	LD HL,(TABMONST1)               ; initialisation de la table
+	LD (NEXTMONSTER),HL		; des monstres.
+	LD HL,TABMONST1
+	LD (NEXTMONSTER+2),HL
+        LD A,212
+        LD (CURMONSTER+3),A
+        LD (CURMONSTER+19),A
+        LD (CURMONSTER+35),A
+        LD (TABLE_MST+13),A
+        RET
+
+death_count:	db	0
+forme_list:	dw	F_FACE,F_LS,F_DOS,F_RS
+death_ani_cnt:	db	120
+
+INIRESTART:				;initialise pour restart
+	call stpmus
+wait_musend:
+	ld	a,(busply)
+	or	a
+	jp	nz,wait_musend
+
+	ld	hl,#a000		;P'TITE DGINDJOLE DE LA MORT
+	ld	(musadr),hl
+	call	strmus
+	xor	a
+	ld	(death_count),a
+        LD A,212
+        LD IX,TABLE_MST
+        LD (TABLE_MST+3),A
+        LD (TABLE_MST+7),A
+        LD (TABLE_MST+11),A
+        LD (TABLE_MST+13),A
+        CALL gestmstr0
+
+	ld	a,120
+	ld	(death_ani_cnt),a
+
+notfinish:
+	LD A,191
+	CALL INTERUPT
+	XOR A
+	CALL SCROLLH
+
+	LD A,15
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	LD A,#77
+	OUT (#9A),A
+	OUT (#9A),A
+
+	xor	a
+	out	(#99),a
+	ld	a,#80+16
+	out	(#99),a
+	ld	a,#33
+	out	(#9a),a
+	out	(#9a),a
+
+	ld	a,12
+	out	(#99),a
+	ld	a,#80+16
+	out	(#99),a
+	ld	a,#22
+	out	(#9a),a
+	out	(#9a),a
+
+	ld	a,210
+	call	INTERUPT
+
+	ld	a,(SCROLLX)
+	add	a,4
+	call	SCROLLH
+
+	LD A,15
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	XOR A
+	OUT (#9A),A
+	OUT (#9A),A
+
+	xor	a
+	out	(#99),a
+	ld	a,#80+16
+	out	(#99),a
+	ld	a,#77
+	out	(#9a),a
+	xor	a
+	out	(#9a),a
+
+	ld	a,12
+	out	(#99),a
+	ld	a,#80+16
+	out	(#99),a
+	ld	a,#50
+	out	(#9a),a
+	xor	a
+	out	(#9a),a
+
+	ld	a,(death_count)
+	inc	a
+	and	%00011111
+	ld	(death_count),a
+	and	%00000111
+	jp	nz,no_form
+
+	ld	a,(death_count)
+	and	%00011000
+	rrca
+	rrca
+;	 rrca
+	ld	l,a
+	ld	h,0
+	ld	de,forme_list
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	call	CHG_MARSP
+
+no_form:
+	call	#fd9f
+
+	ld	a,(death_ani_cnt)
+	or	a
+	jr	z,death_ani_end
+	dec	a
+	ld	(death_ani_cnt),a
+	jp	nz,notfinish
+
+death_ani_end:
+	ld	a,(busply)	
+	or	a
+	jp	nz,notfinish
+
+	call	stpmus
+	ld	hl,#8000
+	ld	(musadr),hl
+
+	call	SCREEN_OFF		;et c'est reparti pour un tour
+
+	LD HL,F_RS
+	CALL CHG_MARSP			;initialise sprite MaRIO
+        call INITIME			;remet temps a 0
+        XOR A
+        LD (SCROLLX),A			;pareil pour le scroll
+        LD (OFFSET),A
+        LD (DESTX),A
+        call FIN_FL			; RESTART GESTION DES FLECHES
+        LD A,16
+        LD (X),A
+        LD A,16
+        LD (Y),A
+        LD HL,(RESADR)
+        LD (DEBUTECR),HL
+        CALL MAKESTAGE			; affichage du premier ecran.
+        CALL MAKE_COPY			; affichage premiere tranche
+        				; du scrolling.
+	LD HL,SAVEMONST
+	LD DE,CURMONSTER
+	LD BC,50
+	LDIR
+        LD HL,(RESADR)
+        LD DE,#8000
+        CALL SIMRST20
+        JP Z,REDEB
+        ;ici on doit retrouver le premier monstre apres RESADR
+        LD IX,TABMONST1
+LOOP_NXT_MONST:
+	LD E,(IX)
+	LD D,(IX+1)
+	CALL SIMRST20
+	JP NC,TROUVEMST
+	LD DE,16
+	ADD IX,DE
+	JP LOOP_NXT_MONST
+TROUVEMST:  
+	LD L,(IX)
+	LD H,(IX+1)
+	LD (NEXTMONSTER),HL		; des monstres.
+	PUSH IX
+	POP HL
+	LD (NEXTMONSTER+2),HL
+        LD A,212
+        LD (CURMONSTER+3),A
+        LD (CURMONSTER+19),A
+        LD (CURMONSTER+35),A
+	call	strmus
+        RET
+
+REDEB:	LD HL,(TABMONST1)		; initialisation de la table
+	LD (NEXTMONSTER),HL		; des monstres.
+	LD HL,TABMONST1
+	LD (NEXTMONSTER+2),HL
+        LD A,212
+        LD (CURMONSTER+3),A
+        LD (CURMONSTER+19),A
+        LD (CURMONSTER+35),A
+        LD (TABLE_MST+13),A
+	call strmus
+	RET
+
+WARP:	LD A,160
+	LD (HL),A
+	CALL STOPSAUT
+	call stpmus
+	LD HL,F_RS
+	CALL CHG_MARSP
+        XOR A
+        LD (SCROLLX),A
+        LD (OFFSET),A
+        LD (DESTX),A
+        call FIN_FL			; RESTART GESTION DES FLECHES
+        LD A,21
+        LD (X),A
+        LD A,80
+        LD (Y),A
+        LD HL,#8000+479
+        LD (DEBUTECR),HL
+        CALL MAKESTAGE			; affichage du premier ecran.
+        CALL MAKE_COPY			; affichage premiere tranche
+        				; du scrolling.
+	LD HL,SAVEMONST
+	LD DE,CURMONSTER
+	LD BC,50
+	LDIR
+	LD HL,(MIDDLE_TAB)               ; initialisation de la table
+	LD (NEXTMONSTER),HL		; des monstres.
+	LD HL,MIDDLE_TAB
+	LD (NEXTMONSTER+2),HL
+        LD A,212
+        LD (CURMONSTER+3),A
+        LD (CURMONSTER+19),A
+        LD (CURMONSTER+35),A
+	call strmus
+        RET
+
+REWARP: CALL STOPSAUT
+	call stpmus
+	LD HL,F_RS
+	CALL CHG_MARSP
+        XOR A
+        LD (SCROLLX),A
+        LD (OFFSET),A
+        LD (DESTX),A
+        call FIN_FL			; RESTART GESTION DES FLECHES
+        LD A,21
+        LD (X),A
+        LD A,80
+        LD (Y),A
+        LD HL,#8000+256
+        LD (RESADR),HL
+        LD (DEBUTECR),HL
+        CALL MAKESTAGE			; affichage du premier ecran.
+        CALL MAKE_COPY			; affichage premiere tranche
+        				; du scrolling.
+	LD HL,SAVEMONST
+	LD DE,CURMONSTER
+	LD BC,50
+	LDIR
+        LD HL,(RESADR)
+        LD DE,#8000
+        CALL SIMRST20
+        JP Z,REDEB
+	LD HL,(MIDDLE_TAB)               ; initialisation de la table
+	LD (NEXTMONSTER),HL 		 ; des monstres.
+	LD HL,MIDDLE_TAB
+	LD (NEXTMONSTER+2),HL
+        LD A,212
+        LD (CURMONSTER+3),A
+        LD (CURMONSTER+19),A
+        LD (CURMONSTER+35),A
+	call strmus
+        RET
+
+RESADR: DW	#8000			;restart address
+

@@ -1,0 +1,75 @@
+;***************************************************************
+;
+;	routine de gestion de 3 strig
+;	en simultane. en sortie:
+;	STRG1: & STRG3: = 1 if pressed
+;	else is = to 0
+;
+;***************************************************************
+strig:	ld	hl,0
+	ld	(s1),hl
+	di
+	ld	a,15		;read strig of port 1
+	out	(#a0),a
+	in	a,(#a2)
+	and	#af
+	or	3
+	out	(#a1),a
+	ld	a,14
+	out	(#a0),a
+	in	a,(#a2)
+	and	#30		;reset dir. bits & save strig bits
+	ld	b,a
+	and	#10
+	jp	nz,stg0
+	ld	a,1
+	ld	(s1),a
+stg0:	ld	a,b
+	and	#20
+	jp	nz,stg1
+	ld	a,1
+	ld	(s3),a
+
+stg1:	ld	a,15		;read strig of port 2
+	out	(#a0),a
+	in	a,(#a2)
+	and	#df
+	or	#4c
+	out	(#a1),a
+	ld	a,14
+	out	(#a0),a
+	in	a,(#a2)
+	and	#30		;reset dir. bits & save strig bits
+	ld	b,a
+	and	#10
+	jp	nz,stg2
+	ld	a,1
+	ld	(s1),a
+stg2:	ld	a,b
+	and	#20
+	jp	nz,stg3
+	ld	a,1
+	ld	(s3),a
+
+stg3:	in	a,(#aa)		;test touche GRAPH
+	and	#f0
+	or	6
+	out	(#aa),a
+	in	a,(#a9)
+	and	4
+	jp	nz,stg4
+	ld	a,1
+	ld	(s3),a
+
+stg4:	in	a,(#aa)		;test touche SPACE
+	and	#f0
+	or	8
+	out	(#aa),a
+	in	a,(#a9)
+	and	1
+	jp	nz,eostg
+	ld	a,1
+	ld	(s1),a
+eostg:	ret
+
+

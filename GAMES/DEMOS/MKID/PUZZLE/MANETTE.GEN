@@ -1,0 +1,101 @@
+;ROUTINE UNIVERSELLE DE TEST JOYSTICK
+;COPIE DES ROUTINE D5H ET D8H DU BIOS
+;LEGEREMENT MODIFIEE POUR RETOURNER LE FLAG Z A 1 SI RIEN N'EST APPUYE
+;
+;BY SLAYERMAN FROM F.U.C
+;FOR M-KID GAME
+
+
+;*******************************************************************
+;
+;	LECTURE DES JOYSTICK (PORT 0, 1, 2) VOIR #D5 DU BIOS
+;
+;*******************************************************************
+RD_STK:	DEC	A
+	JP	M,KEYBRD	;SAUT SI CLAVIER (PORT 0)
+	CALL	SEL_STK		;SELECTION DU PORT JOYSTICK
+	LD	HL,STICK_TBL1
+END_STK:
+	AND	#0F
+	LD	E,A
+	LD	D,0
+	ADD	HL,DE
+	LD	A,(HL)
+	OR	A		;POSITION LE FLAG Z SI RIEN DE NOUVEAU ;-)
+	RET
+
+KEYBRD:	CALL	RD_STK0
+	RRCA
+	RRCA
+	RRCA
+	RRCA
+	LD	HL,STICK_TBL2
+	JR	END_STK
+
+SEL_STK:			;SELECTION DU PORT JOYSTICK 1 OU 2
+	LD	B,A		;NUMERO DE PORT DANS B
+	LD	A,#0F
+	CALL	RD_PSGPORT
+	DJNZ	PORT2
+
+        AND	#DF		;JOYSTICK PORT 1
+        OR	#03
+        JP	RD_STICK
+
+PORT2   AND	#AF		;JOYSTICK PORT 2
+	OR	#03
+RD_STICK:
+	OUT	(#A1),A
+	CALL	RD_JOY
+	RET
+
+RD_JOY:
+	LD	A,#0E
+RD_PSGPORT:
+	OUT	(#A0),A
+	IN	A,(#A2)
+	RET
+
+RD_STK0:			;LIT JOYSTICK PORT 0
+	IN	A,(#AA)
+	AND	#F0
+	ADD	A,8
+	OUT	(#AA),A
+	IN	A,(#A9)
+	RET
+
+STICK_TBL1:
+	DEFB	0,5,1,0,3,4,2,3,7,6,8,7,0,5,1,0
+STICK_TBL2:
+	DEFB	0,3,5,4,1,2,0,3,7,0,6,5,8,1,7,0
+
+
+;*********************************************************
+;
+;	LECTURE DES SWITCH FIRE VOIR #D8 DU BIOS
+;
+;*********************************************************
+RD_STG:
+	DEC	A
+	JP	M,KBD_STG	;SI STRIG 0 SAUTE
+	PUSH	AF
+	AND	1
+	CALL	SEL_STK
+	POP	BC
+	DEC	B
+	DEC	B
+	LD	B,#10
+	JP	M,STG1
+	LD	B,#20
+STG1:	AND	B
+STG2:	SUB	1
+	SBC	A,A
+	OR	A		;POSITIONNE LE FLAG Z SI PAS D'APPUI
+	RET
+
+KBD_STG:
+	CALL	RD_STK0
+        AND	1
+	JR	STG2
+
+

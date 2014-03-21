@@ -1,0 +1,182 @@
+PAUSE:
+	LD A,210
+	CALL INTERUPT
+	LD A,(SCROLLX)
+	ADD A,4
+	CALL SCROLLH
+
+	LD A,15
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	XOR A
+	OUT (#9A),A
+	OUT (#9A),A
+
+	xor	a
+	out	(#99),a
+	ld	a,#80+16
+	out	(#99),a
+	ld	a,#77
+	out	(#9a),a
+	xor	a
+	out	(#9a),a
+
+	ld	a,12
+	out	(#99),a
+	ld	a,#80+16
+	out	(#99),a
+	ld	a,#50
+	out	(#9a),a
+	xor	a
+	out	(#9a),a
+
+	IF	RASTER_COU
+	LD A,1			; set the color 15 for raster test
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	ld     a,#77
+	OUT (#9A),A
+	OUT (#9A),A
+	ENDC
+
+	IF	RASTER_COU
+	LD A,1			; set the color 15 for raster test
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	ld a,#70
+	OUT (#9A),A
+	OUT (#9A),A
+	ENDC
+
+	IF	RASTER_COU
+	LD A,1			; set the color 1 for raster test
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	ld a,#07
+	OUT (#9A),A
+	xor a
+	OUT (#9A),A
+	ENDC
+
+	CALL #FD9F
+
+	IF	RASTER_COU
+	LD A,1			; set the color 1 for raster test
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	XOR A
+	OUT (#9A),A
+	OUT (#9A),A
+	ENDC
+	IF	RASTER_COU
+	ld     a,1		; set the color 1 for raster test
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	xor    a
+	OUT (#9A),A
+	or     7
+	OUT (#9A),A
+	ENDC
+
+	IF	RASTER_COU
+	LD A,1			; set the color 1 for raster test
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	XOR A
+	OUT (#9A),A
+	OUT (#9A),A
+	ENDC
+	JP TESTPAUSE2
+REPAUSE2:
+
+	LD A,191
+	CALL INTERUPT
+	XOR A
+	CALL SCROLLH
+
+	LD A,15
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	LD A,#77
+	OUT (#9A),A
+	OUT (#9A),A
+
+	xor	a
+	out	(#99),a
+	ld	a,#80+16
+	out	(#99),a
+	ld	a,#33
+	out	(#9a),a
+	out	(#9a),a
+
+	ld	a,12
+	out	(#99),a
+	ld	a,#80+16
+	out	(#99),a
+	ld	a,#22
+	out	(#9a),a
+	out	(#9a),a
+	JP PAUSE
+TESTPAUSE:
+	LD A,(ANTIREB2)
+	CP 0
+	JP NZ,DEJA
+	CALL TESTF1
+	CP 0
+	JP Z,PAUSEON
+	RET
+
+PAUSEON:
+	call	hltmus
+
+	ld	bc,#0101
+	call	set_fx
+
+	LD A,255
+	LD (ANTIREB2),A
+	JP REPAUSE2
+TESTPAUSE2:
+	LD A,(ANTIREB2)
+	CP 0
+	JP NZ,DEJA2
+	CALL TESTF1
+	CP 0
+	JP Z,PAUSEOFF
+	JP REPAUSE2
+
+PAUSEOFF:
+	ld	bc,#0101
+	call	set_fx
+
+	call	cntmus
+
+	LD A,255
+	LD (ANTIREB2),A
+	RET
+DEJA2:
+	CALL TESTF1
+	CP 0
+	JP Z,REPAUSE2
+	XOR A
+	LD (ANTIREB2),A
+	JP REPAUSE2
+DEJA:
+	CALL TESTF1
+	CP 0
+	ret z
+	XOR A
+	LD (ANTIREB2),A
+	RET
+ANTIREB2:
+	DEFB 0                
+
+
+

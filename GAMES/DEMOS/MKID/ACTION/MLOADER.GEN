@@ -1,0 +1,234 @@
+;	STAGE LOADER POUR M-KID
+;
+;BY SLAYERMAN from F.U.C
+;dated 14/05/95.
+
+*i	sysadd
+*i	bios
+*i	doscmd
+*i	macro
+*i	stat-equ
+
+initmap equ	#c000
+wr_fc	equ	initmap+3
+wr_fd	equ	wr_fc+3
+wr_fe	equ	wr_fd+3
+rd_fc	equ	wr_fe+3
+rd_fd	equ	rd_fc+3
+rd_fe	equ	rd_fd+3
+strmus	equ	rd_fe+3
+stpmus	equ	strmus+3
+
+	org	#0100
+
+	jp	start
+prg1:	jp	pltldr		;palette loader
+prg2:	jp	vdp_cmd 	;vdp_cmd
+prg3:	jp	ldirvm1 	;ram_vram
+prg4:	jp	imgld		;load image en page 0 ou 1
+
+
+;*********************************************************************
+;
+;	CA COMMENCE ICI ;-)
+;
+;*********************************************************************
+
+start:	di
+	call	test_r800	;test mode R800 ou pas
+	ld	a,(f_r800)
+	or	a
+;call	nz,setr800	;si R800 alors mode R800 ROM
+
+;	 ld	 hl,status1		 ;installe les STATUS bytes
+;	 ld	 de,#f975
+;	 ld	 bc,status2-status1
+;	 ldir
+
+;	 ld	 hl,mapper		 ;load mapper handler
+;	 ld	 de,#c000
+;	 call	 diskld
+;	 call	 initmap		 ;installe routines mapper
+
+	ld	a,4
+	call	wr_fe
+	ld	hl,mbplay		;load MB replayer
+	ld	de,#8000
+	call	diskld
+	ld	a,1
+	call	wr_fe
+
+	ld	hl,(stg_nb)		;installe files-list du stage
+	ld	h,0
+	dec	hl
+	add	hl,hl
+	ld	de,list_table
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	ld	de,nom1
+	ld	bc,84+12
+	ldir
+	call	game
+	ret
+
+
+game:	CALSLT	exttbl,disscr		;trun display off
+
+	ld	a,0		;set COLOR 255,0,0
+	ld	(#f3ea),a
+	ld	a,1
+	ld	(#f3eb),a
+	ld	a,255
+	ld	(#f3e9),a
+	CALSLT	exttbl,chgclr
+
+	ld	a,8			;set screen 8
+	CALSLT	exttbl,chgmod
+
+	di
+	ld	a,26		;mode YAE/YJK + mask scrolling
+	out	(#99),a
+	ld	a,#80+25
+	out	(#99),a
+
+	ld	a,(#ffe7)	;sprite on
+	and	253
+	ld	(#ffe7),a
+	out	(#99),a
+	ld	a,#88
+	out	(#99),a
+
+	ld	a,(#f3e0)	;sprite size 16*16
+	and	%11111110
+	or	2
+	ld	(#f3e0),a
+	out	(#99),a
+	ld	a,#81
+	out	(#99),a
+
+	ld	a,(#ffe8)	;screen 212 lines
+	or	#80
+	ld	(#ffe8),a
+	out	(#99),a
+	ld	a,#89
+	out	(#99),a
+	ei
+
+	ld	hl,nom3 	;charge image
+	ld	a,4
+	ld	(dest_page),a
+	call	imgld
+
+	ld	hl,nom2 	;charge palette
+	ld	de,#8000
+	call	diskld
+	ld	hl,#8000
+	call	pltldr
+
+	ld	hl,nom4 	;load formes sprites MKID
+	ld	de,#8000
+	call	diskld
+	ld	hl,#8007
+	ld	de,#d400
+	ld	bc,6144
+	xor	a
+	ld	(dest_page),a
+	call	ldirvm1
+
+	ld	hl,nom5 	;load formes sprites monstre
+	ld	de,#8000
+	call	diskld
+	ld	hl,#8007
+	ld	de,#d400
+	ld	bc,6144
+	ld	a,4
+	ld	(dest_page),a
+	call	ldirvm1
+
+;	 call	 test_r800
+	ld	a,(f_r800)
+	or	a
+;call	nz,setz80	;si R800 passage en Z80 pour loader MBK
+
+	ld	hl,nom7 	;load sample kit
+	call	mkload
+
+	ld	a,(f_r800)
+	or	a
+;call	nz,setr800
+
+	ld	hl,nom6 	;load stage data
+	ld	de,#8000
+	call	diskld
+	ld	hl,#8007
+	ld	de,#8000
+	ld	bc,1024*6
+	ldir
+
+	ld	a,5
+	ld	(muspge),a
+	call	wr_fe
+	ld	hl,nom8 		;load music
+	ld	de,#8000
+	call	diskld
+	ld	hl,#8000
+	ld	(musadr),hl
+
+	ld	a,2
+	call	wr_fe
+	ld	hl,nom1
+	ld	de,#8000
+	call	diskld
+	ld	a,1
+	call	wr_fe
+
+	call	srcchp
+
+	CALSLT	exttbl,enascr		;trun display on
+	call   strmus
+	call	#4000
+	call   stpmus	;DEL this line to use the fade
+	ei
+
+	ld	a,(f_r800)
+	or	a
+;call	nz,setr800
+
+	ld	a,0			;set screen 0
+	CALSLT	exttbl,chgmod
+	jp	#0000			;DOS return
+
+
+
+;***********************************************************************
+;
+;	FILE LIST
+;
+
+nom1:	defs	12
+nom2:	defs	12
+nom3:	defs	12
+nom4:	defs	12
+nom5:	defs	12
+nom6:	defs	12
+nom7:	defs	12
+nom8:	defs	12
+
+fcb:	defs	37
+
+;mapper: defb	 0,"MAPPER2 COM"
+mbplay: defb	0,"MBPLAY2 COM"
+
+*i	divers
+*i	diskldr
+*i	r800
+*i	mbloader
+
+*i	filelist
+;*i	 status
+
+fin    equ     $
+

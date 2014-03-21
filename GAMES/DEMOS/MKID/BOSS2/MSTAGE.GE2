@@ -1,0 +1,201 @@
+;	--------------------------
+;       nombre de pieces ramassees
+; 	--------------------------
+COIN:
+	DEFB 0
+;	--------------------------
+;	routine de detection de 
+;	pieces.
+;	--------------------------
+TESTCOIN:
+	LD A,(OPX)
+	LD B,A
+        LD A,(X)
+	ADD A,B
+        ADD A,5-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        LD (COINX),A
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+	ADD A,8
+        AND %11110000
+        LD (COINY),A
+        RRA
+        RRA
+        RRA
+        LD B,A
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	CP 11
+        JP Z,GOT_IT         ; SI ON A TROUVE UNE PIECE
+;idem plus haut
+	LD A,(OPX)
+	LD B,A
+        LD A,(X)
+	ADD A,B
+        ADD A,5-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        LD (COINX),A
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+	SUB 4
+        AND %11110000
+        LD (COINY),A
+        RRA
+        RRA
+        RRA
+        LD B,A
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	CP 11
+        JP Z,GOT_IT         ; SI ON A TROUVE UNE PIECE
+	RET
+;	-----------------------------
+;       variables servant a memoriser
+;	ou on a trouver une piece 
+;	pour realiser le copy de
+;	remplacement.
+;	-----------------------------
+COINX:
+	DEFB 0
+COINY:
+	DEFB 0
+;	-----------------------------
+;	routine servant a effectuer
+;	le copy pour effacer la
+;	piece.
+;	NB : petite modif a faire
+;	si on travaille avec degrade.
+;	-----------------------------
+GOT_IT:
+	LD A,(COIN)		; incrementation du nombre
+	INC A			; de piece trouvees.
+	LD (COIN),A		; NB :prevoir conversion en
+	LD A,0			; systeme decimal pour
+	LD (HL),A		; affichage dans tableau score.
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,5-3
+        PUSH AF
+        LD A,(SCROLLX)
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+	LD (COPYCOIN+4),A
+	LD A,(COINY)
+	LD (COPYCOIN+6),A
+	LD HL,COPYCOIN
+	CALL XMMM
+	RET
+;	--------------------------
+;	parametres pour effacement
+;	de la piece.
+;	--------------------------
+COPYCOIN :      DEFB 16,0,176,1, 0,0, 0,0,16 ,0, 16,0,0,0,#D0
+
+;	---------------------------
+;	routine de test si le M-Kid
+;	s'empalle dans la joie,
+;	la gaiete et la bonne 
+;	humeur.
+;	---------------------------
+
+TESTPICOT:
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,12-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+	ADD A,8
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	CP 255
+        JP Z,DEATHON         ; HASTA LA VISTA BABY....
+
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,2-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+	ADD A,8
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	CP 255
+        JP Z,DEATHON         ; HASTA LA VISTA BABY....
+        RET
+

@@ -1,0 +1,46 @@
+; CE FICHIER PEUT ETRE ET DOIT ETRE UTILISE DANS TOUTES LES ROUTINES
+; QUI ONT BESOIN D'UN ACCESS AU STATUS BYTE
+;
+;zone RAM de F975 a FAF5
+
+stg_nb		equ	#f975
+m_live		equ	stg_nb+1
+stk_nb		equ	m_live+1
+musmod		equ	stk_nb+1
+fx_mod		equ	musmod+1
+dest_page	equ	fx_mod+1
+f_r800		equ	dest_page+1
+m_r800		equ	f_r800+1
+chips		equ	m_r800+1
+busply		equ	chips+1
+fading		equ	busply+1
+fadspd		equ	fading+1
+muspge		equ	fadspd+1
+musadr		equ	muspge+1
+pos		equ	musadr+2
+step		equ	pos+1
+UNL_LIFE:	equ	step+1
+INVINCIB:	equ	UNL_LIFE+1
+hz_sel: 	equ	INVINCIB+1
+time_limit:	equ	hz_sel+1
+
+start	equ	#c000
+wr_fc	equ	start+3
+wr_fd	equ	wr_fc+3
+wr_fe	equ	wr_fd+3
+rd_fc	equ	wr_fe+3
+rd_fd	equ	rd_fc+3
+rd_fe	equ	rd_fd+3
+plt_ldr equ	rd_fe+3
+vdp_cmd equ	plt_ldr+3
+ldirvm1 equ	vdp_cmd+3
+set_fx	equ	ldirvm1+3
+
+	IF	not_replay
+strmus	equ	set_fx+3
+stpmus	equ	strmus+3
+hltmus	equ	stpmus+3
+cntmus	equ	hltmus+3
+	ENDIF
+
+

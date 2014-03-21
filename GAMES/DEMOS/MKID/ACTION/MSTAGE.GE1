@@ -1,0 +1,1117 @@
+;
+;       MAKE HORIZONTAL SCROLLING (ENTER A = X SCROLL VALUE)
+;
+SCROLLH:
+        ld      b,a
+        rra
+        rra
+        rra
+        and     #1f
+        out     (#99),a
+        ld      a,#80+26
+        out     (#99),a
+        ld      a,b
+        and     7
+        xor     7
+        out     (#99),a
+        ld      a,#80+27
+        out     (#99),a
+        ret
+
+MAKE_COPY:
+	LD DE,16
+	XOR A
+	LD (COPYPART+6),A
+	LD B,12		
+COPY_LOOP:
+	PUSH BC
+	PUSH DE
+	CALL DOCOPY
+	POP DE
+	LD A,(COPYPART+6)
+	ADD A,16
+	LD (COPYPART+6),A
+	INC D
+        INC D
+	POP BC
+	DJNZ COPY_LOOP
+	LD A,(OFFSET)
+	ADD A,2
+	AND %00001111
+	LD (OFFSET),A
+ 	RET
+DOCOPY:
+ 	LD HL,(DEBUTECR)
+	ADD HL,DE
+	LD A,(DESTX)
+	LD B,A
+	LD A,(OFFSET)
+	ADD A,B
+	LD (COPYPART+4),A
+	LD A,(HL)
+	LD C,A
+	AND #f0
+	LD B,A
+	LD A,(OFFSET)
+	ADD A,B
+	LD (COPYPART),A
+	LD A,C
+	AND #0f
+	RLCA
+        RLCA
+        RLCA
+        RLCA
+        LD (COPYPART+2),A
+
+	LD HL,COPYPART
+	CALL XMMM
+	RET
+	
+CURADR: 	DW	0
+OFFSET: 	DB	0
+DESTX:		DB	0
+SAVEPART:	DB	0,0, 0,1, 0,0, 0,0, 2 ,0, 16,0,0,0,#D0
+SAVEBLOCK:	DB	0,0, 0,1, 0,0, 0,0, 16,0, 16,0,0,0,#D0
+
+COPYPART:	DB	0,0, 0,1, 0,0, 0,0, 2 ,0, 16,0,0,0,#D0
+COPYBLOCK:	DB	0,0, 0,1, 0,0, 0,0, 16,0, 16,0,0,0,#D0
+
+RESTORECOP:
+	LD HL,SAVEPART
+	LD DE,COPYPART
+	LD BC,30
+	LDIR
+	RET
+
+SCREEN_OFF:
+	LD A,%00100010
+	OUT (#99),A
+	LD A,128+1
+	OUT (#99),A
+        RET
+
+MAKESTAGE:
+	CALL SCREEN_OFF
+	CALL RESTORECOP
+        LD HL,(DEBUTECR)
+        LD B,12			
+LOOPY:	PUSH BC
+        LD B,16
+LOOPX:	PUSH BC
+        LD A,(HL)
+        INC HL
+        LD C,A
+	AND #f0
+        LD (COPYBLOCK),A
+        LD A,C
+	AND #0f
+        RLCA
+        RLCA
+        RLCA
+        RLCA
+        LD (COPYBLOCK+2),A
+        PUSH HL
+        LD HL,COPYBLOCK
+        CALL XMMM
+        POP HL
+        LD A,(COPYBLOCK+4)
+        ADD A,16
+        LD (COPYBLOCK+4),A
+        POP BC
+        DJNZ LOOPX
+        
+        LD DE,240+256
+        ADD HL,DE
+        XOR A
+        LD (COPYBLOCK+4),A
+        LD A,(COPYBLOCK+6)
+        ADD A,16
+        LD (COPYBLOCK+6),A
+        POP BC
+        DJNZ LOOPY
+;	 LD B,50
+
+;SECOND: PUSH BC
+;	 LD A,212
+;	 CALL INTERUPT
+;	 POP BC
+;	 DJNZ SECOND
+	LD A,%01100010
+	OUT (#99),A
+	LD A,128+1
+	OUT (#99),A
+	RET
+
+COPYCPT:	DB	0
+COPYSTAT:	DB	0
+VALCLAVIER:	DB	0
+OPX:		DB	0
+OPY:		DB	0
+X:		DB	0
+Y:		DB	0
+SCROLLX:	DB	0
+DEBUTECR:	DW	0
+
+TESTSPACE:
+        IN A,(#AA)
+	AND #f0
+        ADD A,8
+        OUT (#AA),A
+        IN A,(#A9)
+        AND 1
+        RET
+
+TESTESC:
+        IN A,(#AA)
+	AND #f0
+        ADD A,7
+        OUT (#AA),A
+        IN A,(#A9)
+        AND 4
+        RET
+TESTF1:
+        IN A,(#AA)
+	AND #f0
+        ADD A,7
+        OUT (#AA),A
+        IN A,(#A9)
+        AND 2
+        RET
+TESTN:
+        IN A,(#AA)
+	AND #f0
+        ADD A,4
+        OUT (#AA),A
+        IN A,(#A9)
+        AND 8
+        RET
+
+GEST_JOY:
+        LD A,(ONPLAT)
+        CP 1
+        ret z
+	LD A,(stk_nb)
+	CALL RD_STK
+	LD (VALCLAVIER),A
+	CP 2
+	CALL Z,PLUSX
+	LD A,(VALCLAVIER)
+	CP 3
+	CALL Z,PLUSX
+	LD A,(VALCLAVIER)
+	CP 4
+	CALL Z,PLUSX
+	LD A,(VALCLAVIER)
+	CP 6
+	CALL Z,MOINSX
+	LD A,(VALCLAVIER)
+	CP 7
+	CALL Z,MOINSX
+	LD A,(VALCLAVIER)
+	CP 8
+	CALL Z,MOINSX
+	RET
+
+GEST_KEYB:
+        LD A,(ONPLAT)
+        CP 1
+        ret z
+        CALL SCANCLAVIER
+	AND #f0
+        LD (VALCLAVIER),A
+        AND %10000000
+        CALL Z,PLUSX
+        LD A,(VALCLAVIER)
+        AND %00010000
+        CALL Z,MOINSX
+        RET
+PLUSX:
+        LD A,(OPX)
+        ADD A,2
+        LD (OPX),A
+        RET
+MOINSX:
+        LD A,(OPX)
+        SUB 2
+        LD (OPX),A
+        RET
+
+SCANCLAVIER:
+        IN A,(#AA)
+	AND #f0
+        ADD A,8
+        OUT (#AA),A
+        IN A,(#A9)
+        RET
+
+GESTSCORE:
+	LD A,(OPSCORE)
+	or	a
+        RET Z
+	LD B,A
+	LD A,(SCORE+2)
+	ADD A,B
+	CP 10
+	CALL NC,DIZPLUS
+	LD (SCORE+2),A
+        LD A,40+70
+        LD (COPYSCORE+4),A
+        LD A,(SCORE)
+        RLCA 
+        RLCA
+        RLCA
+        LD (COPYSCORE),A
+        LD HL,COPYSCORE
+        CALL XMMM
+        LD A,48+70
+        LD (COPYSCORE+4),A
+        LD A,(SCORE+1)
+        RLCA
+        RLCA
+        RLCA
+        LD (COPYSCORE),A
+        LD HL,COPYSCORE
+        CALL XMMM        
+        LD A,56+70
+        LD (COPYSCORE+4),A
+        LD A,(SCORE+2)
+        RLCA
+        RLCA
+        RLCA
+        LD (COPYSCORE),A
+        LD HL,COPYSCORE
+        CALL XMMM        
+	XOR A
+	LD (OPSCORE),A
+	RET
+
+COPYSCORE:	DB	0,0, 203,1, 0,0, 200,0, 8,0, 7,0,0,0,#D0
+
+INISCORE:
+	XOR A
+	LD (COPYSCORE),A
+	LD A,64+70
+	CALL iniscor
+	LD A,72+70
+	CALL iniscor
+	LD A,40+70
+	CALL iniscor
+	ld a,48+70
+	call iniscor
+	ld a,56+70
+iniscor:
+	LD (COPYSCORE+4),A
+	LD HL,COPYSCORE
+	CALL XMMM
+        RET        
+DIZPLUS:
+	SUB 10
+	PUSH AF
+	LD A,(SCORE+1)
+	INC A
+	CP 10
+	CALL NC,CENTPLUS
+	LD (SCORE+1),A
+	POP AF
+	RET
+CENTPLUS:
+	SUB 10
+	PUSH AF
+	LD A,(SCORE)
+	INC A
+	LD (SCORE),A
+	POP AF
+	RET
+
+GESTDIAM:
+	LD A,(OPDIAM)
+	or	a
+        RET Z
+	LD B,A
+	LD A,(NBDIAM+2)
+	ADD A,B
+	CP 10
+	CALL NC,DIAPLUS
+	LD (NBDIAM+2),A
+        LD A,228
+        LD (COPYDIAM+4),A
+        LD A,(NBDIAM+1)
+        RLCA 
+        RLCA
+        RLCA
+        LD (COPYDIAM),A
+        LD HL,COPYDIAM
+        CALL XMMM
+        LD A,236
+        LD (COPYDIAM+4),A
+        LD A,(NBDIAM+2)
+        RLCA
+        RLCA
+        RLCA
+        LD (COPYDIAM),A
+        LD HL,COPYDIAM
+        CALL XMMM        
+	XOR A
+	LD (OPDIAM),A
+	RET
+
+COPYDIAM:	DB	0,0, 203,1, 0,0, 200,0, 8,0, 7,0,0,0,#D0
+COPYDIAM2:	DB	204,0, 195,1,210,0, 200-5,0, 16,0,13,0,0,0,#D0
+
+INIDIAM:
+	LD HL,COPYDIAM2
+	CALL XMMM
+	XOR A
+	LD (COPYDIAM),A
+	LD A,228
+	CALL inidiam
+	LD A,236
+inidiam:
+	LD (COPYDIAM+4),A
+	LD HL,COPYDIAM
+	CALL XMMM
+        RET        
+DIAPLUS:
+	SUB 10
+	PUSH AF
+	LD A,(NBDIAM+1)
+	INC A
+	CP 10
+	CALL NC,VIEPLUS
+	LD (NBDIAM+1),A
+	POP AF
+	RET
+VIEPLUS:
+	SUB 10
+	PUSH AF
+	LD A,1
+	LD (VIEPL),A
+	POP AF
+	RET
+MAJVIES:
+	LD A,(VIEPL)
+	or	a
+	RET Z
+	XOR A
+	LD (VIEPL),A
+	LD A,1
+	LD (OP_VIE),A
+	JP VIES
+
+VIEPL:	DB	0
+NBDIAM: DB	0,0,0
+NBLIVE: DB	3
+OPDIAM: DB	0
+
+;
+;		VDP COMMANDE PROCEDURE
+;
+VDP_CMD:
+PRG1	LD	A,2
+	DI
+	OUT	(#99),A
+	LD	A,#8F
+	OUT	(#99),A
+WAIT1	IN	A,(#99)
+	RRCA
+	JP	C,WAIT1
+	LD	A,E
+	OUT	(#99),A
+	LD	A,#91
+	OUT	(#99),A
+	LD	B,D
+	LD	C,#9B
+	OTIR
+	XOR	A
+	OUT	(#99),A
+	LD	A,#8F
+	OUT	(#99),A
+	RET
+
+;
+;	  COPY RAM -> VRAM
+;
+RAM_VRAM:
+PRG2	PUSH	HL
+	DI
+	LD	A,0
+	OUT	(#99),A
+	LD	A,#80+45
+	OUT	(#99),A
+
+	LD	A,D		;SET BITS 14 TO 16
+	AND	#C0
+	RLCA
+	RLCA
+	LD	H,A
+	LD	A,(DEST_PAGE)	;BIT 16 = 1
+	OR	H
+	OUT	(#99),A
+	LD	A,#80+14
+	OUT	(#99),A
+	LD	A,E		;SET BITS 0 TO 7
+	OUT	(#99),A
+	LD	A,D		;SET BITS 8 TO 13
+	AND	#3F
+	OR	#40
+	OUT	(#99),A
+	POP	HL
+VRAM_LOOP
+	LD	A,(HL)
+	OUT	(#98),A
+	INC	HL
+	DEC	BC
+	LD	A,B
+	OR	C
+	JR	NZ,VRAM_LOOP
+	RET
+
+SIMRST20:
+	LD A,H
+	CP D
+	RET NZ
+	LD A,E
+	CP L
+	RET
+
+;
+;       liste des variables.
+;
+DEST_PAGE:	DB	0
+SCORE:		DB	0,0,0
+OPSCORE:	DB	0
+
+; * * * * * * * * * * * * * * * * * * * * * * * *
+;differents vecteurs de deplacements de monstre.
+; * * * * * * * * * * * * * * * * * * * * * * * *
+JMPMST: 	DB	-5,-5,-4,-4,-3,-3,-2,-2,-2,-1,-1,-1
+		DB	0,0,1,1,1,2,2,2,3,3,4,4,5,5
+		DS	60
+		DB	"*"
+JMPMST2:	DB	-5,-5,-4,-4,-3,-3,-2,-2,-2,-1,-1,-1,0,0,0,0,0
+		DB	"*"
+JMPMST3:	DB	0,0,0,"*"
+
+*I JMPMST4.DAT
+		db "*"
+;*****************************************************
+;      GESTION DES PLATE_FORMES
+;*****************************************************
+DETEC_PLATE:
+	XOR A			;initialise le compteur
+	LD (NBMST),A		;du nbre de monstres a tester
+        LD (ONPLAT),A
+        LD IX,CURMONSTER	;pointe sur la table des monstres courants
+DLOOP:	ld a,(IX+4)
+        CP 3
+        JP NZ,DSUIV
+
+	LD A,(X)			; est < 16 alors, faire le
+	sub	(ix+2)
+	BIT 7,A
+	CALL NZ,INV
+	CP 10
+	CALL C,YPLAT
+DSUIV:	LD DE,16			; traitement du monstre suivant
+	ADD IX,DE
+	LD A,(NBMST)
+	INC A
+	LD (NBMST),A
+	CP 3				; max 3 monstres a tester
+	JP NZ,DLOOP		
+	RET
+YPLAT:	LD A,(OPY)
+	AND %10000000
+	RET NZ
+	ld A,(Y)
+	LD B,A
+	LD A,(OPY)
+	ADD A,B
+	ADD A,17
+	LD L,A
+	LD A,(IX+3)
+	CP L
+	RET NC
+	ADD A,8
+	CP L
+	RET C
+	CALL STOPPLAT
+	LD A,1
+	LD (ONPLAT),A	
+        LD A,(OPX)
+	or	a
+        RET NZ
+        LD A,(IX+14)
+        CP 1
+        JP Z,CHANGE_DEJA
+	LD A,(IX+5)
+	LD (OPX),A
+	RET
+CHANGE_DEJA:
+	LD A,(IX+5)
+	NEG
+	LD (OPX),A
+	RET
+
+ONPLAT: DB	0
+
+STOPPLAT:
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+	AND #f0
+        LD (Y),A
+        XOR A
+        LD (OPY),A
+	inc	a
+        LD (ONFLOOR),A
+        RET     
+
+INITIME:
+	LD DE,(194*256)+50
+	CALL VPOKE2
+	LD A,#D8
+	LD B,150
+	OUT (#98),A
+	DJNZ $-2
+	LD DE,(197*256)+50
+	CALL VPOKE2
+	LD A,#D8
+	LD B,150
+	OUT (#98),A
+	DJNZ $-2
+
+	LD D,195
+	LD E,49
+	CALL VPOKE2
+        ld a,#D8
+        OUT (#98),A
+	LD A,#68
+	LD B,150
+	OUT (#98),A
+	DJNZ $-2
+        ld a,#D8
+        OUT (#98),A
+	LD D,196
+	LD E,49
+	CALL VPOKE2
+        ld a,#D8
+        OUT (#98),A
+	LD A,#68
+	LD B,150
+	OUT (#98),A
+	DJNZ $-2
+        ld a,#D8
+        OUT (#98),A
+	LD A,199
+	LD (VALTIME),A
+	RET
+
+GESTIME:
+	LD A,(COUNTIME)
+	INC A
+	LD (COUNTIME),A
+        AND %01111111
+	RET NZ
+
+	ld	a,3
+	out	(#99),a
+	ld	a,#80+14
+	out	(#99),a
+	ld	a,(VALTIME)
+	out	(#99),a
+	ld	a,%01000011
+	out	(#99),a
+	LD A,#18
+	OUT (#98),A
+
+	ld	a,3
+	out	(#99),a
+	ld	a,#80+14
+	out	(#99),a
+	ld	a,(VALTIME)
+	out	(#99),a
+	ld	a,%01000100
+	out	(#99),a
+	LD A,#18
+	OUT (#98),A
+
+	LD A,(VALTIME)
+	DEC A
+	LD (VALTIME),A
+	CP 51
+	jp C,LESSLIFE
+	RET
+
+VALTIME:	DB	0
+COUNTIME:	DB	0
+COIN:		DB	0
+
+;	routine de detection de 
+;	pieces.
+TESTCOIN:
+	CALX	3,0,1,1,1,COINX
+	CALY	1,8,0,1,1,COINY
+	LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	CP 11
+        JP Z,GOT_IT         ; SI ON A TROUVE UNE PIECE
+	CP 27
+	JP Z,GOT_IT2
+	cp	10
+	jp	z,got_coeur
+	cp	16+10
+	jp	z,got_time
+	cp	48+10
+	jp	z,got_invincible
+	cp	16+3
+	jp	z,got_boullette
+
+;idem plus haut
+	CALY	1,0,4,1,1,COINY
+	LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	CP 11
+        JP Z,GOT_IT         ; SI ON A TROUVE UNE PIECE
+	CP 27
+	JP Z,GOT_IT2
+	cp	10
+	jp	z,got_coeur
+	cp	16+10
+	jp	z,got_time
+	cp	48+10
+	jp	z,got_invincible
+	cp	16+3
+	jp	z,got_boullette
+	RET
+
+;	variables servant a memoriser
+;	ou on a trouver une piece 
+;	pour realiser le copy de
+;	remplacement.
+COINX:	DB	0
+COINY:	DB	0
+
+;	routine servant a effectuer
+;	le copy pour effacer la
+;	piece.
+;	NB : petite modif a faire
+;	si on travaille avec degrade.
+GOT_IT:
+	LD A,(COIN)		; incrementation du nombre
+	INC A			; de piece trouvees.
+	LD (COIN),A		; NB :prevoir conversion en
+	LD A,3			; systeme decimal pour
+	LD (HL),A		; affichage dans tableau score.
+	CALX	3,0,0,0,0,0
+	ld	(COPYCOIN+4),a
+	ld	a,(COINY)
+	ld	(COPYCOIN+6),a
+
+	LD HL,COPYCOIN
+	CALL XMMM
+
+	ld	bc,#0001
+	call	set_fx
+
+	ld a,1
+        LD (OPDIAM),A
+	RET
+
+GOT_IT2:
+	LD A,(COIN)		; incrementation du nombre
+	INC A			; de piece trouvees.
+	LD (COIN),A		; NB :prevoir conversion en
+	LD A,3			; systeme decimal pour
+	LD (HL),A		; affichage dans tableau score.
+	CALX	3,0,0,0,0,0
+	LD (COPYCOIN+4),A
+	LD A,(COINY)
+	LD (COPYCOIN+6),A
+	LD HL,COPYCOIN
+	CALL XMMM
+
+	ld	bc,#0001
+	call	set_fx
+
+	ld a,5
+        LD (OPDIAM),A
+	RET
+
+;---------------------------------------------------------------
+;
+;	COEUR
+;
+got_coeur:
+	LD	A,3
+	LD	(HL),A
+	CALX	3,0,0,0,0,0
+	LD	(COPYCOIN+4),A
+	LD	A,(COINY)
+	LD	(COPYCOIN+6),A
+	LD	HL,COPYCOIN
+	CALL	XMMM
+
+	ld	a,1
+	ld	(OP_VIE),a
+	call	VIES
+
+	ld	bc,#0104
+	call	set_fx
+	RET
+
+;---------------------------------------------------------------
+;
+;	TIME
+;
+got_time:
+	LD	A,3
+	LD	(HL),A
+	CALX	3,0,0,0,0,0
+	LD	(COPYCOIN+4),A
+	LD	A,(COINY)
+	LD	(COPYCOIN+6),A
+	LD	HL,COPYCOIN
+	CALL	XMMM
+
+	call	INITIME
+
+	ld	bc,#0104
+	call	set_fx
+	RET
+
+;---------------------------------------------------------------
+;
+;	INVINCIBLE
+;
+got_invincible:
+	ld	a,1
+	ld	(INVINCIB),a
+	LD	A,3
+	LD	(HL),A
+	CALX	3,0,0,0,0,0
+	LD	(COPYCOIN+4),A
+	LD	A,(COINY)
+	LD	(COPYCOIN+6),A
+	LD	HL,COPYCOIN
+	CALL	XMMM
+
+	ld	bc,#0104
+	call	set_fx
+	RET
+
+;---------------------------------------------------------------
+;
+;	BOULLETTE
+;
+got_boullette:
+	LD	A,3
+	LD	(HL),A
+	CALX	3,0,0,0,0,0
+	LD	(COPYCOIN+4),A
+	LD	A,(COINY)
+	LD	(COPYCOIN+6),A
+	LD	HL,COPYCOIN
+	CALL	XMMM
+
+	ld	bc,#0104
+	call	set_fx
+	RET
+
+;	parametres pour effacement
+;	de la piece.
+COPYCOIN:	DB	0,0,48,1, 0,0, 0,0,16 ,0, 16,0,0,0,#D0
+
+;	routine de test si le M-Kid
+;	s'empalle dans la joie,
+;	la gaiete et la bonne humeur.
+TESTPICOT:
+	CALX	9,0,1,1,0,0
+	CALY	1,8,0,1,0,0
+	LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	CP 42
+        JP Z,LESSLIFE        ; HASTA LA VISTA BABY....
+
+	CALX	-1,0,1,1,0,0
+	LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	CP 42
+        JP Z,LESSLIFE        ; HASTA LA VISTA BABY....
+	RET
+
+INI_FIRE:
+	LD DE,#F000		;+(32*6)      ; defini les pattern
+	CALL VPOKE2
+	LD HL,PATFIRE
+	LD BC,#4098
+	OTIR
+
+	LD DE,#F8C0		;+(16*6)
+	CALL VPOKE2
+	LD HL,COLFIRE
+	LD BC,#2098
+	OTIR
+        ld a,212
+        ld (TASFIRE),A
+        LD (TASFIRE+4),A
+
+PUTFIRE:
+	LD A,(TASFIRE)
+	LD (TASFIRE+4),A
+	LD A,(TASFIRE+1)
+	LD (TASFIRE+5),A
+	LD DE,#FA30		;+(4*6)
+	CALL VPOKE2
+        LD HL,TASFIRE
+	LD BC,#898
+	OTIR
+	RET
+
+TASFIRE:
+	DB 100,100,0,0
+	DB 100,100,4,0
+
+PATFIRE:
+;	 DB %01110000,%10001000,%10001000,%10001000,%01110000
+;	 DS 27
+;	 DB 0,%01110000,%01110000,%01110000
+;	 DS 28
+
+;-------------------------------------------------------
+; SPRITE Pattern Generate Table
+;
+;No.00
+	db	030h,048h,094h,084h,048h,030h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	000h,030h,078h,078h,030h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+
+COLFIRE:
+;	 DB 1,1,1,1,1,1
+;	 DS 10
+;	 DB 0,15,15,15,15
+;	 DS 11
+
+;-------------------------------------------------------
+; SPRITE Color Table
+;
+;No.00
+	db	001h,001h,001h,001h,001h,001h,000h,000h
+	db	000h,000h,000h,000h,000h,000h,000h,000h
+;
+	db	040h,04Ch,04Ch,04Ch,04Ch,040h,040h,040h
+	db	040h,040h,040h,040h,040h,040h,040h,040h
+
+
+STATFIRE:
+	DEFB 0
+
+GESTFIRE:
+	LD A,(STATFIRE)
+	CP 1
+	JP Z,DEPFIRE
+	CALL TESTN
+	CP 0
+	RET nz
+        XOR A
+        LD (COUNTFIRE),A
+	LD A,1
+	LD (STATFIRE),A
+        ld b,4
+	LD A,(DIREC)
+        cp -1
+        call Z,GAFIRE
+        LD A,B
+	LD (FOPX),A
+	LD A,4
+	LD (FOPY),A
+	LD A,(X)
+        add a,4
+	LD (FPOSX),A
+	LD A,(Y)
+        sub 8
+	LD (FPOSY),A
+	RET
+COUNTFIRE:
+	DB 0        
+GAFIRE:
+	LD B,-4
+	RET        
+FOPX:
+	DB 0
+FOPY:
+	DB 0
+FPOSX:
+	DB 0
+FPOSY:
+	DB 0
+DEPFIRE:
+	LD A,(COUNTFIRE)
+	INC A
+	LD (COUNTFIRE),A
+	OR A
+	JP Z,FIREOFF
+	LD IX,FOPX
+	LD A,(IX)
+	CP -4
+	CALL Z,TESTFG
+	LD A,(IX)
+	CP 4
+	CALL Z,TESTFD
+	LD A,(IX+1)
+	CP -4
+	CALL Z,TESTFH
+	LD A,(IX+1)
+	CP 4
+	CALL Z,TESTFB
+        ld a,(DEPSPR)
+	ADD A,(IX+2)
+	ADD A,(IX)
+        CP 10
+        JP C,FIREOFF
+        cp 250
+        jp nc,FIREOFF	
+	LD (IX+2),A
+        LD (TASFIRE+1),A
+	LD A,(IX+3)
+	ADD A,(IX+1)
+        CP 8
+        JP C,FIREOFF
+        CP 192-8
+        JP NC,FIREOFF
+	LD (IX+3),A
+	DEC A
+	LD (TASFIRE),A
+	JP PUTFIRE
+
+TESTFD:
+	ld	a,(SCROLLX)
+	and	#0f
+	ADD	a,(ix+0)
+	add	a,(ix+2)
+	add	a,5
+	and	#f0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	c,a
+	ld	a,(ix+3)
+        ADD 	A,(IX+1)
+        add a,4
+	and	#f0
+	rrca
+	rrca
+	rrca
+	ld	b,a
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	AND %10000000
+	JP NZ,INV_X
+	RET
+TESTFG:
+	ld	a,(SCROLLX)
+	and	#0f
+	ADD	a,(ix+0)
+	add	a,(ix+2)
+	and	#f0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	c,a
+	ld	a,(ix+3)
+        ADD A,(IX+1)
+        add a,2
+	and	#f0
+	rrca
+	rrca
+	rrca
+	ld	b,a
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	AND %10000000
+	JP NZ,INV_X
+	RET
+TESTFH:
+	ld	a,(SCROLLX)
+	and	#0f
+	ADD	a,(ix+0)
+	add	a,(ix+2)
+        add a,2
+	and	#f0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	c,a
+	ld	a,(ix+3)
+        ADD A,(IX+1)
+	and	#f0
+	rrca
+	rrca
+	rrca
+	ld	b,a
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	AND %10000000
+	JP NZ,INV_Y
+	RET
+TESTFB:
+	ld	a,(SCROLLX)
+	and	#0f
+	ADD	a,(ix+0)
+	add	a,(ix+2)
+        add a,2
+	and	#f0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	c,a
+	ld	a,(ix+3)
+        ADD A,(IX+1)
+	add	a,5
+	and	#f0
+	rrca
+	rrca
+	rrca
+	ld	b,a
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	AND %10000000
+	JP NZ,INV_Y
+	RET
+FIREOFF:
+	XOR A
+	LD (STATFIRE),A
+	LD A,212
+	LD (TASFIRE),A
+	JP PUTFIRE	
+INV_X:
+	LD A,(IX)
+	NEG
+	LD (IX),A
+	RET
+INV_Y:
+	LD A,(IX+1)
+	NEG
+	LD (IX+1),A
+	RET
+
+

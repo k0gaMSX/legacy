@@ -1,0 +1,621 @@
+*S 14,Q-
+
+not_replay	equ	1
+*i	stat-equ
+
+	org	#4000
+
+	call	init_sprite
+	call	strmus
+	di
+mainloop:
+	ld	a,210
+	call	interupt
+
+	call	 flash
+
+	call	up_down
+
+	call	#fd9f
+
+	call	scan_l8
+	and	1
+	jp	nz,mainloop
+
+	ld	a,(select)
+	or	a
+	jp	nz,quitloop
+
+	call	option
+	jp	mainloop
+
+quitloop:
+	ld	a,210
+	call	interupt
+
+	call	#fd9f
+
+	call	scan_l8
+	cp	255
+	jp	nz,quitloop
+
+	ld	a,1
+	ld	(stg_nb),a
+
+	ld	a,255
+	ld	(fading),a
+	ld	a,4
+	ld	(fadspd),a
+quitloop1:
+	ld	a,210
+	call	interupt
+
+	call	#fd9f
+
+	ld	a,(busply)
+	or	a
+	jr	nz,quitloop1
+
+	call	#fd9f
+	ret
+
+up_down:
+	ld	a,(select)
+	or	a
+	jp	nz,down
+	call	scan_l8
+	and	32
+	ret	nz
+	ld	hl,color1
+	ld	(data_ad),hl
+	ld	a,1
+	ld	(select),a
+	or	31
+	ld	(flash_cnt),a
+	ret
+
+down:	call	scan_l8
+	and	64
+	ret	nz
+	ld	hl,color2
+	ld	(data_ad),hl
+	xor	a
+	ld	(select),a
+	or	31
+	ld	(flash_cnt),a
+	ret
+
+select: db	1	;select START ou OPTION
+
+flash:	ld	a,(flash_cnt)
+	inc	a
+	and	31
+	ld	(flash_cnt),a
+	and	15
+	ret	nz
+
+	di
+	ld	a,14		;set color 14 & 15 for selection
+	out	(#99),a
+	ld	a,#80+16
+	out	(#99),a
+	ld	hl,(data_ad)
+	ld	a,(flash_cnt)
+	and	16
+	rrca
+	rrca
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	bc,#049a
+	otir
+	ret
+
+flash_cnt:	db	0	;compteur pour flashing des couleurs 14 & 15
+data_ad:	dw	color1
+
+color1: db	#70,#00,#75,#05
+	db	#75,#05,#75,#05
+
+color2: db	#75,#05,#70,#00
+	db	#75,#05,#75,#05
+
+
+;WAIT A LINE INTERUPT
+;ENTER A = LINE OF SCAN INTERUPT
+interupt:
+	out	(#99),a
+	ld	a,#93
+	out	(#99),a
+	ld	a,1
+	out	(#99),a
+	ld	a,#8f
+	out	(#99),a
+waitint:
+	in	a,(#99)
+	rrca
+	jp	nc,waitint
+
+	xor	a
+	out	(#99),a
+	ld	a,#8f
+	out	(#99),a
+	ret
+
+scan_l8:
+	in	a,(#aa)
+	and	%11110000
+	add	a,8
+	out	(#aa),a
+	in	a,(#a9)
+	ret
+
+;---------------------------------------------------------------
+;
+;	ROUTINE DES OPTIONS
+;
+option:
+	call	anti_reb_spc
+
+	ld	a,(hz_sel)
+	call	init_freq
+
+	xor	a
+	ld	(position_main),a
+	ld	(exit_option),a
+	inc	a
+	call	setpage
+
+	ld	a,64-1
+	ld	(main_attrb+0),a
+	ld	(main_attrb+4),a
+	ld	hl,main_attrb
+	ld	de,#7600
+	ld	bc,8
+	xor	a
+	ld	(dest_page),a
+	call	ldirvm1
+
+	ld	hl,palette_2
+	call	plt_ldr
+
+
+option_loop:
+	ld	a,210
+	call	interupt
+	call	#fd9f
+
+	call	routine_option
+
+	call	main_up_down
+
+	call	put_main
+
+	ld	a,(exit_option)
+	or	a
+	jr	z,option_loop
+
+;	 call	 scan_l8
+;	 and	 1
+;	 jr	 nz,option_loop
+
+option_end:
+	call	anti_reb_spc
+
+	ld	a,212
+	ld	(main_attrb+0),a
+	ld	(main_attrb+4),a
+	ld	hl,main_attrb
+	ld	de,#7600
+	ld	bc,8
+	xor	a
+	ld	(dest_page),a
+	call	ldirvm1
+
+	ld	hl,palette_1
+	call	plt_ldr
+
+	ld	a,0
+	call	setpage
+	ld	a,31
+	ld	(flash_cnt),a
+	ret
+
+setpage:
+	rrca
+	rrca
+	rrca
+	or	#1f
+	ld	(#f3e1),a
+	out	(#99),a
+	ld	a,#80+2
+	out	(#99),a
+	ret
+
+anti_reb_spc:
+	ld	a,210
+	call	interupt
+	call	#fd9f
+
+	call	scan_l8
+	and	1
+	jr	z,anti_reb_spc
+	ret
+
+anti_reb_up:
+	ld	a,210
+	call	interupt
+	call	#fd9f
+
+	call	scan_l8
+	and	32
+	jr	z,anti_reb_up
+	ret
+
+anti_reb_dn:
+	ld	a,210
+	call	interupt
+	call	#fd9f
+
+	call	scan_l8
+	and	64
+	jr	z,anti_reb_dn
+	ret
+
+routine_option:
+	ld	a,(position_main)
+	rlca
+	ld	l,a
+	ld	h,0
+	ld	de,routine_tbl
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	jp	(hl)
+
+routine_tbl:
+	dw	frequence,control,fxmode,music,password,exit
+
+;-------------------------------------------------------
+;
+;	OPTION FREQUENCE
+;
+frequence:
+	call	scan_l8
+	bit	0,a
+	ret	nz
+
+	ld	a,(#ffe8)
+	xor	2
+	ld	(#ffe8),a
+	out	(#99),a
+	ld	a,#80+9
+	out	(#99),a
+
+	ld	a,(hz_sel)
+	xor	1
+	ld	(hz_sel),a
+
+init_freq:
+	ld	l,a
+	ld	h,0
+	ld	de,freq_sx_tbl
+	add	hl,de
+	ld	a,(hl)
+	ld	(copy_freq),a
+
+	ld	hl,copy_freq
+	ld	de,#0f20
+	call	vdp_cmd
+
+	call	anti_reb_spc
+	ret
+
+freq_sx_tbl:
+	db	0,48
+
+copy_freq:
+	db	0,0	;sx
+	db	32,2	;sy
+	db	168,0	;dx
+	db	80,1	;dy
+	db	48,0	;nx
+	db	8,0	;ny
+	db	0,0	;col & arg
+	db	#d0
+
+
+;-------------------------------------------------------
+;
+;	OPTION CONTROL
+;
+control:
+	call	scan_l8
+	bit	0,a
+	ret	nz
+
+	ld	a,(stk_nb)
+	inc	a
+	cp	3
+	jr	c,control1
+	xor	a
+control1:
+	ld	(stk_nb),a
+
+	ld	l,a
+	ld	h,0
+	ld	de,ctrl_sx_tbl
+	add	hl,de
+	ld	a,(hl)
+	ld	(copy_ctrl),a
+
+	ld	hl,copy_ctrl
+	ld	de,#0f20
+	call	vdp_cmd
+
+	call	anti_reb_spc
+	ret
+
+ctrl_sx_tbl:
+	db	0,72,144
+
+copy_ctrl:
+	db	0,0	;sx
+	db	24,2	;sy
+	db	168,0	;dx
+	db	96,1	;dy
+	db	72,0	;nx
+	db	8,0	;ny
+	db	0,0	;col & arg
+	db	#d0
+
+;-------------------------------------------------------
+;
+;	OPTION FX-MODE
+;
+fxmode:
+	call	scan_l8
+	bit	0,a
+	ret	nz
+
+	ld	a,(fx_mod)
+	xor	1
+	ld	(fx_mod),a
+
+	ld	l,a
+	ld	h,0
+	ld	de,fx_sx_tbl
+	add	hl,de
+	ld	a,(hl)
+	ld	(copy_fx),a
+
+	ld	hl,copy_fx
+	ld	de,#0f20
+	call	vdp_cmd
+
+	call	anti_reb_spc
+	ret
+
+fx_sx_tbl:
+	db	0,48
+
+copy_fx:
+	db	0,0	;sx
+	db	16,2	;sy
+	db	168,0	;dx
+	db	112,1	;dy
+	db	48,0	;nx
+	db	8,0	;ny
+	db	0,0	;col & arg
+	db	#d0
+
+;-------------------------------------------------------
+;
+;	OPTION MUSIC MODE
+;
+music:
+	call	scan_l8
+	bit	0,a
+	ret	nz
+
+	ld	a,(musmod)
+	xor	1
+	ld	(musmod),a
+
+	jr	nz,music1
+	call	stpmus
+	jr	music2
+music1:
+	ld	a,(busply)
+	or	a
+	call	z,strmus
+music2:
+	ld	a,(musmod)
+	ld	l,a
+	ld	h,0
+	ld	de,mus_sx_tbl
+	add	hl,de
+	ld	a,(hl)
+	ld	(copy_mus),a
+
+	ld	hl,copy_mus
+	ld	de,#0f20
+	call	vdp_cmd
+
+	call	anti_reb_spc
+	ret
+
+mus_sx_tbl:
+	db	0,48
+
+copy_mus:
+	db	0,0	;sx
+	db	16,2	;sy
+	db	168,0	;dx
+	db	128,1	;dy
+	db	48,0	;nx
+	db	8,0	;ny
+	db	0,0	;col & arg
+	db	#d0
+
+
+password:
+	ret
+
+exit:
+	call	scan_l8
+	bit	0,a
+	ret	nz
+
+	ld	a,(exit_option)
+	or	1
+	ld	(exit_option),a
+
+	call	anti_reb_spc
+	ret
+
+exit_option:
+	db	0
+
+;-------------------------------------------------------
+;
+;	GESTION UP/DOWN DE LA MAIN
+;
+main_up_down:
+	call	scan_l8
+	bit	6,a
+	jr	z,main_down
+	bit	5,a
+	jr	z,main_up
+	ret
+main_up:
+	ld	a,(position_main)
+	or	a
+	jr	z,main_up1
+	dec	a
+main_up1:
+	ld	(position_main),a
+	call	anti_reb_up
+	ret
+main_down:
+	ld	a,(position_main)
+	cp	5
+	jr	z,main_down1
+	inc	a
+main_down1:
+	ld	(position_main),a
+	call	anti_reb_dn
+	ret
+
+position_main:
+	db	0
+
+;-------------------------------------------------------
+;
+;	PUTSPRITE DE LA MAIN
+;
+put_main:
+	ld	a,(position_main)
+	ld	l,a
+	ld	h,0
+	ld	de,put_main_tbl
+	add	hl,de
+
+	ld	a,(hl)
+	dec	a
+	ld	(main_attrb+0),a
+	ld	(main_attrb+4),a
+
+	ld	hl,main_attrb
+	ld	de,#7600
+	ld	bc,8
+	call	ldirvm1
+
+	ret
+
+put_main_tbl:
+	db	80,96,112,128,144,160
+
+;-------------------------------------------------------
+;
+;	INITIALISATION DE LA MAIN
+;
+init_sprite:
+	ld	hl,main_frm
+	ld	de,#7800
+	ld	bc,32*2
+	xor	a
+	ld	(dest_page),a
+	call	ldirvm1
+
+	ld	hl,main_clr
+	ld	de,#7400
+	ld	bc,16*2
+	call	ldirvm1
+
+	ld	a,212
+	ld	(main_attrb+0),a
+	ld	(main_attrb+4),a
+
+	ld	hl,main_attrb
+	ld	de,#7600
+	ld	bc,8
+	call	ldirvm1
+	ret
+
+main_attrb:
+	db	212,8,0,0
+	db	212,8,4,0
+
+;-------------------------------------------------------
+; Palette Data (0GRBh * 16)
+;
+palette_1:
+	dw	0000h,0117h,0777h,0307h
+	dw	0074h,0070h,0005h,0276h
+	dw	0370h,0574h,0770h,0400h
+	dw	0600h,0607h,0070h,0575h
+
+;-------------------------------------------------------
+; Palette Data (0GRBh * 16)
+;
+palette_2:
+	dw	0000h,0000h,0370h,0575h
+	dw	0002h,0020h,0030h,0077h
+	dw	0575h,0333h,0077h,0077h
+	dw	0077h,0077h,0022h,0077h
+
+
+
+main_frm:
+;-------------------------------------------------------
+; SPRITE Pattern Generate Table
+;
+;No.00
+	db	000h,00Fh,011h,024h,04Eh,047h,067h,07Fh
+	db	079h,03Dh,00Eh,000h,000h,000h,000h,000h
+	db	000h,0FCh,082h,0FEh,0FCh,090h,0F0h,060h
+	db	0A0h,0C0h,000h,000h,000h,000h,000h,000h
+;
+	db	000h,000h,00Eh,01Bh,033h,039h,038h,039h
+	db	016h,002h,000h,000h,000h,000h,000h,000h
+	db	000h,000h,07Ch,02Ch,000h,060h,060h,080h
+	db	0C0h,000h,000h,000h,000h,000h,000h,000h
+
+
+
+
+main_clr:
+;-------------------------------------------------------
+; SPRITE Color Table
+;
+;No.00
+	db	000h,001h,001h,001h,001h,001h,001h,001h
+	db	001h,001h,001h,000h,000h,000h,000h,000h
+;
+	db	040h,040h,048h,048h,048h,048h,048h,048h
+	db	048h,049h,040h,040h,040h,040h,040h,040h
+
+                                                                                

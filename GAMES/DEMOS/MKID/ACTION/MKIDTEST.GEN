@@ -1,0 +1,734 @@
+*S 14,Q-
+CHEAT_ON	EQU	1
+
+;routine de test pour M-KID
+;le 14/06/93
+;by SLAYERMAN from ABYSS
+
+*i	sysadd
+*i	bios
+*i	doscmd
+*i	macro
+not_replay	equ	1
+*i	stat-equ
+
+	org	#0100
+
+	call	command
+
+	ld	a,0
+	ld	(flag),a
+
+	di			;test le numero de version du VDP
+	ld	a,1
+	out	(#99),a
+	ld	a,#8f
+	out	(#99),a
+	push	af
+	pop	af
+	in	a,(#99)
+	ld	(vdp_ver),a
+	ld	a,0
+	out	(#99),a
+	ld	a,#8f
+	out	(#99),a
+	push	af
+	pop	af
+	in	a,(#99)
+	ei
+	ld	a,(vdp_ver)
+	rrca
+	and	6
+	jp	nz,v9958
+
+	TEXT	mess1		;V9938
+	ld	a,255
+	ld	(flag),a
+	jp	v9938
+
+v9958:	TEXT	mess0		:V9958
+
+v9938:	ld	a,(flag)
+	or	a
+	jp	nz,vdp_err
+
+; test version of the DOS system
+; le 29/11/92
+; by SLAYERMAN from F.U.C
+
+	ld	c,#6f
+	call	#f37d
+
+	or	a
+	jp	nz,error
+
+	ld	a,b
+	cp	2
+	jp	c,not_dos2
+
+	TEXT	mess2
+	ld	a,255
+	ld	(dosver),a
+
+not_dos2:
+	ld	a,(#0007)	;test last TPA adr.
+	cp	#d4
+	jp	nc,tpa_ok
+
+	TEXT	mess4
+	ld	ix,#0006
+	call	outhex16
+	TEXT	mess5
+	ret
+
+tpa_ok:
+	ld	a,(dosver)
+	or	a
+	jp	nz,dos2_ram
+
+;	TEST NOMBRE DE SEGMENT SOUS DOS 1
+
+	TEXT	mess9
+	in	a,(#ff)
+	xor	255
+	ld	(free_seg),a
+	cp	7
+	jp	c,dos1_err
+
+	TEXT	mess10
+
+	ld	hl,string
+	ld	de,#c000
+	ld	bc,4
+	ldir
+
+	ld	b,4
+tst_loop:
+	ld	a,b
+	out	(#fe),a
+	push	bc
+	call	test_map
+	pop	bc
+	jp	c,test_out
+	inc	b
+	ld	a,(free_seg)
+	cp	b
+	jp	z,test_out
+	jp	tst_loop
+
+test_out:
+	ld	a,b
+	inc	a
+	ld	(free_seg),a
+	cp	7
+	jp	c,dos1_err
+	jp	end
+
+test_map:
+	ld	de,#8000
+	ld	hl,string
+	ld	b,4
+test_map1:
+	ld	a,(de)
+	cp	(hl)
+	jp	nz,test_map2
+	inc	de
+	inc	hl
+	djnz	test_map1
+	scf			;C=1 si STRING trouve
+	ret
+test_map2:
+	scf			;C=0 si STRING pas trouve
+	ccf
+	ret
+
+string: defb	"TEST"
+
+;	TEST NUMBER OF FREE SEGMENT UNDER DOS 2
+dos2_ram:
+	ld	a,(hokvld)
+	and	1
+	jp	z,end		;jump si pas de support logiciel
+
+	xor	a		;get mapper variable table
+	ld	de,#0401
+	call	extbio
+	inc	hl
+	inc	hl
+	ld	a,(hl)
+	ld	(free_seg),a
+	cp	2
+	jp	nc,end
+
+	TEXT	mess6
+	ret
+
+error:
+	TEXT	errmess
+	ret			;retour au DOS
+
+vdp_err:
+	TEXT	mess3
+	ret
+
+dos1_err:
+	TEXT	mess7
+	ld	a,(free_seg)
+	call	outdec
+
+	TEXT	mess8
+	ret
+
+;***************************************************************
+;
+;	ROUTINES DIVERS
+
+outdec: 			;DEC output of accumulator
+	call	decimal
+	TEXT	dcbdata
+	ret
+
+
+; routine de conversion au format decimal
+; le 11/08/93
+; by SLAYERMAN fron FUC
+;
+;	routine de convertion en decimal
+;	entree:	A = val a convertir
+;	modifie: HL, C
+;
+decimal:
+	ld	hl,#3030
+	ld	(dcbdata),hl
+	ld	hl,dcbdata
+;	 ld	 a,(x)
+	ld	c,a
+	cp	10
+	jr	c,unite
+	cp	200
+	jr	c,dec2
+	ld	(hl),#32	;"2"
+	jr	dec3
+dec2:	cp	100
+	jr	c,dec3
+	ld	(hl),#31	;"1"
+dec3:	inc	hl
+	ld	de,valdcb
+	ex	de,hl
+	xor	a
+	ld	b,8
+dec4:	rr	c
+	jr	nc,dec5
+	add	a,(hl)
+	daa
+dec5:	inc	hl
+	djnz	dec4
+	ex	de,hl
+	ld	c,a
+	rrca
+	rrca
+	rrca
+	rrca
+	and	#0f
+	or	#30
+	ld	(hl),a
+	inc	hl
+	ld	a,c
+	and	#0f
+	or	#30
+	ld	(hl),a
+	ret
+unite:	or	#30
+	ld	(dcbdata+2),a
+	ret
+
+dcbdata:
+	defb	#30,#30,#30,'$'
+
+valdcb:	defb	1,2,4,8,#16,#32,#64,#28
+
+
+
+outhex16:			;HEX output of 2 byte at ADD IX
+	ld	a,(ix+1)
+	call	outhexa 	;output MSB Byte
+	ld	a,(ix+0)
+	call	outhexa 	;output LSB Byte
+	ld	e,72
+	ld	c,2
+	call	bdos
+	ret
+
+outhexa:
+	push	af		;HEX output of accumulator
+	rrca
+	rrca
+	rrca
+	rrca
+	and	#0f
+	call	outhex1
+	ld	e,a
+	ld	c,2
+	call	bdos		;print MSB
+	pop	af
+	and	#0f
+	call	outhex1
+	ld	e,a
+	ld	c,2
+	call	bdos		;print LSB
+	ret
+
+outhex1:
+	cp	10
+	jp	nc,outhex10	;si plus que 10 alors add 7
+	add	a,#30
+	ret
+outhex10:
+	add	a,#37
+	ret
+
+command:
+	ld	a,(#80)
+	or	a
+	ret	z
+	ld	b,a
+	push	bc
+	TEXT	crlf
+	pop	bc
+	ld	hl,#81
+
+com_loop:
+	ld	a,(hl)
+	or	a
+	jp	z,com_end
+	push	bc
+
+	ld	e,a
+	ld	c,2
+	push	hl
+	call	bdos
+	pop	hl
+	pop	bc
+
+	inc	hl
+	djnz	com_loop
+
+com_end:
+	TEXT	crlf
+	ret
+
+;*********************************************
+;
+;	zone des datas
+;
+;*********************************************
+
+vdp_ver:
+	defb	0
+flag:	defb	0
+dosver:	defb	0
+
+crlf:	defb	10,13,"$"
+
+mess0:	defb	10,13,"V9958 VDP found    :  (    OK)$"
+
+mess1:	defb	10,13,"V9958 VDP not found:  (NOT OK)$"
+
+mess2:	defb	10,13,"DOS2 system        :  (    OK)$"
+
+mess3:	defb	10,13,"Un-able to run M-KID :-("
+	defb	10,13,"M-KID need V9958 VDP in order to run"
+	defb	10,13,"Returning to DOS prompt now...",10,13,"$"
+
+mess4:	defb	10,13,"TPA size too small!!!"
+	defb	10,13,"Un-able to run M-KID :-("
+	defb	10,13,"Returning to DOS prompt now...",10,13,"$"
+mess5:	defb	10,13,"$"
+
+mess6:	defb	10,13,"Not enough free segment!!!"
+	defb	10,13,"Un-able to run M-KID :-("
+	defb	10,13,"Returning to DOS prompt now...",10,13,"$"
+
+mess7:	defb	10,13,"Free segments found : $"
+
+mess8:	defb	10,13,"Not enough memory for running in DOS1",10,13,"$"
+
+mess9:	defb	10,13,"Scanning DOS1 memory mapper$"
+
+mess10: defb	10,13,"Testing mapper size$"
+
+all_ok:
+	defb	10,13,"All is OK, able to run M-KID!",10,13,"$"
+
+errmess:
+	defb	10,13,"Error occured during DOS test!!"
+	defb	10,13,"Sorry,... test aborded....",10,13,"$"
+
+free_seg:
+	defb	0
+
+
+end:				;fin du test charge routine de demo
+	TEXT	mess7
+
+	ld	a,(free_seg)
+	call	outdec
+
+	TEXT	all_ok
+
+	di
+	ld	hl,status1		;installe les STATUS bytes
+	ld	de,#f975
+	ld	bc,status2-status1-1
+	ldir
+
+	ld	a,(#ffe8)	;set frequency selector
+	and	%00000010
+	rrca
+	ld	(hz_sel),a
+
+	xor	a
+	ld	(UNL_LIFE),a
+	ld	(INVINCIB),a
+
+	call	test_r800	;test mode R800 ou pas
+	ld	a,(#80)
+	or	a
+	jp	z,go_on
+
+check_line:
+	ld	a,(#80)
+	ld	b,a
+	ld	hl,#81
+check_loop:			;cherche "/"
+	ld	a,(hl)
+	or	a
+	jp	z,go_on
+	cp	"/"
+	push	bc
+	call	z,option
+	inc	hl
+	pop	bc
+	djnz	check_loop
+	jp	go_on
+
+option: 			;cherche option valid
+	inc	hl
+	ld	a,(hl)
+	cp	"R"
+	jp	z,turbo_mode
+	cp	"r"
+	jp	z,turbo_mode
+	cp	"M"
+	jp	z,music_mode
+	cp	"m"
+	jp	z,music_mode
+	cp	"J"
+	jp	z,stick_mode
+	cp	"j"
+	jp	z,stick_mode
+
+	IF	CHEAT_ON
+	call	cheatmode
+	ENDC
+
+	dec	hl
+	ret
+
+;*************** CHEAT MODE*************
+
+	IF	CHEAT_ON
+cheatmode:
+	push	hl
+	ex	de,hl
+	ld	hl,cheat0
+	ld	b,3
+cheatm0:
+	ld	a,(de)
+	cpl
+	cp	(hl)
+	jp	nz,cheatm11
+	inc	hl
+	inc	de
+	djnz	cheatm0
+	xor	a
+	ld	(INVINCIB),a
+	ld	a,1
+	ld	(UNL_LIFE),a
+	jp	cheat_end
+
+cheatm11:
+	pop	hl
+	push	hl
+	ex	de,hl
+	ld	hl,cheat1
+	ld	b,3
+cheatm1:
+	ld	a,(de)
+	cpl
+	cp	(hl)
+	jp	nz,cheatm22
+	inc	hl
+	inc	de
+	djnz	cheatm1
+	xor	a
+	ld	(UNL_LIFE),a
+	inc	a
+	ld	(INVINCIB),a
+	jp	cheat_end
+
+cheatm22:
+	pop	hl
+	push	hl
+	ex	de,hl
+	ld	hl,cheat2
+	ld	b,5
+cheatm2:
+	ld	a,(de)
+	cpl
+	cp	(hl)
+	jp	nz,cheat_end
+	inc	hl
+	inc	de
+	djnz	cheatm2
+	ld	a,1
+	ld	(UNL_LIFE),a
+	ld	(INVINCIB),a
+
+cheat_end:
+	pop	hl
+	ret
+
+cheat0: db	"F".XOR.255,"U".XOR.255,"C".XOR.255
+cheat1: db	"I".XOR.255,"O".XOR.255,"D".XOR.255
+cheat2: db	"A".XOR.255,"B".XOR.255,"Y".XOR.255,"S".XOR.255,"S".XOR.255
+	ENDC
+
+;*************** TURBO R MODE **********
+turbo_mode:
+	inc	hl
+	push	hl
+	ld	a,(hl)
+	cp	"0"
+	jp	nz,turbo_m1
+
+	call	test_r800
+	ld	a,(f_r800)
+	or	a
+	call	nz,setz80
+	xor	a		;force to "NO R800" state
+	ld	(f_r800),a
+	jp	turbo_m2
+
+turbo_m1:
+	cp	"1"
+	jp	nz,turbo_m2
+	call	test_r800	;test mode R800 ou pas
+
+turbo_m2:
+	pop	hl
+	ret
+
+;*************** MUSIC MODE ************
+music_mode:
+	inc	hl
+	ld	a,(hl)
+	cp	"0"
+	ret	c
+	cp	"3"
+	ret	nc
+	and	3
+	ld	(musmod),a
+	ret
+
+;*************** JOYSTICK MODE *********
+stick_mode:
+	inc	hl
+	ld	a,(hl)
+	cp	"0"
+	ret	c
+	cp	"3"
+	ret	nc
+	and	3
+	ld	(stk_nb),a
+	ret
+
+;*************** START TO PLAY *********
+go_on:
+	ld	a,(f_r800)
+	or	a
+	call	nz,setr800	;si R800 alors mode R800 ROM
+
+;call	Protect
+
+	ld	hl,loader
+	ld	de,#c000
+	call	diskld
+	jp	#C000
+
+fcb:	defs	37
+
+loader:
+	defb	0,"MUL     COM"
+
+*i	r800
+*i	diskldr
+*i	status
+
+DPB_Tbl equ	#f355
+
+Protect:
+	ld	a,255
+	ld	(Floppy_Drive),a
+	ld	(DPB_Counter),a
+
+	ld	hl,DPB_Tbl
+
+Scan_Loop:
+	ld	a,(DPB_Counter)
+	inc	a
+	ld	(DPB_Counter),a
+	cp	8
+	jr	z,Scan_Out
+
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	push	hl
+	call	test_DPB
+	pop	hl
+	jr	c,Scan_Loop
+
+Scan_Out:
+	ld	a,(Floppy_Drive)
+	cp	255
+	ret	z
+
+	add	a,65
+	ld	(Pmess1),a
+	ld	(Pmess2b),a
+
+	TEXT	Pmess0
+	call	Check_Protect
+	ret
+
+Pmess0:  db	 "Premier Floppy Disk: "
+Pmess1:  db	 "A",13,10,"$"
+
+test_DPB:
+	push	de
+	pop	ix
+	ld	a,#f9
+	cp	(IX+1)
+	scf
+	ret	nz
+	ld	a,(ix+0)
+	ld	(Floppy_Drive),a
+	ccf
+	ret
+
+Floppy_Drive:
+	db	255
+DPB_Counter:
+	db	255
+
+Pmess2:  db	 "Insert MKID disk 1 in drive: "
+Pmess2b: db	 "A and press a key",10,13,"$"
+
+;---------------------------------------------------------------
+;
+;	ATTEND POUR LE BON DISK, ET TEST LA PROTECTION
+;
+Check_Protect:
+	TEXT	Pmess2
+
+	ld	c,7
+	call	bdos
+
+	ld	de,0
+	ld	hl,LoadAdres
+	ld	bc,#02F8
+	xor	a
+	ld	a,(Floppy_Drive)
+	call	#ffa7
+	jr	c,Check_Protect
+
+	ld	hl,LoadAdres+2
+	ld	de,Disk_ID
+Check_Disk:
+	ld	a,(de)
+	or	a
+	jr	z,Disk_Chk_End
+	cp	(hl)
+	inc	hl
+	inc	de
+	jr	z,Check_Disk
+	jr	Check_Protect
+
+Disk_ID:
+	db	"F.U.C1993",0
+
+Disk_Chk_End:
+
+;---------------------------------------------------------------
+;
+;	CHECK PROTECTION ON DISK
+;
+Protect_Loop:
+	ld	de,711
+	call	ReadProtect	; sector 1+2 test for CRC
+
+	ld	de,718
+	call	ReadProtect	; sector 8+9
+
+	ld	a,(TestAdres)
+	ld	(Compare),a
+
+	ld	de,715
+	call	ReadProtect	; sector 5+6
+
+	ld	de,718
+	call	ReadProtect	; sector 8+9
+
+	ld	hl,TestAdres
+	ld	a,(Compare)
+	cp	(hl)
+	jr	nz,ProtectOkay
+	ld	a,(ProtectCounter)
+	inc	a
+	ld	(ProtectCounter),a
+	cp	7
+	jr	nz,Protect_Loop
+
+ProtectWrong:
+;	 di
+;	 halt	       ; computer crashes
+;	 ret
+
+	TEXT	Pmess3
+	ret
+
+ReadProtect:
+	ld	hl,LoadAdres
+	ld	bc,#02F8
+	xor	a
+	ld	a,(Floppy_Drive)
+	call	#ffa7
+	jr	c,ProtectWrong
+	ret
+
+ProtectCounter:   DB    0
+Compare:          DB    0
+LoadAdres:        EQU   #8000
+TestAdres:        EQU   LoadAdres+#3FF
+
+ProtectOkay:                    ; protection Okay, continue...
+	TEXT	Pmess4
+	ret
+
+Pmess3:  db	 "Erreur!! Disk pirate",10,13,"$"
+Pmess4:  db	 "Disk original OK!",10,13,"$"
+
+
+

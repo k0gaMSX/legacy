@@ -1,0 +1,86 @@
+
+;
+;	routine loader palette
+;
+pltldr:
+	di
+	ld	c,#9a
+	ld	b,32
+	di
+	xor	a
+	out	(#99),a
+	ld	a,#80+16
+	out	(#99),a
+	otir
+	ei
+	ret
+
+;
+;		vdp commande procedure
+;
+vdp_cmd:
+	ld	a,2
+	di
+	out	(#99),a
+	ld	a,#8f
+	out	(#99),a
+wait1	in	a,(#99)
+	rrca
+	jp	c,wait1
+	ld	a,e
+	out	(#99),a
+	ld	a,#91
+	out	(#99),a
+	ld	b,d
+	ld	c,#9b
+	otir
+	xor	a
+	out	(#99),a
+	ld	a,#8f
+	out	(#99),a
+	ei
+	ret
+
+
+;
+;	copy RAM -> VRAM
+;	Entry:	HL: Add of data
+;		DE: Add dest in VRAM
+;		BC: len of data
+;		(dest_page): VRAM page select => 0=page 0   4=page 1
+;
+ldirvm1:
+	push	hl
+	di
+	ld	a,0
+	out	(#99),a
+	ld	a,#80+45
+	out	(#99),a
+	ld	a,d		;set bits 14 to 16
+	and	#c0
+	rlca
+	rlca
+	ld	h,a
+	ld	a,(dest_page)	;bit 16 = 1
+	or	h
+	out	(#99),a
+	ld	a,#80+14
+	out	(#99),a
+	ld	a,e		;set bits 0 to 7
+	out	(#99),a
+	ld	a,d		;set bits 8 to 13
+	and	#3f
+	or	#40
+	out	(#99),a
+	pop	hl
+ldirvm2:
+	ld	a,(hl)
+	out	(#98),a
+	inc	hl
+	dec	bc
+	ld	a,b
+	or	c
+	jp	nz,ldirvm2
+	ei
+	ret
+

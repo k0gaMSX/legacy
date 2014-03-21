@@ -1,0 +1,409 @@
+; CE FICHIER DETECTE LE TYPE DE HARDWARE ET LA TAILLE DE LA RAM
+; PUIS SI TOUT EST O.K. IL LOAD MLOADER.COM
+;
+;routine de test pour M-KID
+;le 14/06/93
+;by SLAYERMAN from ABYSS
+
+*i	sysadd
+*i	bios
+*i	doscmd
+*i	macro
+*i	stat-equ
+
+initmap equ	#c000
+wr_fc	equ	initmap+3
+wr_fd	equ	wr_fc+3
+wr_fe	equ	wr_fd+3
+rd_fc	equ	wr_fe+3
+rd_fd	equ	rd_fc+3
+rd_fe	equ	rd_fd+3
+strmus	equ	rd_fe+3
+stpmus	equ	strmus+3
+
+	org	#0100
+
+	ld	a,0
+	ld	(flag),a
+
+	di			;test le numero de version du VDP
+	ld	a,1
+	out	(#99),a
+	ld	a,#8f
+	out	(#99),a
+	push	af
+	pop	af
+	in	a,(#99)
+	ld	(vdp_ver),a
+	ld	a,0
+	out	(#99),a
+	ld	a,#8f
+	out	(#99),a
+	push	af
+	pop	af
+	in	a,(#99)
+	ei
+	ld	a,(vdp_ver)
+	rrca
+	and	6
+	jp	nz,v9958
+
+	TEXT	mess1		;V9938
+	ld	a,255
+	ld	(flag),a
+	jp	v9938
+
+v9958:	TEXT	mess0		:V9958
+
+v9938:	ld	a,(flag)
+	or	a
+	jp	nz,vdp_err
+
+; test version of the DOS system
+; le 29/11/92
+; by SLAYERMAN from F.U.C
+
+	ld	c,#6f
+	call	#f37d
+
+	or	a
+	jp	nz,error
+
+	ld	a,b
+	cp	2
+	jp	c,not_dos2
+
+	TEXT	mess2
+	ld	a,255
+	ld	(dosver),a
+
+not_dos2:
+	ld	a,(#0007)	;test last TPA adr.
+	cp	#c2
+	jp	nc,tpa_ok
+
+	TEXT	mess4
+	ld	ix,#0006
+	call	outhex16
+	TEXT	mess5
+	ret
+
+tpa_ok:
+	ld	a,(dosver)
+	or	a
+	jp	nz,dos2_ram
+
+;	TEST NOMBRE DE SEGMENT SOUS DOS 1
+
+	TEXT	mess9
+	in	a,(#ff)
+	xor	255
+	ld	(free_seg),a
+	cp	7
+	jp	c,dos1_err
+
+	TEXT	mess10
+
+	ld	hl,string
+	ld	de,#c000
+	ld	bc,4
+	ldir
+
+	ld	b,4
+tst_loop:
+	ld	a,b
+	out	(#fe),a
+	push	bc
+	call	test_map
+	pop	bc
+	jp	c,test_out
+	inc	b
+	ld	a,(free_seg)
+	cp	b
+	jp	z,test_out
+	jp	tst_loop
+
+test_out:
+	ld	a,b
+	inc	a
+	ld	(free_seg),a
+	cp	7
+	jp	c,dos1_err
+	jp	end
+
+test_map:
+	ld	de,#8000
+	ld	hl,string
+	ld	b,4
+test_map1:
+	ld	a,(de)
+	cp	(hl)
+	jp	nz,test_map2
+	inc	de
+	inc	hl
+	djnz	test_map1
+	scf			;C=1 si STRING trouve
+	ret
+test_map2:
+	scf			;C=0 si STRING pas trouve
+	ccf
+	ret
+
+string: defb	"TEST"
+
+;	TEST NUMBER OF FREE SEGMENT UNDER DOS 2
+dos2_ram:
+	ld	a,(hokvld)
+	and	1
+	jp	z,end		;jump si pas de support logiciel
+
+	xor	a		;get mapper variable table
+	ld	de,#0401
+	call	extbio
+	inc	hl
+	inc	hl
+	ld	a,(hl)
+	ld	(free_seg),a
+	cp	8
+	jp	nc,end
+
+	TEXT	mess6
+	ret
+
+error:
+	TEXT	errmess
+	ret			;retour au DOS
+
+vdp_err:
+	TEXT	mess3
+	ret
+
+dos1_err:
+	TEXT	mess7
+	ld	a,(free_seg)
+	call	outdec
+
+	TEXT	mess8
+	ret
+
+;***************************************************************
+;
+;	ROUTINES DIVERS
+
+outdec: 			;DEC output of accumulator
+	call	decimal
+	TEXT	dcbdata
+	ret
+
+
+; routine de conversion au format decimal
+; le 11/08/93
+; by SLAYERMAN fron FUC
+;
+;	routine de convertion en decimal
+;	entree:	A = val a convertir
+;	modifie: HL, C
+;
+decimal:
+	ld	hl,#3030
+	ld	(dcbdata),hl
+	ld	hl,dcbdata
+;	 ld	 a,(x)
+	ld	c,a
+	cp	10
+	jr	c,unite
+	cp	200
+	jr	c,dec2
+	ld	(hl),#32	;"2"
+	jr	dec3
+dec2:	cp	100
+	jr	c,dec3
+	ld	(hl),#31	;"1"
+dec3:	inc	hl
+	ld	de,valdcb
+	ex	de,hl
+	xor	a
+	ld	b,8
+dec4:	rr	c
+	jr	nc,dec5
+	add	a,(hl)
+	daa
+dec5:	inc	hl
+	djnz	dec4
+	ex	de,hl
+	ld	c,a
+	rrca
+	rrca
+	rrca
+	rrca
+	and	#0f
+	or	#30
+	ld	(hl),a
+	inc	hl
+	ld	a,c
+	and	#0f
+	or	#30
+	ld	(hl),a
+	ret
+unite:	or	#30
+	ld	(dcbdata+2),a
+	ret
+
+dcbdata:
+	defb	#30,#30,#30,'$'
+
+valdcb:	defb	1,2,4,8,#16,#32,#64,#28
+
+
+
+outhex16:			;HEX output of 2 byte at ADD IX
+	ld	a,(ix+1)
+	call	outhexa 	;output MSB Byte
+	ld	a,(ix+0)
+	call	outhexa 	;output LSB Byte
+	ld	e,72
+	ld	c,2
+	call	bdos
+	ret
+
+outhexa:
+	push	af		;HEX output of accumulator
+	rrca
+	rrca
+	rrca
+	rrca
+	and	#0f
+	call	outhex1
+	ld	e,a
+	ld	c,2
+	call	bdos		;print MSB
+	pop	af
+	and	#0f
+	call	outhex1
+	ld	e,a
+	ld	c,2
+	call	bdos		;print LSB
+	ret
+
+outhex1:
+	cp	10
+	jp	nc,outhex10	;si plus que 10 alors add 7
+	add	a,#30
+	ret
+outhex10:
+	add	a,#37
+	ret
+
+
+
+;*********************************************
+;
+;	zone des datas
+;
+;*********************************************
+
+vdp_ver:
+	defb	0
+flag:	defb	0
+dosver:	defb	0
+
+mess0:	defb	10,13,"V9958 VDP found    :  (    OK)$"
+
+mess1:	defb	10,13,"V9958 VDP not found:  (NOT OK)$"
+
+mess2:	defb	10,13,"DOS2 system        :  (    OK)$"
+
+mess3:	defb	10,13,"Un-able to run M-KID :-("
+	defb	10,13,"M-KID need V9958 VDP in order to run"
+	defb	10,13,"Returning to DOS prompt now...",10,13,"$"
+
+mess4:	defb	10,13,"TPA size too small!!!"
+	defb	10,13,"Un-able to run M-KID :-("
+	defb	10,13,"Returning to DOS prompt now...",10,13,"$"
+mess5:	defb	10,13,"$"
+
+mess6:	defb	10,13,"Not enough free segment!!!"
+	defb	10,13,"Un-able to run M-KID :-("
+	defb	10,13,"Returning to DOS prompt now...",10,13,"$"
+
+mess7:	defb	10,13,"Free segments found : $"
+
+mess8:	defb	10,13,"Not enough memory for running in DOS1",10,13,"$"
+
+mess9:	defb	10,13,"Scanning DOS1 memory mapper$"
+
+mess10: defb	10,13,"Testing mapper size$"
+
+all_ok:
+	defb	10,13,"All is OK, able to run M-KID!",10,13,"$"
+
+errmess:
+	defb	10,13,"Error occured during DOS test!!"
+	defb	10,13,"Sorry,... test aborded....",10,13,"$"
+
+free_seg:
+	defb	0
+
+
+end:				;fin du test charge routine de demo
+	TEXT	mess7
+
+	ld	a,(free_seg)
+	call	outdec
+
+	TEXT	all_ok
+
+	ld	c,7
+	call	bdos
+
+	ld	hl,block1
+	ld	de,#4000
+	ld	bc,block2-#4001
+	ldir
+	jp	#4000
+
+;---------------------------------------------------------------
+;
+;	BOOT, MAPPER HANDLER INSTALL
+
+block1:
+	org	#4000
+
+	di
+	ld	hl,status1		;installe les STATUS bytes
+	ld	de,#f975
+	ld	bc,status2-status1-1
+	ldir
+
+;	 ld	 a,1
+;	 ld	 (stk_nb),a
+	jp no800
+	call	test_r800	;test mode R800 ou pas
+	ld	a,(f_r800)
+	or	a
+	call	nz,setr800	;si R800 alors mode R800 ROM
+no800:
+	ld	hl,mapper		;load mapper handler
+	ld	de,#c000
+	call	diskld
+	call	initmap 		;installe routines mapper
+
+	ld	hl,mloader
+	ld	de,#100
+	call	diskld
+	jp	#100
+
+fcb:	defs	37
+
+mapper: defb	0,"MAPPER2 COM"
+mloader:
+	defb	0,"MLOADER COM"
+
+*i	divers
+*i	r800
+*i	diskldr
+*i	status
+block2:
+
+	END
+

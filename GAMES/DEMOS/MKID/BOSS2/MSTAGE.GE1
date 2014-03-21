@@ -1,0 +1,136 @@
+;
+;       MAKE HORIZONTAL SCROLLING (ENTER A = X SCROLL VALUE)
+;
+SCROLLH:
+        ld      b,a
+        rra
+        rra
+        rra
+        and     #1f
+        out     (#99),a
+        ld      a,#80+26
+        out     (#99),a
+        ld      a,b
+        and     7
+        xor     7
+        out     (#99),a
+        ld      a,#80+27
+        out     (#99),a
+        ret
+MAKE_COPY:
+	LD DE,16
+	XOR A
+	LD (COPYPART+6),A
+	LD B,12
+COPY_LOOP:
+	PUSH BC
+	PUSH DE
+	CALL DOCOPY
+	POP DE
+	LD A,(COPYPART+6)
+	ADD A,16
+	LD (COPYPART+6),A
+	INC D
+        INC D
+	POP BC
+	DJNZ COPY_LOOP
+	LD A,(OFFSET)
+	ADD A,2
+	AND %00001111
+	LD (OFFSET),A
+ 	RET
+DOCOPY:
+ 	LD HL,(DEBUTECR)
+	ADD HL,DE
+	LD (CURADR),HL
+	LD A,(DESTX)
+	LD B,A
+	LD A,(OFFSET)
+	ADD A,B
+	LD (COPYPART+4),A
+	LD A,(HL)
+	LD C,A
+	AND %11110000
+	LD B,A
+	LD A,(OFFSET)
+	ADD A,B
+	LD (COPYPART),A
+	LD A,C
+	AND %00001111
+	RLA
+        RLA
+        RLA
+        RLA
+        LD (COPYPART+2),A
+
+	LD HL,COPYPART
+	CALL XMMM
+	RET
+	
+CURADR:
+	DEFW 0
+OFFSET:
+	DEFB 0
+DESTX:
+        DEFB 0
+COPYPART :      DEFB 0,0, 0,1, 0,0, 0,0, 2 ,0, 16,0,0,0,#D0
+COPYBLOCK:      DEFB 0,0, 0,1, 0,0, 0,0, 16,0, 16,0,0,0,#D0
+MAKESTAGE:
+        LD HL,(DEBUTECR)
+        LD B,12
+LOOPY:
+        PUSH BC
+        LD B,16
+LOOPX:
+        PUSH BC
+        LD A,(HL)
+        INC HL
+        LD C,A
+        AND %11110000
+        LD (COPYBLOCK),A
+        LD A,C
+        AND %00001111
+        RLA
+        RLA
+        RLA
+        RLA
+        LD (COPYBLOCK+2),A
+        PUSH HL
+        LD HL,COPYBLOCK
+        CALL XMMM
+        POP HL
+        LD A,(COPYBLOCK+4)
+        ADD A,16
+        LD (COPYBLOCK+4),A
+        POP BC
+        DJNZ LOOPX
+        
+        LD DE,240+256
+        ADD HL,DE
+        XOR A
+        LD (COPYBLOCK+4),A
+        LD A,(COPYBLOCK+6)
+        ADD A,16
+        LD (COPYBLOCK+6),A
+        POP BC
+        DJNZ LOOPY
+        RET
+COPYCPT:
+        DEFB 0
+COPYSTAT:
+        DEFB 0
+VALCLAVIER:
+        DEFB 0
+OPX:
+        DEFB 0
+OPY:
+        DEFB 0
+X:
+        DEFB 0
+Y:      
+        DEFB 0
+SCROLLX:
+        DEFB 0
+DEBUTECR:
+        DEFW 0
+

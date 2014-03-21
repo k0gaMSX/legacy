@@ -1,0 +1,1112 @@
+;	FERME UNE PORTE
+;	ENTREE: IX = STRUCT DE LA PORTE
+
+CLOSEDOOR:
+	LD A,255-47
+	LD (TEMPCUR),A
+LOOP_CLOSE:
+	LD A,(IX)			; X PORTE
+	LD (FERMECOP+4),A
+	LD A,(IX+1)
+	LD (FERMECOP+6),A		; Y PORTE
+	LD A,(TEMPCUR)
+	LD (FERMECOP),A
+	LD C,16
+	SUB C
+	LD (TEMPCUR),A
+
+	LD HL,FERMECOP
+	CALL XMMM
+        PUSH IX
+        CALL ANIMDECO
+        POP IX
+        
+	LD A,(TEMPCUR)
+        CP 128-16
+        JR Z,CLOSEEND
+        
+        LD B,8
+ATTEND1PEU:                              ; ATTENDRE X FRAMES
+        PUSH BC
+        LD A,207
+        CALL INTERUPT
+        LD A,(SCROLLX)
+        ADD A,4
+        CALL SCROLLH
+	CALL MUSIC
+        LD A,4
+        CALL SCROLLH
+        POP BC
+        DJNZ ATTEND1PEU
+
+	JP LOOP_CLOSE
+
+CLOSEEND:
+	CALL ADR_BLOC			; REMET UN OBSTACLE
+	LD A,#84			; CAR PORTE FERMEE
+	LD (HL),A
+	LD BC,512
+	ADD HL,BC
+        LD A,#85
+	LD (HL),A
+
+	LD (IX+2),0			; PORTE FERMEE
+	LD (IX+4),0			; PAS DE DEMANDE DE FERMETURE
+	RET
+
+FIRSTDOOR:
+	DEFB 0,192-64
+	DEFB 0,0,0,0,0,0,0,0,0,0,0,0	
+
+;***	INITIALISATION DE LA PAGE	***
+INIT_PAGE:
+;       ANIMATION PAGE SUIVANTE
+        XOR A
+        LD (DEST_PAGE),A
+	LD (ANI_PERSSC),A
+	               
+;       LD A,(PAGE)
+;       CP 0
+;       JP Z,PREMIERE
+
+        XOR A
+        LD (OFFSET),A
+        LD (DESTX),A
+        LD A,8
+        LD (X),A
+
+        LD DE,#FA40                     ; SUPPRIME LES PLATEFORMES
+        LD BC,60			; ET LES CLEFS MET LES SPR A 212
+        LD HL,NOMOVBL
+        CALL RAM_VRAM
+                        
+P_REESSAIS:
+        LD A,(REESSAIS)                 ; REGARDE SI IL S'AGIT D'UN REESSAIT
+        CP 0                            ; OU PAS
+        JR Z,ANIMARCHE                  ; SI OUI PAS DE SCROLL
+        LD A,(X_REESSAIS)               ; AFFICHAGE DIRECT DE LA PAGE
+        LD (X),A                        ; AVEC LES ANCIENNES COORDONNEES
+        LD A,(Y_REESSAIS)
+        LD (Y),A
+        
+        LD HL,F_RS			; MKID TOURNE VERS LA DROITE
+        CALL CHG_MARSP
+        LD A,1
+        LD (DIREC),A
+        LD A,2
+        LD (OPX),A
+        
+        CALL DO_CLIGNOT        
+        LD A,(SEMA_REFLECTION)
+        CP 0
+        JR Z,NORESTOREPAGE
+        CALL REST_PAGE                  ; RESTAURE LA PAGE COURANTE 
+NORESTOREPAGE:
+        CALL MAKESTAGE                  ; REAFFICHAGE DE LA PAGE
+	JP NEXT_PAGE
+ANIMARCHE:
+	LD D,255-26
+	LD E,255
+	CALL MARCHE
+;       SCROLLING POUR PASSAGE D'1 SALLE A 1 AUTRE
+SCROLL_INI:
+        LD B,128
+SCROLL_PAGE:
+        PUSH BC
+        DI
+        LD A,212
+        CALL INTERUPT
+        LD A,(SCROLLX)
+        ADD A,4
+        CALL SCROLLH
+
+        LD A,(SCROLLX)
+        ADD A,2
+        LD (SCROLLX),A
+
+        LD A,(X)
+        SUB 2
+        LD (X),A
+        CALL VPOKE
+          
+        CALL MAKE_COPY                  ; COPIE DES DECORS
+        CALL MUSIC
+        
+        LD A,(OFFSET)                   ; OFFSET = 0 ALORS UNE TRANCHE DE 16 EN PLUS
+        CP 0
+        JP NZ,PAS_INCDEST
+        LD A,(DESTX)                    ; DESTX CONTIENT L'OFFCET DE LA TRANCHE DE 16
+        ADD A,16
+        LD (DESTX),A
+        LD HL,(DEBUTECR)
+        INC HL
+        LD (DEBUTECR),HL
+PAS_INCDEST:         
+        CALL TESTFINANI
+        CALL ANIMDECO
+
+        LD A,191
+        CALL INTERUPT
+        LD A,4
+        CALL SCROLLH
+        POP BC        
+        DJNZ SCROLL_PAGE
+
+;       FIN DU SCROLL D'UNE PAGE
+NEXT_PAGE:
+        XOR A
+        LD (SCROLLX),A
+        LD (DESTX),A
+        LD (OFFSET),A
+        CALL MAKE_COPY
+
+	LD A,(REESSAIS)
+	CP 1
+	JR Z,MARCHEPAS
+ 	LD D,255
+        LD E,10
+        CALL MARCHE
+        LD A,(X)
+        LD (X_REESSAIS),A
+        LD A,(Y)
+        LD (Y_REESSAIS),A
+
+MARCHEPAS:       
+        JP PAS_PREMIERE
+        
+;       INIT PREMIERE PAGE
+;	NB: POUR UN TRAINER, METTRE EN (PAGE) LA PAGE DU DEBUT DU JEUX
+;	    ROUTINE UTILISABLE POUR DES TELEPORTEURS 
+PREMIERE:
+;	RECHERCHE LA PAGE DE REFLECTION
+	CALL SCREEN_OFF
+	LD A,(PAGE)
+	LD B,A
+	LD HL,ARC_REF
+	LD C,0
+	LD E,0
+FIND1STPAGE:
+	LD A,E
+	CP B
+	JR Z,FINDFIRSTPAGE
+	LD A,(HL)
+	CP 1
+	JR NZ,NOCONTREF
+	INC C
+NOCONTREF: 
+	INC E 
+	INC HL
+	JR FIND1STPAGE
+FINDFIRSTPAGE:
+	LD A,C
+	LD (PAGE_REFLECTION),A
+	LD A,4
+	CALL SCROLLH
+        CALL INIDIAM
+        LD HL,F_RS
+        CALL CHG_MARSP
+
+        LD A,(REESSAIS)			; CERTAINES DONNEES SONT A CONSERVER
+        CP 1				; SI ON REESAIE LE STAGE
+        JR Z,INIREES
+        
+        XOR A
+        LD (COIN),A			; PAS ENCORE DE DIAMANTS RAMASSES
+        LD (OP_VIE),A			; PAS D'OPERATION SUR LES VIES
+        LD A,2                          ; 3 VIES 2,1,0
+        LD (NB_VIE),A
+        CALL INISCORE
+        CALL INITIME
+        LD HL,AJOUT_VCOP		; COPY TETE DE MKID
+        CALL XMMM
+        CALL AFFI_VIE
+INIREES:        
+        CALL ADR_PAGE
+        LD (DEBUTECR),HL
+        XOR A
+        LD (OFFSET),A
+        LD (DESTX),A
+        LD (SCROLLX),A
+        CALL MAKESTAGE                  ; affichage du premier ecran.
+        CALL MAKE_COPY                  ; affichage premiere tranche
+	CALL SCREEN_ON
+
+PAS_PREMIERE:
+	XOR A
+	LD (ONBLOC),A
+        LD A,(SEMA_REFLECTION)
+        CP 1
+        JR Z,NOSAVEXY
+        LD A,(X)
+        LD (X_REESSAIS),A
+        LD A,(Y)
+        LD (Y_REESSAIS),A
+NOSAVEXY:
+        LD A,(PAGE)
+        LD C,A
+        LD B,0
+        LD HL,ARC_REF
+        ADD HL,BC                       ; POINTER SUR LA TABLE DES ATTR DE SALLES
+        LD A,(HL)
+        CP 0
+        JR NZ,REFLECTION_OK
+        XOR A                           ; PAS EN MODE REFLECTION
+        LD (SEMA_REFLECTION),A
+        RET                             ; ON SORT
+REFLECTION_OK:
+        LD A,1
+        LD (SEMA_REFLECTION),A
+        CALL INIT_MOVBLOCS
+        LD A,(PAGE)
+        CP 0
+        JR Z,PAS_INIREF
+        LD A,(PAGE_REFLECTION)          ; NUM PAG REFLECT++
+        INC A
+        LD (PAGE_REFLECTION),A
+PAS_INIREF:
+        CALL SAVE_PAGE
+        
+        LD HL,STGSIGLE			; RECHERCHE LE NUM DE SIGLE A CHERCHER
+        LD A,(PAGE)
+        LD C,A
+        LD B,0
+        ADD HL,BC
+        LD A,(HL)
+        LD (CLEF_PORTE),A               ;  SIGLE DE SORTIE A TROUVER
+        XOR A
+        LD (SIGLE_SORTIE),A		; SIGLE OBTENUSA 0 PAR DEFAUT
+
+        XOR A
+        LD (DEST_PAGE),A
+        LD A,(NBMOVBLOCS)
+        CP 0 
+        JR Z,NO_SPRMOV       
+        DI
+        LD HL,#A000                     ; TRANSFERT DES SPRITES DES PLATEFORMES
+        LD DE,#F200
+        LD BC,96                        ; 3 SPRITES
+        CALL RAM_VRAM
+        LD HL,#A000                     ; TRANSFERT DES SPRITES DES PLATEFORMES
+        LD DE,#F200+96
+        LD BC,96                        ; 3 SPRITES
+        CALL RAM_VRAM
+        LD HL,#A000                     ; TRANSFERT DES SPRITES DES PLATEFORMES
+        LD DE,#F200+192
+        LD BC,96                        ; 3 SPRITES
+        CALL RAM_VRAM
+        LD HL,#A000+128                 ; TABLE DES COULEURS POUR 3 SPRITES
+        LD DE,#F900
+        LD BC,48
+        CALL RAM_VRAM
+        LD HL,#A000+128                 ; TABLE DES COULEURS POUR 3 SPRITES
+        LD DE,#F900+48
+        LD BC,48
+        CALL RAM_VRAM
+        LD HL,#A000+128                 ; TABLE DES COULEURS POUR 3 SPRITES
+        LD DE,#F900+96
+        LD BC,48
+        CALL RAM_VRAM
+NO_SPRMOV:
+	LD HL,#A16A
+	LD DE,#F200+96+96
+	LD BC,96
+	CALL RAM_VRAM
+	LD HL,#A16A+96
+	LD DE,#F900+96+96
+	LD BC,48
+	CALL RAM_VRAM			; TRANSFERT DES COULEURS
+ 
+ 	CALL INIT_PASS
+        CALL INITPOUSPOUS               ; INIT DES BLOCS A POUSSER SI IL Y A
+        XOR A
+        LD (REESSAIS),A
+
+	LD HL,KEYSTRUCT			; DETECTION DES ICONES TOUS EN 212
+        LD B,8				; DONC INACCESSIBLE PAR DEFAUT
+LLII:
+	LD A,255
+	LD (HL),A
+	INC HL
+	DJNZ LLII
+	LD IX,SPRMON5
+	LD (IX+11),2
+        RET
+
+ANI_PERSSC:
+	DEFB 0
+
+;	TAS POUR FAIRE DISPARAITRE LES SPRITES DES PLATEFORMES ,CLEFS, SYMBOLES
+NOMOVBL:
+        DEFB 212,0,64,0
+        DEFB 212,0,68,0
+        DEFB 212,0,72,0
+
+        DEFB 212,0,64,0
+        DEFB 212,0,68,0
+        DEFB 212,0,72,0
+
+        DEFB 212,0,64,0
+        DEFB 212,0,68,0
+        DEFB 212,0,72,0
+
+	DEFB 212,0,76,0
+	DEFB 212,0,80,0
+	DEFB 212,0,84,0
+
+	DEFB 212,0,88,0
+	DEFB 212,0,92,0
+	DEFB 212,0,96,0
+
+;***	SAUVE UNE PAGE	***
+SAVE_PAGE:
+        LD HL,#AF20
+        LD (TEMP_PTR),HL
+        CALL ADR_PAGE
+        LD B,12
+LOOP_SAVEP:
+        PUSH HL
+        PUSH BC
+        LD DE,(TEMP_PTR)
+        LD BC,16
+        LDIR
+        LD HL,(TEMP_PTR)
+        LD BC,16
+        ADD HL,BC
+        LD (TEMP_PTR),HL
+        POP BC
+        POP HL
+        LD DE,512
+        ADD HL,DE
+        DJNZ LOOP_SAVEP 
+        RET
+TEMP_PTR:
+        DEFW #AF20
+
+;***	RESTORE UNE PAGE	***
+
+REST_PAGE:
+        LD HL,#AF20
+        LD (TEMP_PTR),HL
+        CALL ADR_PAGE
+        LD B,12
+LOOP_RESTP:
+        PUSH HL
+        PUSH BC
+        EX DE,HL
+        LD HL,(TEMP_PTR)
+        LD BC,16
+        LDIR
+        LD HL,(TEMP_PTR)
+        LD BC,16
+        ADD HL,BC
+        LD (TEMP_PTR),HL
+        POP BC
+        POP HL
+        LD DE,512
+        ADD HL,DE
+        DJNZ LOOP_RESTP 
+        RET
+
+;***	GESTION DE LA PORTE DE SORTIE	***
+
+GESTPORTE:
+        LD A,(SEMA_REFLECTION)
+        CP 0
+        RET Z
+
+	LD A,1
+	LD (SEMA_SORTIE),A
+        
+        LD IX,PORTE_STRUCT
+        LD A,(IX+2)
+        CP 0
+        RET NZ
+        
+        LD A,(CLEF_PORTE)		; ON REGARDE SI LE SIGLE OBTENUS 
+        LD B,A				; CORRESPOND AU SIGLE DEMANDE
+        LD A,(SIGLE_SORTIE)
+        CP B
+        RET NZ        
+	JP APP_SORTIE
+
+NEXT_ENTREE:				; PAGE SUIVANTE AVEC SCOLLING
+        LD A,(PAGE)
+        INC A
+        LD (PAGE),A
+        JP INIT_PAGE
+
+;***	INITIALISATION DE LA PORTE (A CHAQUE NOUVEAU PASSAGE DE SALLE)	***
+
+TROUVE_PORTE:
+	LD IX,PORTE_STRUCT
+        LD (IX+2),0                     ; IL Y A UNE PORTE!
+        LD A,E
+        RLCA
+        RLCA
+        RLCA
+        RLCA
+        AND #F0
+        LD (IX),A
+        LD A,D
+        RLCA
+        RLCA
+        RLCA
+        RLCA
+        AND #F0
+        LD (IX+1),A
+        RET
+
+PORTE_STRUCT:
+        DEFB 0                          ; POS X MIS A JOUR A CHAQUE CHANGEMENT DE SALLE
+        DEFB 0                          ; POS Y
+        DEFB 0                          ; 255 SI PAS DE PORTE 254 SI OUVERTE
+                                        ; 0 SI FERMEE
+        DEFB 3                          ; TEMPO POUR OUVERTURE
+        DEFB 0
+        
+; REM UNE PORTE PAR PAGE 
+
+;***	GESTION DES CLES POUR LES PASS	***
+
+KEYPASS:
+	LD A,(SEMA_REFLECTION)
+	CP 0
+	RET Z
+
+	LD A,(NBPASS)
+	CP 0
+	RET Z
+
+	LD IX,KEYPASS_STRUCT
+	CALL GESTKEYPASS
+	LD A,(NBPASS)
+	CP 2
+	RET C
+	INC IX
+	INC IX
+	CALL GESTKEYPASS
+	LD A,(NBPASS)
+	CP 3
+	RET NZ
+	INC IX
+	INC IX
+	CALL GESTKEYPASS
+	RET
+GESTKEYPASS:
+	LD A,(IX)			; CLEF DEJA PRISE ?
+	CP 255
+	RET Z
+        
+        LD A,(IX+1)			; TEST DE COLLISION EN Y
+        LD B,A
+        ADD A,16
+        LD C,A
+        LD A,(Y)
+	ADD A,8
+        CALL INTERVALLE
+        LD H,A
+        LD A,(Y)
+        CALL INTERVALLE
+        OR H
+        CP 1
+        RET NZ
+        
+        LD A,(IX)			; TEST DE COLLISION AVEC UN CLEF EN X
+        LD B,A
+        ADD A,16
+        LD C,A
+        LD A,(X)
+	ADD A,4                       
+        CALL INTERVALLE                 
+        LD H,A
+        LD A,(X)
+        ADD A,12
+        CALL INTERVALLE
+        OR H
+	CP 1
+        RET NZ
+	
+	LD A,(CLEF_PASS)
+	INC A
+	LD (CLEF_PASS),A
+
+	PUSH IX
+        CALL TINK
+	POP IX
+
+        LD A,(IX)
+        LD (EFFAKEYPASS+4),A
+        LD A,(IX+1)
+        LD (EFFAKEYPASS+6),A
+        LD HL,EFFAKEYPASS
+        CALL XMMM
+        LD A,1
+        LD (SEMAIMP),A
+	LD (IX),255			; EFFACE LA KEYPASS
+	RET
+EFFAKEYPASS:
+	DEFB 0,0, 0,1, 0,0, 0,0, 16,0, 16,0,0,0,#D0
+	
+
+;***	GESTION DES PASS	***
+
+PASS:
+	LD A,(SEMA_REFLECTION)
+	CP 0
+	RET Z
+        
+	LD A,(NBPASS)
+	CP 0
+	RET Z
+	LD IX,PASSSTR1
+	CALL GESTPASS
+	LD A,(NBPASS)
+	CP 2
+	RET C
+	LD IX,PASSSTR2
+	CALL GESTPASS
+	LD A,(NBPASS)
+	CP 3
+	RET NZ
+	LD IX,PASSSTR3
+	CALL GESTPASS
+	RET
+
+;***	GESTION PROPREMENT DITE DES OUVERTURES DES PORTES	***
+;***	DE SORTIE OU DES PASS					***
+SEMA_SORTIE:
+	DEFB 0
+GESTPASS:
+	XOR A
+	LD (SEMA_SORTIE),A
+
+	LD A,(IX+2)			; PORTE OUVERTE ?
+	CP 254
+	RET Z
+
+        LD A,(CLEF_PASS)		; ON A UNE CLEF, AU MOINS ?
+        CP 0
+        RET Z
+APP_SORTIE:
+        LD A,(ONFLOOR)			; IL FAUT ETRE SUR UNE PLATEFORME
+        LD B,A
+        LD A,(ONBLOC)
+        LD C,A
+        LD A,(ONPLAT)
+        OR B
+        OR C
+        CP 1
+        RET NZ
+        
+        LD A,(IX+1)			; ENSUITE, ON EST DEVANT LA PORTE ?
+        ADD A,16
+        LD B,A
+        ADD A,16
+        LD C,A
+        LD A,(Y)
+        ADD A,10
+        CALL INTERVALLE
+        CP 1
+        RET NZ
+        
+        LD H,0
+        LD A,(IX)			
+        LD B,A
+        DEC B
+        DEC B
+        DEC B
+        ADD A,8
+        LD C,A
+        
+        LD A,(SEMA_SORTIE)
+        CP 1
+        JR Z,SORTIE_TST
+        
+        LD A,(IX)
+        LD B,A
+        ADD A,16
+        LD C,A
+        
+        LD A,(X)                        
+        CALL INTERVALLE                 ; TEST SI XMARIO EST DANS L'INTERVAL X X+16 DE LA PORTE
+        LD H,A
+SORTIE_TST:
+        LD A,(X)			; GAUCHE DE LA PORTE
+        ADD A,10                      
+        CALL INTERVALLE                 ; TEST SI XMARIO EST DANS L'INTERVAL X X+16 DE LA PORTE
+        OR H
+        CP 1
+        RET NZ
+        
+        
+;***	TRT OUVERTURE DE LA PORTE	***
+OUVRE_PASS:
+	LD A,(IX+3)			; IL FAUT ATTENDRE UN PEU AVANT QUE LA PORTE NE S'OUVRE
+	CP 0
+	JR Z,OK_PASS
+	DEC A
+	LD (IX+3),A
+	RET
+OK_PASS:
+	LD (IX+3),5			; REMISE DE LA TEMPO
+; METTRE MARIO PIED A TERRE
+        LD A,(DIREC)			
+        CP -1
+        JR Z,DR_PASS
+        LD HL,F_RS
+        CALL CHG_MARSP
+	JR GA_PASS
+DR_PASS:
+	LD HL,F_LS
+        CALL CHG_MARSP
+GA_PASS:	
+        LD IY,PASSCOP
+        LD (IY),128			; SX
+        LD (IY+2),64			; SY
+        
+        LD A,(IX)                       ; POS X DE LA PORTE
+        LD (IY+4),A                     ; DX
+        LD A,(IX+1)                     ; POS Y DE LA PORTE
+        LD (IY+6),A                     ; DY
+
+        LD A,256-48
+        LD (TEMPCUR),A
+
+	DI
+	LD HL,#A0C8  			; SPR DE LA CLEF		
+	LD DE,#F200+96
+	LD BC,96
+	CALL RAM_VRAM			; TRANSFERT DES FORMES
+	LD HL,#A0C8+96
+	LD DE,#F900+96+48
+	LD BC,48
+	CALL RAM_VRAM			; TRANSFERT DES COULEURS
+ 
+        PUSH IY				; INIT ANIM DE LA CLEF
+        PUSH IX
+        LD HL,ANIM_M1
+        LD A,(IX)
+        ADD A,6
+        LD C,A
+        LD (HL),A
+        INC HL
+        LD A,(IX+1)
+        ADD A,8
+        LD (HL),A
+        LD B,A
+        PUSH BC
+        LD HL,ANIM_M1
+        LD IX,SPRMON6
+        LD (IX+11),2
+        CALL INIT_DEPM
+        POP BC
+        LD HL,ANIM_M7
+        LD A,C
+        LD (HL),A
+        INC HL
+        LD A,B
+        LD (HL),A
+        POP IX
+        POP IY
+
+        LD A,128
+        LD (IY),A
+ANIM_PASS:
+        CP 128+96
+        JR Z,RETIREOBST
+        PUSH AF
+        LD HL,PASSCOP  
+        CALL XMMM
+	LD A,(SEMA_SORTIE)
+	CP 1
+        JR Z,PASSORT
+	CALL LOG_PASS			; FERMETURE EVENTIELLE D'UNE AUTRE PORTE
+
+        PUSH IY
+        PUSH IX
+        LD IX,SPRMON6
+        LD HL,ANIM_M1
+        CALL ANIM_M
+        POP IX
+        POP IY
+
+        
+PASSORT:
+        LD B,8
+TEMPO_PASS:                              ; ATTENDRE X FRAMES
+        PUSH BC
+        LD A,160
+        CALL INTERUPT
+        PUSH IY
+        CALL MUSIC
+        POP IY
+        LD A,(SCROLLX)
+        ADD A,4
+        CALL SCROLLH
+        POP BC
+        DJNZ TEMPO_PASS
+        POP AF
+        ADD A,16
+        LD (IY),A
+        JP ANIM_PASS
+
+;	RETIRE L'OBSTACLE DE LA PORTE
+
+RETIREOBST:
+
+	CALL ADR_PAGE
+        LD A,(IX)                       ; PRENDRE POSITION X DE LA PORTE
+        RRCA
+        RRCA
+        RRCA
+        RRCA                            ; POS X / 16
+        AND #0F
+        LD C,A
+        LD B,0
+	ADD HL,BC			; OK EN X
+
+        LD A,(IX+1)
+        RRCA
+        RRCA
+        RRCA
+        RRCA
+        AND #0F
+        LD B,A
+        CP 0
+        JR Z,SUITE_PASS
+        LD DE,512
+PASS_INCY:
+        ADD HL,DE
+        DJNZ PASS_INCY                  ; HL EST BON EN Y
+                                        ; HL = (((PAGE)*16)+(IY)) * (IY+1*512)
+SUITE_PASS:       
+        LD BC,512
+        XOR A                           ; BLOC PAS OBSTACLE CAR <128 EN X
+        LD (HL),A
+        ADD HL,BC                       ; LIGNE SUIVANTE CAR PORTE = 32 DE HAUT
+        LD (HL),A
+        LD (IX+2),254                   ; PORTE OUVERTE
+
+	LD A,(SEMA_SORTIE)		; STAGE SUIVANT SI PORTE DE SORTIE
+	CP 1
+	JP Z,NEXT_ENTREE
+
+        LD IX,SPRMON6
+        LD (IX+11),2
+        LD HL,ANIM_M7
+        CALL INIT_DEPM
+LOOP_ANCL:				; AU REVOIR LA CLEF
+        LD A,160
+        CALL INTERUPT
+        LD IX,SPRMON6
+	LD HL,ANIM_M7
+	CALL ANIM_M
+        CALL MUSIC
+	LD IX,SPRMON6
+        LD A,(IX+11)
+        AND 1
+        CP 1        
+	JR NZ,LOOP_ANCL
+        CALL TINK
+        LD A,(CLEF_PASS)
+        DEC A
+        LD (CLEF_PASS),A
+        RET
+ANIM_M7:
+	DB 0,0,76,255
+	DB 0,-1,76,1
+	DB 0,-2,76,2
+	DB 0,-3,76,3
+        DB 0,-4,76,4
+	DB 0,212,76,255
+        DB 0,0,76,1
+	DB 0,0,100,254
+
+FERMECOP:
+	DEFB 256-32,0, 64,1, 0,0, 0,0, 16,0, 32,0, 0,0,#D0
+
+;	LOGIQUE DE LIEN D'OUVERTURE ET DE FERMETURE DES PORTES
+;	A APPELER AVANT CHAQUE OUVERTURE DE PORTE DU TYPE PASS
+
+LOG_PASS:
+	PUSH IX
+	LD IX,PASSSTR1
+	LD A,(IX+4)
+	CP 1
+	JR Z,FIN_LOG
+
+	LD IX,PASSSTR2
+	LD A,(IX+4)
+	CP 1
+	JR Z,FIN_LOG
+
+	LD IX,PASSSTR3
+	LD A,(IX+4)
+	CP 1
+	JR Z,FIN_LOG
+
+	POP IX
+	RET
+FIN_LOG:
+;	FERMETURE DE LA PORTE CONCERNEE
+
+	LD A,(IX)			; X PORTE
+	LD (FERMECOP+4),A
+	LD A,(IX+1)
+	LD (FERMECOP+6),A		; Y PORTE
+	LD A,(TEMPCUR)
+	LD (FERMECOP),A
+	LD C,16
+	SUB C
+	LD (TEMPCUR),A
+
+	LD HL,FERMECOP
+	CALL XMMM
+        
+	LD A,(TEMPCUR)
+        CP 128-16
+        JR Z,LOGFERMFIN
+	POP IX
+	RET
+
+LOGFERMFIN:
+	CALL ADR_BLOC			; REMET UN OBSTACLE
+	LD A,#86			; CAR PORTE FERMEE
+	LD (HL),A
+	LD BC,512
+	ADD HL,BC
+        LD A,#85
+	LD (HL),A
+
+	LD (IX+2),0			; PORTE FERMEE
+	LD (IX+4),0			; PAS DE DEMANDE DE FERMETURE
+	POP IX
+	RET
+TEMPCUR:DEFB 0
+
+;	INIT DES PASS (PORTES DE PASSAGE EN MODE REFLECTION)      
+
+INIT_PASS:
+        LD A,(SEMA_REFLECTION)
+        CP 0
+        RET Z
+	LD IX,PORTE_STRUCT
+        LD (IX+2),255                   ; 255 DONC PAS DE PORTE PAR DEFAUT
+
+	LD IY,KEYPASS_STRUCT
+        
+	XOR A
+	LD (NBPASS),A   
+        LD (CLEF_PASS),A
+        LD (NBAIE),A
+        CALL ADR_PAGE
+        LD D,0
+SCAN_PASS:
+        LD E,0
+        PUSH HL
+        LD B,16
+LOOP_SCAN:                              ; RECHERCHE LE BLOC DE LA PORTE DS LA MEMOIRE
+        LD A,(HL)
+        CP #86          
+        CALL Z,TROUVE_PASS
+
+        LD A,(HL)
+        CP #91          
+        CALL Z,TROUVE_AIE
+
+        LD A,(HL)
+        CP #3B
+        CALL Z,TROUVE_CLEF
+        LD A,(HL)
+        CP #84
+        CALL Z,TROUVE_PORTE
+        CP #D4
+        CALL Z,TROUVE_OPEN
+        INC HL
+        INC E                           ; E = COMPTEUR COLONNE
+        DJNZ LOOP_SCAN
+
+        POP HL
+        LD A,D                          ; D = COMPTEUR LIGNE
+        CP 12
+        JR Z,PAS_PASS  	                ; ON A PAS TROUVE DE PASS
+        LD BC,512
+        ADD HL,BC                       ; UNE LIGNE PLUS LOIN
+        INC D
+        JP SCAN_PASS
+PAS_PASS:
+        RET
+;       TROUVE UN BLOC A COGNER
+TROUVE_AIE:
+	PUSH IX
+	LD A,(NBAIE)
+        CP 0
+        JR NZ,A1
+        LD IX,AIESTRUCT
+        JR NINCIX
+A1:
+	CP 1
+	JR NZ,A2
+        LD IX,AIE1
+        JR NINCIX
+A2:
+	CP 2
+	JR NZ,A3
+        LD IX,AIE2
+        JR NINCIX
+A3:
+	LD IX,AIE3
+
+NINCIX:
+	LD (IX+2),0
+        LD (IX+3),0			; PAR DEFAUT IL Y A UN OBJET DERRIERE
+        LD (IX+4),0
+	LD A,(NBAIE)
+	INC A
+	LD (NBAIE),A
+	CALL OUVERT
+	POP IX 
+	RET
+AIESTRUCT:
+	DEFB 0,0,0,0,0			; X,Y,DELAIS,1 SI PLUS RIEN A PRENDRE
+AIE1:   				; ,ETAPE D'ACTION A EFFECTUER
+        DEFB 0,0,0,0,0
+AIE2:
+	DEFB 0,0,0,0,0
+AIE3:
+        DEFB 0,0,0,0,0
+NBAIE:  DEFB 0
+;	ON A TROUVE UNE PORTE DE PASSAGE
+TROUVE_PASS:
+	LD A,(NBPASS)
+	INC A
+	LD (NBPASS),A
+
+	CP 2
+	JR NC,DEUXPASS
+	LD IX,PASSSTR1
+	JR ARRANGEPASS
+DEUXPASS:
+	CP 3
+	JR Z,TROISPASS
+	LD IX,PASSSTR2
+	JR ARRANGEPASS
+TROISPASS:
+	LD IX,PASSSTR3
+ARRANGEPASS:
+	LD A,(HL)
+	CP 0
+	JR NZ,PAS_OUVERT
+	LD (IX+2),254			; IL Y A UNE PORTE ET ELLE EST OUVERTE
+	LD (IX+4),1
+	JR OUVERT
+PAS_OUVERT:
+	LD (IX+4),0
+        LD (IX+2),0                     ; IL Y A UNE PORTE FERMEE (0)!
+OUVERT:
+        LD A,E
+        RLCA
+        RLCA
+        RLCA
+        RLCA
+        AND #F0
+        LD (IX),A
+        LD A,D
+        RLCA
+        RLCA
+        RLCA
+        RLCA
+        AND #F0
+        LD (IX+1),A
+        RET
+;	ON A TROUVE UNE CLEF
+TROUVE_CLEF:
+	LD A,E
+        RLCA
+        RLCA
+        RLCA
+        RLCA
+        AND #F0
+        LD (IY),A
+        LD A,D
+        RLCA
+        RLCA
+        RLCA
+        RLCA
+        AND #F0
+        LD (IY+1),A
+	INC IY
+	INC IY
+	RET
+;       ON A TROUVE UNE PORTE OUVERTE
+TROUVE_OPEN:
+	PUSH BC				; RETIRE L'OBSTACLE
+	PUSH HL
+	XOR A
+	LD (HL),A
+	LD BC,512
+	ADD HL,BC
+	LD (HL),A
+	POP HL
+	POP BC
+	JP TROUVE_PASS
+
+KEYPASS_STRUCT:
+	DEFB 0,0			; X,Y DE LA CLEF (3 CLEFS MAX)
+	DEFB 0,0
+	DEFB 0,0
+        DEFB 0,0
+
+NBPASS:	DEFB 0				; NOMBRE DE PORTES PASS
+CLEF_PASS:
+	DEFB 0				; NOMBRE DE CLEF POUR LES PASS RAMASSES
+PASSSTR1:
+        DEFB 0                          ; POS X MIS A JOUR A CHAQUE CHANGEMENT DE SALLE
+        DEFB 0                          ; POS Y
+        DEFB 0                          ; 255 SI PAS DE PORTE 254 SI OUVERTE 0 SI FERMEE
+        DEFB 3				; TEMPO POUR DETECTION DE LA PORTE 
+	DEFB 1				; 0 NE DOIT PAS SE FERMER A L'OUVERTURE
+					; D'UNE AUTRE PORTE
+PASSSTR2:                              
+        DEFB 0                          ; POS X MIS A JOUR A CHAQUE CHANGEMENT DE SALLE
+        DEFB 0                          ; POS Y
+        DEFB 0                          ; 255 SI PAS DE PORTE 254 SI OUVERTE 0 SI FERMEE
+        DEFB 3
+	DEFB 2				; 0 NE DOIT PAS SE FERMER A L'OUVERTURE
+					; D'UNE AUTRE PORTE
+
+PASSSTR3:                             
+        DEFB 0                          ; POS X MIS A JOUR A CHAQUE CHANGEMENT DE SALLE
+        DEFB 0                          ; POS Y
+        DEFB 0                          ; 255 SI PAS DE PORTE 254 SI OUVERTE 0 SI FERMEE
+        DEFB 3
+	DEFB 3				; 0 NE DOIT PAS SE FERMER A L'OUVERTURE
+					; D'UNE AUTRE PORTE
+PASSCOP:                              
+        DEFB 128,0, 64,1, 0,0, 0,0, 16,0, 32,0, 0,0,#D0 
+
+PAGE:
+        DEFB 0                          ; PAGE EN 16*12 OCTET ACTUELLE
+PAGE_REFLECTION:
+        DEFB 0                          ; PAGE DE REFLECTION COURANTE
+SEMA_REFLECTION:
+        DEFB 0                          ; A 1 SI PAGE EN MODE REFLECTION SINON 0
+MUSIC:
+	DI
+        PUSH BC
+        PUSH AF
+        PUSH HL
+        PUSH DE
+        PUSH IX
+        PUSH IY
+	CALL #FD9F
+        POP IY
+        POP IX
+        POP DE
+        POP HL
+        POP AF
+        POP BC
+	RET
+
+ 
+

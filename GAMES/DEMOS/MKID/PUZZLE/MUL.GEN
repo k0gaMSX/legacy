@@ -1,0 +1,333 @@
+*S 14,Q-
+
+;       STAGE LOADER POUR M-KID
+;
+;BY SLAYERMAN from F.U.C
+;dated 22/06/95.
+
+*i      sysadd
+*i      bios
+*i      doscmd
+*i      macro
+*i      stat-equ
+
+wr_fc   equ     WriteFC
+wr_fd   equ     wr_fc+3	  ;#c006
+wr_fe   equ     wr_fd+3	  ;#c009
+			  ;#c00c
+rd_fc   equ     wr_fe+6   ;#c00f
+rd_fd   equ     rd_fc+3	  ;#c012
+rd_fe   equ     rd_fd+3	  ;#c015
+			  ;#c018
+strmus  equ     Start_Music
+stpmus  equ     strmus+3  ;#c01e
+
+
+not_replay      equ     1
+smpadr  equ     #400F
+
+        org     #0100
+
+        jp      start
+prg1:   jp      pltldr          ;palette loader
+prg2:   jp      vdp_cmd         ;vdp_cmd
+prg3:   jp      ldirvm1         ;ram_vram
+prg4:   jp      imgld           ;load image en page 0 ou 1
+        jp      SETSFX
+
+fx_mod db 1
+;*********************************************************************
+;
+;       CA COMMENCE ICI ;-)
+;
+;*********************************************************************
+
+start:
+        ld      a,1
+        ld      (musmod),a
+
+        ld      a,1
+        ld      (fx_mod),a
+        di
+        ld      a,(f_r800)
+        or      a
+        call    nz,setr800      ;si R800 alors mode R800 ROM
+
+        ld      a,4
+        call    wr_fe
+
+        ld      a,(musmod)
+        or      a
+        jp      z,no_mus        ;for no music
+        cp      1
+        jp      z,mb1_4         ;force MB1.4
+
+        in      a,(#c4)         ;make sure OPL4 is connected
+        cp      255
+        jp      z,mb1_4
+
+        ld      hl,mbwave       ;load MB WAVE for OPL4
+        ld      de,#8000
+        call    diskld
+        jp      no_mus
+
+mb1_4:
+        ld      hl,mbplay       ;load MB replayer
+        ld      de,#8000
+        call    diskld
+        call    srcchp
+no_mus:
+        ld      a,1
+        call    wr_fe
+
+
+stg_handler:
+        xor     a
+        ld      (see_ld),a      ;RESET SEE loader flag
+        ld      a,(stg_nb)      ;cherche la list de fichier du stage
+        cp      255
+        jp      z,password
+        rlca
+        ld      l,a
+        ld      h,0
+        ld      de,stage_tbl
+        add     hl,de
+        ld      e,(hl)
+        inc     hl
+        ld      d,(hl)
+        ex      de,hl
+
+        push    hl              ;get screen number
+        call    setscreen
+        CALSLT  exttbl,disscr           ;trun display off
+        pop     hl
+        inc     hl
+
+scan:   ld      a,(hl)
+        or      a
+        jp      z,ram_load
+        cp      1
+        jp      z,vram_load
+        cp      2
+        jp      z,vram_crunch
+        cp      3
+        jp      z,plt_ld
+        cp      4
+        jp      z,mbk_ld
+        cp      5
+        jp      z,vram_data
+        cp      6
+        jp      z,sc5_load
+        cp      7
+        jp      z,stg_ld
+        cp      8
+        jp      z,see_load
+        cp      255
+        jp      nz,scan_error
+
+        ld      a,(musmod)
+        cp 	0
+        jr 	z,nomusix
+
+        ld      a,5
+        ld      (muspge),a
+        
+        ld 	hl,#8000
+        ld 	(musadr),hl
+        call 	strmus
+nomusix:
+        ld      a,(fx_mod)
+        or      a
+        jp      z,no_fx
+        ld      a,(see_ld)
+        or      a
+        jp      z,no_fx
+        ld      hl,#b000
+        ld      (SEEADR),hl
+        call    SEE_IN          ;initialise SEE
+        jp      c,password
+no_fx:
+        CALSLT  exttbl,enascr           ;trun display on
+        call    #4000                   ;call game routine
+
+	call 	SEE_EX
+        ld      a,(musmod)
+        cp 	1
+        call    z,stpmus
+        
+        CALSLT  exttbl,disscr           ;trun display off
+        jp      password
+
+scan_error:
+        di
+        halt
+
+ram_load:                       ;LOAD program or data
+        inc     hl
+        ld      a,(hl)          ;page
+        push    hl
+        call    wr_fe
+        pop     hl
+        inc     hl
+        ld      d,(hl)          ;add de destination dans DE
+        inc     hl
+        ld      e,(hl)
+        inc     hl              ;add du nom de fichier dans HL
+        push    hl
+        call    diskld
+        ld      a,1             ;restore mapper page1
+        call    wr_fe
+        pop     hl
+        ld      de,12
+        add     hl,de           ;next one
+        jp      scan
+
+vram_load:                      ;LOAD uncruched grafic data
+        inc     hl
+        ld      a,(hl)          ;page de destination
+        ld      (dest_page),a
+        inc     hl
+        push    hl
+        call    imgld
+        pop     hl
+        ld      de,12
+        add     hl,de           ;next one
+        jp      scan
+
+vram_crunch:                    ;LOAD crunched grafic data
+        di
+        halt
+
+plt_ld: inc     hl              ;LOAD palette data
+        push    hl
+        ld      de,#8000
+        call    diskld
+        ld      hl,#8000        ;send palette 0 to VDP
+        call    pltldr
+        pop     hl
+        ld      de,12
+        add     hl,de           ;next one
+        jp      scan
+
+mbk_ld:
+        inc     hl
+        push    hl
+        ld      a,(f_r800)
+        or      a
+        call    nz,setz80       ;si R800 passage en Z80 pour loader MBK
+        pop     hl
+        push    hl
+
+        call    rd_fd
+        ld      (mb_kit),a
+        ld      a,4
+        call    wr_fd
+
+        call    mkload
+
+        ld      a,(mb_kit)
+        call    wr_fd
+
+        ld      a,(f_r800)      ;restore R800 mode if Turbo R
+        or      a
+        call    nz,setr800
+        pop     hl
+        ld      de,12
+        add     hl,de           ;next one
+        jp      scan
+
+vram_data:
+        inc     hl
+        ld      a,(hl)          ;set destination page
+        ld      (dest_page),a
+        inc     hl
+        push    hl
+        ld      de,#8000
+        call    diskld
+        pop     hl
+        ld      de,12
+        add     hl,de
+        ld      d,(hl)          ;add destination
+        inc     hl
+        ld      e,(hl)
+        inc     hl
+        ld      b,(hl)          ;lenght of data
+        inc     hl
+        ld      c,(hl)
+        push    hl
+        ld      hl,#8007        ;send to VRAM
+        call    ldirvm1
+        pop     hl
+        inc     hl              ;next one
+        jp      scan
+
+sc5_load:                       ;Load imqge screen 5
+        inc     hl
+        ld      a,(hl)          ;set destination page
+        ld      (dest_page),a
+        inc     hl
+        push    hl
+        call    imgld2
+        pop     hl
+        ld      de,14
+        add     hl,de
+        jp      scan
+
+stg_ld: inc     hl              ;LOAD palette data
+        push    hl
+        ld      de,#8000
+        call    diskld
+        ld      hl,#8007
+        ld      de,#8000
+        ld      bc,6144
+        ldir
+        pop     hl
+        ld      de,12
+        add     hl,de           ;next one
+        jp      scan
+
+see_load:                       ;LOAD a SEE file
+        inc     hl
+        ld      a,(hl)          ;page
+        push    hl
+        call    wr_fe
+        pop     hl
+        inc     hl
+        ld      d,(hl)          ;add de destination dans DE
+        inc     hl
+        ld      e,(hl)
+        inc     hl              ;add du nom de fichier dans HL
+        push    hl
+        call    diskld
+        ld      a,1             ;restore mapper page1
+        call    wr_fe
+        pop     hl
+        ld      de,12
+        add     hl,de           ;next one
+        ld      a,1
+        ld      (see_ld),a
+        jp      scan
+
+see_ld: db      0
+
+setscreen:
+        ld      a,(hl)
+        cp      5
+        jp      z,screen5
+
+        ld      a,0             ;set COLOR 255,0,0
+        ld      (#f3ea),a
+        ld      a,1
+        ld      (#f3eb),a
+        ld      a,255
+        ld      (#f3e9),a
+        CALSLT  exttbl,chgclr
+
+        ld      a,8                     ;set screen 8
+        CALSLT  exttbl,chgmod
+
+        di
+        ld      a,26            ;mode YAE/YJK + mask scrolling
+        out     (#99),a
+        ld      a,#80+25
+        ou                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                

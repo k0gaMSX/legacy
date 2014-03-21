@@ -1,0 +1,1883 @@
+
+        ORG #4000
+
+START:
+        DI
+;       INITIALISATION DE LA PREMIERE FORME DE SPRITE
+
+	LD HL,F_RS
+	CALL CHG_MARSP
+
+        LD A,21
+        LD (X),A
+        LD A,80
+        LD (Y),A
+        XOR A
+        LD (COIN),A
+        LD HL,#8000
+        LD (DEBUTECR),HL
+        CALL MAKESTAGE
+        CALL MAKE_COPY
+	LD HL,(TABMONST1)
+	LD (NEXTMONSTER),HL
+	LD HL,TABMONST1
+	LD (NEXTMONSTER+2),HL
+        LD A,212
+        LD (CURMONSTER+3),A
+        LD (CURMONSTER+19),A
+        LD (CURMONSTER+35),A
+MAIN_LOOP:
+        LD A,210
+        CALL INTERUPT
+        LD A,(SCROLLX)
+        ADD A,4
+        CALL SCROLLH
+        XOR A
+        OUT (#99),A
+        LD A,128+16
+        OUT (#99),A
+        LD A,#FF
+        OUT (#9A),A
+        OUT (#9A),A
+        LD A,15
+        OUT (#99),A
+        LD A,128+16
+        OUT (#99),A
+        LD A,#FF
+        OUT (#9A),A
+        OUT (#9A),A
+
+	LD A,(DEATHSTAT)
+	CP 1
+	JP Z,DEATH        		; SI ON EST MORT
+        				; ON PASSE TOUTE UNE SERIE
+	CALL GEST_JOY
+        LD A,(STICK_NUMBER)
+	CALL RD_STG
+	CALL NZ,SAUTON
+	CALL TESTRETOUR
+        CALL TESTOBSTACLE
+        CALL TESTPICOT
+	CALL GESTMONSTER
+REDEATH:
+        CALL GESTMARIO
+        CALL DETECMST
+        CALL ANIM_KID
+        CALL VPOKE              ;PUT MARIO SPRITE
+	CALL TESTCOIN
+        CALL TESTESC
+        OR A
+        JP Z,THEEND
+        CALL #FD9F
+        XOR A
+        OUT (#99),A
+        LD A,128+16
+        OUT (#99),A
+        LD A,#22
+        OUT (#9A),A
+        OUT (#9A),A
+        LD A,190
+        CALL INTERUPT
+        XOR A
+        CALL SCROLLH
+        JP MAIN_LOOP
+THEEND:
+        XOR A
+        OUT (#99),A
+        LD A,128+25
+        OUT (#99),A
+        XOR A
+        CALL SCROLLH
+        RET
+
+	
+TESTOBSTACLE:
+        LD A,(OPX)
+        CP 2
+        CALL Z,TESTDROITE
+        LD A,(OPX)
+        CP -2
+        CALL Z,TESTGAUCHE
+        LD A,(SAUTSTAT)
+        OR A
+        CALL Z,DOCHUTE
+        LD A,(SAUTSTAT)
+        OR A
+        CALL NZ,DOSAUT
+        RET
+DOSAUT:
+        LD HL,(PNTSAUT)
+        LD A,(HL)
+        LD (OPY),A
+        INC HL
+        LD (PNTSAUT),HL
+        LD A,(SAUTSTAT)
+        INC A
+        LD (SAUTSTAT),A
+        CP 18
+        CALL Z,SAUTFIN
+	CALL TESTSAUT
+        RET
+TESTRETOUR:
+	LD A,(STICK_NUMBER)
+	CALL RD_STG
+	RET NZ
+	XOR A
+	LD (RETOURCLV),A
+	RET 
+SAUTON:
+        LD A,(SAUTSTAT)
+        OR A
+        RET NZ
+	LD A,(RETOURCLV)
+	OR A
+	RET NZ
+        LD A,(ONFLOOR)
+        CP 1
+        RET NZ
+        LD A,(VALCLAVIER)
+        CP 1
+        JP Z,HIGHJUMP
+        CP 2
+        JP Z,HIGHJUMP
+        CP 8
+        JP Z,HIGHJUMP
+REBOND:
+        LD HL,TABLESAUT
+        LD (PNTSAUT),HL
+        LD A,1
+        LD (SAUTSTAT),A
+        XOR A
+        LD (ONFLOOR),A
+        RET
+HIGHJUMP:
+        LD HL,TABLESAUT2
+        LD (PNTSAUT),HL
+        LD A,1
+        LD (SAUTSTAT),A
+        XOR A
+        LD (ONFLOOR),A
+        RET
+TABLESAUT2:
+        DEFB -5,-5,-5,-5,-4,-4,-4,-4,-3,-3,-3,-2,-2,-1,-1,0,0,0,0,0
+        
+TABLESAUT:
+        DEFB -5,-5,-4,-4,-3,-3,-2,-2,-2,-1,-1,-1,0,0,0,0,0,0,0,0
+SAUTFIN:
+        XOR A
+        LD (SAUTSTAT),A
+        LD A,1
+        LD (RETOURCLV),A
+        RET
+RETOURCLV:
+	DEFB 0
+PNTSAUT:
+        DEFW 0
+
+SAUTSTAT:
+        DEFB 0
+        
+TESTSAUT:
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,12-3			;14
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+        SUB 8			; SI TAILLE = 24
+        AND %11110000
+        LD (MAXSAUT),A
+        RRA
+        RRA
+        RRA
+        LD B,A
+        
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,STOPSAUT         ; SI ON NE TROUVE PAS D'OBSTACLE
+; MEME TEST MAIS PLUS A GAUCHE
+
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,2			; SUB 2
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+        SUB 8			; SI TAILLE = 24
+        AND %11110000
+        LD (MAXSAUT),A
+        RRA
+        RRA
+        RRA
+        LD B,A
+        
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,STOPSAUT         ; SI ON NE TROUVE PAS D'OBSTACLE
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+        SUB 8
+        CP 4
+        JP C,STOPSAUT
+        RET
+MAXSAUT:
+	DEFB 0
+STOPSAUT:
+	LD A,1
+	LD (RETOURCLV),A
+	LD A,(MAXSAUT)
+        ADD A,24
+	LD (Y),A
+	XOR A
+	LD (OPX),A
+	LD (SAUTSTAT),A
+	LD (OPY),A
+        
+	RET
+DOCHUTE:
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,12-3			;14-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+        ADD A,16
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,STOPCHUTE         ; SI ON NE TROUVE PAS D'OBSTACLE
+; MEME TEST MAIS PLUS A GAUCHE
+
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,2			;SUB 2
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+        ADD A,16
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,STOPCHUTE         ; SI ON NE TROUVE PAS D'OBSTACLE
+NEXTCHUTE:
+        XOR A
+        LD (ONFLOOR),A
+        LD A,(TMPCHUTE)
+        INC A
+        LD (TMPCHUTE),A
+        AND %00000001
+        OR A
+        RET Z
+        LD A,(OPY)
+        INC A
+        LD (OPY),A
+        RET
+
+
+
+
+
+STOPCHUTE:
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+        AND %11110000
+        LD (Y),A
+        XOR A
+        LD (OPY),A
+        LD A,1
+        LD (ONFLOOR),A
+        RET     
+ONFLOOR:
+        DEFB 0                  ;SWITCH POUR INDIQUER QU'ON EST AU SOL
+TMPCHUTE:
+        DEFB 0
+OBSTACLE:
+        XOR A
+        LD (OPX),A
+        RET     
+
+TESTSPACE:
+        IN A,(#AA)
+        AND %11110000
+        ADD A,8
+        OUT (#AA),A
+        IN A,(#A9)
+        AND 1
+        RET
+
+TESTESC:
+        IN A,(#AA)
+        AND %11110000
+        ADD A,7
+        OUT (#AA),A
+        IN A,(#A9)
+        AND 4
+        RET
+GEST_JOY:
+	XOR A
+	LD (OPX),A
+	LD A,(STICK_NUMBER)
+	CALL RD_STK
+	LD (VALCLAVIER),A
+	CP 2
+	CALL Z,PLUSX
+	LD A,(VALCLAVIER)
+	CP 3
+	CALL Z,PLUSX
+	LD A,(VALCLAVIER)
+	CP 4
+	CALL Z,PLUSX
+	LD A,(VALCLAVIER)
+	CP 6
+	CALL Z,MOINSX
+	LD A,(VALCLAVIER)
+	CP 7
+	CALL Z,MOINSX
+	LD A,(VALCLAVIER)
+	CP 8
+	CALL Z,MOINSX
+	RET
+GEST_KEYB:
+        XOR A
+        LD (OPX),A              ; INITIALIZE OPERATION ON X,Y POSITION
+        CALL SCANCLAVIER
+        AND %11110000
+        LD (VALCLAVIER),A
+        AND %10000000
+        CALL Z,PLUSX
+        LD A,(VALCLAVIER)
+        AND %00010000
+        CALL Z,MOINSX
+        RET
+PLUSX:
+        LD A,(OPX)
+        ADD A,2
+        LD (OPX),A
+        RET
+MOINSX:
+        LD A,(OPX)
+        SUB 2
+        LD (OPX),A
+        RET
+
+SCANCLAVIER:
+        IN A,(#AA)
+        AND %11110000
+        ADD A,8
+        OUT (#AA),A
+        IN A,(#A9)
+        RET
+
+;  PUTSPRITE 0
+VPOKE:
+        LD DE,#FA00
+        LD A,D
+        AND %11000000
+        RLCA
+        RLCA
+        OUT (#99),A
+        LD A,128+14
+        OUT (#99),A
+
+        LD A,E
+        OUT (#99),A
+        LD A,D
+        AND %00111111 
+        OR %01000000
+        OUT (#99),A
+
+        LD A,(Y)
+        DEC A
+        SUB 16
+	LD (TASKID),A
+	LD (TASKID+4),A
+	LD (TASKID+8),A
+	LD (TASKID+12),A
+
+        LD A,(X)
+	LD (TASKID+1),A
+	LD (TASKID+5),A
+	LD (TASKID+9),A
+	LD (TASKID+13),A
+	LD A,(Y)
+	DEC A
+	LD (TASKID2),A
+	LD (TASKID2+4),A
+	LD (TASKID2+8),A
+	LD (TASKID2+12),A
+        LD A,(X)
+	LD (TASKID2+1),A
+	LD (TASKID2+5),A
+	LD (TASKID2+9),A
+	LD (TASKID2+13),A
+	LD C,#98
+	LD B,4*8
+	LD HL,TASKID
+	OTIR
+        RET
+
+TASKID:
+	DEFB 0,0,0,0
+	DEFB 0,0,4,0
+	DEFB 0,0,8,0
+	DEFB 0,0,12,0
+TASKID2:
+	DEFB 0,0,16,0
+	DEFB 0,0,20,0
+	DEFB 0,0,24,0
+	DEFB 0,0,28,0
+
+
+GESTMARIO:
+	XOR A
+	LD (DEPSPR),A
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        CP 10                   ; IF X < 2 THEN DO NOT MODIFY
+        CALL C,HORSZONE         ; SPRITE POSITION
+        CP 128                  ; IF X > 128 THEN CALL MAKE SCROLL
+        CALL NC,HORSZONEX       ; AND DO NOT MODIFY SPRITE POSITION
+        LD (X),A
+        LD A,(OPY)
+        LD B,A
+        LD A,(Y)
+        ADD A,B
+	                 
+        CP 2
+        CALL C,HORSZONE         ; IF Y> 210-16 THEN
+	PUSH AF
+        CP 192                  ; DEATH
+        CALL NC,DEATHON
+	POP AF
+        LD (Y),A
+        RET
+HORSZONEX:
+        PUSH BC
+        PUSH AF
+	LD A,-2
+	LD (DEPSPR),A
+        LD A,(SCROLLX)
+        ADD A,2
+        LD (SCROLLX),A
+        AND %00001111
+        OR A
+        CALL Z,PLUSECR
+        CALL MAKE_COPY
+        POP AF
+        POP BC
+        SUB B
+        RET
+HORSZONE:
+        SUB B
+        RET
+PLUSECR:
+        LD HL,(DEBUTECR)
+        INC HL
+        LD (DEBUTECR),HL
+        LD A,(DESTX)
+        ADD A,16
+        LD (DESTX),A
+        RET
+
+;MAKE A COPY OF A BITMAP BLOCK
+;ENTER HL = POINTER ON BLOCK DATE 
+XMMM:   
+TST:    LD D,2
+        CALL STATREG
+        RRCA
+        JR C,TST
+
+        LD B,15                         ;                   CALL HMMM
+        LD A,32        
+        OUT (#99),A
+        LD A,#91
+        OUT (#99),A
+        LD C,#9B         
+        OTIR
+
+        XOR A 
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+
+        RET
+
+;
+;       LECTURE D'UN REGISTRE STATUS DU VDP
+;       -----------------------------------
+;
+STATREG:  
+        LD A,D
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        IN A,(#99)
+        RET
+
+;WAIT A LINE INTERUPT
+;ENTER A = LINE OF SCAN INTERUPT 
+INTERUPT:
+        OUT (#99),A
+        LD A,#93
+        OUT (#99),A
+        LD A,1
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+WAITINT:
+        IN A,(#99)
+        AND 1
+        JR Z,WAITINT
+        XOR A 
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        RET
+
+DEATHSTAT:
+	DEFB 0
+DEATHON:
+	LD A,(DEATHSTAT)
+	CP 1
+	RET Z
+	LD A,1
+	LD (DEATHSTAT),A
+        LD HL,TABLESAUT
+        LD (PNTSAUT),HL
+	XOR A
+	LD (OPX),A
+        LD (SAUTSTAT),A
+	RET
+	
+DEATH:
+        LD HL,(PNTSAUT)
+        LD A,(HL)
+        LD (OPY),A
+        INC HL
+        LD (PNTSAUT),HL
+        LD A,(SAUTSTAT)
+        INC A
+        LD (SAUTSTAT),A
+        CP 18
+        JP Z,DEATHFIN
+        JP REDEATH
+DEATHFIN:
+	RET
+TESTDROITE:
+	LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,12-3			;14-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        ADD A,15
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,OBSTACLE
+;TEST A DROITE AU NIVEAU DE LA TETE
+	LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,12-3			;14-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,OBSTACLE
+;IDEM UN PEU PLUS HAUT
+	LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,12-3			;14-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+	SUB 8
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,OBSTACLE
+
+        RET     
+TESTGAUCHE:
+	LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,2			;SUB 2
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        ADD A,15
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,OBSTACLE
+;TEST A GAUCHE AU NIVEAU DE LA TETE
+	LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,2				;SUB 2
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,OBSTACLE
+; IDEM UN PEU PLUS HAUT
+	LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,2			;SUB 2
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        SUB 8
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,OBSTACLE
+
+        RET     
+DEPSPR:
+	DEFB 0
+NBMST:
+	DEFB 0
+GESTMONSTER:
+	LD HL,(DEBUTECR)		; Y A T'IL UN NOUVEAU MONSTRE
+	LD DE,(NEXTMONSTER)		; A TRAITER ?
+	CALL SIMRST20			; RST #20
+        CALL Z,NEWMONSTER
+
+	XOR A
+	LD (NBMST),A
+        LD IX,CURMONSTER
+LOOPMST:
+        LD A,(IX+11)			; LE MONSTRE EST T'IL ENCORE
+        OR A				; A TRAITER
+        CALL Z,PUT212			; SI NON, LE FAIRE DISPARAITRE
+        LD A,(IX+11)
+        OR A
+        JP Z,SUIVANT			; ET TRAITER LE MONSTRE SUIVANT
+        
+	LD A,(IX+4)			; TESTER LE TYPE DE SPRITE
+	OR A				; A TRAITER
+	CALL Z,MSTYPE0
+	LD A,(IX+4)
+	CP 1
+	CALL Z,MSTYPE1
+        LD A,(IX+4)
+        CP 2
+        CALL Z,MSTYPE2
+        LD A,(IX+4)
+        CP 255
+        CALL Z,MSTYPE_MORT
+SUIVANT:
+	LD DE,16
+	ADD IX,DE
+	LD A,(NBMST)
+	INC A
+	LD (NBMST),A
+	CP 3
+	JP NZ,LOOPMST
+
+	LD A,(CURMONSTER+3)
+        DEC A
+	LD (TASMONSTER),A
+	LD A,(CURMONSTER+2)
+	LD (TASMONSTER+1),A
+
+	LD A,(CURMONSTER+19)
+        DEC A
+	LD (TASMONSTER+4),A
+	LD A,(CURMONSTER+18)
+	LD (TASMONSTER+5),A
+
+	LD A,(CURMONSTER+35)
+        DEC A
+	LD (TASMONSTER+8),A
+	LD A,(CURMONSTER+34)
+	LD (TASMONSTER+9),A
+
+PUTMONSTER:
+        LD DE,#FA00+32
+        LD A,D
+        AND %11000000
+        RLCA
+        RLCA
+        OUT (#99),A
+        LD A,128+14
+        OUT (#99),A
+
+        LD A,E
+        OUT (#99),A
+        LD A,D
+        AND %00111111 
+        OR %01000000
+        OUT (#99),A
+
+	LD HL,TASMONSTER
+	LD C,#98
+	LD B,12
+	OTIR
+        RET
+;  TRAITEMENT DE MONSTRE DE TYPE 0
+MSTYPE0:
+	LD L,(IX+14)
+	LD H,(IX+15)
+	LD A,(HL)
+        
+	CP "*"
+	CALL Z,REMSTSAUT
+        
+        INC HL
+	LD (IX+14),L
+	LD (IX+15),H
+
+	LD B,A
+        LD A,(IX+3)			; MISE A JOUR DE LA
+					; POSITION EN Y
+
+	ADD A,B				
+	LD (IX+3),A			; C'EST FAIT
+
+	LD A,(IX+2)			;MISE A JOUR DE LA POSITION EN X
+	LD B,A
+        LD A,(DEPSPR)			; AVEC AUSSI LA MAJ PAR RAPPORT
+        ADD A,B				; AU SCROLLING
+        LD B,A
+        LD A,(IX+5)
+        ADD A,B
+        CP 8
+        CALL C,HORSECRAN		; ET SORTIE SI NECESSAIRE
+        LD (IX+2),A
+	RET
+MSTYPE1:
+			
+	CALL CHUTEMST			;EFFECTUER LES TEST
+	LD A,(IX+3)			;POUR SUIVRE LE RELIEF
+	LD B,A
+	LD A,(IX+6)
+	ADD A,B
+	LD (IX+3),A
+
+	LD A,(IX+5)
+	CP 1
+	CALL Z,DROITEMST
+	LD A,(IX+5)
+	CP -1
+	CALL Z,GAUCHEMST
+
+	LD A,(IX+2)			;MISE A JOUR DE LA POSITION EN X
+	LD B,A
+        LD A,(DEPSPR)			; AVEC AUSSI LA MAJ PAR RAPPORT
+        ADD A,B				; AU SCROLLING
+        LD B,A
+        LD A,(IX+5)
+        ADD A,B
+        CP 8
+        CALL C,HORSECRAN		; ET SORTIE SI NECESSAIRE
+        LD (IX+2),A
+	RET
+MSTYPE2:
+        LD A,(IX+2)
+        CP 128+16
+        CALL C,TOMBEMST			; SI XMST<128, IL TOMBE
+        		
+	LD A,(IX+3)			;POUR SUIVRE LE RELIEF
+	LD B,A
+	LD A,(IX+6)
+	ADD A,B
+	LD (IX+3),A
+
+	LD A,(IX+2)			;MISE A JOUR DE LA POSITION EN X
+	LD B,A
+        LD A,(DEPSPR)			; AVEC AUSSI LA MAJ PAR RAPPORT
+        ADD A,B				; AU SCROLLING
+        LD B,A
+        LD A,(IX+5)
+        ADD A,B
+        LD (IX+2),A
+	RET
+MSTYPE_MORT:
+	LD A,(IX+3)
+	CP 192
+	JP NC,HORSECRAN
+	LD L,(IX+14)
+	LD H,(IX+15)
+	LD A,(HL)
+        
+	CP "*"
+	JP Z,TREAT_CHUTE
+        
+        INC HL
+	LD (IX+14),L
+	LD (IX+15),H
+
+	LD B,A
+        LD A,(IX+3)			; MISE A JOUR DE LA
+					; POSITION EN Y
+
+	ADD A,B				
+	LD (IX+3),A			; C'EST FAIT
+
+	LD A,(IX+2)			;MISE A JOUR DE LA POSITION EN X
+	LD B,A
+        LD A,(DEPSPR)			; AVEC AUSSI LA MAJ PAR RAPPORT
+        ADD A,B				; AU SCROLLING
+        LD B,A
+        LD A,(IX+5)
+        ADD A,B
+        CP 8
+        CALL C,HORSECRAN		; ET SORTIE SI NECESSAIRE
+        LD (IX+2),A
+	RET
+	
+TREAT_CHUTE:
+			
+	CALL MORT_CHUTE			;EFFECTUER LES TEST
+	LD A,(IX+3)			;POUR SUIVRE LE RELIEF
+	LD B,A
+	LD A,(IX+6)
+	ADD A,B
+	LD (IX+3),A
+
+	LD A,(IX+2)			;MISE A JOUR DE LA POSITION EN X
+	LD B,A
+        LD A,(DEPSPR)			; AVEC AUSSI LA MAJ PAR RAPPORT
+        ADD A,B				; AU SCROLLING
+        LD B,A
+        LD A,(IX+5)
+        ADD A,B
+        CP 8
+        CALL C,HORSECRAN		; ET SORTIE SI NECESSAIRE
+        LD (IX+2),A
+	RET
+MORT_CHUTE:
+        LD A,(TMPMST_M)
+        INC A
+        LD (TMPMST_M),A
+        AND %00000001
+        OR A
+        RET Z
+        LD A,(IX+6)
+        INC A
+        LD (IX+6),A
+        RET
+TMPMST_M:
+	DEFB 0
+DROITEMST:
+	LD A,(IX+5)
+        LD B,A
+        LD A,(IX+2)
+        ADD A,B
+        ADD A,15-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(IX+3)
+        ADD A,15
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,OBSTMST
+        LD A,(IX+5)
+        LD B,A
+        LD A,(IX+2)
+        ADD A,B
+        LD B,A
+        LD A,(DEPSPR)
+        ADD A,B
+        CP 240
+        JP NC,OBSTMST
+
+	RET
+GAUCHEMST:
+	LD A,(IX+5)
+        LD B,A
+        LD A,(IX+2)
+        ADD A,B
+        SUB 3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(IX+3)
+        ADD A,15
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,OBSTMST
+	RET
+OBSTMST:
+	LD A,(IX+5)
+        NEG
+	LD (IX+5),A
+	RET
+
+CHUTEMST:
+        LD A,(IX+5)
+        LD B,A
+        LD A,(IX+2)
+        ADD A,B
+        ADD A,15-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(IX+3)
+        LD B,A
+        LD A,(IX+6)
+        ADD A,B
+        ADD A,16
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,STOPMST         ; SI ON NE TROUVE PAS D'OBSTACLE
+; MEME TEST MAIS PLUS A GAUCHE
+
+        LD A,(IX+5)
+        LD B,A
+        LD A,(IX+2)
+        ADD A,B
+        SUB 3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(IX+3)
+        LD B,A
+        LD A,(IX+6)
+        ADD A,B
+        ADD A,16
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,STOPMST         ; SI ON NE TROUVE PAS D'OBSTACLE
+NEXTCHT:
+        LD A,(TMPMST)
+        INC A
+        LD (TMPMST),A
+        AND %00000001
+        OR A
+        RET Z
+        LD A,(IX+6)
+        INC A
+        LD (IX+6),A
+        RET
+
+STOPMST:
+        LD A,(IX+3)
+        LD B,A
+        LD A,(IX+6)
+        ADD A,B
+        AND %11110000
+        LD (IX+3),A
+        XOR A
+        LD (IX+6),A
+        RET     
+TMPMST:
+        DEFB 0
+TMPMST2:
+	DEFB 0
+TOMBEMST:
+        LD A,(IX+5)
+        LD B,A
+        LD A,(IX+2)
+        ADD A,B
+        ADD A,15-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(IX+3)
+        LD B,A
+        LD A,(IX+6)
+        ADD A,B
+        ADD A,16
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,ECRAMST         ; SI ON NE TROUVE PAS D'OBSTACLE
+; MEME TEST MAIS PLUS A GAUCHE
+
+        LD A,(IX+5)
+        LD B,A
+        LD A,(IX+2)
+        ADD A,B
+        SUB 3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(IX+3)
+        LD B,A
+        LD A,(IX+6)
+        ADD A,B
+        ADD A,16
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+        AND %10000000
+        OR A
+        JP NZ,ECRAMST         ; SI ON NE TROUVE PAS D'OBSTACLE
+NEXTCHT2:
+        LD A,(TMPMST2)
+        INC A
+        LD (TMPMST2),A
+        AND %00000001
+        OR A
+        RET Z
+        LD A,(IX+6)
+        INC A
+        LD (IX+6),A
+        RET
+
+ECRAMST:
+	XOR A
+	LD (IX+11),A
+        RET 
+REMSTSAUT:
+	LD A,(IX+12)
+	LD (IX+14),A
+	LD A,(IX+13)
+	LD (IX+15),A
+	LD L,(IX+14)
+	LD H,(IX+15)
+	LD A,(HL)
+	RET
+PUT212:
+	LD A,212
+	LD (IX+3),A
+	RET
+HORSECRAN:
+	XOR A
+	LD (IX+11),A
+	LD A,212
+	LD (IX+3),A
+	XOR A
+	RET
+NEWMONSTER:
+	XOR A
+	LD (CPTPLACE),A
+	LD IX,CURMONSTER
+LOOPPLACE:
+	LD A,(IX+11)
+	OR A
+	JP NZ,NEXTPLACE
+TROUVEPLACE:
+	PUSH IX
+	POP DE
+	LD HL,(NEXTMONSTER+2)
+	LD BC,16
+	LDIR
+	LD IX,(NEXTMONSTER+2)
+	LD DE,16
+	ADD IX,DE
+	LD L,(IX)
+	LD H,(IX+1)
+	LD (NEXTMONSTER),HL
+	LD (NEXTMONSTER+2),IX
+	RET
+CPTPLACE:
+	DEFB 0
+NEXTPLACE:
+	LD DE,16
+	ADD IX,DE
+	LD A,(CPTPLACE)
+	INC A
+	LD (CPTPLACE),A
+	CP 3
+	RET Z
+	JP LOOPPLACE
+	
+NEXTMONSTER:
+	DEFW 0			; ADR POUR COMPARAISON
+	DEFW 0			; ADR OU EST MONSTRE
+CURMONSTER:
+	DEFS 50
+	
+TABMONST1:
+	DEFW #8000+30		; (MONSTRE APPARAIT APRES 10*16)
+	DEFB 255		; POSITION START X
+	DEFB 64 		; POSITION START Y
+	DEFB 0			; TYPE DE MONSTRE
+	DEFB -1 		; DIRECTION EN X
+	DEFB -1			; DIRECTION EN Y
+;SI Y= 128 ALORS DEPLACEMENT PAR VAGUE
+	DEFB 30			; COMBIEN DE FOIS
+	DEFB 4			; NUMERO DU PREMIER PATTERN DE SPRITE
+	DEFB 0			; OFFSET EN X POUR DEUXIEME PARTIE MONSTRE
+	DEFB 16			; OFFSET EN Y  
+	DEFB 1			; STATUT MONSTRE 0 = MORT
+        DEFW JMPMST
+        DEFW JMPMST
+TABMONST2:
+	DEFW #8000+31		; (MONSTRE APPARAIT APRES 10*16)
+	DEFB 255
+	DEFB 16
+	DEFB 1			; TYPE DE MONSTRE
+	DEFB -1			; DIRECTION EN X
+	DEFB 0			; DIRECTION EN Y
+	DEFB 30			; COMBIEN DE FOIS
+	DEFB 4			; NUMERO DU PREMIER PATTERN DE SPRITE
+	DEFB 0			; OFFSET EN X POUR DEUXIEME PARTIE MONSTRE
+	DEFB 16			; OFFSET EN Y  
+	DEFB 1			; STATUT MONSTRE 0 = MORT
+        DEFW JMPMST
+        DEFW JMPMST
+TABMONST3:
+	DEFW #8000+32		; (MONSTRE APPARAIT APRES 10*16)
+	DEFB 255
+	DEFB 0
+	DEFB 2			; TYPE DE MONSTRE
+	DEFB 0 			; DIRECTION EN X
+	DEFB 0			; DIRECTION EN Y
+	DEFB 30			; COMBIEN DE FOIS
+	DEFB 4			; NUMERO DU PREMIER PATTERN DE SPRITE
+	DEFB 0			; OFFSET EN X POUR DEUXIEME PARTIE MONSTRE
+	DEFB 16			; OFFSET EN Y  
+	DEFB 1			; STATUT MONSTRE 0 = MORT
+        DEFW JMPMST
+        DEFW JMPMST
+
+JMPMST:
+        DEFB -5,-5,-4,-4,-3,-3,-2,-2,-2,-1,-1,-1,0,0,1,1,1,2,2,2,3,3,4,4,5,5
+	DEFB "*"
+JMPMST2:
+        DEFB -5,-5,-4,-4,-3,-3,-2,-2,-2,-1,-1,-1,0,0,0,0,0
+	DEFB "*"
+        
+TASMONSTER:
+	DEFB 212,0,80,0
+	DEFB 212,0,80,0
+	DEFB 212,0,80,0
+
+BDOS    EQU     0F37DH
+SETDMA  EQU     26
+READ    EQU     39
+OPEN    EQU     15
+CLOSE   EQU     16
+DISKLOAD:
+        PUSH DE
+        CALL SETFCB
+        CALL OPENF
+        LD HL,(BLENG)
+        POP DE
+        CALL LOADF
+        CALL CLOSEF
+        RET
+
+SETFCB:
+        PUSH HL
+        LD HL,FCB+0
+        LD DE,FCB+1
+        LD BC,36
+        LD (HL),B
+        LDIR
+        POP HL
+        LD DE,FCB
+        LD BC,12
+        LDIR
+        RET
+
+OPENF:  LD      DE,FCB
+        LD      C,OPEN
+        CALL    BDOS
+        LD      HL,1
+        LD      (GROOT),HL
+        DEC     HL
+        LD      (BLOK),HL
+        LD      (BLOK+2),HL
+        RET
+LOADF:  PUSH    HL
+        LD      C,SETDMA
+        CALL    BDOS
+        LD      DE,FCB
+        POP     HL
+        LD      C,READ
+        JP      BDOS
+CLOSEF: LD      DE,FCB
+        LD      C,CLOSE
+        JP      BDOS
+
+;----------- FCB -----------
+
+FCB:    DEFB    0
+        DEFM    "???????????"
+        DEFW    0
+GROOT:  DEFW    0
+BLENG:  DEFW    0
+        DEFB    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+BLOK:   DEFW    0
+        DEFW    0
+
+NOM1:
+        DEFB 0
+        DEFB "EGIP04  PLB"
+NOM2:
+        DEFB 0
+        DEFB "COLOR-01KID"
+NOM3:
+        DEFB 0
+        DEFB "FORME-01KID"
+
+VPOKE2:
+        LD A,D
+        AND %11000000
+        RLCA
+        RLCA
+        OUT (#99),A
+        LD A,128+14
+        OUT (#99),A
+
+        LD A,E
+        OUT (#99),A
+        LD A,D
+        AND %00111111 
+        OR %01000000
+        OUT (#99),A
+        RET
+
+;***************************************
+;
+;	CHANGE SPRITE PROCEDURE
+;	POUR MARIO
+;	HL = AD DATA FORME
+;
+;***************************************
+CHG_MARSP:
+	LD	A,(HL)
+	LD	(KID_FRM+0),A
+	INC	HL
+	LD	A,(HL)
+	RRCA
+	LD	(KID_COU+0),A
+	INC	HL
+	LD	A,(HL)
+	LD	(KID_COU+2),A
+
+	LD	HL,KID_FRM
+	LD	DE,#0D22
+	CALL	VDP_CMD
+
+	LD	HL,KID_COU
+	LD	DE,#0F20
+	CALL	VDP_CMD
+	RET
+
+KID_FRM:		;YMMM
+	DEFB	0,0	;SY
+	DEFB	0,0	;DX
+	DEFB	240,0	;DY
+	DEFB	0,0	;DON'T CARE (NX)
+	DEFB	1,0	;NY
+	DEFB	0,0	;CO & ARG
+	DEFB	#E0
+
+KID_COU:		;HMMM
+	DEFB	0,0	;SX
+	DEFB	0,0	;SY
+	DEFB	0,0	;DX
+	DEFB	248,0	;DY
+	DEFB	128,0	;NX
+	DEFB	1,0	;NY
+	DEFB	0,0	;CO & ARG
+	DEFB	#D0
+
+F_RSH:  DEFB    212,0,236       ;0
+F_RS:	DEFB	213,1,236	;1
+F_RM:	DEFB	214,0,237	;2
+F_RJH:	DEFB	215,1,237	;3
+F_RJL:	DEFB	216,0,238	;4
+F_RSL:	DEFB	217,1,238	;5
+
+F_LSH:	DEFB	224,0,236	;12
+F_LS:	DEFB	225,1,236	;13
+F_LM:	DEFB	226,0,237	;14
+F_LJH:	DEFB	227,1,237	;15
+F_LJL:	DEFB	228,0,238	;16
+F_LSL:	DEFB	229,1,238	;17
+
+
+DIREC:
+	DEFB 1
+PATKID:
+	DEFW 0
+TMPANI:
+	DEFB 0
+MARCHEGAUCHE:
+	DEFW F_LM
+	DEFW F_LS
+MARCHEDROITE:
+	DEFW F_RS
+	DEFW F_RM
+
+ANIM_KID:
+	LD A,(ONFLOOR)		;TEST SI AU SOL OU PAS
+	CP 1
+	JP Z,AU_SOL
+EN_SAUT:
+	LD A,(OPY)
+	RLCA
+	JP NC,SAUT_BAS		; TEST SI EN DESCENTE
+        LD A,(OPX)
+        CP 2
+        JP Z,MONTE_DROITE
+        CP -2
+        JP Z,MONTE_GAUCHE
+        LD A,(DIREC)
+        CP -1
+        JP Z,MONTE_GAUCHE
+        CP 1
+        JP Z,MONTE_DROITE
+	RET
+MONTE_GAUCHE:
+	LD HL,F_LJH
+	LD (PATKID),HL
+	CALL CHG_MARSP
+	LD A,-1
+	LD (DIREC),A
+        RET
+MONTE_DROITE:
+	LD HL,F_RJH
+	LD (PATKID),HL
+	CALL CHG_MARSP
+	LD A,1
+	LD (DIREC),A
+        RET
+
+SAUT_BAS:
+        LD A,(OPX)
+        CP 2
+        JP Z,DESCEND_DROITE
+        CP -2
+        JP Z,DESCEND_GAUCHE
+        LD A,(DIREC)
+        CP -1
+        JP Z,DESCEND_GAUCHE
+        CP 1
+        JP Z,DESCEND_DROITE
+	RET
+DESCEND_GAUCHE:
+	LD HL,F_LJL
+	LD (PATKID),HL
+	CALL CHG_MARSP
+	LD A,-1
+	LD (DIREC),A
+        RET
+DESCEND_DROITE:
+	LD HL,F_RJL
+	LD (PATKID),HL
+	CALL CHG_MARSP
+	LD A,1
+	LD (DIREC),A
+        RET
+
+AU_SOL:
+	LD A,(OPX)
+	OR A
+	JP Z,NOMOVE
+	CP -2
+	JP Z,A_GAUCHE
+A_DROITE:
+	LD A,(TMPANI)
+	INC A
+	LD (TMPANI),A
+	AND %00000111
+	OR A
+	CALL Z,SWAPPAT
+	LD HL,(MARCHEDROITE)
+	LD (PATKID),HL
+	CALL CHG_MARSP
+	LD A,1
+	LD (DIREC),A
+	RET
+A_GAUCHE:
+	LD A,(TMPANI)
+	INC A
+	LD (TMPANI),A
+	AND %00000111
+	OR A
+	CALL Z,SWAPPAT
+	LD HL,(MARCHEGAUCHE)
+	LD (PATKID),HL
+	CALL CHG_MARSP
+	LD A,-1
+	LD (DIREC),A
+	RET
+SWAPPAT:
+	LD DE,(MARCHEDROITE)
+	LD HL,(MARCHEDROITE+2)
+	LD (MARCHEDROITE),HL
+	LD (MARCHEDROITE+2),DE
+	LD DE,(MARCHEGAUCHE)
+	LD HL,(MARCHEGAUCHE+2)
+	LD (MARCHEGAUCHE),HL
+	LD (MARCHEGAUCHE+2),DE
+	RET
+NOMOVE:
+	LD A,255
+	LD (TMPANI),A
+	LD A,(DIREC)
+	CP 1
+	JP Z,WASDR1
+	CP -1
+	JP Z,WASGA1
+	RET	
+WASDR1:
+	LD HL,F_RS
+	CALL CHG_MARSP
+	RET
+WASGA1:
+	LD HL,F_LS
+	CALL CHG_MARSP
+	RET
+;
+;		VDP COMMANDE PROCEDURE
+;
+VDP_CMD:
+PRG1	LD	A,2
+	DI
+	OUT	(#99),A
+	LD	A,#8F
+	OUT	(#99),A
+;	PUSH	AF
+;	POP	AF
+WAIT1	IN	A,(#99)
+	RRCA
+	JP	C,WAIT1
+	LD	A,E
+	OUT	(#99),A
+	LD	A,#91
+	OUT	(#99),A
+	LD	B,D
+	LD	C,#9B
+	OTIR
+	XOR	A
+	OUT	(#99),A
+	LD	A,#8F
+	OUT	(#99),A
+	RET
+;
+;	  COPY RAM -> VRAM
+;
+RAM_VRAM:
+PRG2	PUSH	HL
+	DI
+	LD	A,0
+	OUT	(#99),A
+	LD	A,#80+45
+	OUT	(#99),A
+
+	LD	A,D		;SET BITS 14 TO 16
+	AND	#C0
+	RLCA
+	RLCA
+	LD	H,A
+	LD	A,(DEST_PAGE)	;BIT 16 = 1
+	OR	H
+	OUT	(#99),A
+	LD	A,#80+14
+	OUT	(#99),A
+	LD	A,E		;SET BITS 0 TO 7
+	OUT	(#99),A
+	LD	A,D		;SET BITS 8 TO 13
+	AND	#3F
+	OR	#40
+	OUT	(#99),A
+	POP	HL
+VRAM_LOOP
+	LD	A,(HL)
+	OUT	(#98),A
+	INC	HL
+	DEC	BC
+	LD	A,B
+	OR	C
+	JR	NZ,VRAM_LOOP
+	RET
+
+DEST_PAGE:
+	DEFB 0
+SIMRST20:
+	LD A,H
+	CP D
+	RET NZ
+	LD A,E
+	CP L
+	RET
+STICK_NUMBER:
+	DEFB 0
+
+
+DETECMST:
+	XOR A
+	LD (NBMST),A
+        LD IX,CURMONSTER
+DETECLOOP:
+        LD A,(IX+11)			; MONSTRE A TESTER	
+        OR A				; OUI OU NON
+        JP Z,DSUIVANT			; ET TRAITER LE MONSTRE SUIVANT
+	LD A,(IX+2)
+	LD B,A
+	LD A,(X)
+	SUB B
+	BIT 7,A
+	CALL NZ,INV
+	CP 16
+	CALL C,TEST2Y
+        
+DSUIVANT:
+	LD DE,16
+	ADD IX,DE
+	LD A,(NBMST)
+	INC A
+	LD (NBMST),A
+	CP 3
+	JP NZ,DETECLOOP
+	RET
+TEST2Y:
+	LD A,(IX+3)
+	LD B,A
+	LD A,(Y)
+	SUB B
+ 	BIT 7,A
+ 	CALL NZ,INV
+	CP 16
+	CALL C,COLLISION
+	RET
+COLLISION:
+	LD A,15
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	LD A,#70
+	OUT (#9A),A
+	OUT (#9A),A
+        LD A,(OPY)
+        RLCA
+        JP NC,TUEMONSTRE        
+
+	RET
+TUEMONSTRE:
+	LD A,(OPY)
+	OR A
+	RET Z
+        LD A,(IX+11)
+        CP 255
+        RET Z
+	LD A,255
+	LD (IX+11),A
+        LD (IX+4),A
+        LD HL,JMPMST2			;POINTE SUR VECTEUR DE SAUT/2
+        LD (IX+14),L
+        LD (IX+15),H
+        CALL REBOND
+        RET
+INV:
+	NEG
+	RET
+
+*I MSTAGE.GE2
+*I MANETTE.GEN
+*I MSTAGE.GE1
+FINISH:
+
+

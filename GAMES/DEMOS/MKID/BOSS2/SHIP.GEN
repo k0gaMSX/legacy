@@ -1,0 +1,213 @@
+	DEFB #FE
+	DEFW START
+	DEFW FINISH
+	DEFW START
+	ORG #9000
+START:
+	DI
+
+LOOP:
+	CALL GESTSHIP
+	CALL DIRECTION
+	CALL TESTSPACE
+	CP 0
+	RET Z
+        CALL #FD9F
+	CALL VPOKE
+        JP LOOP
+GESTSHIP:
+	LD A,0
+	CALL INTERUPT
+	LD A,
+	OUT (#99),A
+	LD A,128+25
+	OUT (#99),A
+	LD HL,(PNTSHIP)
+	LD A,(HL)
+	CALL SCROLLH
+	LD A,103
+	CALL INTERUPT
+	XOR A
+	CALL SCROLLH
+	LD A,
+	OUT (#99),A
+	LD A,128+25
+	OUT (#99),A
+	LD HL,(PNTSHIP)
+	INC HL
+	LD (PNTSHIP),HL
+	LD A,(CPTSHIP)
+	INC A
+	LD (CPTSHIP),A
+	CP 0
+	CALL Z,NEWSHIP
+	RET
+NEWSHIP:
+	LD HL,#B000
+	LD (PNTSHIP),HL
+	RET
+PNTSHIP:
+	DEFW #B000    
+CPTSHIP:
+	DEFB 0
+TESTSPACE:
+	IN A,(#AA)
+	AND %11110000
+	ADD A,8
+        OUT (#AA),A
+        IN A,(#A9)
+        AND 1
+        RET
+        
+SCANCLAVIER:
+	IN A,(#AA)
+	AND %11110000
+	ADD A,8
+        OUT (#AA),A
+        IN A,(#A9)
+        RET
+DIRECTION:
+	XOR A
+	LD (OPX),A
+	LD (OPY),A
+	CALL SCANCLAVIER
+	AND %11110000
+	LD (VALCLAVIER),A
+	AND %10000000
+	CALL Z,PLUSX
+	LD A,(VALCLAVIER)
+	AND %01000000
+	CALL Z,PLUSY
+	LD A,(VALCLAVIER)
+	AND %00100000
+	CALL Z,MOINSY
+	LD A,(VALCLAVIER)
+	AND %00010000
+	CALL Z,MOINSX
+	RET
+PLUSX:
+	LD A,(OPX)
+	INC A
+	LD (OPX),A
+	RET
+PLUSY:
+	LD A,(OPY)
+        INC A
+	LD (OPY),A
+	RET
+MOINSX:
+	LD A,(OPX)
+	DEC A
+	LD (OPX),A
+	RET
+MOINSY:
+	LD A,(OPY)
+	DEC A
+	LD (OPY),A
+	RET
+VPOKE:
+        LD DE,#7600
+
+        LD A,D
+        AND %11000000
+        RLCA
+        RLCA
+        OUT (#99),A
+        LD A,128+14
+        OUT (#99),A
+
+        LD A,E
+        OUT (#99),A
+        LD A,D
+        AND %00111111 
+        OR %01000000
+        OUT (#99),A
+
+        LD A,(Y)
+        OUT (#98),A
+	LD A,(X)
+	OUT (#98),A
+        RET
+XMMM:   
+TST:    LD D,2
+        CALL STATREG
+        RRCA
+        JR C,TST
+
+        LD B,15                         ;                   CALL HMMM
+        LD A,32        
+        OUT (#99),A
+        LD A,#91
+        OUT (#99),A
+        LD C,#9B         
+        OTIR
+
+        XOR A 
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+
+        RET
+
+;
+;       LECTURE D'UN REGISTRE STATUS DU VDP
+;       -----------------------------------
+;
+STATREG:  
+        LD A,D
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        IN A,(#99)
+        RET
+
+
+INTERUPT:
+        OUT (#99),A
+        LD A,#93
+        OUT (#99),A
+        LD A,1
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+WAITINT:
+        IN A,(#99)
+        AND 1
+        JR Z,WAITINT
+        XOR A 
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        RET
+
+COPYMONSTRE:      DEFB 0,0, 0,2, 0,0, 0,0, 80,0, 69,0,0,0,#D0
+
+X:	DEFB 10			;COORDONEES MKID
+Y:	DEFB 100
+
+OPX:
+	DEFB 0
+OPY:
+	DEFB 0
+VALCLAVIER:
+	DEFB 0
+SCROLLH:
+	ld	b,a
+	rra
+	rra
+	rra
+	and	#1f
+	out	(#99),a
+	ld	a,#80+26
+	out	(#99),a
+	ld	a,b
+	and	7
+	xor	7
+	out	(#99),a
+	ld	a,#80+27
+	out	(#99),a
+	ret
+
+
+FINISH:
+

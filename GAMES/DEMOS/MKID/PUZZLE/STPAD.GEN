@@ -1,0 +1,165 @@
+; **************************************************************
+;
+;  routine de gestion des PAD's
+;
+;	In:	rien
+;	Out:	varaible X et Y actualisees
+;		X et Y sont des variable sur 16 bits!!!!
+;
+;	Nota: pour utilisation sous DOS remplacer TOUS les:
+;	call	#db
+;
+;	par:
+;	CALSLT	exttbl,#db
+;
+; **************************************************************
+stpad:	ld	hl,0
+	ld	(z1),hl
+	ld	(z2),hl
+	xor	a
+	call	#d5
+	di
+	or	a
+	jp	z,pad
+	push	af
+	or	31
+	ld	(z4),a
+	in	a,(#aa) 	;test touche CTRL
+	and	#f0
+	or	6
+	out	(#aa),a
+	in	a,(#a9)
+	and	2
+	ld	b,1
+	jp	nz,stpad1
+
+	ld	b,5		;petite pause sympa. pour le clavier
+stpad1: ei
+stpad0: push	bc
+	halt
+	pop	bc
+	djnz	stpad0
+	di
+
+	pop	af
+	cp	1
+	jp	z,stick1
+	cp	2
+	jp	z,stick2
+	cp	3
+	jp	z,stick3
+	cp	4
+	jp	z,stick4
+	cp	5
+	jp	z,stick5
+	cp	6
+	jp	z,stick6
+	cp	7
+	jp	z,stick7
+	cp	8
+	jp	z,stick8
+	jp	eopad
+
+pad:	ld	a,12
+	call	#db
+	ld	a,13
+	call	#db
+	di
+	ld	(z1),a
+	ld	a,14
+	call	#db
+	di
+	ld	(z2),a
+	call	z4test
+	or	a
+	jp	nz,mov_xy
+	ld	a,16
+	call	#db
+	ld	a,17
+	call	#db
+	di
+	ld	(z1),a
+	ld	a,18
+	call	#db
+	di
+	ld	(z2),a
+	call	z4test
+	or	a
+	jp	z,eopad
+
+mov_xy: ld	hl,(x)
+	ld	a,(z1)
+	bit	7,a
+	jp	nz,z1neg
+	ld	b,0
+	jp	xz1
+z1neg:	ld	b,255
+xz1:	ld	c,a
+	ld	(z1),bc
+	add	hl,bc
+	ld	(x),hl
+
+	ld	hl,(y)
+	ld	a,(z2)
+	bit	7,a
+	jp	nz,z2neg
+	ld	b,0
+	jp	yz2
+z2neg:	ld	b,255
+yz2:	ld	c,a
+	ld	(z2),bc
+	add	hl,bc
+	ld	(y),hl
+eopad:	ret
+
+stick1: or	255
+	ld	(z2),a
+	inc	a
+	ld	(z1),a
+	jp	mov_xy
+stick2: ld	a,1
+	ld	(z1),a
+	or	255
+	ld	(z2),a
+	jp	mov_xy
+stick3: ld	a,1
+	ld	(z1),a
+	dec	a
+	ld	(z2),a
+	jp	mov_xy
+stick4: ld	a,1
+	ld	(z2),a
+	ld	(z1),a
+	jp	mov_xy
+stick5: ld	a,1
+	ld	(z2),a
+	dec	a
+	ld	(z1),a
+	jp	mov_xy
+stick6: ld	a,1
+	ld	(z2),a
+	or	255
+	ld	(z1),a
+	jp	mov_xy
+stick7: or	255
+	ld	(z1),a
+	inc	a
+	ld	(z2),a
+	jp	mov_xy
+stick8: or	255
+	ld	(z2),a
+	ld	(z1),a
+	jp	mov_xy
+
+;
+;	test of PAD's with Z4
+;
+z4test:	ld	a,(z1)
+	ld	b,a
+	ld	a,(z2)
+	and	b
+	dec	a
+	ld	(z4),a
+	ret
+
+

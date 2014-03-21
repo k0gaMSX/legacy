@@ -1,0 +1,147 @@
+;_________________________________________________________________
+;
+;                       VDP librairies
+;
+;_________________________________________________________________
+;
+;       MAKE A COPY OF A BITMAP BLOCK
+;       ENTER HL = POINTER ON BLOCK DATE 
+;_________________________________________________
+XMMM:
+TST:    LD D,2
+        CALL STATREG
+        RRCA
+        JR C,TST
+
+        LD B,15                         ;                   CALL HMMM
+        LD A,32        
+        OUT (#99),A
+        LD A,#91
+        OUT (#99),A
+        LD C,#9B         
+        OTIR
+
+        XOR A 
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+
+        RET
+
+;
+;       LECTURE D'UN REGISTRE STATUS DU VDP
+;       -----------------------------------
+;
+STATREG:  
+        LD A,D
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        IN A,(#99)
+        RET
+
+;WAIT A LINE INTERUPT
+;ENTER A = LINE OF SCAN INTERUPT 
+INTERUPT:
+        OUT (#99),A
+        LD A,#93
+        OUT (#99),A
+        LD A,1
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+WAITINT:
+        IN A,(#99)
+        AND 1
+        JR Z,WAITINT
+        XOR A 
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        RET
+
+;___________________________________________________________________
+;       MAKE HORIZONTAL SCROLLING (ENTER A = X SCROLL VALUE)
+;___________________________________________________________________
+SCROLLH:
+        LD      B,A
+        RRA
+        RRA
+        RRA
+        AND     #1F
+        OUT     (#99),A
+        LD      A,#80+26
+        OUT     (#99),A
+        LD      A,B
+        AND     7
+        XOR     7
+        OUT     (#99),A
+        LD      A,#80+27
+        OUT     (#99),A
+        RET
+
+;___________________________________________________
+;               VDP COMMANDS PROCEDURE
+;___________________________________________________
+VDP_CMD:
+PRG1    LD      A,2
+        DI
+        OUT     (#99),A
+        LD      A,#8F
+        OUT     (#99),A
+;       PUSH    AF
+;       POP     AF
+WAIT1   IN      A,(#99)
+        RRCA
+        JP      C,WAIT1
+        LD      A,E
+        OUT     (#99),A
+        LD      A,#91
+        OUT     (#99),A
+        LD      B,D
+        LD      C,#9B
+        OTIR
+        XOR     A
+        OUT     (#99),A
+        LD      A,#8F
+        OUT     (#99),A
+        RET
+;___________________________________
+;         COPY RAM -> VRAM
+;___________________________________
+RAM_VRAM:
+PRG2    PUSH    HL
+        DI
+        LD      A,0
+        OUT     (#99),A
+        LD      A,#80+45
+        OUT     (#99),A
+
+        LD      A,D             ;SET BITS 14 TO 16
+        AND     #C0
+        RLCA
+        RLCA
+        LD      H,A
+        LD      A,(DEST_PAGE)   ;BIT 16 = 1
+        OR      H
+        OUT     (#99),A
+        LD      A,#80+14
+        OUT     (#99),A
+        LD      A,E             ;SET BITS 0 TO 7
+        OUT     (#99),A
+        LD      A,D             ;SET BITS 8 TO 13
+        AND     #3F
+        OR      #40
+        OUT     (#99),A
+        POP     HL
+VRAM_LOOP:
+        LD      A,(HL)
+        OUT     (#98),A
+        INC     HL
+        DEC     BC
+        LD      A,B
+        OR      C
+        JR      NZ,VRAM_LOOP
+        RET
+
+

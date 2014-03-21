@@ -1,0 +1,1495 @@
+;	ANIM DU PERS QUI RENTRE DANS LA PORTE
+;	D POINT DEPART EN X E POINT D'ARRIVEE
+MARCHE:
+	XOR A
+	LD (TMPANI),A
+	LD A,D
+	LD (X),A
+	PUSH DE
+	CALL VPOKE
+	POP DE
+MARCHELOOP:
+	PUSH DE
+        LD A,(X)
+        CP E
+        JR Z,FINCLOSE
+        
+        LD A,(TMPANI)			; TEMPO ANIM
+        CP 4
+        CALL Z,CHGANI
+        
+        LD A,(X)
+        INC A
+        LD (X),A
+	CALL VPOKE
+        
+        CALL ANIMDECO
+	LD A,(TMPANI)
+	INC A
+	LD (TMPANI),A
+	LD A,191
+	CALL INTERUPT
+	CALL MUSIC
+        POP DE
+        JR MARCHELOOP
+
+CHGANI:
+	LD A,(ANI_PERSSC)
+	CP 0
+	CALL Z,UNEANI
+        CP 1
+        CALL Z,DEUXANI
+	CALL CHG_MARSP
+	LD A,(ANI_PERSSC)
+	INC A
+        AND 1
+	LD (ANI_PERSSC),A
+        XOR A
+        LD (TMPANI),A
+	RET
+UNEANI:
+	LD HL,F_RM
+        RET
+DEUXANI:
+	LD HL,F_RS
+	RET
+FINCLOSE:
+	LD HL,F_RS
+	CALL CHG_MARSP
+        POP DE
+        RET        
+;***	REALISE UNE COPIE D'UNE TRANCHE DE DECOR DE 2 PIX HR	***
+        
+MAKE_COPY:
+        LD DE,16
+        LD A,2
+        LD (COPYPART+8),A
+        XOR A
+        LD (COPYPART+6),A
+        LD A,250
+        LD (EMPLACX),A
+        LD IX,ANIDECS1
+        LD B,12                         ; 12 LIGNES A COPIER            
+COPY_LOOP:
+	DI
+        PUSH BC
+        PUSH DE
+        CALL DOCOPY
+        POP DE
+        
+        LD A,(COPYPART+6)               ; DY
+        ADD A,16
+        LD (COPYPART+6),A               ; DY+=16
+        
+        INC D                           ; +512 (LIGNE SUIVANTE)         
+        INC D
+        POP BC
+        DJNZ COPY_LOOP
+        
+        LD A,(OFFSET)                   ; COMPTAGE PAR TRANCHE DE 2 SUR 16
+        ADD A,2
+        AND %00001111
+        LD (OFFSET),A
+        RET
+DOCOPY:
+        LD HL,(DEBUTECR)                        ; DEBUT ECR + 16 OCTET
+        ADD HL,DE
+        LD (CURADR),HL                          ; ADR DEBUT DE PAGE
+
+       
+        LD A,(DESTX)
+        LD B,A
+        LD A,(OFFSET)
+        ADD A,B
+        LD (COPYPART+4),A                       ; DX
+        
+        LD A,(HL)                               ; PRENDRE L'OCTET
+        LD C,A
+        AND %11110000                           ; POS X DECORS
+        LD B,A
+        LD A,(OFFSET)                           ; XDECORS+OFFCET
+        ADD A,B
+        LD (COPYPART),A                         ; SX
+        
+        LD A,C                                  ; POS Y DECORS
+        AND %00001111                           
+        RLA
+        RLA
+        RLA
+        RLA
+        LD (COPYPART+2),A                       ; SY
+
+	LD B,144			; C=NB ETAPES ANIMS POUR LES FLAMMES
+	LD C,7				; B=NB ANIMS   	
+	LD D,96
+        LD E,0
+        LD A,(HL)
+        CP #02
+        CALL Z,INITANIDEC
+
+	LD B,128			; IDEM POUR LES PIEUX
+	LD C,5
+	LD D,192-32
+        LD E,1
+        LD A,(HL)
+	CP #70
+	CALL Z,INITANIDEC
+
+        LD HL,COPYPART                          ; COPIE D'1 BLOC DE 2 PIXELS
+        CALL XMMM
+
+        RET
+        
+CURADR:
+        DEFW 0
+OFFSET:
+        DEFB 0
+DESTX:
+        DEFB 0
+COPYPART :      DEFB 0,0, 0,1, 0,0, 0,0, 2 ,0, 16,0,0,0,#D0
+
+;$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+RAZANIDEC:
+	LD IX,ANIDECS1
+	LD HL,ANIDECS1
+	LD (ADR_ANIM),HL	
+	LD B,8
+INIRAZ:
+	LD (IX+15),0
+	CALL INCIX
+	DJNZ INIRAZ
+	RET
+
+;***	INIT D'UNE ANIMATION D'UN DECORS EN COPY ***
+;	B	X DEP ANIM EN SOURCE
+;	C	NB ETAPES ANIMS
+;	D	Y DEP ANIM EN SOURCE
+;	E	1 SI L'ANIM DOIT REPARTIR A L'ENVERS
+;	HL	ADRESSE DU BLOC
+INITANIDEC:
+	LD A,(IX+15)			; SEMA ANIM OK? 
+	CP 1
+	JP Z,ANOTHERANI
+RETROUT:
+	LD A,B				; DEBUT D'ANIM
+	LD (IX+22),A
+	LD (IX),A
+
+	LD (IX+24),H			; ADRESSE DU BLOC
+        LD (IX+25),L
+
+	LD (IX+21),C			; NB ETAPES ANIMS
+	LD (IX+2),D			; SY
+        LD (IX+23),E			; ANIM REPART A L'ENVERS(1) OU PAS(0)
+	LD A,(COPYPART+6)		; DY
+	LD (IX+6),A
+	LD A,1				; SEMA ANIM PRISE (MAX2)
+	LD (IX+15),A
+        LD (IX+17),0			; RAZ CPT ANIM        
+        LD A,(EMPLACX)
+        LD (IX+16),A			; X
+        
+	LD A,(COPYPART+4)
+        ADD A,4        
+	LD (IX+4),A			; DX
+
+        LD (IX+18),1			; TEMPO
+        LD A,(IX+16)
+        CP 250
+        JR NZ,NORMANIM
+        LD (IX+8),2			; ON NE COPIE RIEN AVANT 1 1ER SCROLL
+        RET				; PUIS 4,6,8
+NORMANIM
+	LD (IX+8),8
+	RET
+ANOTHERANI:
+;	TEST POUR VOIR SI IL NE S'AGIT PAS DE L'AUTRE ANIMS ENCORE 1*SCANNEE 
+	PUSH BC
+	PUSH DE
+
+        LD A,(IX+4)			; DX
+        SUB 4
+        LD B,A
+        LD A,(COPYPART+4)		; X TROUVE
+	AND #F0
+        SUB B
+	LD C,A
+ 
+	LD A,(IX+6)			; DY
+	LD B,A
+	LD A,(COPYPART+6)
+	SUB B
+	OR C
+	POP DE
+	POP BC
+	CP 0
+        RET Z				; IL S'AGIT DE LA MEME ANIM ALORS ON ,SORT
+	CALL INCIX			; ON PASSE A LA STRUCT SUIV
+
+	LD A,(IX+15)			; SI ELLE EST LIBRE?
+	CP 1
+	JR Z,ANOTHERANI
+	JP RETROUT
+
+
+;   ***	INCREMENTE IX DE 26 POUR PASSER A UN AUTRE OBJET DS LA STRUCT ***
+INCIX:  DI
+	PUSH HL
+	PUSH BC
+        
+	PUSH IX
+	POP HL
+	LD BC,26
+	ADD HL,BC
+	PUSH HL
+	POP IX
+         
+	POP BC
+	POP HL     
+	RET
+
+
+;	***	ROUTINE D'ANIMATION	****
+
+ANIMDECO:
+	LD IX,(ADR_ANIM)
+	LD A,(ANIDEC12)			; LES AMIMS 1 FOIS SUR 8 
+	CP 7
+	JR Z,ANID1
+	INC A
+	LD (ANIDEC12),A
+	CALL INCIX
+	PUSH IX
+	POP HL
+	LD (ADR_ANIM),HL 
+	JR ALLONSY
+ANID1:
+	XOR A
+	LD (ANIDEC12),A
+        LD IX,ANIDECS1
+	LD HL,ANIDECS1
+	LD (ADR_ANIM),HL
+
+;	*** ANIMATION PROPREMENT DITE	***
+
+ALLONSY:
+	LD A,(IX+15)				;SEMAPHORE OK ?
+	CP 0
+	RET Z
+
+	LD A,(IX+18)				; ATTENDRE X FRAMES
+	DEC A
+	LD (IX+18),A
+	CP 0
+	RET NZ
+	LD A,1
+	LD (IX+18),A
+
+	LD A,(IX+21)				; NOMBRE D'ETAPES D'ANIMS
+	LD B,A
+
+        LD A,(IX+17)				; REGARDE COMPTEUR ANIM
+        CP B
+        JR Z,DEC0
+
+        INC A
+        LD (IX+17),A
+
+	LD A,(IX+23)
+	CP 0
+	JR NZ,ALLERRETOUR
+ONAUGMENT:
+	LD A,(IX)
+	ADD A,8
+	LD (IX),A
+	JR ANDEC	
+ALLERRETOUR:
+	AND 2
+	CP 0
+	JR Z,ONAUGMENT
+	LD A,(IX)
+	SUB 8
+	LD (IX),A
+	JR ANDEC	
+	
+DEC0:;		REINIT EN FIN DE COMPTEUR
+	XOR A
+	LD (IX+17),A			; RAZ CPT ANIM
+
+        LD A,(IX+23)			; ON INVERSE LE SENS DE L'ANIM SI
+        CP 0
+        JR Z,SUITE_DEC0
+
+        CP 3
+        JR Z,UNDEUX12
+        LD (IX+23),3
+	JR DEUXUN21
+UNDEUX12:
+	LD (IX+23),1
+DEUXUN21:
+	LD A,(IX+23)
+	CP 3
+	JR Z,ANDEC
+SUITE_DEC0:
+	LD A,(IX+22)   				; DEPART ANIM EN INCREMENTANT
+        LD (IX),A
+ANDEC:        
+	LD A,(IX+20)
+	LD H,A
+	LD A,(IX+19)
+	LD L,A
+        LD A,(IX+8)
+        CP 8
+        RET NZ
+	CALL XMMM
+	RET
+
+
+;	REGARDE A CHAQUE PAS DU SCROLL SI L'ANIM SORT DE L'ECRAN
+TESTFINANI:
+	LD IX,ANIDECS1
+	LD B,8
+LOOP_FINANI:
+	CALL REGARDE1FOIS
+        CALL INCIX
+	DJNZ LOOP_FINANI
+	RET
+REGARDE1FOIS:				;VIVE LA BELGIQUE
+	LD A,(IX+15)
+	CP 1
+	RET NZ
+ 	LD A,(IX+16)
+        CP 250-4
+        CALL NC,TAMERE2
+        
+        LD A,(IX+16)
+ 	SUB 2
+ 	LD (IX+16),A
+
+	LD A,(IX+16)
+	ADD A,4
+	CP 0
+	RET NZ
+
+	
+ 	XOR A
+ 	LD (IX+15),A
+        RET
+;	ON DIMESIONNE NX POUR NE PAS QU'IL APPARAISSE TOUT DE SUITE
+TAMERE2:
+	LD A,(IX+8)
+	ADD A,2
+	LD (IX+8),A
+	RET
+TAMERE3:
+	LD A,(IX+8)
+	SUB 2
+	LD (IX+8),A
+	LD A,(IX)
+	ADD A,2
+	LD (IX),A
+	RET
+;	STRUCTURES DES ANIMS
+
+ANIDECS1:			
+	DB 144,0, 96,1, 0,0, 0,0, 8,0,16,0,0,0,#D0
+	DB 0				; SEMAPHORE SI ANIM ON OU PAS
+        DB 0				; POS X DEPART
+        DB 0				; COMPTEUR UN DEUX POUR L'ANIM
+        DB 0				; COMPTEUR FRAME D'ATTENTE
+	DW ANIDECS1			; ADRESSE DE CETTE STRUCT POUR LE COPY
+	DB 0				; NB ETAPES ANIMS
+        DB 0
+        DB 0				; SEMAPHORE A 1 SI L'ANIM DOIT REPARTIR
+        				; A L'ENVERS        
+        DW #0000                        ; ADRESSE DU BLOC
+ANIDECS2:			
+	DB 144,0, 96,1, 0,0, 0,0, 8,0,16,0,0,0,#D0
+	DB 0				; SEMAPHORE SI ANIM ON OU PAS
+        DB 0				; POS X DEPART
+        DB 0				; COMPTEUR UN DEUX POUR L'ANIM
+        DB 0				; COMPTEUR FRAME D'ATTENTE
+	DW ANIDECS2			; ADRESSE DE CETTE STRUCT POUR LE COPY
+	DB 0				; NB ETAPES ANIMS
+        DB 0				; SERT A SAVOIR QUEL SX UTILISER
+        DB 0				; SEMAPHORE A 1 SI L'ANIM DOIT REPARTIR
+        				; A L'ENVERS        
+        DW #0000                        ; ADRESSE DU BLOC
+
+ANIDECS3:			
+	DB 144,0, 96+32,1, 0,0, 0,0, 8,0,16,0,0,0,#D0
+	DB 0				; SEMAPHORE SI ANIM ON OU PAS
+        DB 0				; POS X DEPART
+        DB 0				; COMPTEUR UN DEUX POUR L'ANIM
+        DB 0				; COMPTEUR FRAME D'ATTENTE
+	DW ANIDECS3			; ADRESSE DE CETTE STRUCT POUR LE COPY
+	DB 0				; NB ETAPES ANIMS
+        DB 0
+        DB 0				; SEMAPHORE A 1 SI L'ANIM DOIT REPARTIR
+        				; A L'ENVERS        
+        DW #0000                        ; ADRESSE DU BLOC
+ANIDECS4:			
+	DB 144,0, 96+32,1, 0,0, 0,0, 8,0,16,0,0,0,#D0
+	DB 0				; SEMAPHORE SI ANIM ON OU PAS
+        DB 0				; POS X DEPART
+        DB 0				; COMPTEUR UN DEUX POUR L'ANIM
+        DB 0				; COMPTEUR FRAME D'ATTENTE
+	DW ANIDECS4			; ADRESSE DE CETTE STRUCT POUR LE COPY
+	DB 0				; NB ETAPES ANIMS
+        DB 0
+        DB 0				; SEMAPHORE A 1 SI L'ANIM DOIT REPARTIR
+        				; A L'ENVERS        
+        DW #0000                        ; ADRESSE DU BLOC
+
+ANIDECS5:			
+	DB 144,0, 96+32,1, 0,0, 0,0, 8,0,16,0,0,0,#D0
+	DB 0				; SEMAPHORE SI ANIM ON OU PAS
+        DB 0				; POS X DEPART
+        DB 0				; COMPTEUR UN DEUX POUR L'ANIM
+        DB 0				; COMPTEUR FRAME D'ATTENTE
+	DW ANIDECS5			; ADRESSE DE CETTE STRUCT POUR LE COPY
+	DB 0				; NB ETAPES ANIMS
+        DB 0
+        DB 0				; SEMAPHORE A 1 SI L'ANIM DOIT REPARTIR
+        				; A L'ENVERS        
+        DW #0000                        ; ADRESSE DU BLOC
+
+ANIDECS6:			
+	DB 144,0, 96+32,1, 0,0, 0,0, 8,0,16,0,0,0,#D0
+	DB 0				; SEMAPHORE SI ANIM ON OU PAS
+        DB 0				; POS X DEPART
+        DB 0				; COMPTEUR UN DEUX POUR L'ANIM
+        DB 0				; COMPTEUR FRAME D'ATTENTE
+	DW ANIDECS6			; ADRESSE DE CETTE STRUCT POUR LE COPY
+	DB 0				; NB ETAPES ANIMS
+        DB 0
+        DB 0				; SEMAPHORE A 1 SI L'ANIM DOIT REPARTIR
+        				; A L'ENVERS        
+
+ANIDECS7:			
+	DB 144,0, 96+32,1, 0,0, 0,0, 8,0,16,0,0,0,#D0
+	DB 0				; SEMAPHORE SI ANIM ON OU PAS
+        DB 0				; POS X DEPART
+        DB 0				; COMPTEUR UN DEUX POUR L'ANIM
+        DB 0				; COMPTEUR FRAME D'ATTENTE
+	DW ANIDECS7			; ADRESSE DE CETTE STRUCT POUR LE COPY
+	DB 0				; NB ETAPES ANIMS
+        DB 0
+        DB 0				; SEMAPHORE A 1 SI L'ANIM DOIT REPARTIR
+        				; A L'ENVERS        
+        DW #0000                        ; ADRESSE DU BLOC
+
+ANIDECS8:			
+	DB 144,0, 96+32,1, 0,0, 0,0, 8,0,16,0,0,0,#D0
+	DB 0				; SEMAPHORE SI ANIM ON OU PAS
+        DB 0				; POS X DEPART
+        DB 0				; COMPTEUR UN DEUX POUR L'ANIM
+        DB 0				; COMPTEUR FRAME D'ATTENTE
+	DW ANIDECS8			; ADRESSE DE CETTE STRUCT POUR LE COPY
+	DB 0				; NB ETAPES ANIMS
+        DB 0
+        DB 0				; SEMAPHORE A 1 SI L'ANIM DOIT REPARTIR
+        				; A L'ENVERS        
+        DW #0000                        ; ADRESSE DU BLOC
+
+
+ANIDEC12:				; GESTIONS DES ANIMS 1*/2
+	DB 0				; 
+EMPLACX:DB 0				; VARIABLE TEMPORAIRE POUR L'INIT
+ADR_ANIM:
+	DW #0000			; ADRESSE DE LA STRUCT DE L'ANIM COURANTE
+;$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+;***	MAKESTAGE	***
+
+MAKESTAGE:
+	DI
+ 	CALL SCREEN_OFF
+        CALL RAZANIDEC			; PAS D'ANIM PAR DEFAUT
+	LD IX,ANIDECS1
+        
+        LD HL,(DEBUTECR)
+        LD A,16
+        LD (COPYPART+8),A
+        XOR A
+        LD (COPYPART+4),A
+        LD (COPYPART+6),A
+        LD B,12                 
+LOOPY:
+        PUSH BC
+        XOR A
+        LD (COPYPART),A
+        LD B,16
+LOOPX:
+	DI
+        PUSH BC
+        LD A,(HL)
+        LD C,A
+        AND %11110000
+        LD (COPYPART),A
+        LD A,C
+        AND %00001111
+        RLA
+        RLA
+        RLA
+        RLA
+        LD (COPYPART+2),A
+
+	LD A,(COPYPART+4)
+	LD (EMPLACX),A
+
+	LD B,144			; C=NB ETAPES ANIMS POUR LES FLAMMES
+	LD C,7				; B=NB ANIMS   	
+	LD D,96
+        LD E,0
+        LD A,(HL)
+        CP #02
+        CALL Z,INITANIDEC
+
+	LD B,128			; IDEM POUR LES PIEUX
+	LD C,5
+	LD D,192-32
+        LD E,1
+        LD A,(HL)
+	CP #70
+	CALL Z,INITANIDEC
+
+        PUSH HL
+        LD HL,COPYPART
+        CALL XMMM
+        POP HL
+        LD A,(COPYPART+4)
+        ADD A,16
+        LD (COPYPART+4),A
+        INC HL
+        POP BC
+        DJNZ LOOPX
+        
+        LD DE,240+256
+        ADD HL,DE
+        XOR A
+        LD (COPYPART+4),A
+        LD A,(COPYPART+6)
+        ADD A,16
+        LD (COPYPART+6),A
+        POP BC
+        DJNZ LOOPY
+	CALL SCREEN_ON
+        RET
+COPYCPT:
+        DEFB 0
+COPYSTAT:
+        DEFB 0
+VALCLAVIER:
+        DEFB 0
+OPX:
+        DEFB 0
+OPY:
+        DEFB 0
+X:
+        DEFB 0
+Y:      
+        DEFB 0
+SCROLLX:
+        DEFB 0
+DEBUTECR:
+        DEFW 0
+
+;***	TESTSPACE	***
+
+TESTSPACE:
+        IN A,(#AA)
+        AND %11110000
+        ADD A,8
+        OUT (#AA),A
+        IN A,(#A9)
+        AND 1
+        RET
+
+;***	TESTESC	***
+
+TESTESC:
+        IN A,(#AA)
+        AND %11110000
+        ADD A,7
+        OUT (#AA),A
+        IN A,(#A9)
+        AND 4
+        RET
+;***	GESTJOY	***
+
+GEST_JOY:
+        XOR A
+        LD (OPX),A
+        LD A,(STICK_NUMBER)
+        CALL RD_STK
+        LD (VALCLAVIER),A
+        CP 2
+        CALL Z,PLUSX
+        LD A,(VALCLAVIER)
+        CP 3
+        CALL Z,PLUSX
+        LD A,(VALCLAVIER)
+        CP 4
+        CALL Z,PLUSX
+        LD A,(VALCLAVIER)
+        CP 6
+        CALL Z,MOINSX
+        LD A,(VALCLAVIER)
+        CP 7
+        CALL Z,MOINSX
+        LD A,(VALCLAVIER)
+        CP 8
+        CALL Z,MOINSX
+        RET
+
+;***	GEST KEYB	***
+
+GEST_KEYB:
+        XOR A
+        LD (OPX),A              ; INITIALIZE OPERATION ON X,Y POSITION
+        CALL SCANCLAVIER
+        AND %11110000
+        LD (VALCLAVIER),A
+        AND %10000000
+        CALL Z,PLUSX
+        LD A,(VALCLAVIER)
+        AND %00010000
+        CALL Z,MOINSX
+        RET
+PLUSX:
+        LD A,(OPX)
+        ADD A,2
+        LD (OPX),A
+        RET
+MOINSX:
+        LD A,(OPX)
+        SUB 2
+        LD (OPX),A
+        RET
+
+SCANCLAVIER:
+        IN A,(#AA)
+        AND %11110000
+        ADD A,8
+        OUT (#AA),A
+        IN A,(#A9)
+        RET
+
+;***	GESTION DES SCORES	***
+
+GESTSCORE:
+        LD A,(OPSCORE)
+        OR A
+        RET Z
+        LD B,A
+        LD A,(SCORE+2)
+        ADD A,B
+        CP 10
+        CALL NC,DIZPLUS
+        LD (SCORE+2),A
+        LD A,40+70
+        LD (COPYSCORE+4),A
+        LD A,(SCORE)
+        RLCA 
+        RLCA
+        RLCA
+        LD (COPYSCORE),A
+        LD HL,COPYSCORE
+        CALL XMMM
+        LD A,48+70
+        LD (COPYSCORE+4),A
+        LD A,(SCORE+1)
+        RLCA
+        RLCA
+        RLCA
+        LD (COPYSCORE),A
+        LD HL,COPYSCORE
+        CALL XMMM        
+        LD A,56+70
+        LD (COPYSCORE+4),A
+        LD A,(SCORE+2)
+        RLCA
+        RLCA
+        RLCA
+        LD (COPYSCORE),A
+        LD HL,COPYSCORE
+        CALL XMMM        
+        XOR A
+        LD (OPSCORE),A
+        RET
+COPYSCORE :   DEFB 0,0, 203,1, 0,0, 200,0, 8,0, 7,0,0,0,#D0
+
+;***	INITSCORE	***
+
+INISCORE:
+        XOR A
+        LD (COPYSCORE),A
+        LD A,64+70
+        CALL iniscor
+        LD A,72+70
+        CALL iniscor
+        LD A,40+70
+        CALL iniscor
+        ld a,48+70
+        call iniscor
+        ld a,56+70
+iniscor:
+        LD (COPYSCORE+4),A
+        LD HL,COPYSCORE
+        CALL XMMM
+        RET        
+DIZPLUS:
+        SUB 10
+        PUSH AF
+        LD A,(SCORE+1)
+        INC A
+        CP 10
+        CALL NC,CENTPLUS
+        LD (SCORE+1),A
+        POP AF
+        RET
+CENTPLUS:
+        SUB 10
+        PUSH AF
+        LD A,(SCORE)
+        INC A
+        LD (SCORE),A
+        POP AF
+        RET
+
+;***	GESTION DE LA PRISE DES DIAMANTS	***
+
+GESTDIAM:
+	DI
+        LD A,(OPDIAM)
+        OR A
+        RET Z
+        LD B,A
+        LD A,(NBDIAM+2)
+        ADD A,B
+        CP 10
+        CALL NC,DIAPLUS
+        
+        LD (NBDIAM+2),A
+        LD A,228
+        LD (COPYDIAM+4),A
+        LD A,(NBDIAM+1)
+        RLCA 
+        RLCA
+        RLCA
+        LD (COPYDIAM),A
+        LD HL,COPYDIAM
+        CALL XMMM
+        
+        LD A,236
+        LD (COPYDIAM+4),A
+        LD A,(NBDIAM+2)
+        RLCA
+        RLCA
+        RLCA
+        LD (COPYDIAM),A
+        LD HL,COPYDIAM
+        CALL XMMM     
+        
+        XOR A
+        LD (OPDIAM),A
+        RET
+COPYDIAM :   DEFB 0,0, 203,1, 0,0, 200,0, 8,0, 7,0,0,0,#D0
+COPYDIAM2:   DEFB 204,0, 195,1,210,0, 200-5,0, 16,0,13,0,0,0,#D0
+
+;***	INIDIAM		***
+
+INIDIAM:
+        LD HL,COPYDIAM2
+        CALL XMMM
+        XOR A
+        LD (COPYDIAM),A
+        LD A,228
+        CALL inidiam
+        LD A,236
+inidiam:
+        LD (COPYDIAM+4),A
+        LD HL,COPYDIAM
+        CALL XMMM
+        RET        
+DIAPLUS:                                ; ON PASSE UNE DIZAINE EN PLUS
+        SUB 10
+        PUSH AF
+        LD A,(NBDIAM+1)
+        INC A
+        CP 10
+        CALL NC,VIEPLUS
+        LD (NBDIAM+1),A
+        
+        POP AF
+        RET
+VIEPLUS:
+        SUB 10
+        PUSH AF
+        LD A,1
+        LD (VIEPL),A
+        POP AF
+        RET
+MAJVIES:
+	LD A,(VIEPL)
+	or	a
+	RET Z
+	XOR A
+	LD (VIEPL),A
+	LD A,1
+	LD (OP_VIE),A
+	JP VIES
+
+VIEPL:	DB	0
+
+NBDIAM:
+        DEFB 0,0,0
+NBLIVE:
+        DEFB 3
+OPDIAM:
+        DEFB 0
+CLEF_PORTE:                             ; COMPTEUR DE DIAMANTS ATTRAPPES
+        DEFB 0                          ; SI TOUS PRIS ALORS LA PORTE S OUVRE
+
+;***	GESTION DES VIES	***
+VIES:
+	LD A,(OP_VIE)		;REGARDE L'OPERATION A EFFECTUER SUR UNE VIE
+        OR A
+        RET Z
+        CP -1
+	JP Z,VIE_MOINS
+        LD A,(NB_VIE)
+        INC A
+        LD (NB_VIE),A
+        CP 10
+        CALL Z,TENLIFE
+	ld	bc,#0104
+	call	SET_FX
+AFFI_VIE:
+	LD A,(NB_VIE+1)
+        CP 255
+        RET Z
+	RLCA
+	RLCA
+	RLCA
+        LD (COPYVIES1),A
+        LD HL,COPYVIES1
+        CALL XMMM
+        LD A,(NB_VIE)
+        RLCA
+        RLCA
+        RLCA
+        LD (COPYVIES2),A
+        LD HL,COPYVIES2
+        CALL XMMM
+	RET
+COPYVIES1:
+	DB	0,0, 203,1, 16+4,0, 200,0, 8,0, 7,0,0,0,#D0
+COPYVIES2:
+	DB	0,0, 203,1, 24+4,0, 200,0, 8,0, 7,0,0,0,#D0
+
+LESSLIFE:
+	LD A,-1
+	LD (OP_VIE),A
+        LD A,1
+        LD (DEATHSTAT),A
+        RET
+
+TENLIFE:
+	XOR A
+	LD (NB_VIE),A
+	LD A,(NB_VIE+1)
+	INC A
+	LD (NB_VIE+1),A 
+	RET      
+VIE_MOINS:
+        XOR A
+        LD (OP_VIE),A
+        LD A,(UNL_LIFE)
+        OR A
+        JP NZ,AFFI_VIE
+	LD A,(NB_VIE)
+	DEC A
+	LD (NB_VIE),A
+	CP 255
+	CALL Z,DIZLESS
+        JP AFFI_VIE
+DIZLESS:
+	LD A,9
+	LD (NB_VIE),A
+	LD A,(NB_VIE+1)
+	DEC A
+	LD (NB_VIE+1),A
+	RET
+AJOUT_VCOP:	DB	80,0, 200,1, 4,0, 194,0, 12,0,12,0,0,0,#D0
+
+OP_VIE:
+        DEFB 0				; 1 AJOUT -1 RETRAIT 0 RIEN A FAIRE SUR LE NB VIE 
+NB_VIE: 				
+        DEFB 5,0
+
+;       liste des variables.
+
+STICK_NUMBER:
+        DEFB 0
+DEST_PAGE:
+        DEFB 0
+SCORE:
+        DEFB 0,0,0
+OPSCORE:
+        DEFB 0
+
+; * * * * * * * * * * * * * * * * * * * * * * * *
+;differents vecteurs de deplacements de monstre.
+; * * * * * * * * * * * * * * * * * * * * * * * *
+JMPMST: 	DB	-5,-5,-4,-4,-3,-3,-2,-2,-2,-1,-1,-1
+		DB	0,0,1,1,1,2,2,2,3,3,4,4,5,5
+		DS	60
+		DB	"*"
+JMPMST2:	DB	-5,-5,-4,-4,-3,-3,-2,-2,-2,-1,-1,-1,0,0,0,0,0
+		DB	"*"
+JMPMST3:	DB	0,0,0,"*"
+
+
+       
+;***   INITIME	***
+
+INITIME:
+        LD D,194			; 2 LIGNES DE CADRE INF ET SUP
+        LD E,50
+        CALL VPOKE2
+        LD A,#D8
+        LD B,150
+        OUT (#98),A
+        DJNZ $-2
+        LD D,197
+        LD E,50
+        CALL VPOKE2
+        LD A,#D8
+        LD B,150
+        OUT (#98),A
+        DJNZ $-2
+
+        LD D,195
+        LD E,49
+        CALL VPOKE2
+        ld a,#D8
+        OUT (#98),A
+        
+        LD A,#68
+        LD B,150
+        OUT (#98),A
+        DJNZ $-2
+        ld a,#D8
+        OUT (#98),A
+        
+        LD D,196
+        LD E,49
+        CALL VPOKE2
+        ld a,#D8
+        OUT (#98),A
+        LD A,#68
+        LD B,150
+        OUT (#98),A
+        DJNZ $-2
+        ld a,#D8
+        OUT (#98),A
+        
+        LD A,199
+        LD (VALTIME),A
+        RET
+        
+;***    GESTION DU TEMPS	***
+
+GESTIME:
+        LD A,(COUNTIME)
+        INC A
+        LD (COUNTIME),A
+        AND %11111111
+        OR A
+        RET NZ
+
+        LD A,(VALTIME)
+        LD E,A  
+        LD D,195
+        CALL VPOKE2
+        LD A,#18
+        OUT (#98),A
+        LD A,(VALTIME)
+        LD E,A
+        LD D,196
+        CALL VPOKE2
+        LD A,#18
+        OUT (#98),A
+
+        LD A,(VALTIME)
+        DEC A
+        LD (VALTIME),A
+        CP 51
+        CALL C,LESSLIFE
+        RET
+VALTIME:
+        DEFB 0
+COUNTIME:
+        DEFB 0
+;       nombre de pieces ramassees]
+COIN:
+	DEFB 0
+
+;*****************************************************************
+;	routine de detection de 
+;	DIAMANTS, ET AUTRES BONUS.
+
+TESTCOIN:
+	LD A,(OPX)
+	LD B,A
+        LD A,(X)
+	ADD A,B
+        ADD A,8-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        LD (COINX),A
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+	ADD A,8
+        AND %11110000
+        LD (COINY),A
+        RRA
+        RRA
+        RRA
+        LD B,A
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	CP 11
+        JP Z,GOT_IT         ; SI ON A TROUVE UNE PIECE
+	CP #1B
+	JP Z,GOT_IT
+        CP #5B		    ; REINITIALISE LE TEMPS
+        JP Z,TIMEPLUS
+        CP #A8
+        JP Z,SECRETSTG	    ; PASSAGE SECRET
+        CP #4B
+        JP Z,LIFEMORE    
+        CP #76
+        JP Z,PIERRE_CACH
+                	
+;idem plus haut
+	LD A,(OPX)
+	LD B,A
+        LD A,(X)
+	ADD A,B
+        ADD A,8-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        LD (COINX),A
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+	SUB 8
+        AND %11110000
+        LD (COINY),A
+        RRA
+        RRA
+        RRA
+        LD B,A
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	CP 11
+        JP Z,GOT_IT         	; SI ON A TROUVE UNE PIECE
+	CP #1B
+	JP Z,GOT_IT
+        CP #5B		    	; REINITIALISE LE TEMPS
+        JP Z,TIMEPLUS
+        CP #A8
+        JP Z,SECRETSTG		; PASSAGE SECRET AUX 2 DERNIERES SALLES
+        CP #4B
+        JP Z,LIFEMORE    
+        CP #76
+        JP Z,PIERRE_CACH
+ 	
+        RET
+
+
+;	PIERRE CACHEE
+PIERRE_CACH:
+	LD A,#80			; ON MET UNE PIERRE QUI CASSE 
+	LD (HL),A
+        LD BC,512
+        ADD HL,BC
+        LD A,#65			; ON MET L'OMBRE DE LA PIERRE
+        LD (HL),A
+	LD HL,STONECOP
+
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,8-3
+        PUSH AF
+        LD A,(SCROLLX)
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+	LD (STONECOP+4),A
+	LD (OMBRECOP+4),A
+	LD A,(COINY)
+	LD (STONECOP+6),A
+	ADD A,16
+	LD (OMBRECOP+6),A
+	CALL XMMM				; COPY DE LA PIERRE
+	LD HL,OMBRECOP				
+	CALL XMMM				; COPY DE L'OMBRE DE LA PIERRE
+        RET
+STONECOP:
+	DB 128,0,0,1,0,0,0,0,16,0,16,0,0,0,#D0
+OMBRECOP:
+	DB 128-32,0,80,1,0,0,0,0,16,0,16,0,0,0,#D0
+
+;       PASSAGE SECRET (LES 2 PAGES SECRETTES SONT TJRS LES PAGES 30.31)
+SECRETSTG:
+	LD A,(PAGE)		; ON EST DS LA SALLE SECRETTE ? 
+	CP 31       
+        JR Z,RETSECRET
+        CP 30
+        JR Z,RETSECRET
+	LD A,(PAGE)		; SAUVEGARDE LA PAGE COURANTE ET SES COORDONNEES
+	LD (OLDPAGE),A
+	LD A,(X)
+	LD (OLDX),A
+	LD A,(Y)
+	LD (OLDY),A
+        LD A,(SEMA_REFLECTION)
+        CP 1
+        JR NZ,NOSAVEREF
+	LD A,(PAGE_REFLECTION)
+	SUB 1
+	LD (OLD_REF),A
+	JR SAVEREF
+NOSAVEREF:
+	LD A,(PAGE_REFLECTION)
+	LD (OLD_REF),A
+SAVEREF:
+        LD A,(X_REESSAIS)
+        LD (OLDXREES),A
+        LD A,(Y_REESSAIS)
+        LD (OLDYREES),A
+	
+	LD A,100		; COORDONNEES PR LA STGSECRET
+	LD (X),A
+	LD A,32
+	LD (Y),A
+	LD A,30
+	LD (PAGE),A
+        JP INIREES  
+RETSECRET:
+	CALL SAUTFIN
+	LD A,(OLDX)
+	LD (X),A
+	LD A,(OLDY)
+	ADD A,24
+	AND #F0
+	LD (Y),A
+        LD A,(OLDXREES)
+        LD (X_REESSAIS),A
+        LD A,(OLDYREES)
+        LD (Y_REESSAIS),A
+	LD A,(OLD_REF)
+	LD (PAGE_REFLECTION),A
+	LD A,(OLDPAGE)
+	LD (PAGE),A
+        CALL INIREES
+        LD A,(OLDXREES)
+        LD (X_REESSAIS),A
+        LD A,(OLDYREES)
+        LD (Y_REESSAIS),A
+        RET        
+OLDPAGE:DB 0
+OLD_REF:DB 0
+OLDX:	DB 0
+OLDY:	DB 0
+OLDXREES:	
+	DB 0
+OLDYREES:
+	DB 0
+
+;	ROUTINE QUI SUPPRIME LE PATTERN DU REVEIL
+TIMEPLUS:
+	DI
+        CALL TINK
+	LD A,1
+        LD (HL),0
+	LD (OPTIME),A
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,8-3
+        PUSH AF
+        LD A,(SCROLLX)
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+	LD (COPYCOIN+4),A
+	LD A,(COINY)
+	LD (COPYCOIN+6),A
+        LD HL,COPYCOIN
+	CALL XMMM
+        LD A,1
+        LD (SEMAIMP),A
+	RET
+OPTIME:	DB 0
+TIMEMORE:
+	DI	
+	LD A,(OPTIME)
+	CP 0
+	RET Z
+	LD A,(VALTIME)
+        CP 199
+        RET Z
+        LD C,A
+        LD A,199
+        SUB C
+        LD B,A
+        
+        LD A,199
+        LD (VALTIME),A
+    
+        PUSH BC
+        LD D,195
+        LD E,C
+        CALL VPOKE2
+        LD A,#68
+        OUT (#98),A
+        DJNZ $-2
+        POP BC
+        LD D,196
+        LD E,C
+        CALL VPOKE2
+        LD A,#68
+        OUT (#98),A
+        DJNZ $-2
+	XOR A
+	LD (OPTIME),A
+	RET
+;	ROUTINE QUI SUPPRIME LE PATTERN DE MKID POUR UNE VIE SUPP 
+LIFEMORE:
+	DI
+        CALL TINK
+	LD A,1
+        LD (HL),0
+	LD (OP_VIE),A
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,8-3
+        PUSH AF
+        LD A,(SCROLLX)
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+	LD (COPYCOIN+4),A
+	LD A,(COINY)
+	LD (COPYCOIN+6),A
+        LD HL,COPYCOIN
+	CALL XMMM
+        LD A,1
+        LD (SEMAIMP),A
+        CALL VIES
+	RET
+        
+;	COORD DIAMANTS
+
+COINX:
+	DEFB 0
+COINY:
+	DEFB 0
+
+;	BRUIT DU DIAM RAMASSE
+
+TINK:
+	PUSH HL
+	LD BC,#0101
+	CALL SET_FX
+	POP HL
+	RET
+
+;	routine servant a effectuer
+;	le copy pour effacer lE DIAMANT
+
+GOT_IT:
+	CALL TINK
+	LD A,(COIN)		; incrementation du nombre
+	INC A			; de piece trouvees.
+	LD (COIN),A		; NB :prevoir conversion en
+	LD A,0			; systeme decimal pour
+	LD (HL),A		; affichage dans tableau score.
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,8-3
+        PUSH AF
+        LD A,(SCROLLX)
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+	LD (COPYCOIN+4),A
+	LD A,(COINY)
+	LD (COPYCOIN+6),A
+	LD HL,COPYCOIN
+	CALL XMMM
+        ld a,1
+        LD (OPDIAM),A
+        LD (SEMAIMP),A		; REMET A BLANC LA SAUVEGARDE 16*16 DE POUSPOUS
+	RET
+COPYCOIN :      DEFB 0,0,0,1, 0,0, 0,0, 16,0, 16,0,0,0,#D0
+
+;**********************************************************************
+
+
+;***	TESTPICOT	***
+
+TESTPICOT:
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,12-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+	ADD A,4
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	CP #0A
+        JP Z,LESSLIFE         ; HASTA LA VISTA BABY....
+        CP #41		     ; LAVE
+        JP Z,LESSLIFE        ; HASTA LA VISTA BABY....
+        CP #51
+        JP Z,LESSLIFE        ; HASTA LA VISTA BABY....
+        CP #61
+        JP Z,LESSLIFE        ; HASTA LA VISTA BABY....
+        CP #71
+        JP Z,LESSLIFE        ; HASTA LA VISTA BABY....
+        CP #70
+        JP Z,TESTFINC        ; HASTA LA VISTA BABY....
+ 
+        LD A,(OPX)
+        LD B,A
+        LD A,(X)
+        ADD A,B
+        ADD A,2-3
+        PUSH AF
+        LD A,(SCROLLX)
+        AND %00001111
+        LD B,A
+        POP AF
+        ADD A,B
+        AND %11110000
+        RRA 
+        RRA
+        RRA
+        RRA
+        LD C,A
+        LD A,(Y)
+        LD B,A
+        LD A,(OPY)
+        ADD A,B
+	ADD A,4
+        AND %11110000
+        RRA
+        RRA
+        RRA
+        LD B,A
+        LD HL,(DEBUTECR)
+        ADD HL,BC
+        LD A,(HL)
+	CP #0A		     ; PICOT	
+        JP Z,LESSLIFE        ; HASTA LA VISTA BABY....
+        CP #41		     ; LAVE
+        JP Z,LESSLIFE        ; HASTA LA VISTA BABY....
+        CP #51
+        JP Z,LESSLIFE        ; HASTA LA VISTA BABY....
+        CP #61
+        JP Z,LESSLIFE        ; HASTA LA VISTA BABY....
+        CP #71
+        JP Z,LESSLIFE        ; HASTA LA VISTA BABY....
+        CP #70
+        JP Z,TESTFINC        ; HASTA LA VISTA BABY....
+        RET
+        
+;       TEST FIN DE COURSE DES LANCES ET PICOT QUI SORTENT DU SOL          
+      
+TESTFINC:
+	LD IX,ANIDECS1
+	LD B,8
+LOOPFINC:
+	LD A,(IX+15)
+	CP 0
+	JR Z,SUITEFINC
+	LD A,(IX+24)
+	CP H
+	JR NZ,SUITEFINC
+	LD A,(IX+25)
+	CP L
+	JR NZ,SUITEFINC
+	LD A,(IX)			; EN BOUT DE COURSE		
+	CP 128+40			; COORDONNEE SX+8ETAPES D'ANIMS
+	JP Z,LESSLIFE
+SUITEFINC
+	CALL INCIX
+	DJNZ LOOPFINC
+	RET
+

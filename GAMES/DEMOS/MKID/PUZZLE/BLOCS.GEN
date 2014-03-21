@@ -1,0 +1,1237 @@
+;***	GESTION DES BLOCS, PLATEFORME, POUPOUS EN MODE REFLECTION	***
+
+
+TAB_DECORS:     EQU #8000
+        
+;***	RECHERCHE LE DEBUT DE CHAQUE TABLE D'EMPLACEMENT DE BLOCS	***
+
+SEARCH_PTBLOC:
+        LD A,(HL)
+        CP 255
+        JR Z,OK_PTBLOC
+        INC HL
+        INC HL
+        JP SEARCH_PTBLOC        
+OK_PTBLOC:
+        INC HL                                  ; POINTER AU DEBUT
+        RET
+
+; ***	ROUTINE DE DETECTION DES ICONES POUR LA PORTE DE SORTIE ***        
+KEYS:
+	LD A,(SEMA_REFLECTION)
+	CP 0
+	RET Z
+
+	LD A,(NBAIE)
+	CP 0
+	RET Z
+        LD A,1
+        LD (NUMSIGLE),A
+	LD IX,KEYSTRUCT
+	CALL GESTKEYS
+        LD A,(NUMSIGLE)
+        INC A
+        LD (NUMSIGLE),A
+	LD A,(NBAIE)
+	CP 2
+	RET C
+	INC IX
+	INC IX
+	CALL GESTKEYS
+        LD A,(NUMSIGLE)
+        INC A
+        LD (NUMSIGLE),A
+        
+	LD A,(NBAIE)
+	CP 3
+	RET NZ
+	INC IX
+	INC IX
+	CALL GESTKEYS
+	XOR A
+	LD (NUMSIGLE),A
+	RET
+GESTKEYS:
+	LD A,(IX)			; CLEF DEJA PRISE ?
+	CP 255
+	RET Z
+        
+        LD A,(IX+1)			; TEST DE COLLISION EN Y
+        LD B,A
+        ADD A,16
+        LD C,A
+        LD A,(Y)
+	ADD A,8
+        CALL INTERVALLE
+        LD H,A
+        LD A,(Y)
+        CALL INTERVALLE
+        OR H
+        CP 1
+        RET NZ
+        
+        LD A,(IX)			; TEST DE COLLISION AVEC UN CLEF EN X
+        LD B,A
+        ADD A,16
+        LD C,A
+        LD A,(X)
+	ADD A,4                       
+        CALL INTERVALLE                 
+        LD H,A
+        LD A,(X)
+        ADD A,12
+        CALL INTERVALLE
+        OR H
+	CP 1
+        RET NZ
+	CALL TINK
+        LD A,(IX)
+        LD (EFFAKEYPASS+4),A
+        LD A,(IX+1)
+        LD (EFFAKEYPASS+6),A
+        LD HL,EFFAKEYPASS
+        CALL XMMM
+	LD (IX),255			; EFFACE 
+        LD A,1
+        LD (SEMAIMP),A
+        LD A,(NUMSIGLE)
+        LD (SIGLE_SORTIE),A
+	RET
+	        
+                
+KEYSTRUCT:
+	DEFB 0,0
+	DEFB 0,0
+	DEFB 0,0
+	DEFB 0,0
+SIGLE_SORTIE:
+	DEFB 0				; NUMERO DU SIGLE DE SORTIE QUE POSSEDE
+					; MKID POUR L'INSTANT SI 0 PAS DE SIGLE
+
+;***    GESTION DES BLOCS AUE L'ON COGNE AVEC LA TETE ***
+
+COGNE:
+	LD A,0				; APPEL POUR LES 3 SIGLES
+	LD (NUMSIGLE),A
+	LD IX,AIESTRUCT
+	LD A,(NBAIE)
+	CP 0
+	RET Z
+	PUSH AF
+	CALL ACTIONCOGNE
+        CALL APPACTION        
+	POP AF
+	PUSH AF
+	CP 2
+	CALL NC,ACTIONCOGNE
+	CALL APPACTION
+ 	POP AF
+	CP 3
+	CALL Z,ACTIONCOGNE
+	XOR A 
+	LD (NUMSIGLE),A
+	RET
+APPACTION:
+	LD A,(NUMSIGLE)
+	INC A
+	LD (NUMSIGLE),A
+        INC IX
+        INC IX
+        INC IX
+        INC IX
+        INC IX
+        RET
+ACTIONCOGNE:	
+	LD A,(SEMA_REFLECTION)
+	CP 0
+	RET Z
+	LD A,(IX+4)
+	CP 0
+	JP NZ,SOULEVE_BLOC
+
+;	LD A,(CHUTEFLAG)
+;       CP 1
+;       RET Z
+        
+	LD A,(IX)				; DETEC X
+        ADD A,4
+	LD B,A
+	ADD A,12
+	LD C,A
+	LD A,(X)
+        ADD A,4
+	CALL INTERVALLE
+        LD D,A
+        LD A,(X)
+        ADD A,8
+        CALL INTERVALLE
+        OR D
+	CP 0
+	RET Z
+
+        LD A,(IX+1)				; DETEC Y
+        ADD A,8
+        LD B,A
+        ADD A,16
+        LD C,A
+        LD A,(Y)
+        SUB 2
+        CALL INTERVALLE
+        CP 0
+        RET Z
+
+        LD IY,POUPOUS1			; SINON ON TESTE SI ON EST SUR UN AUTRE BLOC
+        CALL TEST_DESSUS
+        CP 1
+        RET Z
+        
+        CALL POF
+	LD A,(NBPOUSPOUS)
+	CP 2
+	JR C,SUITE_COGNE
+        LD IY,POUPOUS2
+        CALL TEST_DESSUS
+        CP 1
+        RET Z
+	LD A,(NBPOUSPOUS)
+	CP 3
+	JR Z,SUITE_COGNE
+        LD IY,POUPOUS3
+        CALL TEST_DESSUS
+        CP 1
+        RET Z
+SUITE_COGNE:	
+	LD A,1
+	LD (IX+4),A
+	LD A,(IX)
+	LD (ACTIONCOP+4),A
+	LD A,(IX+1)
+	LD (ACTIONCOP+6),A
+        LD A,(IX)
+        ADD A,4
+        LD (ANIM_M5),A
+        LD A,(IX+1)
+        SUB 16
+        LD (ANIM_M5+1),A
+        PUSH IX
+        PUSH HL
+        LD HL,ANIM_M5
+        LD IX,SPRMON5
+        LD (IX+11),2
+        CALL INIT_DEPM 
+        POP HL
+        POP IX      
+SOULEVE_BLOC:
+	LD A,(IX+2)				; DELAIS
+	INC A
+	LD (IX+2),A
+	CP 5
+	RET NZ
+
+	LD (IX+2),0        
+        LD A,(IX+4)
+	CP 2
+	JR NC,REMET_LEBLOC
+
+	LD B,A
+        INC B
+        INC B
+        INC B
+	LD A,(ACTIONCOP+6)
+	SUB B
+	LD (ACTIONCOP+6),A
+        
+        LD A,(IX)
+        LD (CACHEACT+4),A
+        LD A,(ACTIONCOP+6)			; ON CACHE LES DEPLACEMENTS
+        ADD A,16				; DU BLOC
+        LD (CACHEACT+6),A
+        LD A,B
+        LD (CACHEACT+10),A
+	LD A,80
+        LD (CACHEACT+2),A
+        LD A,96
+        LD (CACHEACT),A
+        
+	LD A,(IX)				; SAUVEGARDE LE PATTERN
+	LD (SAVEPAT),A				; DU DESSUS
+	LD A,(IX+1)
+	SUB 16
+	LD (SAVEPAT+2),A
+	LD HL,SAVEPAT
+	CALL XMMM
+COPYACTION:
+	LD A,(IX+4)
+	INC A
+	LD (IX+4),A
+	LD HL,ACTIONCOP
+	CALL XMMM
+        LD HL,CACHEACT
+        CALL XMMM
+	RET 
+REMET_LEBLOC:
+        LD A,(IX+4)
+	CP 3
+	JR NC,ACTION2
+	
+	LD A,(IX+1)
+        SUB 2
+	LD (ACTIONCOP+6),A
+	LD A,(IX+1)
+	SUB 4
+	LD (CACHEACT+6),A
+        LD A,2			
+        LD (CACHEACT+10),A
+        LD A,255-63
+        LD (CACHEACT),A
+        LD A,188+16
+        LD (CACHEACT+2),A
+	JP COPYACTION
+ACTION2:
+        LD A,(IX+4)
+	CP 4
+	JR NC,FINACTION
+	
+	LD A,(IX+1)
+	LD (ACTIONCOP+6),A
+	LD A,(IX+1)
+	SUB 2
+	LD (CACHEACT+6),A
+        LD A,190+16
+        LD (CACHEACT+2),A
+	JP COPYACTION
+
+FINACTION:
+	LD A,(IX+3)
+	CP 1
+	JP Z,PAS_ANOB				; SI OBJ DEJA PRIS, ON FOUT RIEN
+	LD (IX+2),2				; ON DIMINUE LA TEMPO
+        PUSH IX
+	LD HL,ANIM_M5				; ANIM SPRITE DE LA CLEF
+	LD IX,SPRMON5				; QUI SAUTE
+	PUSH IX
+	CALL ANIM_M
+	POP IX
+	LD A,(IX+11)				; SI FIN D'ANIM, ON TERMINE
+	AND 1
+	POP IX
+	CP 0
+	RET Z
+
+        LD A,(NUMSIGLE)				; CHOIX DU PATTERN A AFFICHER COMME CLEF
+        CP 1
+        JR NZ,SIGLE2
+	LD A,176
+	LD (COPYCLEF+2),A
+	LD A,96
+	LD (COPYCLEF),A
+        JR SIGLEFIN
+SIGLE2:
+        LD A,(NUMSIGLE)
+        CP 2
+        JR NZ,SIGLE3
+	LD A,160
+	LD (COPYCLEF+2),A
+	LD A,96
+	LD (COPYCLEF),A
+        JR SIGLEFIN
+SIGLE3:
+	LD A,160
+	LD (COPYCLEF+2),A
+	LD A,112
+	LD (COPYCLEF),A
+SIGLEFIN:
+	LD A,(IX)				; PAR AFFICHER LE PATTERN
+	LD (COPYCLEF+4),A			; DE LA CLEF
+	LD A,(IX+1)
+	SUB 16
+	LD (COPYCLEF+6),A
+	LD HL,COPYCLEF
+	CALL XMMM
+        CALL TINK
+	LD A,(NUMSIGLE)				; ON SAIT OU L'ICONE DOIT ETRE 
+	RLCA					; RAMASSEE
+	LD C,A
+	LD B,0
+	LD A,(IX)
+	LD D,(IX)
+	LD A,(IX+1)
+	SUB 16
+	LD HL,KEYSTRUCT
+	ADD HL,BC
+	LD (HL),D				; X ICONE
+	INC HL
+	LD (HL),A				; Y ICONE
+
+        LD (IX+3),1				; PLUS D'OBJET QUI SORTENT 
+PAS_ANOB:
+	XOR A
+	LD (IX+4),A
+	RET
+NUMSIGLE:
+	DEFB 0					; NUMERO DE SIGLE COURANT
+ACTIONCOP:
+	DEFB 144,0, 16,1, 0,0, 0,0, 16,0, 16,0,0,0,#D0
+CACHEACT:
+	DEFB 255-63,0, 16*12,1, 0,0, 0,0, 16,0, 0,0,0,0,#D0
+COPYCLEF:
+	DEFB 96,0, 160,1, 0,0, 0,0, 16,0, 16,0,0,0,#D0
+SAVEPAT:
+	DEFB 0,0, 0,0, 255-63,0, 16*12,1, 16,0, 16,0,0,0,#D0
+
+;	TEST SI UN BLOC EST EN DESSUS
+TEST_DESSUS:        
+        LD A,(IX)			; XPOUS=XPOUSAUTREBLOC ?
+        LD B,A
+        ADD A,16
+        LD C,A
+        LD A,(IY)
+        ADD A,14
+        CALL INTERVALLE
+        CP 1
+        JR Z,OKYTEST
+        LD A,(IY)
+        ADD A,2
+        CALL INTERVALLE
+        CP 0
+        JR Z,PAS_AUDESSUS
+OKYTEST:
+        LD A,(IX+1)			; YPOUS+16=YPOUSAUTREBLOC ?
+	SUB 16
+        LD B,A
+        LD A,(IY+1)
+        CP B
+	JR NZ,PAS_AUDESSUS		; ON ARRETE LA CHUTE SI BLOC JUSTE AU DESSUS
+        LD A,1
+        RET
+PAS_AUDESSUS
+	XOR A				; RETOURNE 0
+	RET
+
+
+;	TEST SI UN BLOC EST EN DESSOUS DE L'AUTRE (POUR LA CHUTE)
+TEST_DESSOUS:        
+        LD A,(IX)			; XPOUS=XPOUSAUTREBLOC ?
+        LD B,A
+        ADD A,16
+        LD C,A
+        LD A,(IY)
+        ADD A,14
+        CALL INTERVALLE
+        CP 1
+        JR Z,OKYTST
+        LD A,(IY)
+        ADD A,2
+        CALL INTERVALLE
+        CP 0
+        JR Z,PAS_ENDESSOUS
+OKYTST:
+        LD A,(IX+1)			; YPOUS+16=YPOUSAUTREBLOC ?
+	ADD A,16
+        LD B,A
+        LD A,(IY+1)
+        CP B
+	JR NZ,PAS_ENDESSOUS		; ON ARRETE LA CHUTE SI BLOC JUSTE AU DESSUS
+        LD A,1
+        RET
+PAS_ENDESSOUS
+	XOR A				; RETOURNE 0
+	RET
+
+
+;***	GESTION DES BLOCS QUE L'ON POUSSE	***
+
+POUSPOUS:
+        LD A,(SEMA_REFLECTION)
+        CP 0
+        RET Z
+        
+        LD A,(NBPOUSPOUS)
+        CP 0
+        RET Z
+
+	LD A,1
+	LD (ECRASE),A
+
+        XOR A
+        LD (ONBLOC),A                           ; PAR DEFAUT PAS SUR UN BLOC
+                
+        LD IX,POUPOUS1
+        CALL TRT_POUSPOUS
+        
+        LD A,(NBPOUSPOUS)
+        CP 2
+        RET C
+
+        LD IX,POUPOUS2
+        CALL TRT_POUSPOUS
+        LD A,(NBPOUSPOUS)
+        CP 3
+        RET NZ
+        LD IX,POUPOUS3
+TRT_POUSPOUS:
+        CALL TEST_CHUTE				; TESTE SI IL N'Y A RIEN EN DESSOUS DU BLOC
+
+        LD A,(IX+5)
+        CP 1
+        CALL Z,POUS_CHUTE                       ; TRT CHUTE DE BLOCS
+
+        LD A,(IX+5)                             ; SI SEMA CHUTE ALORS 
+        CP 1                                    ; ATTENTION CHUTE DE PIERRE
+        JR NZ,PAS_CHUTP
+
+        LD A,(IX+4)
+        CP 0
+        jr NZ,DECOMPTE
+;        CALL Z,FINIDEC
+        LD IY,IXCOP                             ; COMPATIBLE AVEC EGPM
+        LD A,(IX)
+        LD (IY+1),A
+        LD A,(IX+1)
+        LD (IY),A
+        LD IX,IXCOP
+        JP COLLIS_EGPM                          ; COMPORTEMENT MARIO
+DECOMPTE:       
+        DEC A
+        LD (IX+4),A
+        CP 13
+        JR NC,BOUGE
+        XOR A
+        LD (OPX),A
+BOUGE:
+        LD A,4
+        LD (XJOUAG),A
+        LD A,14
+        LD (XJOUAD),A
+        RET
+FINIDEC:
+        LD A,4
+        LD (XJOUAG),A
+        LD A,14
+        LD (XJOUAD),A
+        RET
+
+PAS_CHUTP:
+	LD L,0				; TEST PERS GAUCHE
+        LD A,(IX)			; DU BLOC
+        LD B,A
+        ADD A,8
+        LD C,A
+
+        LD A,(X)
+        LD E,A
+        ADD A,12
+        CALL INTERVALLE
+        CP 1
+        JR Z,OK_POUSX
+ 
+        LD A,(X)
+        LD E,A
+        ADD A,4
+        CALL INTERVALLE
+        CP 1
+        JR Z,OK_POUSX
+        
+	LD L,1				; TEST PERS DR DU BLOC
+	LD A,B
+	ADD A,8
+	LD B,A
+	LD A,C
+	ADD A,8
+	LD C,A
+
+        LD A,E
+        CALL INTERVALLE
+        CP 1
+        JR Z,OK_POUSX
+
+	LD A,(IX)
+	LD B,A
+	ADD A,16
+	LD C,A
+        
+	LD A,E
+	ADD A,8
+	CALL INTERVALLE
+	CP 1
+	JR Z,OK_POUSX        
+        RET
+OK_POUSX:
+        LD A,(IX+1)                             ; Y
+        LD B,A
+        
+        LD A,(Y)
+        LD E,A
+        ADD A,16
+        LD D,A
+
+        LD A,B
+        ADD A,8
+        LD C,A
+        
+        LD H,1                                  ; TEST PIED
+        LD A,D
+        CALL INTERVALLE        
+        CP 1
+        JR Z,OK_POUSY
+        
+        LD A,B
+        ADD A,16
+        LD C,A
+ 
+        LD H,0
+        LD A,E
+        ADD A,2
+        CALL INTERVALLE                         ; TEST TETE
+        CP 1
+        JR Z,OK_POUSY
+
+        RET
+OK_POUSY:
+        LD A,H
+        CP 0
+        JR Z,PAS_DESS
+        LD A,(Y)				; ICI, ON EST AU DESSUS DU BLOC
+        ADD A,8
+        AND #F0
+        LD (Y),A
+        LD A,1
+        LD (ONBLOC),A
+        LD (ONFLOOR),A
+        LD A,0
+        LD (OPY),A
+        
+        LD A,(STICK_NUMBER)			; ANTI REBOND + 4 PIX EN MOINS POUR
+        CP 0					; NE PLUS COLLER AU BLOC EN 
+        CALL RD_STG				; CAS DE SAUT
+        CALL NZ,SAUT2
+        RET         
+PAS_DESS:   		                        ; HL POINTE LE DECORS DU BLOC
+	CALL SAUTFIN
+        LD A,L
+        LD E,A
+        CALL ADR_BLOC
+        LD A,E
+        CP 0
+        ; ON POUSSE VERS LA GAUCHE OU LA DROITE ?
+        JP NZ,GAUCHEPOUSS
+        JP Z,DROITEPOUSS
+        RET
+;       ON POUSSE A GAUCHE
+GAUCHEPOUSS:
+        LD A,(IX)                       ; REPOSITIONNE MARIO
+        ADD A,16                        ; 
+        LD (X),A
+        
+        LD A,(IX+4)                     ; COMPTEUR POUR DONNER L'IMPRESSION
+        CP 0                            ; QUE L'ON POUSSE
+        JR Z,OK_GPOUSS
+        DEC A
+        LD (IX+4),A
+        RET
+OK_GPOUSS:
+        LD (IX+4),15			; REMISE DE LA TEMPO
+
+;       REGARDE SI IL Y A UN BLOC 16 PIX MOINS LOIN SI OUI ON BLOQUE LE BLOC
+        LD B,0
+        LD D,16
+	LD IY,POUPOUS1
+	CALL TEST_BL
+	CP 1
+	RET Z
+        
+	LD A,(NBPOUSPOUS)
+	CP 2
+	JR C,TST_LEFTBL
+        LD B,0
+        LD D,16
+	LD IY,POUPOUS2
+	CALL TEST_BL
+	CP 1
+	RET Z
+
+ 	LD A,(NBPOUSPOUS)
+	CP 3
+	JR NZ,TST_LEFTBL
+        LD B,0
+        LD D,16
+	LD IY,POUPOUS3
+	CALL TEST_BL
+	CP 1
+	RET Z
+TST_LEFTBL:
+        LD A,(IX)                       
+        AND #0F                         ; XPOUS DIV PAR 16 ?
+        CP 0
+        JP NZ,PLUS_TST
+					; OUI ALORS, ON CONTINUE
+        DEC HL
+        LD A,(HL)                       ; BLOC A GAUCHE EST UN OBSTACLE ?
+	INC HL
+        CP #80
+        RET NC
+;       JP NC,END_POUS			
+PLUS_TST:
+        XOR A
+        LD (WAY_BL),A                   ; BLOC DE GAUCHE
+        LD C,4                          
+        LD A,(IX)
+        SUB C
+        LD (IX),A
+        JP ANIMPOUSS
+
+;       ON POUSSE A DROITE
+DROITEPOUSS:
+        LD C,14                        ; REPOS MKID
+        LD A,(IX)
+        SUB C
+        LD (X),A
+
+        LD A,(IX+4)                     ; ON POUSSE 15 *
+        CP 0
+        JR Z,OK_DPOUSS
+        DEC A
+        LD (IX+4),A
+        RET
+OK_DPOUSS:
+        LD (IX+4),15
+
+        LD B,16				; REGARDE SI 1 DES BLOCS
+        LD D,0				; EST A DROITE DU BLOC COURANT 
+	LD IY,POUPOUS1			; SI OUI ON ARRETE
+	CALL TEST_BL
+	CP 1
+	RET Z
+	
+	LD A,(NBPOUSPOUS)
+	CP 2
+	JR C,TST_RIGHT
+        LD B,16
+        LD D,0
+	LD IY,POUPOUS2
+	CALL TEST_BL
+	CP 1
+	RET Z
+	
+	LD A,(NBPOUSPOUS)
+	CP 3
+	JR NZ,TST_RIGHT
+        LD B,16
+        LD D,0
+	LD IY,POUPOUS3
+	CALL TEST_BL
+	CP 1
+	RET Z
+	
+TST_RIGHT:
+        LD A,(IX)                       
+        AND #0F                         ; XPOUS DIV PAR 16 ?
+        CP 0
+        JP NZ,PLUS_TSTDR
+					; OUI ALORS, ON CONTINUE
+        INC HL
+        LD A,(HL)                       ; BLOC A GAUCHE EST UN OBSTACLE ?
+	DEC HL
+        CP #80
+        RET NC
+;       JP NC,END_POUS	
+PLUS_TSTDR: 
+        LD A,1                          ; BLOC DE DROITE
+        LD (WAY_BL),A
+
+        LD A,(IX)
+        ADD A,4
+        LD (IX),A
+        JP ANIMPOUSS
+END_POUS:                               ; ICI LE BLOC EST BLOQUE DONC ON NE S'EN
+        LD A,255                        ; OCCUPE PLUS 
+        LD (IX),A
+        LD A,#F0                        ; IL DEVIENT UN OBSTACLE
+        LD (HL),A
+        RET
+
+TEST_CHUTE:
+        LD A,(IX+5)
+        CP 1
+        RET Z
+
+	LD A,(IX+7)			; ON REGARDE SI ON EST SUR UN BLOC OU PAS	
+        CP 0
+	JP Z,TSTBLBAS
+
+	PUSH HL
+        LD IY,POUPOUS1			; SINON ON TESTE SI ON EST SUR UN AUTRE BLOC
+        CALL TEST_DESSOUS
+        CP 1
+        JR Z,PAS_VIDE
+	LD A,(NBPOUSPOUS)
+	CP 2
+	JR C,JOJOLI
+        LD IY,POUPOUS2
+        CALL TEST_DESSOUS
+        CP 1
+        JR Z,PAS_VIDE
+	LD A,(NBPOUSPOUS)
+	CP 3
+	JR NZ,JOJOLI
+        LD IY,POUPOUS3
+        CALL TEST_DESSOUS
+        CP 1
+        JR Z,PAS_VIDE
+JOJOLI:
+	JP CHUTE_POUS
+TSTBLBAS:
+        PUSH HL
+        CALL ADR_BLOC
+        LD BC,512                       ; ON REGARDE UNE LIGNE PLUS LOIN
+        ADD HL,BC                       ; SI IL Y A QUELQUE CHOSE EN DESSOUS 
+        LD A,(HL)
+        CP #80
+        JR NC,PAS_VIDE
+        LD A,(IX)                       ; X DIVISIBLE PAR 16 ?
+        AND #0F
+        CP 0
+        JR NZ,PAS_VIDE                   ; OUI, ALORS LE BLOC TOMBE!
+	JP CHUTE_POUS
+PAS_VIDE:
+        LD (IX+5),0
+        POP HL
+        RET
+
+;***	ANIMATION DEPLACEMENT POUPOUS	***
+
+ANIMPOUSS:
+;RESTORE
+	DI
+        LD A,(SEMAIMP)
+        CP 1
+        JR Z,IMPOS
+                
+        LD IY,RESTPOUSS
+        LD A,(IX+2)
+        LD (IY+4),A
+        LD A,(IX+3)
+        LD (IY+6),A
+        LD A,(IX+6)
+        LD (IY),A
+        LD HL,RESTPOUSS
+        CALL XMMM
+        JR SAVEP
+IMPOS:
+        LD IY,IMPOSE
+        LD A,(IX+2)
+        LD (IY+4),A
+        LD A,(IX+3)
+        LD (IY+6),A
+        LD HL,IMPOSE
+        CALL XMMM
+        XOR A
+        LD (SEMAIMP),A
+;SAVE
+SAVEP:
+        LD IY,SAVEPOUSS
+        LD A,(IX)
+        LD (IY),A
+        LD A,(IX+1)
+        LD (IY+2),A
+        LD A,(IX+6)
+        LD (IY+4),A
+        LD HL,SAVEPOUSS
+        CALL XMMM
+;COPY
+        LD A,(IX)
+        LD (IX+2),A
+        LD IY,COPYPOUSS
+        LD (IY+4),A
+        LD A,(IX+1)
+        LD (IX+3),A
+        LD (IY+6),A
+        LD A,(WAY_BL)
+        CP 1
+        JR Z,DR_BLOC
+        LD A,2*16
+        JR GA_BLOC      
+DR_BLOC:
+        LD A,3*16
+GA_BLOC:
+        LD (IY+2),A
+        LD HL,COPYPOUSS
+        CALL XMMM
+        RET
+        
+;***	TRT CHUTE POUPOUS	***
+        
+;       ON SIGNALE LA CHUTE        
+CHUTE_POUS:
+        POP HL                          ; ON REPREND LA PILE POUR LE PLANTAGE
+        LD (IX+5),1                     ; SEMAPHORE DE CHUTE A 1
+        LD (IX+4),17                    ; DELAIS
+        RET
+;       TRT CHUTE DU BLOC       
+POUS_CHUTE:
+	LD (IX+7),0        
+        LD A,(IX+1)			; SINON, ON REGARDE SI ON ARRIVE EN BAS DE L'ECRAN
+        CP 176				; SI OUI ALORS ON EN FAIT UN OBSTACLE
+        JP Z,FINCH
+
+	LD (IX+7),1        
+        LD IY,POUPOUS1			; SINON ON TESTE SI ON EST SUR UN AUTRE BLOC
+        CALL TEST_DESSOUS
+        CP 1
+        JR Z,FINCH
+	LD A,(NBPOUSPOUS)
+	CP 2
+	JR C,TST_OBSTHERE
+        LD IY,POUPOUS2
+        CALL TEST_DESSOUS
+        CP 1
+        JR Z,FINCH
+	LD A,(NBPOUSPOUS)
+	CP 3
+	JR NZ,TST_OBSTHERE
+        LD IY,POUPOUS3
+        CALL TEST_DESSOUS
+        CP 1
+        JR Z,FINCH
+TST_OBSTHERE:
+	LD (IX+7),0
+        LD A,(IX+1)                     ; YPOUS DIV 16?
+        AND #0F
+        CP 0
+        JR NZ,PLUSCHUTE
+        CALL ADR_BLOC                   ; HL=ADR DU BLOC
+        LD BC,512
+        ADD HL,BC                       ; POINTE UN BLOC PLUS BAS
+        LD A,(HL)
+        CP #80
+        JR NC,FINCH                  	; UN OBST OU PAS ?
+        
+PLUSCHUTE:				; ICI, ON CONTINUE LA CHUTE
+        LD A,(IX+1)                     ; Y++
+        INC A
+        LD (IX+1),A
+        JP ANIMPOUSS
+        RET
+        
+FINCH:
+        LD (IX+5),0                     ; ON ARRETE LA CHUTE
+        LD (IX+4),15
+        RET
+
+;       TEST SI UN BLOC POUSPOUS EST A DROITE OU A GAUCHE (B=16 OU 0 ET D=16 OU 0)
+TEST_BL:
+        LD A,(IX+1)			; YPOUS=YPOUSAUTREBLOC ?
+        LD C,A
+        LD A,(IY+1)
+        CP C
+        JR NZ,PAS_BL
+
+        LD A,(IX)			; XPOUS+16=YPOUSAUTREBLOC ?
+	ADD A,B				;      -
+        LD B,A
+        LD A,(IY)
+        ADD A,D
+        CP B
+	JR NZ,PAS_BL			; ON ARRETE LA CHUTE SI BLOC JUSTE AU DESSUS
+        LD A,1				; RETOURNE 1
+        RET
+PAS_BL:
+	XOR A
+	RET
+ONBLOC:
+        DEFB 0				; 1 SI ON EST SUR UN POUSPOUS
+WAY_BL:
+        DEFB 0				; COPY DU BON PATTERN SUIVANT LA DIRECTION
+SAVEPOUSS:				; DU POUSPOUS
+        DEFB 0,0, 0,0, 255-15,0, 12*16,1, 16,0,16,0,0,0,#D0
+RESTPOUSS:
+        DEFB 255-15,0, 12*16,1, 0,0, 0,0, 16,0,16,0,0,0,#D0
+COPYPOUSS:
+        DEFB 9*16,0, 3*16,1, 0,0, 0,0, 16,0,16,0,0,0,#D0
+IMPOSE:
+        DEFB 0,0, 0,1, 0,0, 0,0, 16,0,16,0,0,0,#D0
+SEMAIMP:DEFB 0
+
+;       REND COMPATIBLE AVEC LES TESTS DE COLLISIONS EGPM
+IXCOP:
+        DEFB 0                  ; Y
+        DEFB 0                  ; X
+        DEFB 0,0,0,0,2,0,0,0,0,2,1,0,0,0
+POUPOUS1:       
+        DEFB 0                  ; X
+        DEFB 0                  ; Y
+        DEFB 0                  ; XOLD
+        DEFB 0                  ; YOLD
+        DEFB 0                  ; COMPTEUR DELAIS
+        DEFB 0                  ; SEMAPHORE SI BLOC CHUTE (1) SINON (0)
+        DEFB 0                  ; COORD EN X DE LA SAUVEGARDE DU FOND
+	DEFB 0			; 1 SI SUR 1 BLOC POUPOUS
+POUPOUS2:
+        DEFB 0                  ; X
+        DEFB 0                  ; Y
+        DEFB 0                  ; XOLD
+        DEFB 0                  ; YOLD
+        DEFB 0                  ; COMPTEUR DELAIS
+        DEFB 0                  ; SEMAPHORE SI BLOC CHUTE (1) SINON (0)
+        DEFB 0                  ; COORD EN X DE LA SAUVEGARDE DU FOND
+	DEFB 0			; 1 SI SUR 1 BLOC POUPOUS
+
+POUPOUS3:
+        DEFB 0                  ; X
+        DEFB 0                  ; Y
+        DEFB 0                  ; XOLD
+        DEFB 0                  ; YOLD
+        DEFB 0                  ; COMPTEUR DELAIS
+        DEFB 0                  ; SEMAPHORE SI BLOC CHUTE (1) SINON (0)
+        DEFB 0                  ; COORD EN X DE LA SAUVEGARDE DU FOND
+	DEFB 0			; 1 SI SUR 1 BLOC POUPOUS
+
+NBPOUSPOUS:
+        DEFB 0
+;***	INIT DES BLOCS A POUSSER	***
+
+INITPOUSPOUS:
+        XOR A                                   ; NOMBRE DE POUSOUS
+        LD (NBPOUSPOUS),A
+        CALL ADR_PAGE                           ; TU AS DANS HL LE DEBUT DE LA PAGE
+        LD E,0                                  ; LIGNES
+BIGLOOPPOUS:
+        LD D,0                                  ; COLONNES
+        LD B,16
+LOOP_INIPOUS:
+        LD A,(HL)
+        CP #93
+        PUSH AF
+        CALL Z,FIND_POUS
+        POP AF
+        CP #92
+        CALL Z,FIND_POUS
+        INC HL
+        INC D
+        DJNZ LOOP_INIPOUS
+        LD BC,512-16
+        ADD HL,BC
+        INC E
+        LD A,E
+        CP 12
+        JR NZ,BIGLOOPPOUS
+        LD A,(NBPOUSPOUS)
+        CP 0
+        JR Z,PAS_POUS
+        RET
+;       TROUVE POUPOUS
+FIND_POUS:
+        LD A,(NBPOUSPOUS)
+        CP 2
+        JR NZ,POUS2
+        LD IX,POUPOUS3
+        LD (IX+6),255-15
+        JR TRTPOUS
+POUS2:
+        CP 1
+        JR NZ,POUS1
+        LD IX,POUPOUS2
+        LD (IX+6),255-15-16
+        JR TRTPOUS
+POUS1:
+        LD IX,POUPOUS1
+        LD (IX+6),255-15-32
+TRTPOUS:        
+        XOR A
+        LD (HL),A                       ; RETIRE L'OBSTACLE
+        LD A,D
+        RLCA
+        RLCA
+        RLCA
+        RLCA
+        AND #F0
+        LD (IX),A                       ; X
+        LD (IX+2),A                     ;OLD X
+        LD A,E
+        RLCA
+        RLCA
+        RLCA
+        RLCA
+        AND #F0
+        LD (IX+1),A                     ; Y
+        LD (IX+3),A                     ; OLDY
+        LD (IX+4),15
+        LD A,(IX+6)
+        LD (COPY1POUS+4),A
+        PUSH HL
+        PUSH DE
+        PUSH BC
+        LD HL,COPY1POUS                 ; SAUVEGARDE PREMIER BLOCK
+        CALL XMMM
+        POP BC
+        POP DE
+        POP HL
+        LD A,(NBPOUSPOUS)
+        INC A
+        LD (NBPOUSPOUS),A
+        RET
+COPY1POUS:
+        DEFB 0,0, 0,1, 255-15,0, 16*12,1, 16,0, 16,0,0,0,#D0
+PAS_POUS:
+;       LD A,255
+;       LD (IX),A
+;       LD (IX+1),A
+        XOR A
+        LD (NBPOUSPOUS),A
+        RET
+
+;       RECHERCHE L'ADRESSE D'1 BLOC DONT LES COORDONNEES 
+;	SONT POINTEES PAR IX ET IX+1 ET LE RETOURNE DS HL.
+
+ADR_BLOC:
+	PUSH DE
+        CALL ADR_PAGE
+        LD A,(IX+1)                             ; Y
+        RRCA
+        RRCA
+        RRCA
+        RRCA
+        AND #0F
+        LD B,A
+        LD DE,512
+SEARCH_HL:
+        ADD HL,DE
+        DJNZ SEARCH_HL
+        LD A,(IX)                               ; X
+        RRCA
+        RRCA
+        RRCA
+        RRCA
+        AND #0F
+        LD D,0
+        LD E,A
+        ADD HL,DE
+	POP DE
+        RET
+
+;***	INIT ASCENCEURS ET BLOCS MOUVANTS	***
+
+MOV_BLOCS:
+        LD A,(SEMA_REFLECTION)
+        CP 0
+        RET Z
+
+        LD A,(NBMOVBLOCS)
+        CP 0
+        RET Z
+	XOR A
+	LD (ECRASE),A
+
+        LD IX,SPRMON2
+        LD HL,ANIM_M2
+        CALL EGPM
+
+        LD A,(NBMOVBLOCS)       
+        CP 2
+        RET C
+        LD IX,SPRMON3
+        LD HL,ANIM_M3
+        CALL EGPM
+
+        LD A,(NBMOVBLOCS)        
+        CP 3
+        RET NZ
+        LD IX,SPRMON4
+        LD HL,ANIM_M4
+        CALL EGPM
+        RET
+
+;***	INIT ASCENCEURS ET BLOCS MOUVANTS	***
+
+INIT_MOVBLOCS:
+        LD HL,MOVBLOCSTAB
+        LD A,(PAGE_REFLECTION)
+        CP 0
+        JR Z,PAS_CACA
+        LD B,A
+        LD DE,16
+CACA_LOOP:
+        ADD HL,DE
+        DJNZ CACA_LOOP
+PAS_CACA:
+        LD A,(HL)
+        LD (NBMOVBLOCS),A
+        CP 0
+        RET Z
+        INC HL
+        LD IY,ANIM_M2
+        LD IX,SPRMON2
+        CALL INIT_MOVANIM
+        
+        LD A,(NBMOVBLOCS)
+        CP 2
+        RET C
+        LD IY,ANIM_M3
+        LD IX,SPRMON3
+        CALL INIT_MOVANIM
+                
+        LD A,(NBMOVBLOCS)
+        CP 3
+        RET NZ
+        LD IY,ANIM_M4
+        LD IX,SPRMON4
+        CALL INIT_MOVANIM
+        RET
+
+INIT_MOVANIM:
+        LD A,(HL)                       ; X
+        LD (IY),A
+        INC HL
+        LD A,(HL)                       ; Y
+        LD (IY+1),A
+
+        INC HL                          ; +X ALLER
+        LD A,(HL)
+        LD (IY+4),A
+        CP 0
+        JR NZ,PAS_RETX
+        XOR A
+        LD (IY+12),A                    ; RETOUR        
+        JR SUITE0
+PAS_RETX:
+        LD B,A
+        LD A,255
+        SUB B
+        ADD A,1
+        LD (IY+12),A                    ; RETOUR        
+SUITE0:
+        INC HL                          ; +Y ALLER
+        LD A,(HL)
+        LD (IY+5),A
+        CP 0
+        JR NZ,PAS_RETY
+        XOR A
+        LD (IY+13),A                    ; RETOUR
+        JR SUITE1
+PAS_RETY:
+        LD B,A
+        LD A,255
+        SUB B
+        ADD A,1
+        LD (IY+13),A                    ; RETOUR
+SUITE1:        
+        INC HL
+        LD A,(HL)
+        LD (IY+7),A                     ; FRAME ALLER
+        LD (IY+15),A                    ; FRAME RETOUR
+                
+        LD (IX+12),0                    ; SPRITES       
+        INC HL
+        PUSH HL
+        
+        PUSH IY
+        POP HL
+        CALL INIT_DEPM
+        POP HL
+        RET
+
+NBMOVBLOCS:
+        DEFB 0                          ; NB MOVBLOCS
+
+
+

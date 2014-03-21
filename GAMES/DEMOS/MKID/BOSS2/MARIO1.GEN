@@ -1,0 +1,596 @@
+	DEFB #FE
+	DEFW START
+	DEFW FINISH
+	DEFW START
+	ORG #9000
+START:
+	DI
+	LD IX,TABLEDEP
+	LD (PNTTAB),IX
+        LD A,(IX+2)
+        LD (COUNTDEP),A
+
+LOOP:
+	CALL DIRECTION
+        CALL GESTMARIO
+	CALL GESTBULLE
+        CALL GESTMONSTRE
+        CALL TESTCOLLISION
+        CALL TESTCOL2
+	CALL TESTSPACE
+	CP 0
+	RET Z
+        CALL #FD9F
+        CALL DEFORM
+	CALL PAGE0
+	CALL VPOKE
+
+	CALL DIRECTION
+        CALL GESTMARIO
+	CALL GESTBULLE
+        CALL GESTMONSTRE
+        CALL TESTCOLLISION
+        CALL TESTCOL2
+	CALL TESTSPACE
+	CP 0
+	RET Z
+        CALL #FD9F
+	CALL DEFORM
+	CALL PAGE1
+	CALL VPOKE
+	JP LOOP
+PAGE1:
+	LD A,%00011111
+	OUT (#99),A
+	LD A,128+2
+	OUT (#99),A
+	LD A,1
+	LD (COPYMONSTRE+7),A
+	RET
+PAGE0:
+	LD A,%00111111
+	OUT (#99),A
+	LD A,128+2
+	OUT (#99),A
+	LD A,0
+	LD (COPYMONSTRE+7),A
+	RET	
+GESTMARIO:
+	LD A,(OPX)
+	LD B,A
+	LD A,(X)
+	ADD A,B
+	CP 2
+	CALL C,HORSZONE
+	CP 256-16
+	CALL NC,HORSZONE
+	LD (X),A
+	LD A,(OPY)
+	LD B,A
+	LD A,(Y)
+	ADD A,B
+	CP 40
+	CALL C,HORSZONE
+	CP 210-16
+	CALL NC,HORSZONE
+	LD (Y),A
+        RET
+NEXTANIM:
+	LD A,(COPYMONSTRE+2)
+	ADD A,70
+	CP 210
+	CALL Z,REZERO
+	LD (COPYMONSTRE+2),A
+	RET
+REZERO:
+	XOR A
+	RET
+GESTMONSTRE:
+	LD A,(COUNTANIM)
+	INC A
+	LD (COUNTANIM),A
+	AND %00000111
+	CP 0
+	CALL Z,NEXTANIM
+	LD A,(COUNTDEP)
+	DEC A
+	LD (COUNTDEP),A
+        CP 0
+	CALL Z,NEXTDEP
+	LD IX,(PNTTAB)
+	LD A,(IX)
+	LD B,A
+	LD A,(X_MONSTRE)
+	ADD A,B
+	LD (X_MONSTRE),A
+	LD A,(IX+1)
+	LD B,A
+	LD A,(Y_MONSTRE)
+	ADD A,B
+	LD (Y_MONSTRE),A
+	LD (COPYMONSTRE+6),A
+	LD A,(X_MONSTRE)
+	LD (COPYMONSTRE+4),A
+	LD HL,COPYMONSTRE
+	CALL XMMM
+	RET
+
+NEXTDEP:
+	LD IX,(PNTTAB)
+	LD DE,3
+	ADD IX,DE
+	LD (PNTTAB),IX
+        LD A,(IX+2)
+        LD (COUNTDEP),A
+	LD A,(IX)
+	CP '*'
+	JP Z,DEBTAB
+        LD A,(IX+2)
+        CP 255
+        JP Z,SEARCHKID
+	RET
+        
+SEARCHKID:
+	LD A,(Y_MONSTRE)
+	LD B,A
+	LD A,(Y)
+	CP B
+	JP C,YPLUSPET
+        SUB 66
+        CP B
+        JP NC,YPLUSGRAND
+
+	LD A,0
+	LD (IX+1),A
+	LD (IX+4),A
+        LD (IX+7),A			;3
+TSTX:
+	LD A,50
+	LD (IX+8),A
+        LD A,10
+	LD (COUNTDEP),A
+        LD A,20
+        LD (IX+5),A
+	LD A,(X_MONSTRE)
+        LD B,A
+        LD A,(X)
+	CP B
+	JP C,XPLUSPET
+        SUB 74
+        CP B
+        JP NC,XPLUSGRAND
+	XOR A
+	LD (IX),A
+	LD (IX+3),A
+        LD (IX+6),A			;3
+	RET
+TESTCOLLISION:
+	LD A,15
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	LD A,#FF
+	OUT (#9A),A
+	OUT (#9A),A
+	LD A,(Y_MONSTRE)
+	LD B,A				;test si coord = monstre
+	LD A,(Y)
+	CP B
+	RET C		
+        SUB 66-6             
+        CP B
+        RET NC
+	LD A,(X_MONSTRE)
+        ADD A,20
+        LD B,A
+        LD A,(X)
+	CP B
+	RET C            
+        SUB 74-20
+        CP B
+        RET NC
+
+	LD A,15
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	LD A,#F0
+	OUT (#9A),A
+	OUT (#9A),A
+
+	RET
+TESTCOL2:
+	LD A,(Y_MONSTRE)
+        ADD A,10
+	LD B,A
+	LD A,(Y)
+	CP B
+	RET C
+        SUB 66-20	;-26
+        CP B
+        RET NC
+	LD A,(X_MONSTRE)
+        LD B,A
+        LD A,(X)
+        ADD A,8		; !!!
+	CP B
+	RET C            
+        SUB 74-20
+        CP B
+        RET NC
+
+	LD A,15
+	OUT (#99),A
+	LD A,128+16
+	OUT (#99),A
+	LD A,#F0
+	OUT (#9A),A
+	OUT (#9A),A
+
+
+	RET
+
+XPLUSGRAND:
+	LD A,2
+	LD (IX),A
+        LD A,4
+	LD (IX+3),A
+        LD A,-2
+        LD (IX+6),A
+        RET
+XPLUSPET:
+	LD A,-2
+	LD (IX),A
+        LD A,-4
+        LD (IX+3),A
+        LD A,2
+	LD (IX+6),A
+	RET
+YPLUSGRAND:
+	LD A,1
+	LD (IX+1),A
+        LD A,2
+        LD (IX+4),A
+        LD A,-1
+	LD (IX+7),A
+        JP TSTX
+YPLUSPET:
+	LD A,-1
+	LD (IX+1),A
+        LD A,-2
+        LD (IX+4),A
+        LD A,1
+	LD (IX+7),A
+	JP TSTX	
+DEBTAB:
+	LD IX,TABLEDEP
+	LD (PNTTAB),IX
+        LD A,(IX+2)
+        LD (COUNTDEP),A
+	RET
+HORSZONE:
+	SUB B
+	RET
+TESTSPACE:
+	IN A,(#AA)
+	AND %11110000
+	ADD A,8
+        OUT (#AA),A
+        IN A,(#A9)
+        AND 1
+        RET
+        
+SCANCLAVIER:
+	IN A,(#AA)
+	AND %11110000
+	ADD A,8
+        OUT (#AA),A
+        IN A,(#A9)
+        RET
+
+;test du clavier et mise a jour de OPX et OPY
+
+DIRECTION:
+	XOR A
+	LD (OPX),A
+	LD (OPY),A
+	CALL SCANCLAVIER
+	AND %11110000
+	LD (VALCLAVIER),A
+	AND %10000000
+	CALL Z,PLUSX
+	LD A,(VALCLAVIER)
+	AND %01000000
+	CALL Z,PLUSY
+	LD A,(VALCLAVIER)
+	AND %00100000
+	CALL Z,MOINSY
+	LD A,(VALCLAVIER)
+	AND %00010000
+	CALL Z,MOINSX
+	RET
+PLUSX:
+	LD A,(OPX)
+	INC A
+	LD (OPX),A
+	RET
+PLUSY:
+	LD A,(OPY)
+        INC A
+	LD (OPY),A
+	RET
+MOINSX:
+	LD A,(OPX)
+	DEC A
+	LD (OPX),A
+	RET
+MOINSY:
+	LD A,(OPY)
+	DEC A
+	LD (OPY),A
+	RET
+        
+; routine de mise … jour de la tas
+VPOKE:
+        LD DE,#7600
+
+        LD A,D
+        AND %11000000
+        RLCA
+        RLCA
+        OUT (#99),A
+        LD A,128+14
+        OUT (#99),A
+
+        LD A,E
+        OUT (#99),A
+        LD A,D
+        AND %00111111 
+        OR %01000000
+        OUT (#99),A
+
+        LD A,(Y)
+        OUT (#98),A
+	LD A,(X)
+	OUT (#98),A
+        RET
+XMMM:   
+TST:    LD D,2
+        CALL STATREG
+        RRCA
+        JR C,TST
+
+        LD B,15                         ;                   CALL HMMM
+        LD A,32        
+        OUT (#99),A
+        LD A,#91
+        OUT (#99),A
+        LD C,#9B         
+        OTIR
+
+        XOR A 
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+
+        RET
+
+;
+;       LECTURE D'UN REGISTRE STATUS DU VDP
+;       -----------------------------------
+;
+STATREG:  
+        LD A,D
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        IN A,(#99)
+        RET
+
+
+INTERUPT:
+        OUT (#99),A
+        LD A,#93
+        OUT (#99),A
+        LD A,1
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+WAITINT:
+        IN A,(#99)
+        AND 1
+        JR Z,WAITINT
+        XOR A 
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        RET
+; routine de gestion des bulles        
+GESTBULLE:
+	LD A,(COUNTBULLE)
+	INC A
+	LD (COUNTBULLE),A
+	AND %00000001
+	CP 0
+	RET Z
+        LD DE,#7600+4
+        LD A,D
+        AND %11000000
+        RLCA
+        RLCA
+        OUT (#99),A
+        LD A,128+14
+        OUT (#99),A
+        LD A,E
+        OUT (#99),A
+        LD A,D
+        AND %00111111 
+        OR %01000000
+        OUT (#99),A
+        LD IX,TABLE_BULLE
+	LD B,8
+LOOP_BULLE:
+	PUSH BC
+	LD A,(IX+3)
+	LD B,A
+	LD A,(IX+1)
+	SUB B
+        LD (IX+1),A
+	LD E,A
+	CP 160
+	JP Z,BULLE3
+	CP 130
+	JP Z,BULLE3
+	CP 100
+        JP Z,BULLE3
+        CP 50 
+        JP Z,BULLE3
+        CP 49
+        JP Z,BULLE3
+	CP 48
+	JP Z,REBAS
+RETESTY:
+	LD A,(IX+1)
+	OUT (#98),A
+	LD A,(IX)
+	OUT (#98),A
+	LD A,(IX+2)
+	OUT (#98),A
+	LD A,15
+	OUT (#98),A
+	LD DE,4
+	ADD IX,DE
+	POP BC
+	DJNZ LOOP_BULLE
+	RET
+
+BULLE3:
+	DEC (IX+2)
+        DEC (IX+2)
+	DEC (IX+2)
+        DEC (IX+2)
+	JP RETESTY
+REBAS:
+	LD A,212
+	LD (IX+1),A
+	LD A,24
+	LD (IX+2),A
+	LD A,R
+        SLA A
+	LD (IX),A
+	JP RETESTY
+        
+; routine de feformation de l'ecran
+DEFORM:
+	LD HL,(PNTDEFORM)
+	LD A,128+18
+	OUT (#99),A
+	LD A,128+17
+	OUT (#99),A
+        LD C,#9B
+        LD E,%00100000
+        LD A,47
+        CALL INTERUPT
+        LD A,2
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        LD D,187-25
+ML1B:   IN A,(#99)
+        AND E
+        JP NZ,ML1B
+	PUSH BC
+	LD B,7
+	DJNZ $
+	POP BC
+        OUTI
+     
+ML2B:   IN A,(#99)
+        AND E
+        JP Z,ML2B
+        DEC D
+        JP NZ,ML1B
+	LD HL,(PNTDEFORM)
+	INC HL
+	LD (PNTDEFORM),HL
+	LD A,(CPTDEF)
+	INC A
+	LD (CPTDEF),A
+	CP 200
+	CALL Z,NEWDEF
+        XOR A
+        OUT (#99),A
+        LD A,128+18
+        OUT (#99),A
+        
+        RET
+NEWDEF:
+	XOR A
+	LD (CPTDEF),A
+	LD HL,#B000
+	LD (PNTDEFORM),HL
+	RET
+;fin de routine de deformation
+
+COUNTANIM:
+	DEFB 0			;COMPTEUR POUR ANIM DU MONSTRE
+
+CPTDEF:
+	DEFB 0			;COMPTEUR POUR DEFORMATION
+
+PNTDEFORM:
+	DEFW #B000		;POINTEUR SUR TABLE DEFORMATION
+
+TABLE_BULLE:
+		  DEFB 100,200,24,1
+		  DEFB 50,212,24,2
+		  DEFB 200,180,24,1
+		  DEFB 120,200,24,2
+                  DEFB 160,190,24,1
+                  DEFB 10,140,20,1
+                  DEFB 30,90,16,1
+                  DEFB 210,150,20,1	;TAS DES BULLE
+
+COPYMONSTRE:      DEFB 0,0, 0,2, 0,0, 0,0, 80,0, 69,0,0,0,#D0
+
+X_MONSTRE:	DEFB 120		;COORDONEES DU MONSTRE
+Y_MONSTRE:	DEFB 110
+
+COUNTDEP:
+	DEFB 0				;COMBIEN DE DEPLACEMENTS 
+PNTTAB:
+	DEFW 0				;POINTEUR SUR TABLE DEPLACMENTS
+
+TABLEDEP:
+	DEFB 0,0,200
+	DEFB 0,1,50			;EN BAS DE 50 PIXELS
+        DEFB 0,-1,100			;EN HAUT DE 100
+        DEFB 0,1,50			;EN BAS DE 50
+        DEFB -2,0,50			;A GAUCHE DE 2 * 50
+        DEFB 2,0,50			;A DROITE DE 2 * 50
+        DEFB 0,0,50			;TEMPO DE 1 SEC
+        DEFB -2,0,50			
+        DEFB 2,0,50
+        DEFB 0,0,50
+        DEFB -2,-1,50			
+        DEFB 2,1,50
+        DEFB 0,0,255,0,0,0,0,0,0		; CHERCHE MKID ET ATTAQUE
+        DEFB 0,0,255,0,0,0,0,0,0		;
+        DEFB 0,0,255,0,0,0,0,0,0		;
+        DEFB 0,0,255,0,0,0,0,0,0		;
+        DEFB '*'
+
+X:	DEFB 10			;COORDONEES MKID
+Y:	DEFB 100
+
+OPX:
+	DEFB 0
+OPY:
+	DEFB 0
+VALCLAVIER:
+	DEFB 0
+COUNTBULLE:			;SWITCH POUR ANIMATION DE BULLES
+	DEFB 0
+
+FINISH:
+

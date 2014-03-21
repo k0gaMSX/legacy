@@ -1,0 +1,231 @@
+;MBLOADER:
+
+srcchp:
+	call	srcfmp
+
+;routine de recherche de l'OPLL
+;ecrite le 23/04/92
+;par BENOIT Martial
+;fonctionne sous MSX DOS et MSX BASIC
+srcfmp:
+	call	testpac
+	ld	a,(opll_flag)
+	cp	#00
+	ret	nz
+
+	ld	de,pactext+4
+	ld	hl,#4018
+	ld	a,(opll_slt)
+	ld	c,a
+	ld	b,4
+
+pacloop:
+	push	bc
+	push	de
+	push	hl
+	ld	a,c
+	call	#000c
+	pop	hl
+	pop	de
+	ld	b,a
+	ld	a,(de)
+	cp	b
+	pop	bc
+	jr	nz,initpac
+	inc	hl
+	inc	de
+	djnz	pacloop
+	
+	jr	end
+
+initpac:
+	push	bc
+	ld	a,c
+	ld	hl,#7ff6
+	push	bc
+	push	hl
+	call	#000c
+	pop	hl
+	pop	bc
+	or	#01
+	ld	e,a
+	ld	a,c
+	call	#0014
+	pop	bc
+	ld	a,(chips)
+	set	1,a
+	ld	(chips),a
+end:	ret
+
+testpac:
+	ld	a,#80
+	ld	b,16
+	ld	c,a
+
+testpac1:
+	push	bc
+	ld	b,4
+	ld	hl,#401c
+	ld	de,pactext
+
+testpac2:
+	push	bc
+	push	de
+	push	hl
+	ld	a,c
+	call	#000c
+	pop	hl
+	pop	de
+	ld	b,a
+	ld	a,(de)
+	cp	b
+	pop	bc
+	jr	nz,not_opll
+	inc	hl
+	inc	de
+	djnz	testpac2
+
+	pop	bc
+	ld	a,c
+	ld	(opll_slt),a
+	ld	a,0
+	jr	findpac
+
+not_opll:
+	pop	bc
+	inc	c
+	djnz	testpac1
+
+	ld	a,#ff
+findpac:
+	ld	(opll_flag),a
+	ret
+
+pactext:
+	defm	"OPLLAPRL"
+
+opll_flag:
+	defb	0
+opll_slt:
+	defb	0
+
+;------------------- laad moonblaster samplekit -----------
+;
+; opm: - de r800 mag niet aanstaan bij aanroep!
+;
+mkload:
+	push	hl
+	ld	de,#8000
+	call	setdta
+	call	clrfcb
+	pop	hl
+	call	setfcb
+	ld	de,fcb+0	;open files
+	ld	c,#0f
+	call	bdos
+	or	a
+	ret	nz
+	ld	hl,0		;ramdom record = 0
+	ld	(fcb+33),hl
+	ld	(fcb+35),hl
+	inc	hl		;record size = 1 byte
+	ld	(fcb+14),hl
+
+	ld	hl,56
+	ld	de,fcb
+	ld	c,#27
+	call	bdos
+
+	ld	hl,#8000
+	ld	de,smpadr
+	ld	bc,56
+	ldir
+
+	ld	a,1
+	ld	(sampdt),a
+
+	ld	hl,#4000       ;charge 1ere partie sample
+	ld	de,fcb
+	ld	c,#27
+	call	bdos
+	or	a
+	jp	nz,close
+	call	movsmp
+
+	ld	hl,#4000       ;charge 2eme partie sample
+	ld	de,fcb
+	ld	c,#27
+	call	bdos
+	or	a
+	jp	nz,close
+	call	movsmp
+	jp	close
+
+mb_kit: db	2
+
+;------- set the samplekit in the AUDIO RAM
+sampdt:	defb	1
+movsmp:	ld	a,(sampdt)
+	xor	1
+	ld	(sampdt),a
+	or	a
+	call	movsm3
+
+	di
+	ld	a,4
+	out	(0c0h),a
+	ld	a,060h
+	out	(0c1h),a
+	ld	bc,04000h
+	ld	hl,08000h
+movsm6:	ld	a,0fh
+	out	(0c0h),a
+	ld	a,(hl)
+	out	(0c1h),a
+	ld	a,4
+	out	(0c0h),a
+	ld	a,080h
+	out	(0c1h),a
+	inc	hl
+	dec	bc
+	ld	a,b
+	or	c
+	jr	z,movsm4
+movsm5:	in	a,(0c0h)
+	bit	7,a
+	jr	z,movsm5
+	bit	4,a
+	jr	z,movsm6
+movsm4:	ld	a,4
+	out	(0c0h),a
+	ld	a,078h
+	out	(0c1h),a
+	ld	a,080h
+	out	(0c1h),a
+	ld	a,7
+	out	(0c0h),a
+	ld	a,1
+	out	(0c1h),a
+	ret
+
+movsm3: jp	z,movsm2
+	ld	hl,sampd3
+	jr	movsm7
+movsm2:	ld	hl,sampd2
+
+movsm7: di
+	ld	b,10
+movsm8:	ld	a,(hl)
+	out	(0c0h),a
+	inc	hl
+	ld	a,(hl)
+	out	(0c1h),a
+	inc	hl
+	djnz	movsm8
+	ret
+sampd2:	defb	004h,078h,004h,080h,007h,001h,007h,060h,008h,000h
+ 	defb	009h,000h,00ah,000h,00bh,0ffh,00ch,00fh,010h,0f0h
+sampd3:	defb	004h,078h,004h,080h,007h,001h,007h,060h,008h,000h
+	defb	009h,000h,00ah,010h,00bh,0ffh,00ch,01fh,010h,0f0h
+
+

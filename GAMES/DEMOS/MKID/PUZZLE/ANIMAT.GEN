@@ -1,0 +1,686 @@
+;	ANIMATION DE SPRITES ET/OU BLOCS
+;	ENTREES:
+;	  IX 		= ADRESSE STRUCTURE DE L'OBJET. 
+;	  HL 		= ADRESSE DE LA TABLE D'ANIMATION.
+;	  (ECRASE)	= 1 SI ON DOIT MOURRIR ECRASE 
+;			  L'OBJET SI IL VIENT AU DESSUS
+;			  DE MKID.
+;	  XJOUAG,XJOUAD = DETECTION FINE OU PAS POUR DETECTION BLOCS
+
+XJOUAD:	  DEFB 14		; FINESSE POUR LA JOUABILITE
+XJOUAG:	  DEFB 4
+
+ANIMAT:
+EGPM:
+	  PUSH IX
+          CALL ANIM_M 			;	ANIMATION
+          POP IX
+	  CALL COLLIS_EGPM		;	GESTION DE MKID EN FONCTION DE L'OBJET
+          RET
+
+;	  TESTS DE COLLISION ENTRE MARIO ET L'OBJET
+
+;	  EN ENTREE FROIDE : IX = ADR STRUCTURE OBJET
+
+COLLIS_EGPM:
+	XOR A
+        LD (ONPLAT),A
+	LD A,(IX+1)
+        ADD A,4	
+	LD B,A
+	ADD A,8 
+	LD C,A
+        
+        LD A,(XJOUAG)
+        LD L,A
+        
+	LD A,(X)
+	ADD A,L
+	CALL INTERVALLE
+	LD D,A			; FLAG DANS D
+        
+	LD A,(X)
+	ADD A,8 
+	CALL INTERVALLE
+        LD E,A
+        LD A,(XJOUAD)
+        LD L,A
+        LD A,(X)
+        ADD A,L
+        CALL INTERVALLE
+        OR E
+	OR D			; SI UN DES DEUX FLAG = 1 ALORS XOBJ>X>XOBJ+16
+	CP 0
+	RET Z			; MARIO N EST PAS DANS LES LINITES DU BLOC EN X 
+
+	LD A,(IX)		; TEST EN Y SI ON EST EN DESSOUS DU BLOC
+        LD B,A
+	ADD A,12
+	LD C,A
+	LD A,(Y)		; TEST AVEC LA TETE
+        CALL INTERVALLE
+	LD D,A
+	LD A,(Y)		; TEST AVEC LE BUSTE
+	ADD A,2
+	CALL INTERVALLE
+        LD E,A
+        
+	LD A,(Y)		; TEST AVEC LE BUSTE
+	ADD A,12
+	CALL INTERVALLE
+        LD L,A
+        LD A,(Y)		; TEST AVEC LES PIEDS
+        ADD A,16
+        CALL INTERVALLE
+        OR L
+        OR E
+	OR D
+	CP 0
+	RET Z				; MARIO N EST PAS DANS LES LIMITES DU BLOC EN Y
+
+	LD A,D				; ON VIENT DU DESSUS OU DU DESSOUS?
+        OR E
+	CP 1				; DETECTE PAR LA TETE SI OUI ALORS MARIO DESSOUS DU BLOC
+	JP NZ,BLOC_DESSUS		; 
+       
+BLOC_DESSOUS:				
+	LD A,(ONPLAT)
+	LD B,A
+	LD A,(ONBLOC)
+	LD C,A
+	LD A,(ONFLOOR)
+        OR B
+	OR C
+        CP 0
+        JP Z,DOCHUTE			; SI ON EST AU SOL ET QUE (ECRASE)
+					; EST OK ALORS
+              				; ON CREVE ECRASE SOUS LA DALLE
+	LD A,(ECRASE)
+	CP 1
+	RET NZ
+        JP LESSLIFE       		; SINON ON STOPPE LE SAUT
+        RET
+         
+BLOC_DESSUS:
+
+	LD A,(IX+6)			; SI DEP HR ALORS YMKID MOD 16
+	LD B,0
+	
+	LD A,(OBS_SWITCH)		; ICI ON SE DEPLACE EN Y
+	AND B
+	CP 1
+	RET Z
+
+	LD A,(IX+6)
+	LD C,A
+	LD A,15
+	ADD A,C
+ 	LD B,A
+
+	LD A,(IX)			; REPOSITIONNE MKID EN Y
+        SUB B
+        LD (Y),A       
+        LD A,(IX+6)
+        LD (OPY),A
+
+	
+PAS_OBSTT:
+DEP_Y:
+        LD A,1
+        LD (ONPLAT),A			; ON EST SUR UNE PLATEFORME
+        LD (ONFLOOR),A	
+        
+	LD A,(STICK_NUMBER)
+	CALL RD_STG
+	CALL NZ,SAUT2			
+PASDESAUT:
+	LD A,(OBS_SWITCH)
+	CP 1
+	RET Z
+        LD A,(IX+5)
+        CP 0
+        RET Z
+	LD B,A
+        LD A,(X)
+        ADD A,B
+        LD (X),A
+NOMOVX:
+        RET
+SAUT2:
+	LD A,(RETOURCLV)
+	OR A
+	RET NZ
+	LD A,(Y)			; ON NE SE COLLE PLUS A LA PLATEFORME
+	SUB 4
+	LD (Y),A
+        RET        
+ONMOVBL:
+	DEFB 0
+; REGARDE SI A EST ENTRE B ET C  (B>A>C)
+; SI OUI ALORS A=1 SINON A=0
+INTERVALLE:
+	CP C			; SI X>XOBJ
+	JR NC,KO_CX		; ALORS KO
+				; ICI X<XOBJ
+	CP B			; SI X<XOBJ
+	JR C,KO_CX		
+				; ICI X DANS L'INTERVALLE 
+	LD A,1
+	RET			
+KO_CX:
+	XOR A
+	RET
+	                      
+;	  INIT DEPART DE L'OBJET
+;	  EN ENTREE CHAUDE : IX = ADR STRUCTURE OBJET (ATTRIBUTS)
+;			     HL = ADR ANIMATION
+INIT_DEPM:
+          			        ; OFFCET = 0
+          LD (IX+7),0
+RETEST:
+          PUSH HL
+          POP IY
+          
+          LD A,(IY+3)			; SI POSITIONNEMENT AU DEPART ALORS
+          CP 255
+          JP NZ,NO_POSITF
+POSITF:
+  	  LD A,(IY)				; NEW X
+          LD (IX+1),A
+          LD A,(IY+1)
+          LD (IX),A				; NEW Y
+          
+          					; CPT = 4
+          LD (IX+7),4
+          LD B,0
+          LD C,4				; HL =HL + 4
+          ADD HL,BC
+          JP RETEST				 
+NO_POSITF:
+ 	  CP 253
+          JP NZ,NO_CLIGN
+          					; SEMA DE CLIGNOT
+          LD (IX+9),10
+          					; TEMPO POUR LE CLIGNOTEMENT
+          LD (IX+10),10
+           
+          JP POSITF
+NO_CLIGN:          
+          CALL INIT_MONST 			; INIT DU MONSTRE OU DE L'OBJET
+          RET          
+          
+;         ANIMATION POUR TOUS LES OBJETS EN SPRITE OU EN COPY
+
+ANIM_M:   
+          LD (SPR_MONATTR),IX
+          LD (SAVE_PTR),HL
+ 
+ 	  LD A,(IX+11)		; SI IX+11 = 3 ALORS FIN DE CYCLE
+	  CP 3
+          RET Z
+ 
+ 	  LD A,(IX+9)		; GESTION DU CLIGNOTEMENT
+          CP 0
+          JP Z,FIN_CLIGN
+          
+ 	  LD A,(IX+10)
+          DEC A
+          LD (IX+10),A          
+          CP 0
+          RET NZ 
+          
+          LD (IX+10),10
+          
+          LD A,(IX+9)	          
+          DEC A
+          LD (IX+9),A
+                    
+ 	  LD A,(IX)
+          CP 212
+          JP NZ,NOT_212
+          
+          PUSH HL
+          LD A,(IX+7)		; RETROUVER LA COORDONNEE ACTUELLE DU SPRITE
+          SUB 3
+          LD B,0
+          LD C,A
+          ADD HL,BC
+          LD A,(HL)		; REMET LA COORDONNEE 
+          POP HL
+          LD (IX),A
+          JP ETAT_CLIGN      
+NOT_212:          
+ 	  LD A,212
+          LD (IX),A
+          JP ETAT_CLIGN      
+FIN_CLIGN:          
+ 	                  
+ 	  LD A,(IX+4)		; DECOMPTE FRAMES
+          DEC A
+          LD (IX+4),A
+          CP 0
+          JP Z,ANIM_SUIV
+          
+DO_ANIM:
+          LD A,(IX+5)		; PLUS X
+          LD B,A
+          LD A,(IX+1)
+	  LD (IX+13),A		; ON SAUVEGARDE LES ANCIENNE COORDONNEES X
+          ADD A,B
+          LD (IX+1),A
+          
+          LD A,(IX+6)		; PLUS Y
+          LD B,A
+          LD A,(IX)
+	  LD (IX+14),A		; ANCIENNE COODONNEES Y SAUVEGARDEES
+          ADD A,B
+          LD (IX),A
+          
+ETAT_CLIGN:      
+	  LD A,(IX+12)
+	  CP 1
+	  CALL Z,COPY_EGPM	
+          CALL NZ,VPOKE_EGPM
+          RET
+           
+;         NEXT STEP ANIMATION
+          
+ANIM_SUIV:
+ 						; HL POINTE SUR ANIM
+ 	  LD A,(IX+7)				; OFFCET
+          ADD A,4
+          LD (IX+7),A
+          LD B,0
+          LD C,A
+          ADD HL,BC
+          
+          PUSH HL
+          POP IY
+          
+          LD A,(IY+3)				; SI FIN DE TABLE, ON REPOINTE AU DEBUT
+          CP 254
+          JP NZ,TST_POSIT
+   
+          LD A,(IX+11)				; SI BIT 2 DE IX+11 = 1
+          AND #02				; ALORS FIN DE SEQUENCE 
+          CP 0					; POUR CE SPRITE
+          JR Z,PAS_FINA
+          LD (IX+11),3	 			; IX+11 = 3
+          RET           
+PAS_FINA:
+          LD (IX+11),1	          
+          LD HL,(SAVE_PTR)			
+          CALL INIT_DEPM
+          JP PAS_DEBUT
+          
+TST_POSIT:
+ 	  CP 255
+          JP Z,POSITIONNEMENT
+          CP 253
+          JP Z,CLIGNOTEMENT
+          CALL INIT_MONST
+PAS_DEBUT:
+ 	  LD A,(IX+9)
+          CP 0
+          JP Z,DO_ANIM 			        ; SI CLIGNOTEMENT ALORS 
+          JP ANIM_M				; GOTO DECOMPTE CLIGNOTEMENT
+          
+;         INIT DES PARAMETRES D'UNE CESSION D'ANIM DU MONSTRE
+INIT_MONST:
+          LD A,(HL)				; PLUS X
+          LD (IX+5),A
+          INC HL
+          LD A,(HL)				; PLUS Y
+          LD (IX+6),A
+          INC HL
+          LD A,(HL)				; PATRON
+          LD (IX+2),A
+          INC HL            
+          LD A,(HL)				; REMISE EN ORDRE DU COMPTEUR D'ANIMATION
+          LD (IX+4),A
+
+	  LD A,(IX+12)				; SI COPY ALORS PREMIERE SAUVEGARDE 
+	  CP 0
+	  RET Z
+
+	  PUSH HL
+	  PUSH IY
+	  LD IY,EGPM_SAV
+	  LD A,(IX+1)
+	  LD (IY),A
+	  LD A,(IX)
+	  LD (IY+2),A
+	  LD HL,EGPM_SAV
+	  CALL XMMM
+	  POP IY
+	  POP HL
+          RET
+          
+;         NOUVELLES COORDONNEES POUR LE MONSTRE
+
+POSITIONNEMENT:
+
+  	  LD A,(IY)				; NEW X
+          LD (IX+1),A
+          LD A,(IY+1)
+          LD (IX),A				; NEW Y
+          LD HL,(SAVE_PTR)
+          JP ANIM_SUIV
+          
+;         CLIGNOTEMENT DU SPRITE 3 *
+
+CLIGNOTEMENT:
+  	  LD A,(IY)				; NEW X
+          LD (IX+1),A
+          LD A,(IY+1)
+          LD (IX),A				; NEW Y
+          LD HL,(SAVE_PTR)
+          
+          LD (IX+9),10
+          
+          LD (IX+10),5
+          
+          JP ANIM_SUIV
+
+;	  COPY_EGPM
+;	  COPY DE L'OBJET SI IX+12=1
+;	  EN ENTREE IX POINTE SUR MONATR, AINSI QUE (SPR_MONATR)
+;		  
+COPY_EGPM:
+;	RESTAURATION
+	DI
+	LD IY,EGPM_REST
+	LD A,(IX+13)			; ANCIENNE COORDONNEE
+	LD (IY+4),A			; DX
+	LD A,(IX+14)
+	LD (IY+6),A			; DY
+	LD HL,EGPM_REST
+	CALL XMMM
+
+;	SAUVETAGE
+	LD IY,EGPM_SAV
+	LD A,(IX+1)			; NOUVELLE COORDONNEE
+	LD (IY),A			; SX
+	LD A,(IX)			
+	LD (IY+2),A			; SY
+	LD HL,EGPM_SAV
+	CALL XMMM
+
+;	COPIE
+	LD IY,EGPM_COP
+	LD A,(IX+1)			; NOUVELLE COORDONNEE
+	LD (IY+4),A			; DX
+	LD A,(IX)			
+	LD (IY+6),A			; DY
+        LD (IY),128
+        LD (IY+2),0
+	LD HL,EGPM_COP
+	CALL XMMM
+	RET
+	
+EGPM_COP:
+	DEFB 128,0, 0,1, 0,0, 0,0, 16,0, 16,0, 0,0,#D0
+EGPM_SAV:
+	DEFB 0,0, 0,0, 255-31,0, 16*12,1, 16,0, 16,0, 0,0,#D0
+EGPM_REST:
+	DEFB 255-31,0, 16*12,1, 0,0, 0,0, 16,0, 16,0, 0,0,#D0
+
+;	VPOKE
+;	PUTSPRITE DE L'OBJET SI BIT IX+12 = 0 SINON COPY
+;	EN ENTREE IX POINTE SUR MONATR, AINSI QUE (SPR_MONATR)
+
+VPOKE_EGPM:
+	LD IY,TAS_EGPM
+	LD A,(IX)
+	LD (IY),A
+	LD (IY+4),A
+	LD (IY+8),A
+	LD (IY+12),A
+	LD A,(IX+1)
+	LD (IY+1),A
+	LD (IY+5),A
+	LD (IY+9),A
+	LD (IY+13),A
+	LD A,(IX+2)
+	LD (IY+2),A
+	ADD A,4
+	LD (IY+6),A
+	ADD A,4
+	LD (IY+10),A
+	ADD A,4
+	LD (IY+14),A
+
+ 	LD A,(IX+8)
+        LD DE,#FA40			; ADRES EN VRAM
+        ADD A,E
+        LD E,A
+        
+        LD A,D
+        AND %11000000
+        RLCA
+        RLCA
+        OUT (#99),A
+        LD A,128+14
+        OUT (#99),A
+
+        LD A,E
+        OUT (#99),A
+        LD A,D
+        AND %00111111 
+        OR %01000000
+        OUT (#99),A
+        
+        LD C,#98
+	LD A,(IX+15)			; NBSPR
+	RLCA				; *4
+	RLCA
+	LD B,A
+        LD HL,TAS_EGPM			; ADRES EN MC DES ATTRIB DU SPR
+	OTIR
+        RET
+
+TAS_EGPM:
+	DEFB 0,0,0,0
+	DEFB 0,0,0,0
+	DEFB 0,0,0,0
+	DEFB 0,0,0,0
+
+;COMPTEURS ET STRUCTURES LOCALES DES OBJETS+VECTEURS ANIMATION
+
+;	FORMAT DU VECTEUR ANIMATION :
+;
+;	   +X +Y PATRON FRAME (FRAME = NB DE FOIS QUE L'OBJET FAIT +X OU +Y)
+;
+;          SI FRAME = 255 REPOSITIONNEMENT DU SPRITE
+;	      FRAME = 254 FIN DE TABLE
+;	      FRAME = 253 CLIGNOTEMENT DU SPRITE 3 FOIS + REPOSITIONNEMENT DU SPRITE
+
+SAVE_PTR:  DEFW 0				; POINTEUR INTERMEDIAIRE SUR ANIM
+ECRASE:	   DEFB 0
+
+;	   VECTEURS ANIMATION OBJET
+
+ANIM_M1:              				; UTILISE PAR LESSBLOCS QUI TOMBENT
+	   DEFB 0,0,76,255
+           DEFB 0,0,76,5			; TABLE D'ANIMATION
+           DEFB 0,0,76,254
+    
+ANIM_M2:   					; MOVBLOCS
+	   DEFB 0,0,64,255
+           DEFB 0,0,64,1			; ALLER
+           DEFB 0,0,64,20			; ATTENDRE
+           DEFB 0,0,64,1			; RETOUR
+           DEFB 0,0,64,20			; ATTENDRE
+           DEFB 0,0,64,254
+ANIM_M3:            
+	   DEFB 0,0,64,255
+           DEFB 0,0,64,1			; ALLER
+           DEFB 0,0,64,20			; ATTENDRE
+           DEFB 0,0,64,1			; RETOUR
+           DEFB 0,0,64,20			; ATTENDRE
+           DEFB 0,0,64,254
+ANIM_M4:
+	   DEFB 0,0,64,255
+           DEFB 0,0,64,1			; ALLER
+           DEFB 0,0,64,20			; ATTENDRE
+           DEFB 0,0,64,1			; RETOUR
+           DEFB 0,0,64,20			; ATTENDRE
+           DEFB 0,0,64,254
+
+ANIM_M5:
+	   DEFB 0,0,88,255
+           DEFB 0,-1,88,1			; ALLER
+           DEFB 0,-2,88,1			; 
+	   DEFB 0,-3,88,1
+	   DEFB 0,-4,88,1
+           DEFB 0,-5,88,1
+           DEFB 0,-5,88,1
+	   DEFB 0,1,88,1			; RETOUR
+	   DEFB 0,2,88,1
+	   DEFB 0,3,88,1
+	   DEFB 0,4,88,1
+           DEFB 0,5,88,1
+           DEFB 0,5,88,1
+           DEFB 0,212,88,255
+           DEFB 0,0,88,1
+           DEFB 0,0,88,254
+
+ANIM_M6:              				; UTILISE PAR LESSBLOCS QUI TOMBENT
+	   DEFB 0,0,76,255
+           DEFB 2,0,76,127			; TABLE D'ANIMATION
+           DEFB 212,0,76,255
+           DEFB 0,0,76,0
+           DEFB 0,0,76,254
+ 
+
+; STRUCTURE DE TRAVAIL POUR ANIMAT DES OBJETS SPRITE OU COPY
+;
+;     EN ENTREE:
+;
+;	SI BYTE 12 (IX+11) DE LA STRUCTURE =2 ALORS 
+;	L'ANIMATION NE BOUCLE PAS !!!
+;
+;	SI BYTE 13 (IX+12) DE LA STRUCT =1 ALORS OBJET
+;	EN COPY SINON EN SPRITE
+;
+;	LES AUTRES BYTES SONT UTILISES COMME VARIABLES
+;	INTERMEDIAIRES LOCALES A ANIMAT
+
+;	UTILISE PAR LES BLOCS QUI TOMBENT (COPY)    
+SPRMON1:           
+           DEFB 16		; Y
+	   DEFB 128		; X
+           DEFB 0		; PATRON
+	   DEFB 0		; 
+           DEFB 0		; FRAMES
+           DEFB 2		; PLUS X
+           DEFB 0		; PLUS Y
+           DEFB 0		; OFFCET POUR LA TABLE ANIM_1
+           DEFB 0		; NUMERO D'ATTRIBUT * 4
+           DEFB 0		; SEMA DE CLIGNOTEMENT
+           DEFB 0		; DECOMPTEUR POUR LA TEMPO DU CLIGNOTEMENT
+           DEFB 0		; A 1 SI CYCLE DEJA ATTEINT UNE FOIS SINON 0
+	   DEFB 0		; A 1 SI COPY A 0 SI SPRITE
+	   DEFB 0		; ANCIENNE COORD X
+	   DEFB 0		; ANCIENNE COORD Y
+      	   DEFB 0
+;     	   UTILISE PAR LES MOVBLOCS (SPRITES) -> BLOC 0     
+SPRMON2:           
+           DEFB 16		; Y
+	   DEFB 128		; X
+           DEFB 0 		; PATRON
+	   DEFB 0		; 
+           DEFB 0		; FRAMES
+           DEFB 0		; PLUS X
+           DEFB 0		; PLUS Y
+           DEFB 0		; OFFCET POUR LA TABLE ANIM_1
+           DEFB 0		; NUMERO D'ATTRIBUT * 4
+           DEFB 0		; SEMA DE CLIGNOTEMENT
+           DEFB 0		; DECOMPTEUR POUR LA TEMPO DU CLIGNOTEMENT
+           DEFB 0		; A 1 SI CYCLE DEJA ATTEINT UNE FOIS SINON 0
+	   DEFB 0		; A 1 SI COPY A 0 SI SPRITE
+	   DEFB 0		; ANCIENNE COORD X
+	   DEFB 0		; ANCIENNE COORD Y
+ 	   DEFB 3
+;     	   UTILISE PAR LES MOVBLOCS (SPRITES) -> BLOC 1     
+SPRMON3:           
+           DEFB 16		; Y
+	   DEFB 128		; X
+           DEFB 0 		; PATRON
+	   DEFB 0		; 
+           DEFB 0		; FRAMES
+           DEFB 0		; PLUS X
+           DEFB 0		; PLUS Y
+           DEFB 0		; OFFCET POUR LA TABLE ANIM_1
+           DEFB 12		; NUMERO D'ATTRIBUT * 4
+           DEFB 0		; SEMA DE CLIGNOTEMENT
+           DEFB 0		; DECOMPTEUR POUR LA TEMPO DU CLIGNOTEMENT
+           DEFB 0		; A 1 SI CYCLE DEJA ATTEINT UNE FOIS SINON 0
+	   DEFB 0		; A 1 SI COPY A 0 SI SPRITE
+	   DEFB 0		; ANCIENNE COORD X
+	   DEFB 0		; ANCIENNE COORD Y
+ 	   DEFB 3		; NB DE SPRITES
+;     	   UTILISE PAR LES MOVBLOCS (SPRITES) -> BLOC 2     
+SPRMON4:           
+           DEFB 16		; Y
+	   DEFB 0		; X
+           DEFB 0  		; PATRON
+	   DEFB 0		; 
+           DEFB 0		; FRAMES
+           DEFB 0		; PLUS X
+           DEFB 0		; PLUS Y
+           DEFB 0		; OFFCET POUR LA TABLE ANIM_1
+           DEFB 24		; NUMERO D'ATTRIBUT * 4
+           DEFB 0		; SEMA DE CLIGNOTEMENT
+           DEFB 0		; DECOMPTEUR POUR LA TEMPO DU CLIGNOTEMENT
+           DEFB 0		; A 1 SI CYCLE DEJA ATTEINT UNE FOIS SINON 0
+	   DEFB 0		; A 1 SI COPY A 0 SI SPRITE
+	   DEFB 0		; ANCIENNE COORD X
+	   DEFB 0		; ANCIENNE COORD Y
+           DEFB 3		; NB DE SPRITES
+           
+;     	   UTILISE PAR LES SYMBOLES DE SORTIES     
+SPRMON5:           
+           DEFB 0		; Y
+	   DEFB 0		; X
+           DEFB 0  		; PATRON
+	   DEFB 0		; 
+           DEFB 0		; FRAMES
+           DEFB 0		; PLUS X
+           DEFB 0		; PLUS Y
+           DEFB 0		; OFFCET POUR LA TABLE ANIM_1
+           DEFB 48		; NUMERO D'ATTRIBUT * 4
+           DEFB 0		; SEMA DE CLIGNOTEMENT
+           DEFB 0 		; DECOMPTEUR POUR LA TEMPO DU CLIGNOTEMENT
+           DEFB 2		; A 1 SI CYCLE DEJA ATTEINT UNE FOIS SINON 0
+	   DEFB 0		; A 1 SI COPY A 0 SI SPRITE
+	   DEFB 0		; ANCIENNE COORD X
+	   DEFB 0		; ANCIENNE COORD Y
+           DEFB 3		; NB DE SPRITES
+
+;     	   UTILISE PAR LES CLEFS      
+SPRMON6:           
+           DEFB 0 		; Y
+	   DEFB 0		; X
+           DEFB 76  		; PATRON
+	   DEFB 0		; 
+           DEFB 0		; FRAMES
+           DEFB 0		; PLUS X
+           DEFB 0		; PLUS Y
+           DEFB 0		; OFFCET POUR LA TABLE ANIM_1
+           DEFB 36    		; NUMERO D'ATTRIBUT * 4
+           DEFB 0		; SEMA DE CLIGNOTEMENT
+           DEFB 0		; DECOMPTEUR POUR LA TEMPO DU CLIGNOTEMENT
+           DEFB 0		; A 1 SI CYCLE DEJA ATTEINT UNE FOIS SINON 0
+	   DEFB 0		; A 1 SI COPY A 0 SI SPRITE
+	   DEFB 0		; ANCIENNE COORD X
+	   DEFB 0		; ANCIENNE COORD Y
+           DEFB 3		; NB DE SPRITES
+
+
+SPR_MONATTR:			; ADRESSE DE LA STRUCTURE COURANTE
+           DEFW 0    
+
+
+
+
