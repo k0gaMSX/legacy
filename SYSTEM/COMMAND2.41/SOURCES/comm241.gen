@@ -1,0 +1,10798 @@
+
+; DOS Variabelen
+
+BDOS:	EQU	#05
+RDSLT:	EQU	#0C
+CALSLT:	EQU	#1C
+BootDrive:	EQU	#F2FD
+DateFormat:	EQU	#F30E
+LINL40:	EQU	#F3AE
+LINLEN:	EQU	#F3B0
+CRTCNT:	EQU	#F3B1
+CSRY:	EQU	#F3DC
+CSRX:	EQU	#F3DD
+FORCLR:	EQU	#F3E9
+BAKCLR:	EQU	#F3EA
+BDRCLR:	EQU	#F3EB
+RTYCNT:	EQU	#FC9A
+EXPTBL:	EQU	#FCC1
+SLTWRK:	EQU	#FD88
+EXTBIO:	EQU	#FFCA
+
+; DOS Routines
+
+_CONIN:	EQU	#01
+_CONOUT:	EQU	#02
+_INNOE:	EQU	#08
+_BUFIN:	EQU	#0A
+_CONST:	EQU	#0B
+_SELDSK:	EQU	#0E
+_LOGIN:	EQU	#18
+_CURDRV:	EQU	#19
+_SETDMA:	EQU	#1A
+_ALLOC:	EQU	#1B
+_GDATE:	EQU	#2A
+_SDATE:	EQU	#2B
+_GTIME:	EQU	#2C
+_STIME:	EQU	#2D
+_VERIFY:	EQU	#2E
+_DPARM:	EQU	#31
+_FFIRST:	EQU	#40
+_FNEXT:	EQU	#41
+_FNEW:	EQU	#42
+_OPEN:	EQU	#43
+_CREATE:	EQU	#44
+_CLOSE:	EQU	#45
+_ENSURE:	EQU	#46
+_DUP:	EQU	#47
+_READ:	EQU	#48
+_WRITE:	EQU	#49
+_SEEK:	EQU	#4A
+_IOCTL:	EQU	#4B
+_HTEST:	EQU	#4C
+_DELETE:	EQU	#4D
+_RENAME:	EQU	#4E
+_MOVE:	EQU	#4F
+_ATTR:	EQU	#50
+_FTIME:	EQU	#51
+_HDELETE:	EQU	#52
+_HFTIME:	EQU	#56
+_GETVFY:	EQU	#58
+_GETCD:	EQU	#59
+_CHDIR:	EQU	#5A
+_PARSE:	EQU	#5B
+_PFILE:	EQU	#5C
+_CHKCHR:	EQU	#5D
+_WPATH:	EQU	#5E
+_FORK:	EQU	#60
+_JOIN:	EQU	#61
+_TERM:	EQU	#62
+_DEFAB:	EQU	#63
+_DEFER:	EQU	#64
+_ERROR:	EQU	#65
+_EXPLAIN:	EQU	#66
+_FORMAT:	EQU	#67
+_RAMDISK:	EQU	#68
+_BUFFER:	EQU	#69
+_ASSIGN:	EQU	#6A
+_GENV:	EQU	#6B
+_SENV:	EQU	#6C
+_FENV:	EQU	#6D
+_DSKCHK:	EQU	#6E
+_DOSVER:	EQU	#6F
+_REDIR:	EQU	#70
+
+; DOS Foutmeldingen
+
+.OVDEST:	EQU	#81
+.COPY:	EQU	#82
+.BADEST:	EQU	#83
+.NOCAT:	EQU	#84
+.BADVER:	EQU	#85
+.NOHELP:	EQU	#86
+.BADNO:	EQU	#87
+.IOPT:	EQU	#88
+.NOPAR:	EQU	#89
+.INP:	EQU	#8A
+.IPARM:	EQU	#8B
+.OKCMD:	EQU	#8C
+.BUFUL:	EQU	#8D
+.BADCM:	EQU	#8E
+.BADCOM:	EQU	#8F
+.INERR:	EQU	#9B
+.OUTERR:	EQU	#9C
+.ABORT:	EQU	#9D
+.CTRLC:	EQU	#9E
+.STOP:	EQU	#9F
+.NRAMD:	EQU	#BB
+.ITIME:	EQU	#BD
+.IDATE:	EQU	#BE
+.EOF:	EQU	#C7
+.FOPEN:	EQU	#CA
+.FILEX:	EQU	#CB
+.DIRX:	EQU	#CC
+.IATTR:	EQU	#CF
+.NODIR:	EQU	#D6
+.NOFIL:	EQU	#D7
+.IPATH:	EQU	#D9
+.IFNM:	EQU	#DA
+.IDRV:	EQU	#DB
+.NORAM:	EQU	#DE
+.WFILE:	EQU	#F4
+.WDISK:	EQU	#F5
+
+; Programma variabelen
+
+ReadAdres:	EQU	#0000
+PutAdres:	EQU	ReadAdres+#02
+EndAdres:	EQU	PutAdres+#02
+BufferLengte:	EQU	EndAdres+#02
+VariableEnd:	EQU	BufferLengte+#02
+AliasAdres:	EQU	VariableEnd+#02
+AliasEnd:	EQU	AliasAdres+#02
+BufferAdres:	EQU	AliasEnd+#02
+
+	JP	Start
+
+TekstIntro:	DEFB	13
+	DEFB	"MSX-DOS 2  COMMAND version 2.41",13,10
+	DEFB	"Copyright (c) 1995-1997 by C.P.U.",13,10,10,26
+
+CopyBack:	LD	SP,#F51F
+StoEndTPA:	LD	HL,#00
+	DEC	HL
+	DEC	HL
+	LD	SP,HL
+	LD	HL,(#01)
+	INC	HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	PUSH	DE
+	EX	DE,HL
+	LD	DE,CopyBack
+	LD	BC,Reload-CopyBack
+	LDIR
+	PUSH	DE
+	LD	BC,Start-Reload
+	LDIR
+	RET
+
+Reload:	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	LD	(RGetAdres+1),HL
+	POP	HL
+	DEC	HL
+	LD	DE,ExitAdres-1
+	LD	BC,ExitAdres-BootStrap
+	LDDR
+	LD	HL,BootStrap
+	LD	DE,#00
+	LD	BC,#08
+	LDIR
+	LD	DE,#00
+	LD	C,_DEFER
+	CALL	BDOS
+	LD	DE,AbortExit4
+	LD	C,_DEFAB
+	CALL	BDOS
+	LD	HL,#0100
+	LD	(HL),#C3
+	INC	HL
+	LD	(HL),.LOW. Start
+	INC	HL
+	LD	(HL),.HIGH. Start
+	LD	A,(ID_Execute)
+	LD	B,A
+	LD	C,_JOIN
+	CALL	BDOS
+	JR	NZ,Next_0001
+	LD	A,B
+Next_0001:	LD	(Error1+1),A
+	LD	A,C
+	LD	(Error2+1),A
+Mapper1:	LD	A,#00
+Adres1:	CALL	#00
+	LD	HL,(VariableEnd+#8000)
+	INC	HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	EX	DE,HL
+	LD	(VariableEnd+#8000),HL
+	LD	DE,Buffer1-1
+	LD	BC,Buffer1-ExitAdres
+	LDDR
+Mapper2:	LD	A,#00
+Adres2:	CALL	#00
+	LD	A,#01
+	LD	BC,_REDIR
+	CALL	BDOS
+	LD	A,B
+	LD	(RedirSet+1),A
+	LD	DE,AbortExit5
+	LD	C,_DEFAB
+	CALL	BDOS
+	CALL	CheckChecksum
+	POP	HL
+	CALL	NZ,CopyCheck
+	JP	Z,RedirSet
+	LD	HL,Env_Shell
+	LD	DE,BufEnvData
+	LD	B,#FF
+	LD	C,_GENV
+	CALL	BDOS
+	JR	NZ,Next_0002
+	LD	A,(DE)
+	OR	A
+	JR	Z,Next_0002
+	PUSH	DE
+	LD	BC,_PARSE
+	CALL	BDOS
+	POP	HL
+	JR	NZ,Next_0002
+	LD	(DE),A
+	LD	A,#01
+	EX	DE,HL
+	LD	C,_OPEN
+	CALL	BDOS
+	JR	Z,Next_0003
+Next_0002:	LD	DE,Data_Shell
+	LD	A,#01
+	LD	C,_OPEN
+	CALL	BDOS
+	JR	NZ,Next_0004
+Next_0003:	LD	HL,Start-#0100
+	XOR	A
+	LD	E,A
+	LD	D,A
+	LD	C,_SEEK
+	PUSH	BC
+	CALL	BDOS
+	POP	BC
+	JR	NZ,Next_0004
+	LD	DE,Start
+	LD	HL,Stack-Start
+	LD	C,_READ
+	PUSH	BC
+	CALL	BDOS
+	EX	AF,AF'
+	POP	BC
+	LD	C,_CLOSE
+	CALL	BDOS
+	JR	NZ,Next_0004
+	EX	AF,AF'
+	JR	NZ,Next_0004
+	LD	A,.BADCOM
+AbortExit5:	LD	SP,(EndTPA)
+	PUSH	AF
+	CALL	CheckChecksum
+	POP	BC
+	LD	A,B
+	JR	NZ,Next_0004
+RedirSet:	LD	B,#00
+	LD	C,_REDIR
+	LD	A,#01
+	CALL	BDOS
+	LD	DE,AbortExit2
+	LD	C,_DEFAB
+	CALL	BDOS
+	LD	DE,BufEnvData
+	XOR	A
+	LD	(DE),A
+	LD	HL,Env_Parameters
+	LD	C,_SENV
+	PUSH	DE
+	CALL	BDOS
+	POP	DE
+	LD	HL,Env_Program
+	LD	C,_SENV
+	CALL	BDOS
+	LD	A,#FF
+	LD	(ExtraCRLF),A
+Error1:	LD	A,#00
+Error2:	LD	B,#00
+	JP	AbortExit2
+
+AbortExit4:	OR	A
+	LD	C,B
+	POP	HL
+	RET
+
+Next_0004:	PUSH	AF
+	LD	A,#01
+	LD	BC,_REDIR
+	CALL	BDOS
+	POP	AF
+	CP	.NOFIL
+	JR	Z,Next_0006
+	LD	DE,BufEnvData
+	LD	B,A
+	PUSH	AF
+	LD	C,_EXPLAIN
+	CALL	BDOS
+	POP	AF
+	PUSH	DE
+	CP	.STOP
+	JR	Z,Next_0005
+	CP	.CTRLC
+Next_0005:	CALL	Z,RPrintCrLf
+	CALL	RPrintCrLf
+	LD	A,#00
+	CALL	RPrintCode
+	POP	DE
+	CALL	RPrintString
+	LD	A,#01
+	CALL	RPrintCode
+Next_0006:	CALL	RPrintCrLf
+	LD	A,#02
+	CALL	RPrintCode
+	LD	A,(Data_Shell)
+	CALL	RPrintChar
+	LD	A,#03
+	CALL	RPrintCode
+	CALL	RPrintCrLf
+	LD	A,#04
+	CALL	RPrintCode
+Next_0007:	LD	C,_CONST
+	CALL	BDOS
+	PUSH	AF
+	LD	C,_INNOE
+	CALL	BDOS
+	POP	AF
+	JR	NZ,Next_0007
+	CALL	RPrintCrLf
+	LD	A,L
+	AND	%11011111
+	CP	"A"
+	JP	C,Next_0002
+	CP	"I"
+	JP	NC,Next_0002
+	LD	(Data_Shell),A
+	JP	Next_0002
+
+CopyCheck:	LD	DE,Start
+	LD	BC,Stack-Start
+	LDIR
+CheckChecksum:	CALL	MakeChecksum
+	LD	BC,Checksum1
+	PUSH	IX
+	EX	(SP),HL
+	CALL	CompareCheck
+	POP	HL
+	RET	NZ
+CompareCheck:	LD	A,(BC)
+	INC	BC
+	LD	E,A
+	LD	A,(BC)
+	INC	BC
+	LD	D,A
+	OR	A
+	SBC	HL,DE
+	RET
+
+MakeChecksum:	LD	BC,(Stack-Start)/4
+	EXX
+	LD	BC,Start
+	LD	HL,#00
+	PUSH	HL
+	POP	IX
+Next_0008:	LD	A,(BC)
+	INC	BC
+	LD	E,A
+	LD	A,(BC)
+	INC	BC
+	LD	D,A
+	ADD	IX,DE
+	LD	A,(BC)
+	INC	BC
+	LD	E,A
+	LD	A,(BC)
+	INC	BC
+	LD	D,A
+	ADC	HL,DE
+	EXX
+	DEC	BC
+	LD	A,B
+	OR	C
+	EXX
+	JR	NZ,Next_0008
+	RET
+
+Checksum1:	DEFW	#00
+Checksum2:	DEFW	#00
+
+RPrintCode:	CALL	RGetAdres
+Next_0009:	LD	A,(DE)
+	OR	A
+	RET	Z
+	DEC	DE
+	CALL	RPrintChar
+	JR	Next_0009
+
+RGetAdres:	LD	DE,#00
+	LD	B,A
+	INC	B
+Next_0010:	DEC	B
+	RET	Z
+Next_0011:	LD	A,(DE)
+	DEC	DE
+	OR	A
+	JR	NZ,Next_0011
+	JR	Next_0010
+
+RPrintString:	LD	A,(DE)
+	OR	A
+	RET	Z
+	CALL	RPrintChar
+	INC	DE
+	JR	RPrintString
+
+RPrintCrLf:	LD	A,#0D
+	CALL	RPrintChar
+	LD	A,#0A
+RPrintChar:	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+	LD	E,A
+	LD	C,_CONOUT
+	CALL	BDOS
+	POP	BC
+	POP	DE
+	POP	HL
+	RET
+
+Env_Shell:	DEFB	"SHELL",0
+Data_Shell:	DEFB	"A:\COMMAND2.COM",0
+Data_Help:	DEFB	"A:\HELP",0
+Data_Root:	DEFB	"A:\",0
+
+MaxBufferLeng:	DEFW	 4096
+
+Start:	LD	SP,BootStrap
+	LD	A,(#37)
+	EX	AF,AF'
+	LD	C,_DOSVER
+	CALL	BDOS
+	LD	A,#01
+	CP	B
+	JR	NC,Next_0012
+	CP	D
+	JR	C,Next_0013
+Next_0012:	CALL	RPrintCrLf
+	LD	A,#0D
+	CALL	PrintCode
+	LD	A,#35
+	CALL	PrintCode
+	LD	A,#0E
+	CALL	PrintCode
+	CALL	RPrintCrLf
+	DI
+	HALT
+
+Next_0013:	LD	DE,#00
+	PUSH	DE
+	LD	C,_DEFAB
+	CALL	BDOS
+	POP	DE
+	LD	C,_DEFER
+	CALL	BDOS
+	LD	A,(BootDrive)
+	ADD	A,"@"
+	LD	(Data_Help),A
+	LD	(Data_Shell),A
+	LD	(Data_Root),A
+	LD	BC,#04
+	LD	DE,DirBuffer
+	LD	HL,Data_Root
+	LDIR
+	LD	A,(#FBED)
+	BIT	1,A
+	JR	NZ,Next_0999
+	LD	HL,#00
+	LD	(#80),HL
+Next_0999:	CALL	GetMapSupport
+	LD	A,(RTYCNT)
+	OR	A
+	JR	Z,Next_0400
+	LD	(MapperPage),A
+	JR	Next_0402
+
+Next_0400:	LD	B,A
+	INC	A
+	CALL	ALL_SEG
+	JR	NC,Next_0401
+	LD	A,#0D
+	CALL	PrintCode
+	LD	A,#42
+	CALL	LPrintCode
+	DI
+	HALT
+
+Next_0401:	LD	(MapperPage),A
+	LD	(RTYCNT),A
+	LD	HL,BufferAdres
+	CALL	SetPutAdres
+	CALL	SetReadAdres
+	DEC	HL
+	CALL	SetEndAdres
+	LD	HL,#0400
+	CALL	SetBufferLeng
+	LD	HL,BufferAdres+#0400
+	PUSH	HL
+	CALL	SetAliasAdres
+	LD	HL,BufferAdres+#0400+#2800
+	CALL	SetAliasEnd
+	POP	HL
+	XOR	A
+	CALL	Wr_Char
+	INC	HL
+	CALL	Wr_Char
+	LD	HL,VariableEnd
+	LD	A,#FF
+	CALL	Wr_Char
+	INC	HL
+	LD	A,#BF
+	CALL	Wr_Char
+Next_0402:	LD	HL,#00
+	LD	DE,BootStrap
+	LD	BC,#08
+	LDIR
+	LD	A,(MapperPage)
+	LD	(Mapper1+1),A
+	CALL	GET_P2
+	LD	(Mapper2+1),A
+	LD	HL,(MapperAdres)
+	LD	DE,#24
+	ADD	HL,DE
+	LD	(Adres1+1),HL
+	LD	(Adres2+1),HL
+	CALL	MakeChecksum
+	LD	(Checksum1),IX
+	LD	(Checksum2),HL
+	LD	DE,(#06)
+	LD	BC,#0701
+Next_0014:	DEC	DE
+	DJNZ	Next_0014
+Next_0015:	PUSH	BC
+	EXX
+	POP	DE
+	CALL	FindEnvItem
+	JR	NZ,Next_0018
+	OR	(HL)
+	JR	Z,Next_0019
+	CALL	GetEnvData
+	EXX
+	CALL	ChkMemSpace
+	LD	HL,BufEnvName
+Next_0016:	LD	A,(HL)
+	INC	HL
+	LD	(DE),A
+	DEC	DE
+	OR	A
+	JR	NZ,Next_0016
+	LD	HL,BufEnvData
+Next_0017:	LD	A,(HL)
+	INC	HL
+	LD	(DE),A
+	DEC	DE
+	OR	A
+	JR	NZ,Next_0017
+	EXX
+Next_0018:	EXX
+	INC	BC
+	JR	Next_0015
+
+Next_0019:	EXX
+	LD	(DE),A
+	DEC	DE
+	LD	HL,StringCodes
+	LD	C,#05
+	PUSH	DE
+	PUSH	DE
+Next_0020:	LD	A,(HL)
+	INC	HL
+	CALL	GetAdres
+	EX	(SP),HL
+	EX	DE,HL
+	CALL	ChkMemSpace
+	EX	DE,HL
+Next_0021:	LD	A,(DE)
+	INC	DE
+	LD	(HL),A
+	DEC	HL
+	OR	A
+	JR	NZ,Next_0021
+	EX	(SP),HL
+	DEC	C
+	JR	NZ,Next_0020
+	POP	HL
+	POP	DE
+	LD	(HL),D
+	DEC	HL
+	LD	(HL),E
+	DEC	HL
+	EX	DE,HL
+	LD	L,E
+	LD	H,D
+	LD	BC,Start-CopyBack+ExitAdres-BootStrap
+	OR	A
+	SBC	HL,BC
+	LD	(StoEndTPA+1),HL
+	LD	(EndTPA),HL
+	CALL	ChkMemSpace
+	LD	HL,Start-1
+	LD	BC,Start-CopyBack
+	LDDR
+	CALL	ChkMemSpace
+	LD	(ExitAdres),DE
+	LD	C,E
+	LD	B,D
+	INC	BC
+	LD	HL,(#01)
+	INC	HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	LD	(WarmBoot),DE
+	EXX
+	LD	DE,AbortExit1
+	LD	C,_DEFAB
+	CALL	BDOS
+	EXX
+	LD	(HL),B
+	DEC	HL
+	LD	(HL),C
+	EX	AF,AF'
+	OR	A
+	JR	Z,Next_0024
+	LD	HL,Env_Program
+	CALL	GetEnvData2
+	LD	HL,Env_Shell
+	JR	NZ,Next_0022
+	LD	A,(DE)
+	OR	A
+	JR	NZ,Next_0023
+Next_0022:	LD	DE,Data_Shell
+	LD	C,_SENV
+	CALL	BDOS
+	XOR	A
+Next_0023:	CALL	NZ,PutEnvItem2
+Next_0024:	LD	HL,Env_Help
+	LD	DE,Data_Help
+	CALL	SetEnvItem
+	LD	HL,Env_Temp
+	LD	DE,Data_Root
+	CALL	SetEnvItem
+	LD	HL,Env_Date
+	LD	DE,Data_Date1
+	LD	A,(DateFormat)
+	AND	#07
+	CP	#01
+	JR	C,Next_0025
+	LD	DE,Data_Date2
+	JR	Z,Next_0025
+	LD	DE,Data_Date3
+Next_0025:	CALL	SetEnvItem
+	LD	HL,Env_Time
+	LD	DE,Data_Time
+	CALL	SetEnvItem
+	LD	HL,Env_Path
+	LD	DE,Data_Empty
+	CALL	SetEnvItem
+	LD	HL,Env_Cdpath
+	LD	DE,Data_Empty
+	CALL	SetEnvItem
+	LD	HL,Env_Prompt
+	LD	DE,Data_Prompt
+	CALL	SetEnvItem
+	LD	HL,Env_Expert
+	LD	DE,Data_On
+	CALL	SetEnvItem
+	LD	HL,Env_Echo
+	LD	DE,Data_Off
+	CALL	SetEnvItem
+	LD	HL,Env_Upper
+	LD	DE,Data_Off
+	CALL	SetEnvItem
+	LD	HL,Env_Lower
+	LD	DE,Data_Off
+	CALL	SetEnvItem
+	LD	HL,Env_Redir
+	LD	DE,Data_On
+	CALL	SetEnvItem
+	LD	HL,Env_Alias
+	LD	DE,Data_On
+	CALL	SetEnvItem
+	LD	HL,Env_Separ
+	LD	DE,Data_On
+	CALL	SetEnvItem
+	LD	HL,Env_Expand
+	LD	DE,Data_On
+	CALL	SetEnvItem
+	LD	HL,Env_TabOrder
+	LD	DE,Data_TabOrder
+	CALL	SetEnvItem
+	LD	DE,BufEnvData
+	XOR	A
+	LD	(DE),A
+	LD	HL,Env_Parameters
+	LD	C,_SENV
+	PUSH	DE
+	CALL	BDOS
+	POP	DE
+	LD	HL,Env_Program
+	LD	C,_SENV
+	CALL	BDOS
+	JP	Start2
+
+ChkMemSpace:	PUSH	HL
+	PUSH	DE
+	LD	HL,BufEnvData
+	OR	A
+	SBC	HL,DE
+	LD	DE,#F5FF
+	SBC	HL,DE
+	POP	DE
+	POP	HL
+	RET	C
+	LD	B,.NORAM
+	LD	C,_TERM
+	JP	BDOS
+
+SetEnvItem:	PUSH	DE
+	PUSH	HL
+	CALL	GetEnvData2
+	LD	A,(DE)
+	POP	HL
+	POP	DE
+	RET	NZ
+	OR	A
+	RET	NZ
+	LD	C,_SENV
+	JP	BDOS
+
+Data_Date1:	DEFB	"yy-mm-dd",0
+Data_Date2:	DEFB	"mm-dd-yy",0
+Data_Date3:	DEFB	"dd-mm-yy",0
+Data_Empty:	DEFB	";",0
+Data_Time:	DEFB	"24",0
+
+StringCodes:	DEFB	#0D,#0E,#32,#33,#0F
+
+Start2:	LD	HL,#80
+	LD	C,(HL)
+	LD	B,#00
+	ADD	HL,BC
+	INC	HL
+	LD	(HL),B
+	SBC	HL,BC
+	CALL	FndFirstChr
+	LD	(ComlinChar1),A
+	LD	(ComlinChar2),A
+	EXX
+	LD	HL,Data_Pipe
+	LD	DE,PipeFileName
+	LD	BC,#07
+	LDIR
+	LD	A,R
+	AND	#07
+	ADD	A,"0"
+	LD	(DE),A
+	INC	DE
+	LD	C,#04
+	LDIR
+	XOR	A
+	LD	(ID_Redir),A
+	LD	(ID_Pipelin),A
+	LD	(InputHandle),A
+	LD	(OutputHandle),A
+	LD	(ExtraCRLF),A
+	LD	L,A
+	LD	H,A
+	LD	(PipeAdres),HL
+	LD	(NextAdres),HL
+	DEC	A
+	LD	(BatchHandle),A
+	LD	(StringCode),A
+	LD	HL,Null
+	LD	(LineAdres),HL
+	LD	HL,GosubList
+	LD	(GosubAdres),HL
+	LD	HL,IffList
+	LD	(IffAdres),HL
+	LD	D,H
+	LD	E,L
+	INC	DE
+	LD	BC,15
+	LD	(HL),#00
+	LDIR
+	LD	DE,AbortExit2
+	LD	C,_DEFAB
+	CALL	BDOS
+Next_0026:	LD	IY,RedirState
+	LD	(IY+#0E),#00
+	LD	(IY+#10),#00
+	LD	(IY+#00),#00
+	LD	(IY+#29),#00
+	LD	(IY+#2A),#00
+	LD	C,_CURDRV
+	CALL	BDOS
+	INC	A
+	LD	(CurrentDrive),A
+	LD	DE,(PipeAdres)
+	LD	A,D
+	OR	E
+	JP	NZ,Next_0038
+	LD	DE,(NextAdres)
+	LD	A,D
+	OR	E
+	JP	NZ,Next_0403
+	LD	HL,Env_Redir
+	CALL	Check_OFF
+	CCF
+	SBC	A,A
+	LD	(RedirState),A
+	LD	HL,Env_Alias
+	CALL	Check_OFF
+	CCF
+	SBC	A,A
+	LD	(AliasState),A
+	LD	HL,Env_Separ
+	CALL	Check_OFF
+	CCF
+	SBC	A,A
+	LD	(SeparState),A
+	EXX
+	LD	A,(HL)
+	OR	A
+	JP	NZ,Next_0037
+	LD	A,(BatchHandle)
+	INC	A
+	JR	Z,Next_0029
+	LD	HL,ErrorCode
+	LD	A,(HL)
+	LD	(HL),#00
+	OR	A
+	JR	Z,Next_0028
+	PUSH	AF
+	LD	A,(ID_Redir2)
+	LD	(ID_Redir),A
+	LD	HL,Null
+	LD	(LineAdres),HL
+	LD	A,#FF
+	LD	(BatchHandle),A
+	LD	A,(BatchPage)
+	OR	A
+	CALL	NZ,ReleaseBTM
+	POP	AF
+	CP	.OKCMD
+	JR	NZ,Next_0027
+	XOR	A
+Next_0027:	JP	Next_0040
+
+Next_0028:	CALL	CheckEcho
+	JR	C,Next_0033
+	SCF
+	JR	Next_0031
+
+Next_0029:	LD	A,(ComlinChar2)
+	OR	A
+	JR	Z,Next_0031
+	LD	A,(AbortError)
+	OR	A
+	JR	NZ,Next_0030
+	LD	A,.OKCMD
+Next_0030:	JP	AbortExit1
+
+Next_0031:	PUSH	AF
+	LD	HL,ExtraCRLF
+	XOR	A
+	CP	(HL)
+	LD	(HL),A
+	CALL	NZ,LPrint
+	LD	HL,Env_Prompt
+	CALL	GetEnvData2
+	LD	A,(DE)
+	OR	A
+	JR	NZ,Next_0032
+	LD	HL,Data_Prompt
+	LD	BC,8
+	PUSH	DE
+	LDIR
+	POP	DE
+Next_0032:	LD	HL,Buffer1
+	LD	IX,BufExtra3
+	LD	(IX),#00
+	CALL	ParseLine
+	EX	DE,HL
+	INC	DE
+	CALL	PrintString
+	POP	AF
+	JR	NC,Next_0036
+Next_0033:	CALL	ReadBatLine
+	JR	C,Next_0033
+	JR	Z,Next_0035
+	CP	.EOF
+	JR	Z,Next_0034
+	PUSH	AF
+	CALL	LPrint
+	POP	AF
+	JP	Next_0040
+
+Next_0034:	LD	A,.OKCMD
+Next_0035:	LD	(ErrorCode),A
+	SCF
+Next_0036:	CALL	NC,GetLine
+	INC	HL
+Next_0037:	EX	DE,HL
+	CALL	Aliasing
+	JP	NZ,Next_0040
+Next_0403:	CALL	MultiComm
+	LD	HL,Buffer1
+	LD	IX,BufExtra3
+	LD	(IX),#00
+	CALL	ParseLine
+	JR	NZ,Next_0040
+	EX	DE,HL
+	INC	DE
+	PUSH	DE
+	LD	A,(BatchHandle)
+	INC	A
+	SCF
+	CALL	NZ,CheckEcho
+	CALL	NC,LPrintString
+	LD	C,_FORK
+	CALL	BDOS
+	POP	DE
+	JR	NZ,Next_0040
+	LD	A,B
+	LD	(ID_Redir),A
+	LD	HL,Buffer2
+	CALL	Redirecting
+	JR	NZ,Next_0040
+	EX	DE,HL
+	INC	DE
+	XOR	A
+	LD	(InputHandle),A
+	LD	(OutputHandle),A
+	LD	H,A
+	LD	L,A
+	LD	(PipeAdres),HL
+Next_0038:	PUSH	DE
+	CALL	Pipelining
+	POP	HL
+	JR	NZ,Next_0040
+	PUSH	HL
+	CALL	RemoveQuote
+	POP	HL
+	CALL	Executing
+	CP	.BADCM
+	JR	NZ,Next_0040
+	LD	HL,Txt_Unknown
+	LD	DE,BufEnvData
+	CALL	GetAlias
+	JR	NZ,Next_0040
+	LD	A,(DE)
+	OR	A
+	JR	NZ,Next_0403
+	LD	A,.BADCM
+	JR	Next_0040
+
+Txt_Unknown:	DEFB	"UNKNOWN_CMD",0
+
+AbortExit2:	CP	.INERR
+	JR	Z,Next_0039
+	CP	.OUTERR
+	JR	NZ,Next_0040
+	LD	A,#3D
+	DEFB	#21
+Next_0039:	LD	A,#3C
+	LD	(StringCode),A
+	LD	A,(ID_Redir)
+	OR	A
+	LD	A,B
+	JP	Z,AbortExit1
+Next_0040:	LD	SP,BootStrap
+	LD	(AbortError),A
+	LD	B,A
+	PUSH	BC
+	LD	DE,BufEnvName
+	CP	" "
+	JR	C,Next_0041
+	CP	.OKCMD
+	JR	Z,Next_0041
+	CP	#80
+	JR	Z,Next_0041
+	LD	C,_EXPLAIN
+	CALL	BDOS
+	DEFB	#21
+Next_0041:	XOR	A
+	LD	(DE),A
+	LD	BC,#FF5F
+	LD	D,#00
+	CALL	BDOS
+	POP	BC
+	LD	C,B
+	LD	HL,ComlinChar1
+	LD	A,(HL)
+	LD	(HL),#00
+	OR	A
+	JR	NZ,Next_0043
+	LD	A,B
+	CP	.BADCM
+	CALL	NZ,Next_0049
+	JR	NZ,Next_0042
+	PUSH	BC
+	LD	BC,_REDIR
+	LD	A,#01
+	CALL	BDOS
+	POP	BC
+	LD	A,B
+	CP	.ABORT
+	JR	Z,Next_0042
+	CP	.BADCM
+	CALL	NZ,LPrint
+Next_0042:	LD	A,(BufEnvName)
+	OR	A
+	JR	Z,Next_0043
+	CALL	LPrint
+	LD	A,#0D
+	CALL	PrintCode
+	LD	A,(StringCode)
+	ADD	A,#01
+	DEC	A
+	PUSH	AF
+	CALL	NC,PrintCode
+	LD	DE,BufEnvName
+	CALL	PrintString
+	LD	A,#0E
+	CALL	LPrintCode
+	POP	AF
+	CP	#3B
+	JR	Z,Next_0045
+	CP	#3A
+	JR	Z,Next_0044
+Next_0043:	LD	A,C
+	CP	#80
+	JR	Z,Next_0046
+	OR	A
+	JR	Z,Next_0047
+	CALL	Next_0049
+	JR	NZ,Next_0047
+Next_0044:	CALL	Rejoin
+Next_0045:	LD	BC,_REDIR
+	LD	A,#01
+	CALL	BDOS
+	LD	A,(BatchHandle)
+	INC	A
+	LD	A,#36
+	CALL	NZ,Find_YyNn
+	JR	Z,Next_0047
+Next_0046:	LD	HL,ErrorCode
+	LD	(HL),#80
+Next_0047:	LD	A,#3A
+	LD	(StringCode),A
+	CALL	Rejoin2
+	JP	NZ,Next_0040
+	DEC	A
+	LD	(StringCode),A
+	LD	DE,(PipeAdres)
+	LD	A,D
+	OR	E
+	JR	NZ,Next_0048
+	LD	HL,ID_Redir
+	LD	B,(HL)
+	XOR	A
+	LD	(HL),A
+	OR	B
+	LD	C,_JOIN
+	CALL	NZ,BDOS
+	JP	NZ,Next_0040
+	LD	HL,Null
+	EXX
+Next_0048:	JP	Next_0026
+
+Next_0049:	CP	.ABORT
+	RET	Z
+	CP	.STOP
+	RET	Z
+	CP	.CTRLC
+	RET	Z
+	LD	A,(StringCode)
+	CP	#3C
+	RET	Z
+	CP	#3D
+	RET
+
+ErrorHand1:	LD	A,#01
+	RET
+
+AbortExit3:	POP	HL
+	LD	A,#FF
+	RET
+
+Aliasing:	PUSH	DE
+	XOR	A
+	BIT	7,(IY+#29)
+	JP	NZ,Next_0413
+Next_0404:	LD	A,(DE)
+	INC	DE
+	CP	" "
+	JR	Z,Next_0404
+	CP	"^"
+	JR	Z,Next_0404
+	DEC	DE
+	LD	HL,BufEnvName
+	PUSH	DE
+	LD	A,(DE)
+	CP	"@"
+	JR	NZ,Next_0406
+	LD	L,E
+	LD	H,D
+Next_0405:	INC	HL
+	LD	A,(HL)
+	LD	(DE),A
+	INC	DE
+	OR	A
+	JR	NZ,Next_0405
+	POP	DE
+	LD	C,#00
+	JR	Next_0412
+
+Next_0406:	LD	(HL),A
+	INC	HL
+	INC	DE
+	LD	A,(DE)
+	OR	A
+	JR	Z,Next_0407
+	CP	"^"
+	JR	NZ,Next_0406
+Next_0407:	LD	(HL),#00
+	EX	DE,HL
+	CALL	FndFirstChr
+	PUSH	HL
+	LD	HL,BufEnvName
+	PUSH	HL
+	DEC	HL
+Next_0408:	INC	HL
+	LD	A,(HL)
+	CALL	MakeUpper
+	LD	(HL),A
+	OR	A
+	JR	Z,Next_0409
+	CP	" "
+	JR	Z,Next_0409
+	CP	"/"
+	JR	NZ,Next_0408
+Next_0409:	LD	A,(HL)
+	LD	(HL),#00
+	LD	B,H
+	LD	C,L
+	POP	HL
+	PUSH	AF
+	PUSH	BC
+	LD	DE,BufExtra
+	CALL	GetAlias
+	POP	BC
+	POP	AF
+	LD	(BC),A
+	LD	HL,(LineAdres)
+	LD	(FIB2+1),HL
+	LD	HL,BufEnvName
+	LD	(LineAdres),HL
+	LD	HL,BufExtra2
+	CALL	ParseLine
+	LD	HL,(FIB2+1)
+	LD	(LineAdres),HL
+	POP	HL
+	LD	A,(BufExtra)
+	POP	DE
+	LD	C,#00
+	OR	A
+	JR	Z,Next_0412
+	PUSH	DE
+	CALL	NCopy
+	POP	HL
+	PUSH	HL
+	LD	DE,BufExtra2
+	LD	A,(DE)
+	OR	A
+	JR	Z,Next_0411
+	INC	DE
+Next_0410:	LD	A,(DE)
+	OR	A
+	JR	Z,Next_0411
+	LD	C,A
+	CALL	InsertByte
+	INC	HL
+	INC	DE
+	JR	Next_0410
+
+Next_0411:	LD	C,_CONST
+	CALL	BDOS
+	POP	DE
+	JP	Next_0404
+
+Next_0412:	CALL	CheckChar
+	JR	Z,Next_0413
+	JR	C,Next_0412
+	CP	"^"
+	JR	NZ,Next_0412
+	JP	Next_0404
+
+Next_0413:	LD	B,A
+	LD	DE,LineBuffer
+	POP	HL
+Next_0414:	LD	A,(HL)
+	LD	(DE),A
+	OR	A
+	JR	Z,Next_0415
+	INC	HL
+	INC	DE
+	DEC	B
+	JR	NZ,Next_0414
+	LD	A,.BUFUL
+	RET
+
+Next_0415:	LD	DE,LineBuffer
+	XOR	A
+	RET
+
+MultiComm:	PUSH	DE
+	XOR	A
+	BIT	7,(IY+#2A)
+	JR	NZ,Next_0417
+	LD	C,#00
+Next_0416:	CALL	CheckChar
+	JR	Z,Next_0417
+	JR	C,Next_0416
+	CP	"^"
+	JR	NZ,Next_0416
+	EX	DE,HL
+	DEC	HL
+	LD	(HL),#00
+	INC	HL
+	CALL	FndFirstChr
+	JR	NZ,Next_0418
+Next_0417:	LD	H,A
+	LD	L,A
+Next_0418:	LD	(NextAdres),HL
+	POP	DE
+	RET
+
+RemoveQuote:	LD	A,(HL)
+	INC	HL
+	OR	A
+	RET	Z
+	CP	#22
+	JR	Z,Next_0419
+	CP	"'"
+	JR	NZ,RemoveQuote
+Next_0419:	LD	B,A
+	LD	D,H
+	LD	E,L
+	DEC	DE
+Next_0420:	LD	A,(HL)
+	CP	B
+	JR	Z,Next_0421
+	LD	(DE),A
+	OR	A
+	RET	Z
+	INC	HL
+	INC	DE
+	JR	Next_0420
+
+Next_0421:	PUSH	HL
+Next_0422:	INC	HL
+	LD	A,(HL)
+	LD	(DE),A
+	INC	DE
+	OR	A
+	JR	NZ,Next_0422
+	POP	HL
+	DEC	HL
+	JR	RemoveQuote
+
+ParseLine:	XOR	A
+	LD	(HL),A
+	LD	C,A
+	LD	(FIB2),A
+Next_0050:	CALL	CheckChar
+	JP	C,Next_0056
+	CP	"%"
+	JP	NZ,Next_0056
+	LD	A,(DE)
+	INC	DE
+	CP	"&"
+	JR	Z,Next_0423
+	CP	"0"
+	JR	C,Next_0051
+	CP	"9"+1
+	JR	NC,Next_0051
+	DEC	DE
+	PUSH	BC
+	PUSH	HL
+	PUSH	DE
+	EX	DE,HL
+	CALL	GetValue_8
+	JR	Z,Next_0424
+	POP	DE
+	POP	HL
+	POP	BC
+	LD	A,(DE)
+	INC	DE
+	JR	Next_0051
+
+Next_0423:	PUSH	BC
+	PUSH	HL
+	PUSH	DE
+	EX	DE,HL
+	LD	A,#FF
+	LD	(FIB2),A
+	LD	E,#01
+Next_0424:	LD	A,E
+	INC	A
+	POP	DE
+	EX	DE,HL
+	POP	HL
+	POP	BC
+	PUSH	BC
+	PUSH	AF
+	LD	A,(DE)
+	CP	"&"
+	JR	NZ,Next_0425
+	LD	A,#FF
+	LD	(FIB2),A
+	INC	DE
+Next_0425:	POP	AF
+	PUSH	DE
+	CALL	MakeComLin
+	POP	DE
+	POP	BC
+	RET	NZ
+	JR	Next_0050
+
+Next_0051:	CP	"%"
+	JP	Z,Next_0056
+	DEC	DE
+	PUSH	BC
+	PUSH	HL
+	XOR	A
+	LD	(BufEnvName),A
+	LD	L,E
+	LD	H,D
+	PUSH	DE
+	LD	D,#00
+Next_0426:	LD	A,(HL)
+	INC	HL
+	OR	A
+	JR	Z,Next_0430
+	CP	"["
+	JR	NZ,Next_0427
+	INC	D
+Next_0427:	CP	"]"
+	JR	NZ,Next_0428
+	DEC	D
+Next_0428:	INC	D
+	DEC	D
+	JR	NZ,Next_0426
+	CP	"%"
+	JR	NZ,Next_0426
+	POP	DE
+	PUSH	HL
+	PUSH	DE
+	DEC	HL
+	LD	(HL),#00
+	EX	DE,HL
+	LD	DE,BufEnvName
+	LD	A,(HL)
+	CP	"_"
+	JP	Z,Next_0431
+	CP	"@"
+	JP	Z,Next_0435
+	LD	BC,#FF6B
+	CALL	BDOS
+	JR	NZ,Next_0054
+	PUSH	IX
+Next_0429:	POP	IX
+	POP	HL
+	POP	HL
+	EX	(SP),HL
+Next_0052:	LD	A,(DE)
+	INC	DE
+	CALL	PutComChar
+	JR	NZ,Next_0053
+	JR	C,Next_0052
+Next_0053:	POP	DE
+	POP	BC
+	RET	NZ
+	JP	Next_0050
+
+Next_0430:	POP	DE
+	JR	Next_0055
+
+Next_0054:	POP	DE
+	POP	HL
+	DEC	HL
+	LD	(HL),"%"
+Next_0055:	POP	HL
+	POP	BC
+	LD	A,(DE)
+	INC	DE
+Next_0056:	CALL	PutComChar
+	RET	NZ
+	JP	C,Next_0050
+	RET
+
+Next_0431:	EX	DE,HL
+	PUSH	DE
+	LD	B,#FF
+Next_0432:	INC	DE
+	INC	B
+	LD	A,(DE)
+	OR	A
+	JR	NZ,Next_0432
+	POP	DE
+	LD	HL,Internals-2
+	XOR	A
+Next_0433:	JR	NZ,Next_0434
+	INC	HL
+	INC	HL
+	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0434
+	CALL	Compare_DEHL
+	JR	C,Next_0433
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	PUSH	IX
+	LD	DE,Next_0429
+	PUSH	DE
+	PUSH	HL
+	XOR	A
+	RET
+
+Next_0434:	LD	DE,Null
+	PUSH	IX
+	JP	Next_0429
+
+Next_0435:	EX	DE,HL
+	PUSH	DE
+	LD	B,#FF
+Next_0436:	INC	DE
+	INC	B
+	LD	A,(DE)
+	OR	A
+	JP	Z,Next_0441
+	CP	"["
+	JR	NZ,Next_0436
+	EX	DE,HL
+	INC	HL
+	PUSH	BC
+	PUSH	HL
+	LD	D,#01
+Next_0437:	LD	A,(HL)
+	INC	HL
+	OR	A
+	JR	Z,Next_0439
+	CP	"["
+	JR	NZ,Next_0438
+	INC	D
+Next_0438:	CP	"]"
+	JR	NZ,Next_0437
+	DEC	D
+	JR	NZ,Next_0437
+	DEC	HL
+	LD	(HL),#00
+	PUSH	IX
+	POP	HL
+	POP	DE
+	PUSH	IX
+	LD	C,(HL)
+	LD	B,#00
+	ADD	HL,BC
+	INC	HL
+	INC	HL
+	PUSH	HL
+	POP	IX
+	CALL	ParseLine
+	JR	Next_0440
+
+Next_0439:	INC	A
+	POP	HL
+Next_0440:	POP	IX
+	JP	NZ,Next_0055
+	POP	BC
+	LD	A,B
+	EX	AF,AF'
+	LD	A,(HL)
+	LD	B,H
+	LD	C,L
+	EX	AF,AF'
+	LD	B,A
+	LD	A,H
+	EX	AF,AF'
+Next_0441:	POP	DE
+	OR	A
+	JP	Z,Next_0434
+	LD	HL,Functions-2
+	XOR	A
+Next_0442:	JP	NZ,Next_0434
+	INC	HL
+	INC	HL
+	LD	A,(HL)
+	OR	A
+	JP	Z,Next_0434
+	CALL	Compare_DEHL
+	JR	C,Next_0442
+	EX	AF,AF'
+	LD	B,A
+	INC	BC
+	PUSH	BC
+	LD	C,(HL)
+	INC	HL
+	LD	B,(HL)
+	POP	HL
+	LD	DE,Next_0429
+	PUSH	IX
+	PUSH	DE
+	PUSH	BC
+	RET
+
+MakeComLin:	LD	B,A
+	LD	C,#00
+	LD	DE,(LineAdres)
+	LD	A,(HL)
+	EX	AF,AF'
+Next_0057:	CALL	CheckChar
+	JR	C,Next_0060
+	CP	"/"
+	JR	Z,Next_0058
+	CALL	SkipChar
+	JR	NZ,Next_0060
+Next_0058:	EX	DE,HL
+	DEC	HL
+	PUSH	BC
+	CALL	FndFirstChr
+	POP	BC
+	EX	DE,HL
+	DJNZ	Next_0059
+	LD	A,(FIB2)
+	OR	A
+	RET	Z
+	DEC	DE
+	LD	A,(DE)
+	CALL	SkipChar
+	JR	Z,Next_0443
+	INC	DE
+Next_0443:	LD	A,(DE)
+	INC	DE
+	CALL	PutComChar
+	RET	NZ
+	JR	C,Next_0443
+	RET
+
+Next_0059:	EX	AF,AF'
+	LD	(HL),A
+	EX	AF,AF'
+	LD	A,(DE)
+	CP	"/"
+	JR	NZ,Next_0057
+	INC	DE
+Next_0060:	CALL	PutComChar
+	RET	NZ
+	JR	C,Next_0057
+	RET
+
+Next_0061:	LD	A,.IFNM
+	OR	A
+	RET
+
+Redirecting:	XOR	A
+	LD	(BufEnvData),A
+	LD	(BufEnvName),A
+	LD	C,A
+	LD	(HL),A
+Next_0062:	CALL	CheckChar
+	JR	C,Next_0067
+	BIT	7,(IY+#00)
+	JR	NZ,Next_0067
+	CP	"<"
+	JR	Z,Next_0063
+	CP	">"
+	JR	NZ,Next_0067
+	PUSH	DE
+	EXX
+	LD	HL,BufEnvData
+	JR	Next_0064
+
+Next_0063:	PUSH	DE
+	EXX
+	LD	HL,BufEnvName
+Next_0064:	EX	(SP),HL
+	PUSH	HL
+	CP	(HL)
+	JR	NZ,Next_0065
+	INC	HL
+Next_0065:	CALL	FndFirstChr
+	EX	DE,HL
+	LD	BC,_PARSE
+	LD	A,#39
+	LD	(StringCode),A
+	CALL	BDOS
+	EX	AF,AF'
+	LD	A,B
+	POP	BC
+	POP	HL
+	EX	AF,AF'
+	RET	NZ
+	EX	AF,AF'
+	BIT	5,A
+	JR	NZ,Next_0061
+	AND	#18
+	JR	Z,Next_0061
+	PUSH	DE
+	EX	DE,HL
+	SBC	HL,BC
+	PUSH	BC
+	EX	(SP),HL
+	POP	BC
+	JR	Z,Next_0066
+	LDIR
+Next_0066:	XOR	A
+	LD	(DE),A
+	EXX
+	POP	DE
+	DEC	A
+	LD	(StringCode),A
+	JR	Next_0062
+
+Next_0067:	CALL	PutComChar
+	RET	NZ
+	JP	C,Next_0062
+	LD	A,#39
+	LD	(StringCode),A
+	EXX
+	LD	HL,BufEnvData
+	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0069
+	PUSH	HL
+	LD	BC,#0145
+	CALL	BDOS
+	POP	HL
+	RET	NZ
+	LD	A,(HL)
+	CP	">"
+	JR	NZ,Next_0068
+	INC	HL
+	PUSH	HL
+	CALL	FndFirstChr
+	EX	DE,HL
+	LD	C,_OPEN
+	LD	A,#06
+	CALL	BDOS
+	POP	HL
+	CP	.NOFIL
+	JR	Z,Next_0068
+	OR	A
+	RET	NZ
+	LD	BC,#014A
+	LD	A,#02
+	SBC	HL,HL
+	LD	E,L
+	LD	D,H
+	CALL	BDOS
+	RET	NZ
+	JR	Next_0069
+
+Next_0068:	CALL	FndFirstChr
+	EX	DE,HL
+	LD	BC,_CREATE
+	LD	A,#06
+	CALL	BDOS
+	RET	NZ
+Next_0069:	LD	HL,BufEnvName
+	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0071
+	PUSH	HL
+	LD	BC,_CLOSE
+	CALL	BDOS
+	POP	HL
+	RET	NZ
+	LD	A,(HL)
+	CP	"<"
+	JR	NZ,Next_0070
+	INC	HL
+Next_0070:	CALL	FndFirstChr
+	EX	DE,HL
+	LD	C,_OPEN
+	LD	A,#05
+	CALL	BDOS
+	RET	NZ
+	BIT	7,B
+	LD	A,.NOFIL
+	RET	NZ
+Next_0071:	EXX
+	LD	A,#FF
+	LD	(StringCode),A
+	RET
+
+Pipelining:	LD	A,#3A
+	LD	(StringCode),A
+	XOR	A
+	LD	C,A
+	LD	L,A
+	LD	H,A
+	LD	(PipeAdres),HL
+	LD	A,(OutputHandle)
+	EX	AF,AF'
+Next_0072:	CALL	CheckChar
+	JR	C,Next_0073
+	BIT	7,(IY+#00)
+	JR	NZ,Next_0073
+	CP	"|"
+	JR	NZ,Next_0073
+	LD	L,E
+	LD	H,D
+	CALL	FndFirstChr
+	LD	(PipeAdres),HL
+	DEC	DE
+	XOR	A
+	LD	(DE),A
+	CALL	OpenPipeFile
+	RET	NZ
+	LD	A,B
+	LD	(OutputHandle),A
+	JR	Next_0074
+
+Next_0073:	OR	A
+	JR	NZ,Next_0072
+	LD	(OutputHandle),A
+Next_0074:	EX	AF,AF'
+	OR	A
+	JR	Z,Next_0075
+	LD	(InputHandle),A
+	LD	B,A
+	XOR	A
+	LD	L,A
+	LD	H,A
+	LD	E,A
+	LD	D,A
+	LD	C,_SEEK
+	CALL	BDOS
+	RET	NZ
+Next_0075:	LD	A,(OutputHandle)
+	LD	HL,InputHandle
+	OR	(HL)
+	JR	Z,Next_0077
+	LD	C,_FORK
+	CALL	BDOS
+	RET	NZ
+	LD	A,B
+	LD	(ID_Pipelin),A
+	LD	A,(InputHandle)
+	OR	A
+	JR	Z,Next_0076
+	PUSH	AF
+	LD	BC,_CLOSE
+	CALL	BDOS
+	POP	BC
+	LD	C,_DUP
+	CALL	Z,BDOS
+	RET	NZ
+Next_0076:	LD	A,(OutputHandle)
+	OR	A
+	JR	Z,Next_0077
+	PUSH	AF
+	LD	BC,#0145
+	CALL	BDOS
+	POP	BC
+	LD	C,_DUP
+	CALL	Z,BDOS
+	RET	NZ
+Next_0077:	LD	A,#FF
+	LD	(StringCode),A
+	XOR	A
+	RET
+
+OpenPipeFile:	LD	HL,PipeFileName+7
+Next_0078:	LD	A,(HL)
+	INC	A
+	LD	(HL),A
+	CP	"9"+1
+	JR	C,Next_0079
+	LD	(HL),"0"
+	DEC	HL
+	JR	Next_0078
+
+Next_0079:	LD	HL,Env_Temp
+	CALL	GetEnvData2
+	LD	BC,_PARSE
+	CALL	BDOS
+	RET	NZ
+	LD	A,B
+	AND	#18
+	JR	Z,Next_0080
+	LD	A,"\"
+	LD	(DE),A
+	INC	DE
+Next_0080:	LD	HL,PipeFileName
+	LD	BC,#0C
+	LDIR
+	XOR	A
+	LD	(DE),A
+	LD	DE,BufEnvData
+	LD	BC,#8044
+	LD	A,#04
+	CALL	BDOS
+	RET	Z
+	CP	.FILEX
+	JR	Z,OpenPipeFile
+	RET
+
+Rejoin2:	LD	HL,ID_Pipelin
+	LD	B,(HL)
+	XOR	A
+	LD	(HL),A
+	OR	B
+	LD	C,_JOIN
+	CALL	NZ,BDOS
+	RET	NZ
+	LD	HL,InputHandle
+	LD	B,(HL)
+	XOR	A
+	LD	(HL),A
+	OR	B
+	LD	C,_HDELETE
+	CALL	NZ,BDOS
+	RET
+
+Rejoin:	LD	HL,#00
+	LD	(PipeAdres),HL
+	LD	HL,InputHandle
+	LD	B,(HL)
+	XOR	A
+	LD	(HL),A
+	OR	B
+	LD	C,_HDELETE
+	CALL	NZ,BDOS
+	LD	HL,OutputHandle
+	LD	B,(HL)
+	XOR	A
+	LD	(HL),A
+	OR	B
+	LD	C,_HDELETE
+	CALL	NZ,BDOS
+	LD	HL,ID_Pipelin
+	LD	B,(HL)
+	XOR	A
+	LD	(HL),A
+	OR	B
+	LD	C,_JOIN
+	CALL	NZ,BDOS
+	RET
+
+CheckChar:	LD	A,(DE)
+	INC	DE
+	OR	A
+	RET	Z
+	INC	C
+	DEC	C
+	JR	Z,Next_0081
+	CP	C
+	SCF
+	RET	NZ
+	LD	C,#00
+	OR	A
+	SCF
+	RET
+
+Next_0081:	LD	C,A
+	CP	#22
+	JR	Z,Next_0444
+	CP	"'"
+	JR	Z,Next_0444
+	LD	C,#00
+	OR	A
+	RET
+
+Next_0444:	OR	A
+	SCF
+	RET
+
+PutComChar:	BIT	7,(HL)
+	JR	NZ,Next_0082
+	PUSH	BC
+	LD	C,(HL)
+	LD	B,#00
+	INC	BC
+	ADD	HL,BC
+	LD	(HL),A
+	SBC	HL,BC
+	POP	BC
+	OR	A
+	RET	Z
+	INC	(HL)
+	XOR	A
+	SCF
+	RET
+
+Next_0082:	LD	A,.BUFUL
+	RET
+
+Next_0083:	XOR	A
+	RET
+
+Executing:	CALL	FndFirstChr
+	EX	DE,HL
+	PUSH	DE
+	LD	BC,_PARSE
+	CALL	BDOS
+	LD	(IY+#0A),B
+	LD	(IY+#0B),C
+	EX	(SP),HL
+	EX	DE,HL
+	POP	BC
+	RET	NZ
+	SBC	HL,DE
+	LD	A,L
+	ADD	HL,DE
+	LD	(PathLen),A
+	DEC	HL
+	LD	A,(HL)
+	INC	HL
+	CP	"\"
+	JR	NZ,Next_0446
+	PUSH	HL
+	LD	HL,(IffAdres)
+	BIT	0,(HL)
+	POP	HL
+	JR	NZ,Next_0446
+Next_0445:	PUSH	DE
+	LD	HL,Cmd_Chdir
+	JR	Next_0447
+Next_0446:	LD	A,(ParseFlags)
+	BIT	6,A
+	JR	NZ,Next_0445
+	EXX
+	BIT	2,A
+	JR	Z,Next_0084
+	BIT	0,A
+	JR	NZ,Next_0084
+	EXX
+	CALL	FndFirstChr
+	JR	NZ,Next_0085
+	LD	HL,(IffAdres)
+	BIT	0,(HL)
+	RET	NZ
+	LD	A,(LogiDrive)
+	DEC	A
+	LD	E,A
+	LD	C,_SELDSK
+	CALL	BDOS
+	LD	C,_ERROR
+	CALL	BDOS
+	LD	A,B
+	RET
+
+Next_0084:	BIT	0,A
+	JR	Z,Next_0083
+	BIT	3,A
+	JP	Z,Next_0094
+	AND	#40
+Next_0085:	LD	A,.BADCM
+	RET	NZ
+	EXX
+	DEC	DE
+	PUSH	HL
+	PUSH	BC
+	LD	A,(PathLen)
+	LD	B,A
+	LD	HL,Commands-2
+	XOR	A
+Next_0086:	JR	NZ,Next_0088
+	INC	HL
+	INC	HL
+	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0088
+	CALL	Compare_DEHL
+	JR	C,Next_0086
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	POP	BC
+Next_0447:	LD	BC,Cmd_Else
+	SBC	HL,BC
+	ADD	HL,BC
+	JR	Z,Next_0448
+	LD	BC,Cmd_Endiff
+	OR	A
+	SBC	HL,BC
+	ADD	HL,BC
+	JR	Z,Next_0448
+	LD	BC,Cmd_Iff
+	OR	A
+	SBC	HL,BC
+	ADD	HL,BC
+	JR	Z,Next_0448
+	PUSH	HL
+	LD	HL,(IffAdres)
+	BIT	0,(HL)
+	POP	HL
+	JR	Z,Next_0448
+	POP	DE
+	XOR	A
+	RET
+
+Next_0448:	LD	BC,Cmd_Echo
+	OR	A
+	SBC	HL,BC
+	ADD	HL,BC
+	JR	Z,Next_0449
+	LD	BC,Cmd_Echos
+	OR	A
+	SBC	HL,BC
+	ADD	HL,BC
+	EX	(SP),HL
+	JR	NZ,Next_0087
+	EX	(SP),HL
+Next_0449:	EX	(SP),HL
+	LD	A,(HL)
+	CALL	CheckBlank
+	JR	NC,Next_0087
+	INC	HL
+	DEFB	#06
+Next_0087:	OR	A
+	CALL	NC,FndFirstChr
+	XOR	A
+	LD	(DirFlag),A
+	LD	B,A
+	DEC	A
+	RET
+
+Next_0088:	POP	BC
+	POP	HL
+	PUSH	HL
+	LD	HL,(IffAdres)
+	BIT	0,(HL)
+	POP	HL
+	RET	NZ
+	INC	DE
+	PUSH	HL
+	PUSH	BC
+	PUSH	DE
+	EXX
+	POP	DE
+	POP	HL
+	PUSH	HL
+	XOR	A
+	SBC	HL,DE
+	LD	C,L
+	LD	B,H
+	LD	HL,BufEnvName
+	EX	DE,HL
+	JR	Z,Next_0089
+	LDIR
+Next_0089:	LD	(DE),A
+	POP	DE
+	POP	HL
+	SBC	HL,DE
+	LD	C,L
+	LD	B,H
+	LD	HL,BufExtra
+	PUSH	HL
+	EX	DE,HL
+	JR	Z,Next_0090
+	LDIR
+Next_0090:	LD	(DE),A
+	EX	DE,HL
+	POP	DE
+	BIT	4,(IY+#0A)
+	JR	NZ,Next_0091
+	LD	(HL),"."
+	INC	HL
+	LD	(HL),"*"
+	INC	HL
+	LD	(HL),#00
+Next_0091:	CALL	FindFile
+	JR	Z,Next_0095
+	CP	.NOFIL
+	RET	NZ
+	LD	A,(ParseFlags)
+	AND	#06
+	LD	A,.BADCM
+	LD	HL,Env_Path
+	CALL	Z,GetEnvData2
+	RET	NZ
+	EX	DE,HL
+Next_0093:	CALL	FndFirstChr
+Next_0094:	LD	A,.BADCM
+	RET	Z
+	LD	BC,BufEnvName
+	CALL	MakePath
+	RET	C
+	LD	(Value_L),HL
+	CALL	FindFile
+	LD	HL,(Value_L)
+	JR	NZ,Next_0093
+Next_0095:	JR	NC,Next_0098
+	LD	HL,ID_Pipelin
+	LD	B,(HL)
+	XOR	A
+	LD	(HL),A
+	OR	B
+	LD	C,_JOIN
+	CALL	NZ,BDOS
+	LD	A,(BatchHandle)
+	INC	A
+	JR	Z,Next_0096
+	INC	A
+	CALL	Z,ReleaseBTM
+	LD	A,(ID_Redir)
+	LD	B,A
+	LD	C,_JOIN
+	CALL	BDOS
+	LD	A,(ID_Redir2)
+	LD	(ID_Redir),A
+	LD	A,(BatchHandle)
+	CP	#FE
+	JR	Z,Next_0096
+	LD	B,A
+	LD	C,_CLOSE
+	CALL	BDOS
+Next_0096:	LD	A,#3B
+	LD	(StringCode),A
+	LD	HL,ID_Redir
+	LD	A,(HL)
+	LD	(ID_Redir2),A
+	XOR	A
+	LD	(HL),A
+	LD	DE,FileBuffer+7
+	LD	HL,Ext_BTM
+	LD	B,(HL)
+	CALL	Compare_DEHL
+	JR	C,Next_0450
+	CALL	OpenBTM
+	LD	B,#FE
+	JR	Next_0451
+
+Next_0450:	LD	DE,FIB1
+	LD	A,#01
+	LD	C,_OPEN
+	CALL	BDOS
+Next_0451:	LD	(ErrorCode),A
+	RET	NZ
+	LD	L,A
+	LD	H,A
+	LD	(BatLineLen),HL
+	DEC	A
+	LD	(StringCode),A
+	LD	A,B
+	LD	(BatchHandle),A
+	EXX
+	PUSH	DE
+	EXX
+	POP	HL
+	LD	DE,OrigLine
+	LD	(LineAdres),DE
+	CALL	NCopy
+	RET
+
+Next_0098:	LD	HL,Env_Expert
+	CALL	Check_ON
+	JR	NC,Next_0099
+	LD	A,(FIB1+25)
+	LD	L,A
+	LD	DE,BufEnvData
+	LD	C,_DPARM
+	CALL	BDOS
+	RET	NZ
+	LD	A,(BufEnvData+20)
+	BIT	7,A
+	LD	A,.BADVER
+	RET	NZ
+Next_0099:	LD	C,_FORK
+	CALL	BDOS
+	RET	NZ
+	LD	A,B
+	LD	(ID_Execute),A
+	LD	DE,FIB1
+	LD	C,_OPEN
+	LD	A,#01
+	CALL	BDOS
+	RET	NZ
+	LD	A,B
+	EX	AF,AF'
+	LD	HL,BufEnvData
+	LD	A,(LogiDrive)
+	ADD	A,"@"
+	LD	(HL),A
+	INC	HL
+	LD	(HL),":"
+	INC	HL
+	LD	(HL),"\"
+	INC	HL
+	EX	DE,HL
+	LD	C,_WPATH
+	CALL	BDOS
+	RET	NZ
+	LD	DE,FIB1+1
+Next_0100:	LD	A,(DE)
+	LD	(HL),A
+	INC	DE
+	INC	HL
+	OR	A
+	JR	NZ,Next_0100
+	LD	DE,BufEnvData
+	LD	HL,Env_Program
+	LD	C,_SENV
+	CALL	BDOS
+	EXX
+	PUSH	HL
+	EXX
+	POP	DE
+	PUSH	DE
+	LD	HL,Env_Parameters
+	LD	C,_SENV
+	CALL	BDOS
+	POP	HL
+	CALL	SetComLine
+	RET	NZ
+	CALL	SetPage2
+	LD	DE,(AliasEnd+#8000)
+	LD	HL,(VariableEnd+#8000)
+	RES	7,H
+	CALL	RestorePage2
+	OR	A
+	SBC	HL,DE
+	LD	DE,Buffer1-ExitAdres
+	CALL	Compare4
+	LD	A,.NORAM
+	RET	C
+	CALL	SetPage2
+	LD	DE,(VariableEnd+#8000)
+	PUSH	DE
+	LD	HL,Buffer1-1
+	LD	BC,Buffer1-ExitAdres
+	LDDR
+	EX	DE,HL
+	POP	DE
+	LD	(HL),D
+	DEC	HL
+	LD	(HL),E
+	DEC	HL
+	LD	(VariableEnd+#8000),HL
+	CALL	RestorePage2
+	LD	DE,(ExitAdres)
+	LD	HL,ExitAdres-1
+	LD	BC,ExitAdres-BootStrap+1
+	LDDR
+	LD	HL,#FFD8
+	ADD	HL,DE
+	EX	DE,HL
+	LD	E,#08
+	LD	HL,(#06)
+	LD	L,E
+	LD	BC,#09
+	LDDR
+	PUSH	DE
+	INC	D
+	LD	E,#06
+	LD	(#06),DE
+	XOR	A
+	LD	(#03),A
+	LD	A,(CurrentDrive)
+	DEC	A
+	LD	(#04),A
+	LD	DE,#00
+	LD	C,_DEFAB
+	CALL	BDOS
+	POP	DE
+	DEC	D
+	LD	HL,SetComLine-1
+	LD	BC,#59
+	LDDR
+	INC	DE
+	PUSH	DE
+	RET
+
+	LD	SP,(EndTPA)
+	PUSH	DE
+	LD	HL,Stack-1
+	LD	BC,Stack-Start
+	LDDR
+	INC	DE
+	EX	DE,HL
+	EX	(SP),HL
+	DEC	H
+	PUSH	HL
+	EX	AF,AF'
+	LD	B,A
+	PUSH	BC
+	LD	C,_READ
+	LD	DE,#0100
+	CALL	BDOS
+	POP	BC
+	POP	DE
+	JR	NZ,Next_0101
+	SBC	HL,DE
+	LD	A,.NORAM
+	JR	Z,Next_0101
+	LD	C,_CLOSE
+	CALL	BDOS
+	JR	NZ,Next_0101
+	LD	DE,#80
+	LD	C,_SETDMA
+	CALL	BDOS
+	LD	A,#FF
+	LD	(#37),A
+	LD	DE,(#01)
+	DEC	DE
+	DEC	DE
+	DEC	DE
+	DEC	DE
+	LD	HL,(#06)
+	LD	L,#00
+	LD	SP,HL
+	XOR	A
+	LD	B,A
+	LD	L,A
+	LD	H,A
+	LD	C,#FF
+	PUSH	HL
+	JP	#0100
+
+Next_0101:	LD	B,A
+	LD	C,_TERM
+	JP	BDOS
+
+SetComLine:	EX	DE,HL
+	LD	HL,#80
+	LD	B,#24
+	XOR	A
+Next_0102:	DEC	HL
+	LD	(HL),A
+	DJNZ	Next_0102
+	PUSH	DE
+	CALL	SetFile
+	JR	NZ,Next_0103
+	EX	DE,HL
+	CALL	FndFirstChr
+	EX	DE,HL
+	LD	HL,#6C
+	CALL	SetFile
+Next_0103:	POP	HL
+	RET	NZ
+	LD	BC,#80
+	XOR	A
+	LD	D,A
+	DEC	A
+	LD	(BC),A
+	INC	BC
+Next_0104:	LD	E,(HL)
+	PUSH	HL
+	PUSH	BC
+	LD	HL,#80
+	INC	(HL)
+	LD	C,_CHKCHR
+	LD	HL,Env_Upper
+	CALL	Check_ON
+	CCF
+	SBC	A,A
+	CALL	NZ,BDOS
+	POP	BC
+	POP	HL
+	RET	NZ
+	OR	E
+	LD	(BC),A
+	RET	Z
+	INC	BC
+	INC	HL
+	JR	Next_0104
+
+SetFile:	EX	DE,HL
+	CALL	FndFirstChr
+	EX	DE,HL
+	PUSH	HL
+	LD	BC,_PARSE
+	CALL	BDOS
+	EX	DE,HL
+	POP	HL
+	RET	NZ
+	BIT	2,B
+	JR	NZ,Next_0105
+	LD	C,#00
+Next_0105:	LD	(HL),C
+	INC	HL
+	LD	C,_PFILE
+	JP	BDOS
+
+FindFile:	LD	DE,BufEnvName
+	LD	BC,_PARSE
+	CALL	BDOS
+	SCF
+	RET	NZ
+	LD	A,C
+	LD	(LogiDrive),A
+	LD	HL,BufExtra
+	LD	A,B
+	AND	#18
+	JR	Z,Next_0106
+	LD	A,"\"
+	LD	(DE),A
+	INC	DE
+Next_0106:	CALL	NCopy
+	EX	AF,AF'
+	LD	DE,BufEnvName
+	LD	IX,FIB1
+	LD	B,#06
+	LD	C,_FFIRST
+Next_0107:	CALL	BDOS
+	JR	Z,Next_0108
+	CP	.NOFIL
+	SCF
+	RET	NZ
+	EX	AF,AF'
+	CCF
+	SBC	A,A
+	AND	.NOFIL
+	SCF
+	RET
+
+Next_0108:	LD	DE,FIB1+1
+	CALL	FindComBat
+	RET	Z
+	EXX
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	EXX
+	LD	DE,Buffer1+1
+	LD	HL,FileBuffer+8
+	LD	B,3
+Next_0997:	LD	A,(HL)
+	CP	" "
+	JR	Z,Next_0998
+	LD	(DE),A
+	INC	HL
+	INC	DE
+	DJNZ	Next_0997
+Next_0998:	EX	DE,HL
+	LD	(HL),#00
+	LD	HL,Buffer1
+	LD	(HL),"."
+	LD	DE,BufEnvData
+	CALL	GetAlias
+	EXX
+	POP	HL
+	POP	DE
+	POP	BC
+	EXX
+	LD	A,(DE)
+	OR	A
+	LD	C,_FNEXT
+	JR	Z,Next_0107
+	EX	DE,HL
+	LD	DE,Buffer1
+	CALL	NCopy
+	DEC	DE
+	LD	A," "
+	LD	(DE),A
+	INC	DE
+	PUSH	DE
+	LD	DE,BufEnvName
+	PUSH	DE
+	LD	BC,_PARSE
+	CALL	BDOS
+	LD	(HL),#00
+	POP	HL
+	POP	DE
+	CALL	NCopy
+	DEC	DE
+	LD	B,8
+	LD	HL,FileBuffer
+Next_0452:	LD	A,(HL)
+	CP	" "
+	JR	Z,Next_0453
+	LD	(DE),A
+	INC	DE
+	INC	HL
+	DJNZ	Next_0452
+Next_0453:	LD	A,"."
+	LD	(DE),A
+	INC	DE
+	LD	HL,FileBuffer+8
+	LD	B,3
+Next_0454:	LD	A,(HL)
+	CP	" "
+	JR	Z,Next_0455
+	LD	(DE),A
+	INC	DE
+	INC	HL
+	DJNZ	Next_0454
+Next_0455:	EXX
+	PUSH	HL
+	EXX
+	POP	HL
+	CALL	NCopy
+	EX	DE,HL
+	LD	(HL),#00
+	POP	HL
+	LD	HL,Buffer1
+	JP	Executing
+
+FindComBat:	LD	HL,FileBuffer
+	LD	C,_PFILE
+	CALL	BDOS
+	SCF
+	RET	NZ
+	LD	DE,FileBuffer+7
+	LD	HL,Ext_COM
+	LD	B,(HL)
+	CALL	Compare_DEHL
+	DEC	A
+	RET	NC
+	CALL	Compare_DEHL
+	DEC	A
+	CCF
+	RET	Z
+	CALL	Compare_DEHL
+	DEC	A
+	CCF
+	RET
+
+Ext_COM:	DEFB	3
+	DEFB	"COM"
+Ext_BAT:	DEFB	3
+	DEFB	"BAT"
+Ext_BTM:	DEFB	3
+	DEFB	"BTM"
+
+Compare_DEHL:	PUSH	BC
+	PUSH	DE
+	LD	A,B
+	LD	B,(HL)
+	CP	B
+	JR	C,Next_0112
+	INC	B
+Next_0110:	JR	C,Next_0111
+	SUB	(HL)
+	ADD	A,#FF
+Next_0111:	INC	HL
+	INC	DE
+	LD	A,(DE)
+	CALL	MakeCapital
+	DJNZ	Next_0110
+	SBC	A,A
+	INC	A
+Next_0112:	POP	DE
+	POP	BC
+	RET
+
+MakeCapital:	BIT	7,A
+	RET	NZ
+	BIT	6,A
+	RET	Z
+	RES	5,A
+	RET
+
+MakeLower:	CP	"A"
+	RET	C
+	CP	"Z"+1
+	RET	NC
+	SET	5,A
+	RET
+
+MakeUpper:	CP	"a"
+	RET	C
+	CP	"z"+1
+	RET	NC
+	RES	5,A
+	RET
+
+Env_Date:	DEFB	"DATE",0
+Env_Time:	DEFB	"TIME",0
+Data_On:	DEFB	"ON",0
+Data_Off:	DEFB	"OFF",0
+Env_Echo:	DEFB	"ECHO",0
+Env_Help:	DEFB	"HELP",0
+Env_Path:	DEFB	"PATH",0
+Env_Cdpath:	DEFB	"CDPATH",0
+Env_Prompt:	DEFB	"PROMPT",0
+Env_TabOrder:	DEFB	"TABORDER",0
+Env_Parameters: DEFB	"PARAMETERS",0
+Env_Program:	DEFB	"PROGRAM",0
+Env_Temp:	DEFB	"TEMP",0
+Env_Upper:	DEFB	"UPPER",0
+Env_Lower:	DEFB	"LOWER",0
+Env_Redir:	DEFB	"REDIR",0
+Env_Expert:	DEFB	"EXPERT",0
+Env_Alias:	DEFB	"ALIAS",0
+Env_Separ:	DEFB	"SEPAR",0
+Env_Expand:	DEFB	"EXPAND",0
+Env_Pushd:	DEFB	"PUSHD",0
+Data_Pipe:	DEFB	"%PIPE00.$$$"
+Data_Prompt:	DEFB	"%_CWD%>",0
+Data_TabOrder:	DEFB	"BOTH",0
+
+Orders:	DEFB	3
+	DEFB	"DIR"
+	DEFB	%00000010
+
+	DEFB	4
+	DEFB	"BOTH"
+	DEFB	%00000011
+
+	DEFB	4
+	DEFB	"FILE"
+	DEFB	%00000001
+
+	DEFB	8
+	DEFB	"DIR,FILE"
+	DEFB	%00000110
+
+	DEFB	8
+	DEFB	"FILE,DIR"
+	DEFB	%00000101
+
+Commands:	DEFB	2
+	DEFB	"IF"
+	DEFW	Cmd_If
+
+	DEFB	2
+	DEFB	"CD"
+	DEFW	Cmd_Chdir
+
+	DEFB	2
+	DEFB	"RD"
+	DEFW	Cmd_Rmdir
+
+	DEFB	2
+	DEFB	"MD"
+	DEFW	Cmd_Mkdir
+
+	DEFB	3
+	DEFB	"CDD"
+	DEFW	Cmd_Cdd
+
+	DEFB	3
+	DEFB	"CLS"
+	DEFW	Cmd_Cls
+
+	DEFB	3
+	DEFB	"CPU"
+	DEFW	Cmd_Cpu
+
+	DEFB	3
+	DEFB	"DEL"
+	DEFW	Cmd_Delete
+
+	DEFB	3
+	DEFB	"DIR"
+	DEFW	Cmd_Dir
+
+	DEFB	3
+	DEFB	"END"
+	DEFW	Cmd_End
+
+	DEFB	3
+	DEFB	"IFF"
+	DEFW	Cmd_Iff
+
+	DEFB	3
+	DEFB	"REM"
+	DEFW	Cmd_Rem
+
+	DEFB	3
+	DEFB	"REN"
+	DEFW	Cmd_Rename
+
+	DEFB	3
+	DEFB	"SET"
+	DEFW	Cmd_Set
+
+	DEFB	3
+	DEFB	"VER"
+	DEFW	Cmd_Ver
+
+	DEFB	3
+	DEFB	"VOL"
+	DEFW	Cmd_Vol
+
+	DEFB	4
+	DEFB	"BEEP"
+	DEFW	Cmd_Beep
+
+	DEFB	4
+	DEFB	"COPY"
+	DEFW	Cmd_Copy
+
+	DEFB	4
+	DEFB	"DATE"
+	DEFW	Cmd_Date
+
+	DEFB	4
+	DEFB	"ECHO"
+	DEFW	Cmd_Echo
+
+	DEFB	4
+	DEFB	"ELSE"
+	DEFW	Cmd_Else
+
+	DEFB	4
+	DEFB	"EXIT"
+	DEFW	Cmd_Exit
+
+	DEFB	4
+	DEFB	"FREE"
+	DEFW	Cmd_Free
+
+	DEFB	4
+	DEFB	"GOTO"
+	DEFW	Cmd_Goto
+
+	DEFB	4
+	DEFB	"HELP"
+	DEFW	Cmd_Help
+
+	DEFB	4
+	DEFB	"MODE"
+	DEFW	Cmd_Mode
+
+	DEFB	4
+	DEFB	"MOVE"
+	DEFW	Cmd_Move
+
+	DEFB	4
+	DEFB	"PATH"
+	DEFW	Cmd_Path
+
+	DEFB	4
+	DEFB	"POPD"
+	DEFW	Cmd_Popd
+
+	DEFB	4
+	DEFB	"THEN"
+	DEFW	Cmd_Then
+
+	DEFB	4
+	DEFB	"TIME"
+	DEFW	Cmd_Time
+
+	DEFB	4
+	DEFB	"TYPE"
+	DEFW	Cmd_Type
+
+	DEFB	5
+	DEFB	"ALIAS"
+	DEFW	Cmd_Alias
+
+	DEFB	5
+	DEFB	"ATDIR"
+	DEFW	Cmd_Atdir
+
+	DEFB	5
+	DEFB	"BASIC"
+	DEFW	Cmd_Basic
+
+	DEFB	5
+	DEFB	"CHDIR"
+	DEFW	Cmd_Chdir
+
+	DEFB	5
+	DEFB	"COLOR"
+	DEFW	Cmd_Color
+
+	DEFB	5
+	DEFB	"ECHOS"
+	DEFW	Cmd_Echos
+
+	DEFB	5
+	DEFB	"GOSUB"
+	DEFW	Cmd_Gosub
+
+	DEFB	5
+	DEFB	"INKEY"
+	DEFW	Cmd_Inkey
+
+	DEFB	5
+	DEFB	"INPUT"
+	DEFW	Cmd_Input
+
+	DEFB	5
+	DEFB	"MKDIR"
+	DEFW	Cmd_Mkdir
+
+	DEFB	5
+	DEFB	"MVDIR"
+	DEFW	Cmd_Mvdir
+
+	DEFB	5
+	DEFB	"PAUSE"
+	DEFW	Cmd_Pause
+
+	DEFB	5
+	DEFB	"PUSHD"
+	DEFW	Cmd_Pushd
+
+	DEFB	5
+	DEFB	"RESET"
+	DEFW	Cmd_Reset
+
+	DEFB	5
+	DEFB	"RMDIR"
+	DEFW	Cmd_Rmdir
+
+	DEFB	5
+	DEFB	"RNDIR"
+	DEFW	Cmd_Rndir
+
+	DEFB	6
+	DEFB	"ASSIGN"
+	DEFW	Cmd_Assign
+
+	DEFB	6
+	DEFB	"ATTRIB"
+	DEFW	Cmd_Attrib
+
+	DEFB	6
+	DEFB	"CDPATH"
+	DEFW	Cmd_Cdpath
+
+	DEFB	6
+	DEFB	"CONCAT"
+	DEFW	Cmd_Concat
+
+	DEFB	6
+	DEFB	"DSKCHK"
+	DEFW	Cmd_Dskchk
+
+	DEFB	6
+	DEFB	"ENDIFF"
+	DEFW	Cmd_Endiff
+
+	DEFB	6
+	DEFB	"FORMAT"
+	DEFW	Cmd_Format
+
+	DEFB	6
+	DEFB	"MEMORY"
+	DEFW	Cmd_Memory
+
+	DEFB	6
+	DEFB	"RETURN"
+	DEFW	Cmd_Return
+
+	DEFB	6
+	DEFB	"VERIFY"
+	DEFW	Cmd_Verify
+
+	DEFB	7
+	DEFB	"BUFFERS"
+	DEFW	Cmd_Buffers
+
+	DEFB	7
+	DEFB	"HISTORY"
+	DEFW	Cmd_History
+
+	DEFB	7
+	DEFB	"RAMDISK"
+	DEFW	Cmd_Ramdisk
+
+Null:	DEFB	0
+
+Internals:	DEFB	2
+	DEFB	"BG"
+	DEFW	Int_Bg
+
+	DEFB	2
+	DEFB	"FG"
+	DEFW	Int_Fg
+
+	DEFB	3
+	DEFB	"CPU"
+	DEFW	Int_Cpu
+
+	DEFB	3
+	DEFB	"CWD"
+	DEFW	Int_Cwd
+
+	DEFB	3
+	DEFB	"CWP"
+	DEFW	Int_Cwp
+
+	DEFB	3
+	DEFB	"DOW"
+	DEFW	Int_Dow
+
+	DEFB	3
+	DEFB	"ROW"
+	DEFW	Int_Row
+
+	DEFB	4
+	DEFB	"BOOT"
+	DEFW	Int_Boot
+
+	DEFB	4
+	DEFB	"CWDS"
+	DEFW	Int_Cwds
+
+	DEFB	4
+	DEFB	"CWPS"
+	DEFW	Int_Cwps
+
+	DEFB	4
+	DEFB	"DATE"
+	DEFW	Int_Date
+
+	DEFB	4
+	DEFB	"DISK"
+	DEFW	Int_Disk
+
+	DEFB	4
+	DEFB	"ROWS"
+	DEFW	Int_Rows
+
+	DEFB	4
+	DEFB	"TIME"
+	DEFW	Int_Time
+
+	DEFB	5
+	DEFB	"DATEF"
+	DEFW	Int_Datef
+
+	DEFB	5
+	DEFB	"ERROR"
+	DEFW	Int_Error
+
+	DEFB	5
+	DEFB	"FNEXT"
+	DEFW	Int_Fnext
+
+	DEFB	5
+	DEFB	"SHELL"
+	DEFW	Int_Shell
+
+	DEFB	6
+	DEFB	"COLUMN"
+	DEFW	Int_Column
+
+	DEFB	6
+	DEFB	"DOSVER"
+	DEFW	Int_Dosver
+
+	DEFB	6
+	DEFB	"MSXVER"
+	DEFW	Int_Msxver
+
+	DEFB	7
+	DEFB	"COLUMNS"
+	DEFW	Int_Columns
+
+	DEFB	8
+	DEFB	"DRIVEMAP"
+	DEFW	Int_Drivemap
+
+	DEFB	9
+	DEFB	"DIRBUFFER"
+	DEFW	Int_Dirbuffer
+
+	DEFB	9
+	DEFB	"FILECOUNT"
+	DEFW	Int_Filecount
+
+	DEFB	0
+
+Functions:	DEFB	3
+	DEFB	"EXT"
+	DEFW	Fun_Ext
+
+	DEFB	3
+	DEFB	"HEX"
+	DEFW	Fun_Hex
+
+	DEFB	3
+	DEFB	"LEN"
+	DEFW	Fun_Len
+
+	DEFB	3
+	DEFB	"MID"
+	DEFW	Fun_Mid
+
+	DEFB	4
+	DEFB	"CHAR"
+	DEFW	Fun_Char
+
+	DEFB	4
+	DEFB	"FILE"
+	DEFW	Fun_File
+
+	DEFB	4
+	DEFB	"FULL"
+	DEFW	Fun_Full
+
+	DEFB	4
+	DEFB	"LEFT"
+	DEFW	Fun_Left
+
+	DEFB	4
+	DEFB	"NAME"
+	DEFW	Fun_Name
+
+	DEFB	4
+	DEFB	"PATH"
+	DEFW	Fun_Path
+
+	DEFB	5
+	DEFB	"ALIAS"
+	DEFW	Fun_Alias
+
+	DEFB	5
+	DEFB	"ASCII"
+	DEFW	Fun_Ascii
+
+	DEFB	5
+	DEFB	"DRIVE"
+	DEFW	Fun_Drive
+
+	DEFB	5
+	DEFB	"INSTR"
+	DEFW	Fun_Instr
+
+	DEFB	5
+	DEFB	"LABEL"
+	DEFW	Fun_Label
+
+	DEFB	5
+	DEFB	"LOWER"
+	DEFW	Fun_Lower
+
+	DEFB	5
+	DEFB	"PARSE"
+	DEFW	Fun_Parse
+
+	DEFB	5
+	DEFB	"READY"
+	DEFW	Fun_Ready
+
+	DEFB	5
+	DEFB	"RIGHT"
+	DEFW	Fun_Right
+
+	DEFB	5
+	DEFB	"UPPER"
+	DEFW	Fun_Upper
+
+	DEFB	6
+	DEFB	"ATTRIB"
+	DEFW	Fun_Attrib
+
+	DEFB	6
+	DEFB	"FFIRST"
+	DEFW	Fun_Ffirst
+
+	DEFB	7
+	DEFB	"NEWFILE"
+	DEFW	Fun_Newfile
+
+	DEFB	8
+	DEFB	"DISKFREE"
+	DEFW	Fun_Diskfree
+
+	DEFB	8
+	DEFB	"DISKUSED"
+	DEFW	Fun_Diskused
+
+	DEFB	8
+	DEFB	"FILEATTR"
+	DEFW	Fun_Fileattr
+
+	DEFB	8
+	DEFB	"FILEDATE"
+	DEFW	Fun_Filedate
+
+	DEFB	8
+	DEFB	"FILESIZE"
+	DEFW	Fun_Filesize
+
+	DEFB	8
+	DEFB	"FILETIME"
+	DEFW	Fun_Filetime
+
+	DEFB	9
+	DEFB	"DISKTOTAL"
+	DEFW	Fun_Disktotal
+
+	DEFB	9
+	DEFB	"FILETOTAL"
+	DEFW	Fun_Filetotal
+
+	DEFB	0
+
+Int_Dirbuffer:	LD	DE,DirBuffer
+	JR	Lower
+
+Int_Boot:	LD	A,(BootDrive)
+Next_0456:	LD	HL,BufEnvName+1
+	LD	(HL),#00
+	DEC	HL
+	ADD	A,"@"
+	LD	(HL),A
+	EX	DE,HL
+Lower:	PUSH	DE
+	LD	HL,Env_Lower
+	CALL	Check_ON
+	POP	DE
+	RET	C
+	PUSH	DE
+Next_0457:	LD	A,(DE)
+	CALL	MakeLower
+	LD	(DE),A
+	INC	DE
+	OR	A
+	JR	NZ,Next_0457
+	POP	DE
+	RET
+
+Int_Disk:	LD	A,(CurrentDrive)
+	JR	Next_0456
+
+Int_Column:	LD	A,(CSRX)
+Next_0458:	LD	IX,BufEnvName
+	PUSH	IX
+	CALL	Convert8
+	POP	DE
+	RET
+
+Int_Columns:	LD	A,(LINLEN)
+	JR	Next_0458
+
+Int_Bg:	LD	A,(BAKCLR)
+	JR	Next_0458
+
+Int_Fg:	LD	A,(FORCLR)
+	JR	Next_0458
+
+Int_Row:	LD	A,(CSRY)
+	JR	Next_0458
+
+Int_Rows:	LD	A,(CRTCNT)
+	JR	Next_0458
+
+Int_Error:	LD	A,(AbortError)
+	JR	Next_0458
+
+Int_Drivemap:	LD	C,_LOGIN
+	CALL	BDOS
+	LD	C,L
+	JP	Next_0509
+
+Int_Shell:	CALL	SetPage2
+	LD	HL,#3FFF
+	LD	DE,(VariableEnd+#8000)
+	RES	7,D
+	OR	A
+	SBC	HL,DE
+	CALL	RestorePage2
+	LD	DE,Buffer1-ExitAdres
+	XOR	A
+Next_0950:	INC	A
+	SBC	HL,DE
+	JR	NC,Next_0950
+	DEC	A
+	JR	Next_0458
+
+Int_Cpu:	LD	A,(MSXVersion)
+	LD	DE,Text_Z80
+	CP	3
+	RET	C
+	LD	IX,#0183
+	CALL	CallSlot
+	LD	A,E
+	LD	DE,Text_Z80
+	OR	A
+	RET	Z
+	LD	DE,Text_R800
+	RET
+
+Text_Z80:	DEFB	"Z80",0
+Text_R800:	DEFB	"R800",0
+
+Int_Msxver:	LD	A,(MSXVersion)
+	LD	DE,Text_MSX2
+	DEC	A
+	RET	Z
+	LD	DE,Text_MSX3
+	DEC	A
+	RET	Z
+	LD	DE,Text_MSX4
+	RET
+
+Text_MSX2:	DEFB	"MSX-2",0
+Text_MSX3:	DEFB	"MSX-2+",0
+Text_MSX4:	DEFB	"Turbo-R",0
+
+Int_Cwds:	SCF
+Int_Cwd:	EX	AF,AF'
+	CALL	SetAbort
+	LD	HL,BufEnvName
+	LD	A,(CurrentDrive)
+	LD	B,A
+	ADD	A,"@"
+	LD	(HL),A
+	INC	HL
+	LD	(HL),":"
+	INC	HL
+	LD	(HL),"\"
+	INC	HL
+	LD	(HL),#00
+	EX	DE,HL
+	LD	C,_GETCD
+	CALL	BDOS
+	OR	A
+	LD	DE,BufEnvName
+	PUSH	DE
+	JR	NZ,Next_0459
+	EX	AF,AF'
+	JR	NC,Next_0460
+	LD	BC,_PARSE
+	CALL	BDOS
+	DEC	DE
+	LD	A,(DE)
+	CP	"\"
+	INC	DE
+	JR	Z,Next_0460
+	LD	A,"\"
+	LD	(DE),A
+Next_0459:	XOR	A
+	INC	DE
+	LD	(DE),A
+Next_0460:	CALL	ResetAbort
+	POP	DE
+	JP	Lower
+
+Int_Cwps:	SCF
+Int_Cwp:	CALL	Int_Cwd
+	INC	DE
+	LD	A,(DE)
+	OR	A
+	RET	Z
+	INC	DE
+	RET
+
+Int_Datef:	SCF
+Int_Date:	EX	AF,AF'
+	CALL	GetDateForm
+	LD	C,_GDATE
+	CALL	BDOS
+	LD	BC,#F844
+	ADD	HL,BC
+	LD	A,D
+	ADD	A,A
+	ADD	A,A
+	ADD	A,A
+	ADD	A,A
+	ADD	A,A
+	RL	L
+	OR	E
+	LD	D,L
+	LD	HL,BufEnvName+1
+	LD	(HL),D
+	DEC	HL
+	LD	(HL),A
+	EX	AF,AF'
+	SBC	A,A
+	LD	C,A
+	LD	IX,BufEnvName+2
+	PUSH	IX
+	CALL	PrintDate
+	POP	DE
+	INC	DE
+	RET
+
+Int_Dosver:	LD	DE,Text_Dosver
+	RET
+
+Text_Dosver:	DEFB	"2.41",0
+
+Int_Dow:	LD	C,_GDATE
+	CALL	BDOS
+	ADD	A,#17
+	CALL	GetAdres
+	EX	DE,HL
+	LD	DE,BufEnvName
+	CALL	NCopy
+	DEC	DE
+	PUSH	DE
+	LD	A,#1E
+	CALL	GetAdres
+	EX	DE,HL
+	POP	DE
+	CALL	NCopy
+	LD	DE,BufEnvName
+	RET
+
+Int_Time:	CALL	GetTimeForm
+	LD	C,_GTIME
+	CALL	BDOS
+	PUSH	DE
+	LD	A,L
+	ADD	A,A
+	ADD	A,A
+	LD	B,#03
+Next_0461:	ADD	A,A
+	RL	H
+	DJNZ	Next_0461
+	LD	C,H
+	LD	HL,BufEnvName
+	LD	(HL),A
+	INC	HL
+	LD	(HL),C
+	LD	IX,BufEnvName+2
+	CALL	PrintTime
+	POP	BC
+	PUSH	AF
+	LD	(IX),":"
+	INC	IX
+	LD	A,B
+	LD	D,#FF
+	CALL	PrintFigure2
+	POP	AF
+	CP	" "
+	JR	Z,Next_0462
+	LD	(IX),A
+	INC	IX
+Next_0462:	LD	(IX),#00
+	LD	DE,BufEnvName+3
+	RET
+
+SetAbort:	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	PUSH	AF
+	LD	DE,ErrorHand1
+	LD	C,_DEFER
+	CALL	BDOS
+	LD	DE,AbortExit3
+	LD	C,_DEFAB
+	CALL	BDOS
+	POP	AF
+	POP	HL
+	POP	DE
+	POP	BC
+	RET
+
+ResetAbort:	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	PUSH	AF
+	LD	DE,#00
+	LD	C,_DEFER
+	CALL	BDOS
+	LD	DE,AbortExit2
+	LD	C,_DEFAB
+	CALL	BDOS
+	POP	AF
+	POP	HL
+	POP	DE
+	POP	BC
+	RET
+
+Int_Fnext:	CALL	SetAbort
+	LD	IX,FIB3
+	LD	C,_FNEXT
+	CALL	BDOS
+	CALL	ResetAbort
+	OR	A
+	JP	NZ,Next_0475
+	LD	HL,FIB3+#15
+	LD	DE,FileTotal1
+	CALL	RestSubt
+	LD	HL,(FileCount)
+	INC	HL
+	LD	(FileCount),HL
+	LD	DE,FIB3+1
+	RET
+
+Int_Filecount:	LD	HL,(FileCount)
+	LD	IX,BufEnvName
+	PUSH	IX
+	CALL	Convert16
+	POP	DE
+	RET
+
+Fun_Alias:	LD	DE,BufEnvName
+	CALL	GetAlias
+	RET
+
+Fun_Ascii:	LD	A,(HL)
+	LD	IX,BufEnvName
+	PUSH	IX
+	CALL	Convert8
+	POP	DE
+	RET
+
+Fun_Attrib:	EX	DE,HL
+	PUSH	DE
+	LD	BC,_PARSE
+	CALL	BDOS
+	EX	DE,HL
+	XOR	A
+	LD	(HL),A
+	LD	(Attribute1),A
+Next_0463:	INC	HL
+	CALL	FndFirstChr
+	JR	Z,Next_0466
+	CALL	MakeCapital
+	CP	"N"
+	LD	B,A
+	LD	A,#00
+	JR	Z,Next_0465
+	LD	DE,Attribs
+Next_0464:	LD	A,(DE)
+	OR	A
+	JR	Z,Next_0463
+	CP	B
+	INC	DE
+	LD	A,(DE)
+	INC	DE
+	JR	NZ,Next_0464
+	LD	B,A
+	LD	A,(Attribute1)
+	OR	B
+Next_0465:	LD	(Attribute1),A
+	JR	Next_0463
+
+Next_0466:	CALL	SetAbort
+	POP	DE
+	LD	C,_ATTR
+	XOR	A
+	CALL	BDOS
+	OR	A
+	JR	Z,Next_0467
+	LD	L,#FF
+Next_0467:	CALL	ResetAbort
+	LD	DE,BufEnvName+1
+	LD	(DE),A
+	DEC	DE
+	LD	A,"0"
+	LD	(DE),A
+	LD	A,(Attribute1)
+	CP	L
+	RET	NZ
+	LD	A,"1"
+	LD	(DE),A
+	RET
+
+Attribs:	DEFB	"R",#01
+	DEFB	"H",#02
+	DEFB	"S",#04
+	DEFB	"D",#10
+	DEFB	"A",#20
+
+Fun_Char:	CALL	GetValue_8
+	JP	NZ,Next_0475
+	LD	HL,BufEnvName+1
+	LD	(HL),#00
+	DEC	HL
+	LD	(HL),E
+	EX	DE,HL
+	RET
+
+Fun_Hex:	CALL	GetValue_16
+	JP	NZ,Next_0475
+	LD	HL,BufEnvName
+	PUSH	HL
+	LD	A,D
+	CALL	MakeByte
+	LD	A,E
+	CALL	MakeByte
+	LD	(HL),#00
+	POP	DE
+	RET
+
+Fun_Diskfree:	CALL	GetAlloc
+Next_0468:	JR	C,Next_0475
+	DEFB	#3E
+Next_0469:	ADD	HL,HL
+Next_0470:	SRL	B
+	JR	NZ,Next_0469
+	LD	E,#00
+	LD	D,L
+	LD	L,H
+	LD	H,E
+	SLA	D
+	ADC	HL,HL
+Next_0471:	LD	(Value_L),DE
+	LD	(Value_H),HL
+	EX	AF,AF'
+	CP	"B"
+	JR	Z,Next_0474
+	LD	B,10
+Next_0472:	SRL	H
+	RR	L
+	RR	D
+	RR	E
+	DJNZ	Next_0472
+	LD	(Value_L),DE
+	LD	(Value_H),HL
+	CP	"K"
+	JR	Z,Next_0474
+	LD	B,10
+Next_0473:	SRL	H
+	RR	L
+	RR	D
+	RR	E
+	DJNZ	Next_0473
+	LD	(Value_L),DE
+	LD	(Value_H),HL
+Next_0474:	LD	DE,Value_L
+	XOR	A
+	LD	IX,BufEnvName
+	PUSH	IX
+	CALL	Convert32
+	POP	DE
+	XOR	A
+	RET
+
+Next_0475:	LD	DE,Null
+	RET
+
+Fun_Filetotal:	LD	A,(HL)
+	CALL	MakeUpper
+	EX	AF,AF'
+	LD	DE,(FileTotal1)
+	LD	HL,(FileTotal2)
+	JR	Next_0471
+
+GetAlloc:	LD	A,(HL)
+	CALL	MakeCapital
+	SUB	"@"
+	RET	C
+	CP	9
+	CCF
+	RET	C
+	LD	E,A
+	INC	HL
+	LD	A,(HL)
+	CP	":"
+	SCF
+	RET	NZ
+	INC	HL
+	CALL	FndFirstChr
+	SCF
+	RET	Z
+	CALL	MakeCapital
+	CP	"B"
+	JR	Z,Next_0476
+	CP	"K"
+	JR	Z,Next_0476
+	CP	"M"
+	SCF
+	RET	NZ
+Next_0476:	EX	AF,AF'
+	CALL	SetAbort
+	LD	C,_ALLOC
+	CALL	BDOS
+	CALL	ResetAbort
+	LD	IY,RedirState
+	LD	B,A
+	INC	A
+	SCF
+	RET	Z
+	OR	A
+	RET
+
+Fun_Disktotal:	CALL	GetAlloc
+	EX	DE,HL
+	JP	Next_0468
+
+Fun_Diskused:	CALL	GetAlloc
+	JP	C,Next_0475
+	EX	DE,HL
+	OR	A
+	SBC	HL,DE
+	JP	Next_0470
+
+Fun_Filedate:	SCF
+Fun_Filetime:	EX	AF,AF'
+	EX	DE,HL
+	PUSH	DE
+	CALL	GetDateForm
+	CALL	GetTimeForm
+	POP	DE
+	PUSH	DE
+	LD	BC,_PARSE
+	CALL	BDOS
+	EX	DE,HL
+	POP	DE
+	PUSH	HL
+	CALL	FndFirstChr
+	POP	HL
+	JP	NZ,Next_0475
+	LD	(HL),A
+	CALL	SetAbort
+	LD	C,_FTIME
+	CALL	BDOS
+	CALL	ResetAbort
+	OR	A
+	JP	NZ,Next_0475
+	EX	AF,AF'
+	JR	NC,Next_0477
+	EX	DE,HL
+Next_0477:	EX	AF,AF'
+	LD	HL,BufEnvName
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	LD	IX,BufEnvName+2
+	EX	AF,AF'
+	JR	C,Next_0480
+	PUSH	DE
+	CALL	PrintTime
+	POP	BC
+	PUSH	AF
+	LD	(IX),":"
+	INC	IX
+	LD	A,C
+	AND	%00011111
+	ADD	A,A
+	LD	D,#FF
+	CALL	PrintFigure2
+	POP	AF
+	CP	" "
+	JR	Z,Next_0478
+	LD	(IX),A
+	INC	IX
+Next_0478:	LD	(IX),#00
+Next_0479:	LD	DE,BufEnvName+3
+	RET
+
+Next_0480:	DEC	HL
+	LD	C,#00
+	CALL	PrintDate
+	JR	Next_0479
+
+Fun_Filesize:	EX	DE,HL
+	PUSH	DE
+	LD	BC,_PARSE
+	CALL	BDOS
+	EX	DE,HL
+	XOR	A
+	LD	(HL),A
+	POP	DE
+	LD	A,B
+	AND	%01100000
+	JP	NZ,Next_0475
+	INC	HL
+	CALL	FndFirstChr
+	JP	Z,Next_0475
+	CALL	MakeCapital
+	CP	"B"
+	JR	Z,Next_0481
+	CP	"K"
+	JR	Z,Next_0481
+	CP	"M"
+	JP	NZ,Next_0475
+Next_0481:	EX	AF,AF'
+	CALL	SetAbort
+	LD	C,_FFIRST
+	LD	B,#16
+	LD	IX,FIB1
+	CALL	BDOS
+	CALL	ResetAbort
+	OR	A
+	JR	Z,Next_0482
+	JP	Next_0475
+
+Next_0482:	LD	HL,FIB1+#15
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	INC	HL
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	JP	Next_0471
+
+Fun_Fileattr:	EX	DE,HL
+	PUSH	DE
+	LD	BC,_PARSE
+	CALL	BDOS
+	EX	DE,HL
+	POP	DE
+	PUSH	HL
+	CALL	FndFirstChr
+	POP	HL
+	JP	NZ,Next_0475
+	LD	(HL),A
+	CALL	SetAbort
+	LD	C,_ATTR
+	CALL	BDOS
+	CALL	ResetAbort
+	OR	A
+	JP	NZ,Next_0475
+	LD	A,L
+	LD	DE,BufEnvName
+	PUSH	DE
+	LD	HL,AttrList
+	LD	B,#08
+Next_0483:	RLA
+	JR	NC,Next_0484
+	PUSH	AF
+	LD	A,(HL)
+	LD	(DE),A
+	POP	AF
+	INC	DE
+Next_0484:	INC	HL
+	DJNZ	Next_0483
+	XOR	A
+	LD	(DE),A
+	POP	DE
+	RET
+
+AttrList:	DEFB	"--ADVSHR"
+
+Fun_Label:	EX	DE,HL
+	CALL	SetAbort
+	LD	BC,#0840
+	LD	IX,FIB1
+	CALL	BDOS
+	CALL	ResetAbort
+	CP	.IDRV
+	JP	Z,Next_0475
+	CP	.NOFIL
+	JP	Z,Next_0475
+	CP	#FF
+	JP	Z,Next_0475
+	LD	DE,FIB1+1
+	RET
+
+Fun_Ready:	PUSH	HL
+	CALL	GetDriveLet
+	POP	DE
+	LD	B,#00
+	JR	NZ,Next_0485
+	CALL	SetAbort
+	LD	BC,#0840
+	LD	IX,FIB1
+	CALL	BDOS
+	CALL	ResetAbort
+	LD	B,"1"
+	OR	A
+	JR	Z,Next_0485
+	CP	.NOFIL
+	JR	Z,Next_0485
+	LD	B,"0"
+	CP	#FF
+	JR	Z,Next_0485
+	LD	B,#00
+Next_0485:	LD	HL,BufEnvName
+	PUSH	HL
+	LD	(HL),B
+	INC	HL
+	LD	(HL),#00
+	POP	DE
+	RET
+
+Fun_Ext:	EX	DE,HL
+	LD	BC,_PARSE
+	CALL	BDOS
+	EX	DE,HL
+	LD	HL,BufEnvName
+	LD	C,_PFILE
+	CALL	BDOS
+	LD	(BufEnvName+11),A
+	LD	DE,BufEnvName+8
+	RET
+
+Fun_Len:	LD	B,#FF
+Next_0486:	LD	A,(HL)
+	INC	B
+	INC	HL
+	OR	A
+	JR	NZ,Next_0486
+	LD	A,B
+	JP	Next_0458
+
+Fun_Instr:	LD	E,#00
+	CALL	GetDigit
+	JR	C,Next_0487
+	CALL	GetValue_8
+	JP	NZ,Next_0475
+Next_0487:	PUSH	DE
+	CALL	FndFirstChr
+	CALL	ParseString
+	POP	DE
+	JP	Z,Next_0475
+	CALL	SkipSpace2
+	PUSH	HL
+	LD	B,E
+	LD	E,#00
+	LD	HL,BufExtra-1
+	DEC	B
+	INC	B
+	JR	Z,Next_0489
+Next_0488:	INC	HL
+	INC	E
+	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0492
+	DJNZ	Next_0488
+	DEC	HL
+	DEC	E
+Next_0489:	LD	B,H
+	LD	C,L
+	POP	HL
+Next_0490:	INC	BC
+	INC	E
+	LD	A,(BC)
+	OR	A
+	JR	Z,Next_0491
+	PUSH	BC
+	PUSH	HL
+	CALL	Compare2
+	POP	HL
+	POP	BC
+	JR	NZ,Next_0490
+	LD	A,E
+	JP	Next_0458
+
+Next_0491:	XOR	A
+	JP	Next_0458
+
+Next_0492:	POP	HL
+	JP	Next_0475
+
+ParseString:	EX	DE,HL
+	LD	HL,BufExtra
+	LD	C,#00
+Next_0493:	CALL	CheckChar
+	JR	C,Next_0494
+	CP	","
+	JR	Z,Next_0496
+	OR	A
+Next_0494:	JR	NC,Next_0495
+	CP	C
+	JR	Z,Next_0493
+Next_0495:	LD	(HL),A
+	INC	HL
+	OR	A
+	RET	Z
+	JR	Next_0493
+
+Next_0496:	XOR	A
+	LD	(HL),A
+	EX	DE,HL
+	INC	A
+	RET
+
+Fun_Lower:	EX	DE,HL
+	PUSH	DE
+	JP	Next_0457
+
+Fun_Upper:	EX	DE,HL
+	PUSH	DE
+Next_0497:	LD	A,(DE)
+	CALL	MakeUpper
+	LD	(DE),A
+	INC	DE
+	OR	A
+	JR	NZ,Next_0497
+	POP	DE
+	RET
+
+Fun_Name:	EX	DE,HL
+	LD	BC,_PARSE
+	CALL	BDOS
+	EX	DE,HL
+	LD	HL,BufEnvName
+	LD	C,_PFILE
+	CALL	BDOS
+	LD	(BufEnvName+8),A
+	LD	DE,BufEnvName
+	RET
+
+Fun_File:	EX	DE,HL
+	LD	BC,_PARSE
+	CALL	BDOS
+	EX	DE,HL
+	RET
+
+Fun_Path:	EX	DE,HL
+	PUSH	DE
+	LD	BC,_PARSE
+	CALL	BDOS
+	LD	(HL),#00
+	POP	DE
+	RET
+
+Fun_Mid:	CALL	ParseString
+	CALL	NZ,FndFirstChr
+	JP	Z,Next_0475
+	CALL	GetValue_8
+	JP	NZ,Next_0475
+	LD	A,E
+	PUSH	AF
+	CALL	FndFirstChr
+	LD	E,A
+	JR	Z,Next_0498
+	CALL	GetValue_8
+Next_0498:	POP	BC
+	LD	HL,BufExtra-1
+Next_0499:	INC	HL
+	LD	A,(HL)
+	OR	A
+	JP	Z,Next_0475
+	DJNZ	Next_0499
+	PUSH	HL
+	LD	B,E
+Next_0500:	INC	HL
+	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0501
+	DJNZ	Next_0500
+Next_0501:	LD	(HL),#00
+	POP	DE
+	RET
+
+Fun_Left:	CALL	ParseString
+	CALL	NZ,FndFirstChr
+	JP	Z,Next_0475
+	LD	A,(HL)
+	CP	"-"
+	JR	NZ,Next_0503
+	INC	HL
+	PUSH	HL
+	LD	HL,BufExtra
+	LD	B,#FF
+Next_0502:	LD	A,(HL)
+	INC	B
+	INC	HL
+	OR	A
+	JR	NZ,Next_0502
+	POP	HL
+	PUSH	BC
+	CALL	GetValue_8
+	POP	BC
+	JP	NZ,Next_0475
+	LD	A,B
+	SUB	E
+	LD	E,A
+	JR	NC,Next_0504
+	LD	E,#00
+	JR	Next_0504
+
+Next_0503:	CALL	GetValue_8
+	JP	NZ,Next_0475
+Next_0504:	LD	HL,BufExtra
+	PUSH	HL
+	LD	B,E
+	JR	Next_0500
+
+Fun_Right:	CALL	ParseString
+	CALL	NZ,FndFirstChr
+	JP	Z,Next_0475
+	CALL	GetValue_8
+	JP	NZ,Next_0475
+	LD	HL,BufExtra
+	LD	D,#FF
+Next_0505:	LD	A,(HL)
+	INC	HL
+	INC	D
+	OR	A
+	JR	NZ,Next_0505
+	LD	A,D
+	SUB	E
+	LD	B,A
+	LD	HL,BufExtra
+	JR	NC,Next_0507
+Next_0506:	EX	DE,HL
+	RET
+
+Next_0507:	INC	B
+	DEC	B
+	JR	Z,Next_0506
+Next_0508:	INC	HL
+	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0506
+	DJNZ	Next_0508
+	JR	Next_0506
+
+Fun_Parse:	EX	DE,HL
+	LD	BC,_PARSE
+	CALL	BDOS
+	LD	C,B
+Next_0509:	LD	HL,BufExtra
+	PUSH	HL
+	LD	B,#08
+	XOR	A
+Next_0510:	SLA	C
+	ADC	A,"0"
+	LD	(HL),A
+	INC	HL
+	XOR	A
+	DJNZ	Next_0510
+	LD	(HL),#00
+	POP	DE
+	RET
+
+Fun_Newfile:	EX	DE,HL
+	LD	BC,_PARSE
+	CALL	BDOS
+	LD	A,(DE)
+	CALL	SkipChar
+	JP	NZ,Next_0475
+	EX	DE,HL
+	LD	(HL),#00
+	INC	HL
+	PUSH	HL
+	LD	HL,BufExtra
+	LD	C,_PFILE
+	CALL	BDOS
+	POP	HL
+	CALL	FndFirstChr
+	JP	Z,Next_0475
+	EX	DE,HL
+	LD	HL,BufExtra+11
+	LD	C,_PFILE
+	CALL	BDOS
+	LD	DE,BufExtra
+	LD	B,11
+Next_0511:	LD	A,(DE)
+	LD	C,A
+	LD	A,(HL)
+	CP	"?"
+	JR	NZ,Next_0512
+	LD	(HL),C
+Next_0512:	INC	HL
+	INC	DE
+	DJNZ	Next_0511
+	PUSH	HL
+	LD	B,8
+Next_0513:	LD	A,(DE)
+	CP	" "
+	JR	Z,Next_0514
+	LD	(HL),A
+	INC	HL
+Next_0514:	INC	DE
+	DJNZ	Next_0513
+	LD	A,(DE)
+	CP	" "
+	JR	Z,Next_0516
+	LD	(HL),"."
+	INC	HL
+	LD	B,3
+Next_0515:	LD	A,(DE)
+	CP	" "
+	JR	Z,Next_0516
+	LD	(HL),A
+	INC	HL
+	INC	DE
+	DJNZ	Next_0515
+Next_0516:	LD	(HL),#00
+	POP	DE
+	RET
+
+Fun_Ffirst:	CALL	SetAbort
+	EX	DE,HL
+	LD	HL,#0000
+	LD	(FileTotal1),HL
+	LD	(FileTotal2),HL
+	LD	(FileCount),HL
+	LD	C,_FFIRST
+	LD	B,#16
+	LD	IX,FIB3
+	CALL	BDOS
+	CALL	ResetAbort
+	OR	A
+	JP	NZ,Next_0475
+	LD	HL,FIB3+#15
+	LD	DE,FileTotal1
+	CALL	RestSubt
+	LD	HL,(FileCount)
+	INC	HL
+	LD	(FileCount),HL
+	LD	DE,FIB3+1
+	RET
+
+Fun_Full:	CALL	SetAbort
+	EX	DE,HL
+	LD	C,_FFIRST
+	LD	B,#16
+	LD	IX,FIB3
+	CALL	BDOS
+	CALL	ResetAbort
+	OR	A
+	JP	NZ,Next_0475
+	LD	HL,BufEnvName
+	PUSH	HL
+	LD	A,(FIB3+#19)
+	ADD	A,"@"
+	LD	(HL),A
+	INC	HL
+	LD	(HL),":"
+	INC	HL
+	LD	(HL),"\"
+	INC	HL
+	EX	DE,HL
+	LD	C,_WPATH
+	CALL	BDOS
+	POP	DE
+	RET
+
+Fun_Drive:	EX	DE,HL
+	LD	BC,_PARSE
+	CALL	BDOS
+	LD	HL,BufEnvName
+	PUSH	HL
+	LD	A,C
+	ADD	A,"@"
+	LD	(HL),A
+	INC	HL
+	LD	(HL),":"
+	INC	HL
+	LD	(HL),#00
+	POP	DE
+	RET
+
+Cmd_Rem:	XOR	A
+	RET
+
+Cmd_Beep:	AND	(HL)
+	LD	A,.INP
+	RET	NZ
+	LD	A,#07
+	JP	PrintChar
+
+Cmd_Assign:	AND	(HL)
+	LD	B,A
+	LD	D,A
+	LD	C,_ASSIGN
+	JP	Z,BDOS
+
+	CALL	GetDriveLet
+	RET	NZ
+	LD	B,D
+	CALL	FndFirstChr
+	JR	NZ,Next_0113
+	LD	D,#FF
+	LD	C,_ASSIGN
+	PUSH	BC
+	CALL	BDOS
+	POP	BC
+	RET	NZ
+	LD	HL,LPrint
+	PUSH	HL
+	CALL	PrintDrive
+	LD	A,"="
+	CALL	PrintChar
+	LD	B,D
+PrintDrive:	LD	A,B
+	ADD	A,"@"
+	CALL	PrintChar
+	LD	A,":"
+	JP	PrintChar
+
+Next_0113:	CALL	GetDriveLet
+	RET	NZ
+	CALL	FndFirstChr
+	LD	A,.INP
+	RET	NZ
+	LD	C,_ASSIGN
+	JP	BDOS
+
+GetDriveLet:	LD	A,(HL)
+	CALL	MakeCapital
+	SUB	"@"
+	JR	C,Next_0115
+	JR	Z,Next_0115
+	CP	#1B
+	JR	NC,Next_0115
+	LD	D,A
+	INC	HL
+	LD	A,(HL)
+	CP	":"
+	JR	NZ,Next_0114
+	INC	HL
+Next_0114:	LD	A,(HL)
+	CALL	SkipChar
+	RET	Z
+Next_0115:	LD	A,.IDRV
+	OR	A
+	RET
+
+Cmd_Basic:	CALL	SetComLine
+	RET	NZ
+	LD	HL,VariableEnd	; Release variable memory
+	LD	A,#FF
+	CALL	Wr_Char
+	INC	HL
+	LD	A,#BF
+	CALL	Wr_Char
+	LD	SP,#F51F
+	CALL	#F368
+	JP	#4022
+
+Cmd_Buffers:	AND	(HL)
+	JR	NZ,Next_0116
+	LD	BC,_BUFFER
+	CALL	BDOS
+	RET	NZ
+	PUSH	BC
+	LD	A,#27
+	CALL	PrintCode
+	POP	AF
+	LD	IX,BufEnvData
+	PUSH	IX
+	CALL	Convert8
+	POP	DE
+	JP	LPrintString
+
+Next_0116:	CALL	GetValue_8
+	CALL	Z,LastDigit
+	RET	NZ
+	LD	A,(HL)
+	OR	A
+	LD	A,.INP
+	RET	NZ
+	LD	B,E
+	LD	C,_BUFFER
+	JP	BDOS
+
+Cmd_Cls:	AND	(HL)
+	LD	A,.INP
+	RET	NZ
+	LD	A,#0C
+	JP	PrintChar
+
+Cmd_Cpu:	AND	(HL)
+	JR	Z,Next_0518
+	LD	A,(HL)
+	INC	HL
+	SUB	"0"
+	JR	C,Next_0517
+	CP	3
+	JR	NC,Next_0517
+	EX	AF,AF'
+	CALL	FndFirstChr
+	LD	A,.INP
+	RET	NZ
+	LD	A,(MSXVersion)
+	CP	3
+	LD	A,0
+	RET	C
+	EX	AF,AF'
+	OR	%10000000
+	LD	IX,#0180
+
+CallSlot:	LD	IY,(EXPTBL-1)
+	LD	HL,#00
+	ADD	HL,SP
+	LD	SP,#F51F
+	PUSH	HL
+	CALL	CALSLT
+	POP	HL
+	LD	SP,HL
+	LD	E,A
+	XOR	A
+	LD	IY,RedirState
+	RET
+
+Next_0517:	LD	A,.BADNO
+	OR	A
+	RET
+
+Next_0518:	LD	A,#43
+	CALL	PrintCode
+	LD	A,(MSXVersion)
+	CP	3
+	LD	A,#44
+	JP	C,LPrintCode
+	LD	IX,#0183
+	CALL	CallSlot
+	LD	A,E
+	ADD	A,#44
+	JP	LPrintCode
+
+Cmd_Date:	PUSH	HL
+	CALL	GetDateForm
+	POP	HL
+	LD	A,(HL)
+	OR	A
+	JR	NZ,Next_0120
+	LD	C,_GDATE
+	CALL	BDOS
+	PUSH	HL
+	PUSH	DE
+	PUSH	AF
+	LD	A,#16
+	CALL	PrintCode
+	POP	AF
+	ADD	A,#17
+	CALL	PrintCode
+	LD	A,#1E
+	CALL	PrintCode
+	POP	DE
+	POP	HL
+	LD	BC,#F844
+	ADD	HL,BC
+	LD	A,D
+	ADD	A,A
+	ADD	A,A
+	ADD	A,A
+	ADD	A,A
+	ADD	A,A
+	RL	L
+	OR	E
+	LD	D,L
+	LD	HL,BufEnvName+1
+	LD	(HL),D
+	DEC	HL
+	LD	(HL),A
+	LD	C,#FF
+	LD	IX,BufEnvName+2
+	PUSH	IX
+	CALL	PrintDate
+	POP	DE
+	CALL	PrintString
+	LD	A,#1F
+	CALL	LPrintCode
+Next_0117:	LD	A,#20
+	CALL	PrintCode
+	LD	HL,Env_Date
+	CALL	GetEnvData2
+	JR	NZ,Next_0118
+	LD	A,(DE)
+	OR	A
+	JR	Z,Next_0118
+	PUSH	DE
+	LD	A,#22
+	CALL	PrintCode
+	POP	DE
+	CALL	PrintString
+	LD	A,#23
+	CALL	PrintCode
+Next_0118:	LD	A,#21
+	CALL	PrintCode
+	CALL	GetLine
+	JR	Z,Next_0119
+	CP	.EOF
+	RET	NZ
+Next_0119:	INC	HL
+	CALL	FndFirstChr
+	RET	Z
+Next_0120:	EXX
+	LD	C,_GDATE
+	CALL	BDOS
+	EXX
+	LD	A,(IY+#12)
+	ADD	A,A
+	ADD	A,A
+	LD	B,#03
+	PUSH	AF
+	JR	Next_0122
+
+Next_0121:	CALL	SkipSepars
+	JR	C,Next_0123
+Next_0122:	CALL	GetDigit2
+	EXX
+	LD	B,A
+	SBC	A,A
+	LD	C,A
+	POP	AF
+	RLCA
+	RLCA
+	PUSH	AF
+	INC	C
+	JR	Z,Next_0130
+	AND	#03
+	JR	Z,Next_0130
+	DEC	A
+	JR	Z,Next_0129
+	DEC	A
+	JR	Z,Next_0128
+	EXX
+	CALL	GetDigit
+	JR	C,Next_0124
+	INC	HL
+	CALL	GetDigit3
+	JR	C,Next_0123
+	EXX
+	SUB	#50
+	LD	C,A
+	LD	A,B
+	CP	#13
+	JR	Z,Next_0127
+	CP	#14
+	LD	A,C
+	JR	Z,Next_0125
+Next_0123:	POP	AF
+	LD	B,.IDATE
+	JR	Next_0131
+
+Next_0124:	EXX
+	LD	A,B
+	SUB	#50
+	JR	NC,Next_0126
+Next_0125:	ADD	A,#64
+Next_0126:	LD	C,A
+Next_0127:	LD	B,#00
+	LD	HL,#07BC
+	ADD	HL,BC
+	LD	B,D
+Next_0128:	LD	D,B
+	DEFB	#06
+Next_0129:	LD	E,B
+Next_0130:	EXX
+	DJNZ	Next_0121
+	CALL	FndFirstChr
+	JR	NZ,Next_0123
+	POP	AF
+	EXX
+	LD	C,_SDATE
+	CALL	BDOS
+	AND	.IDATE
+	RET	Z
+	LD	B,A
+Next_0131:	LD	DE,BufEnvName
+	LD	C,_EXPLAIN
+	CALL	BDOS
+	PUSH	DE
+	CALL	LPrint
+	LD	A,#0D
+	CALL	PrintCode
+	POP	DE
+	CALL	PrintString
+	LD	A,#0E
+	CALL	LPrintCode
+	JP	Next_0117
+
+Cmd_Echo:	EX	DE,HL
+	JP	LPrintString
+
+Cmd_Echos:	EX	DE,HL
+	JP	PrintString
+
+Cmd_Exit:	AND	(HL)
+	JR	Z,AbortExit1
+	CALL	GetValue_8
+	CALL	Z,LastDigit
+	CALL	Z,LastByte
+	RET	NZ
+	LD	A,E
+
+AbortExit1:	PUSH	AF
+	LD	HL,BootStrap
+	LD	DE,#00
+	LD	BC,#08
+	LDIR
+	CP	.OKCMD
+	JR	Z,Next_0137
+	LD	DE,#01
+Next_0132:	PUSH	DE
+	CALL	FindEnvItem
+	POP	DE
+	INC	DE
+	JR	NZ,Next_0132
+	OR	(HL)
+	JR	Z,Next_0133
+	PUSH	DE
+	LD	DE,BufEnvData
+	XOR	A
+	LD	(DE),A
+	LD	C,_SENV
+	CALL	BDOS
+	POP	DE
+	DEC	DE
+	JR	Next_0132
+
+Next_0133:	LD	HL,(#06)
+	DEC	HL
+	DEC	HL
+	DEC	HL
+	DEC	HL
+	DEC	HL
+	DEC	HL
+	DEC	HL
+Next_0134:	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0137
+	LD	DE,BufEnvName
+Next_0135:	LD	A,(HL)
+	LD	(DE),A
+	DEC	HL
+	INC	DE
+	OR	A
+	JR	NZ,Next_0135
+	LD	DE,BufEnvData
+Next_0136:	LD	A,(HL)
+	LD	(DE),A
+	DEC	HL
+	INC	DE
+	OR	A
+	JR	NZ,Next_0136
+	PUSH	HL
+	CALL	PutEnvItem
+	POP	HL
+	JR	Next_0134
+
+Next_0137:	LD	HL,(#01)
+	INC	HL
+	LD	DE,(WarmBoot)
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	LD	DE,#00
+	LD	C,_DEFAB
+	CALL	BDOS
+	POP	BC
+	LD	C,_TERM
+	JP	BDOS
+
+Cmd_Format:	AND	(HL)
+	LD	B,A
+	JR	NZ,Next_0145
+	LD	L,#00
+	LD	BC,#0867
+Next_0138:	ADD	HL,HL
+	PUSH	HL
+	PUSH	BC
+	XOR	A
+	CALL	BDOS
+	POP	BC
+	POP	HL
+	JR	NZ,Next_0139
+	INC	HL
+Next_0139:	DJNZ	Next_0138
+	LD	A,L
+	OR	A
+	LD	A,.IDRV
+	RET	Z
+	LD	A,L
+	DEC	A
+	AND	L
+	LD	A,L
+	JR	Z,Next_0144
+	PUSH	HL
+	LD	A,#2A
+	CALL	PrintCode
+	POP	HL
+	PUSH	HL
+	LD	A,"@"
+Next_0140:	INC	A
+	SRL	L
+	JR	NC,Next_0141
+	PUSH	AF
+	CALL	PrintChar
+	POP	AF
+	PUSH	AF
+	LD	A,","
+	CALL	NZ,PrintChar
+	POP	AF
+Next_0141:	JR	NZ,Next_0140
+	LD	A,#2B
+	CALL	PrintCode
+	POP	HL
+Next_0142:	PUSH	HL
+	LD	C,_CONST
+	CALL	BDOS
+	PUSH	AF
+	LD	C,_INNOE
+	CALL	BDOS
+	LD	C,A
+	POP	AF
+	POP	HL
+	JR	NZ,Next_0142
+	LD	A,C
+	CALL	MakeCapital
+	LD	C,A
+	SUB	"A"
+	CP	#08
+	JR	NC,Next_0142
+	LD	B,A
+	INC	B
+	XOR	A
+	SCF
+Next_0143:	RLA
+	DJNZ	Next_0143
+	AND	L
+	JR	Z,Next_0142
+	PUSH	AF
+	LD	A,C
+	CALL	PrintChar
+	CALL	LPrint
+	POP	AF
+Next_0144:	INC	B
+	RRCA
+	JR	NC,Next_0144
+	JR	Next_0147
+
+Next_0145:	INC	HL
+	LD	A,(HL)
+	CP	":"
+	LD	A,.IPARM
+	RET	NZ
+	INC	HL
+	LD	A,(HL)
+	CALL	SkipChar
+	LD	A,.IPARM
+	RET	NZ
+	LD	A,B
+	CALL	MakeCapital
+	CP	"Z"+1
+	JR	NC,Next_0146
+	SUB	"A"
+	LD	B,A
+	CCF
+Next_0146:	LD	A,.IDRV
+	RET	NC
+	INC	B
+	CALL	FndFirstChr
+	JR	Z,Next_0147
+	CP	"/"
+	LD	A,.IOPT
+	RET	Z
+	PUSH	BC
+	CALL	GetValue_8
+	POP	BC
+	RET	NZ
+	OR	E
+	LD	A,.IPARM
+	RET	Z
+	LD	A,E
+	CP	#0A
+	LD	A,.IPARM
+	RET	NC
+	LD	A,(HL)
+	OR	A
+	JR	NZ,Next_0519
+	LD	A,E
+	EXX
+	JR	Next_0151
+
+Next_0519:	CP	"/"
+	JR	Z,Next_0520
+	CALL	SkipChar
+	LD	A,.IPARM
+	RET	NZ
+	CALL	FndFirstChr
+	CP	"/"
+	LD	A,.INP
+	RET	NZ
+Next_0520:	INC	HL
+	LD	A,(HL)
+	CALL	MakeUpper
+	CP	"X"
+	LD	A,.IOPT
+	RET	NZ
+	INC	HL
+	CALL	LastByte
+	CALL	Z,LastItem
+	RET	NZ
+	LD	A,E
+	JR	Next_0521
+
+Next_0147:	LD	A,B
+	EXX
+	LD	B,A
+	LD	C,_FORMAT
+	XOR	A
+	CALL	BDOS
+	RET	NZ
+	LD	A,H
+	OR	L
+	JR	Z,Next_0151
+Next_0148:	LD	A,B
+	PUSH	BC
+	CALL	ReadSlot
+	POP	BC
+	OR	A
+	JR	Z,Next_0149
+	INC	HL
+	CALL	PrintChar
+	JR	Next_0148
+
+Next_0149:	LD	A,"?"
+	CALL	PrintChar
+	CALL	PrintSpace
+Next_0150:	LD	C,_CONST
+	CALL	BDOS
+	PUSH	AF
+	LD	C,_INNOE
+	CALL	BDOS
+	LD	C,A
+	POP	AF
+	JR	NZ,Next_0150
+	LD	A,C
+	CP	"9"+1
+	JR	NC,Next_0150
+	SUB	"1"
+	JR	C,Next_0150
+	PUSH	AF
+	LD	A,C
+	CALL	PrintChar
+	CALL	LPrint
+	POP	AF
+Next_0151:	INC	A
+	PUSH	AF
+	CALL	LPrint
+	LD	A,#2C
+	CALL	PrintCode
+	EXX
+	LD	A,B
+	EXX
+	DEC	A
+	LD	C,_CURDRV
+	CALL	M,BDOS
+	ADD	A,"A"
+	CALL	PrintChar
+	LD	A,#2D
+	CALL	LPrintCode
+	CALL	AskAnyKey
+	POP	AF
+	EXX
+Next_0521:	LD	DE,BufEnvData
+	LD	HL,(ExitAdres)
+	OR	A
+	SBC	HL,DE
+	EX	DE,HL
+	LD	C,_FORMAT
+	JP	BDOS
+
+Cmd_Memory:	AND	(HL)
+	LD	A,#00
+	LD	(OptionFlag1),A
+	JP	NZ,Next_0527
+Next_0522:	LD	HL,(MapperTable)
+Next_0523:	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0525
+	PUSH	AF
+	INC	HL
+	LD	B,(HL)
+	CALL	Multiply16
+	LD	A,#49
+	CALL	PrintCode
+	POP	AF
+	LD	B,A
+	AND	%00000011
+	ADD	A,"0"
+	CALL	PrintChar
+	BIT	7,B
+	JR	Z,Next_0524
+	LD	A,"-"
+	CALL	PrintChar
+	LD	A,B
+	RRA
+	RRA
+	AND	%00000011
+	ADD	A,"0"
+	CALL	PrintChar
+Next_0524:	CALL	LPrint
+	INC	HL
+	LD	B,(HL)
+	CALL	Multiply16
+	LD	A,#06
+	CALL	LPrintCode
+	INC	HL
+	LD	B,(HL)
+	CALL	Multiply16
+	LD	A,#4A
+	CALL	LPrintCode
+	INC	HL
+	LD	B,(HL)
+	CALL	Multiply16
+	LD	A,#4B
+	CALL	LPrintCode
+	CALL	LPrint
+	INC	HL
+	INC	HL
+	INC	HL
+	INC	HL
+	JR	Next_0523
+
+Next_0525:	LD	HL,(ExitAdres)
+	LD	DE,#FFD8
+	ADD	HL,DE
+	LD	L,#08
+	LD	DE,#09
+	OR	A
+	SBC	HL,DE
+	LD	L,#06
+	DEC	H
+	LD	(Value_L),HL
+	LD	HL,#00
+	LD	(Value_H),HL
+	CALL	Print32
+	LD	A,#4C
+	CALL	LPrintCode
+	CALL	LPrint
+	CALL	GetBufferLeng
+	PUSH	HL
+	LD	(Value_L),HL
+	CALL	Print32
+	LD	A,#4D
+	CALL	LPrintCode
+	CALL	GetEndAdres
+	EX	DE,HL
+	POP	HL
+	SBC	HL,DE
+
+	LD	DE,BufferAdres
+	ADD	HL,DE
+	DEC	HL
+	LD	(Value_L),HL
+	CALL	Print32
+	LD	A,#06
+	CALL	LPrintCode
+	CALL	LPrint
+	CALL	SetPage2
+	LD	HL,(AliasEnd+#8000)
+	CALL	RestorePage2
+	SET	7,H
+	PUSH	HL
+	CALL	GetAliasAdres
+	SET	7,H
+	EX	DE,HL
+	POP	HL
+	PUSH	HL
+	PUSH	DE
+	SBC	HL,DE
+	LD	(Value_L),HL
+	CALL	Print32
+	LD	A,#4E
+	CALL	LPrintCode
+	CALL	SetPage2
+	POP	HL
+Next_0526:	LD	C,(HL)
+	INC	HL
+	LD	B,(HL)
+	DEC	HL
+	ADD	HL,BC
+	LD	A,B
+	OR	C
+	JR	NZ,Next_0526
+	CALL	RestorePage2
+	EX	DE,HL
+	POP	HL
+	SBC	HL,DE
+	LD	(Value_L),HL
+	CALL	Print32
+	LD	A,#06
+	CALL	LPrintCode
+	CALL	LPrint
+	CALL	SetPage2
+	LD	DE,(AliasEnd+#8000)
+	PUSH	DE
+	LD	HL,#3FFF
+	SBC	HL,DE
+	LD	(Value_L),HL
+	CALL	Print32
+	LD	A,#4F
+	CALL	LPrintCode
+	LD	HL,(VariableEnd+#8000)
+	RES	7,H
+	POP	DE
+	SBC	HL,DE
+	LD	(Value_L),HL
+	CALL	RestorePage2
+	CALL	Print32
+	LD	A,#06
+	JP	LPrintCode
+
+Next_0527:	LD	A,(HL)
+	CP	"/"
+	LD	A,.IPARM
+	RET	NZ
+	INC	HL
+	LD	A,(HL)
+	CALL	MakeUpper
+	CP	"P"
+	JR	Z,Next_0528
+	CP	"K"
+	JR	Z,Next_0530
+	LD	A,.IOPT
+	RET
+
+Next_0528:	CALL	FindScrSize
+Next_0529:	INC	HL
+	CALL	FndFirstChr
+	JR	NZ,Next_0527
+	JP	Next_0522
+
+Next_0530:	LD	A,#01
+	LD	(OptionFlag1),A
+	JR	Next_0529
+
+Multiply16:	PUSH	HL
+	PUSH	DE
+	LD	HL,#00
+	LD	(Value_L),HL
+	LD	(Value_H),HL
+	LD	DE,#4000
+	INC	B
+	DEC	B
+	JR	Z,Next_0533
+Next_0531:	LD	HL,(Value_L)
+	ADD	HL,DE
+	LD	(Value_L),HL
+	JR	NC,Next_0532
+	LD	HL,(Value_H)
+	INC	HL
+	LD	(Value_H),HL
+Next_0532:	DJNZ	Next_0531
+Next_0533:	POP	DE
+	POP	HL
+Print32:	LD	A,(OptionFlag1)
+	BIT	0,A
+	JR	NZ,Next_0534
+	PUSH	HL
+	PUSH	DE
+	LD	IX,BufExtra
+	PUSH	IX
+	LD	DE,Value_L
+	LD	A," "
+	CALL	Convert32
+	POP	HL
+	PUSH	HL
+	INC	HL
+	INC	HL
+	LD	C," "
+	CALL	InsertByte
+	INC	HL
+	INC	HL
+	INC	HL
+	INC	HL
+	CALL	InsertByte
+	POP	DE
+	CALL	PrintString
+	LD	A,#48
+	CALL	PrintCode
+	POP	DE
+	POP	HL
+	RET
+
+Next_0534:	PUSH	HL
+	PUSH	DE
+	LD	A," "
+	CALL	PrintLen2
+	POP	DE
+	POP	HL
+	RET
+
+Cmd_Goto:	LD	A,(BatchHandle)
+	CP	#FE
+	LD	A,.BADCM
+	RET	NZ
+	LD	A,(HL)
+	OR	A
+	LD	A,.NOPAR
+	RET	Z
+	PUSH	HL
+Next_0535:	LD	HL,#00
+	LD	(BatLineAdr),HL
+Next_0536:	CALL	ReadBatLine
+	JR	Z,Next_0537
+	POP	HL
+	CP	.EOF
+	RET	NZ
+	CALL	Next_0538
+	LD	A,#FF
+	LD	(StringCode),A
+	LD	A,.IPARM
+	RET
+
+Next_0537:	JR	NC,Next_0536
+	LD	HL,BufEnvData+1
+	CALL	FndFirstChr
+	POP	BC
+	PUSH	BC
+	CALL	Compare
+	JR	NZ,Next_0536
+	POP	HL
+	RET
+
+Cmd_End:	LD	A,(BatchHandle)
+	CP	#FE
+	LD	A,.BADCM
+	RET	NZ
+	LD	A,(HL)
+	OR	A
+	LD	A,.INP
+	RET	NZ
+Next_0538:	LD	HL,#00
+	LD	(BatLineAdr),HL
+	LD	A,(BatchPage)
+	LD	E,#1A
+	JP	WR_SEG
+
+Cmd_Gosub:	LD	A,(BatchHandle)
+	CP	#FE
+	LD	A,.BADCM
+	RET	NZ
+	LD	A,(HL)
+	OR	A
+	LD	A,.NOPAR
+	RET	Z
+	PUSH	HL
+	LD	HL,(GosubAdres)
+	LD	DE,GosubList+16
+	OR	A
+	SBC	HL,DE
+	POP	HL
+	LD	A,.INP
+	RET	Z
+	PUSH	HL
+	LD	HL,(GosubAdres)
+	LD	DE,(BatLineAdr)
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	INC	HL
+	LD	(GosubAdres),HL
+	JR	Next_0535
+
+Cmd_Return:	LD	A,(BatchHandle)
+	CP	#FE
+	LD	A,.BADCM
+	RET	NZ
+	PUSH	HL
+	LD	HL,(GosubAdres)
+	LD	DE,GosubList
+	PUSH	HL
+	SBC	HL,DE
+	POP	HL
+	JR	Z,Next_0539
+	DEC	HL
+	LD	D,(HL)
+	DEC	HL
+	LD	E,(HL)
+	LD	(GosubAdres),HL
+	EX	DE,HL
+	LD	(BatLineAdr),HL
+Next_0539:	POP	HL
+	LD	A,(HL)
+	OR	A
+	RET	Z
+	PUSH	HL
+	JP	Next_0535
+
+Cmd_If:	CALL	Parse_If2
+	RET	NZ
+	JR	C,Executing2
+	XOR	A
+	RET
+
+Executing2:	LD	DE,BufEnvData
+	PUSH	DE
+	CALL	NCopy
+	POP	DE
+	CALL	Aliasing
+	RET	NZ
+	LD	HL,(NextAdres)
+	LD	A,H
+	OR	L
+	CALL	Z,MultiComm
+	EX	DE,HL
+	PUSH	HL
+	CALL	RemoveQuote
+	POP	HL
+	JP	Executing
+
+Parse_If2:	CALL	Parse_If
+	RET	NZ
+	CCF
+	SBC	A,A
+	EX	AF,AF'
+	PUSH	HL
+	EXX
+	POP	HL
+	CALL	SkipSpace2
+	LD	BC,BufEnvData
+	PUSH	BC
+	CALL	MakePath
+	POP	BC
+	RET	NZ
+	PUSH	HL
+	PUSH	BC
+	LD	HL,Word_And
+	CALL	Compare3
+	POP	BC
+	POP	HL
+	JR	NZ,Next_0540
+	CALL	SkipSpace2
+	EX	AF,AF'
+	PUSH	AF
+	CALL	Parse_If2
+	POP	BC
+	RET	NZ
+	AND	B
+	CP	A
+	RRA
+	RET
+
+Next_0540:	PUSH	HL
+	PUSH	BC
+	LD	HL,Word_Or
+	CALL	Compare3
+	POP	BC
+	POP	HL
+	JR	NZ,Next_0541
+	CALL	SkipSpace2
+	EX	AF,AF'
+	PUSH	AF
+	CALL	Parse_If2
+	POP	BC
+	RET	NZ
+	OR	B
+	CP	A
+	RRA
+	RET
+
+Next_0541:	PUSH	HL
+	PUSH	BC
+	LD	HL,Word_Xor
+	CALL	Compare3
+	POP	BC
+	POP	HL
+	JR	NZ,Next_0542
+	CALL	SkipSpace2
+	EX	AF,AF'
+	PUSH	AF
+	CALL	Parse_If2
+	POP	BC
+	RET	NZ
+	XOR	B
+	CP	A
+	RRA
+	RET
+
+Next_0542:	EXX
+	EX	AF,AF'
+	CP	A
+	RRA
+	RET
+
+Cmd_Iff:	PUSH	HL
+	LD	HL,(IffAdres)
+	LD	DE,IffList+16
+	CALL	Compare4
+	JR	Z,Next_0544
+	LD	A,(HL)
+	INC	HL
+	LD	(IffAdres),HL
+	LD	(HL),A
+	EX	DE,HL
+	POP	HL
+	LD	B,A
+	PUSH	BC
+	PUSH	DE
+	CALL	Parse_If2
+	CCF
+	POP	DE
+	POP	BC
+	RET	NZ
+	BIT	0,B
+	JR	Z,Next_0543
+	DEFB	#3E
+Next_0543:	SBC	A,A
+	LD	(DE),A
+	LD	A,(HL)
+	OR	A
+	RET	Z
+	JP	Executing2
+
+Next_0544:	POP	HL
+	LD	A,.INP
+	RET
+
+Cmd_Then:	AND	(HL)
+	RET	Z
+	JP	Executing2
+
+Cmd_Else:	PUSH	HL
+	LD	HL,(IffAdres)
+	LD	DE,IffList
+	CALL	Compare4
+	JR	Z,Next_0545
+	LD	A,(HL)
+	CP	#9F
+	JR	Z,Next_0545
+	CPL
+	LD	(HL),A
+Next_0545:	POP	HL
+	LD	A,(HL)
+	OR	A
+	RET	Z
+	JP	Executing2
+
+Cmd_Endiff:	PUSH	HL
+	LD	HL,(IffAdres)
+	LD	DE,IffList
+	CALL	Compare4
+	JR	Z,Next_0546
+	DEC	HL
+	LD	(IffAdres),HL
+Next_0546:	POP	HL
+	LD	A,(HL)
+	OR	A
+	RET	Z
+	JP	Executing2
+
+Parse_If:	LD	BC,BufEnvData
+	PUSH	BC
+	CALL	MakePath2
+	POP	BC
+	RET	NZ
+	EX	DE,HL
+	LD	HL,Word_Not
+	CALL	Compare3
+	EX	DE,HL
+	JR	NZ,Next_0152
+	CALL	Start_If
+	CCF
+	RET
+
+Start_If:	CALL	FndFirstChr
+	LD	BC,BufEnvData
+	CALL	MakePath2
+	RET	NZ
+Next_0152:	LD	BC,BufEnvData
+	EX	DE,HL
+	LD	HL,Word_Exist
+	CALL	Compare3
+	EX	DE,HL
+	JR	NZ,Next_0154
+	CALL	FndFirstChr
+	CALL	CheckPath
+	RET	NZ
+	BIT	3,B
+	LD	A,.NOFIL
+	JR	Z,Next_0153
+	LD	C,(HL)
+	LD	(HL),#00
+	PUSH	HL
+	PUSH	BC
+	LD	IX,FIB1
+	LD	BC,#0640
+	CALL	BDOS
+	POP	BC
+	POP	HL
+	LD	(HL),C
+Next_0153:	OR	A
+	RET	Z
+	CP	.NODIR
+	SCF
+	RET	Z
+	CP	.NOFIL
+	SCF
+	RET
+
+Next_0154:	CALL	SkipSpace2
+	LD	A,(HL)
+	CALL	MakeUpper
+	CP	"="
+	JR	NZ,Next_0547
+	INC	HL
+	LD	A,(HL)
+	CP	"="
+	JP	NZ,Next_0554
+	LD	A,#01
+	JR	Next_0550
+
+Next_0547:	CP	"E"
+	JR	NZ,Next_0548
+	INC	HL
+	LD	A,(HL)
+	CALL	MakeUpper
+	CP	"Q"
+	JR	NZ,Next_0554
+	LD	A,#01
+	JR	Next_0550
+
+Next_0548:	CP	"G"
+	JR	NZ,Next_0549
+	INC	HL
+	LD	A,(HL)
+	CALL	MakeUpper
+	CP	"T"
+	JR	NZ,Next_0554
+	LD	A,#02
+	JR	Next_0550
+
+Next_0549:	CP	"L"
+	JR	NZ,Next_0554
+	INC	HL
+	LD	A,(HL)
+	CALL	MakeUpper
+	CP	"T"
+	JR	NZ,Next_0554
+	LD	A,#03
+Next_0550:	EX	AF,AF'
+	INC	HL
+	CALL	SkipSpace2
+	LD	BC,BufEnvData+#80
+	PUSH	BC
+	CALL	MakePath2
+	POP	BC
+	RET	NZ
+	EX	DE,HL
+	LD	HL,BufEnvData
+	CALL	Compare
+	EX	DE,HL
+	EX	AF,AF'
+	DEC	A
+	JR	Z,Next_0553
+	DEC	A
+	JR	Z,Next_0552
+	DEC	A
+	EX	AF,AF'
+	JR	NZ,Next_0551
+	SCF
+	RET
+
+Next_0551:	LD	A,#00
+	BIT	0,A
+	RET
+
+Next_0552:	EX	AF,AF'
+	LD	A,#00
+	BIT	0,A
+	CCF
+	RET
+
+Next_0553:	EX	AF,AF'
+	RET	Z
+	CP	A
+	SCF
+	RET
+
+Next_0554:	POP	HL
+	LD	A,.IPARM
+	OR	A
+	RET
+
+Compare:	LD	A,(BC)
+	CP	(HL)
+	RET	NZ
+	INC	BC
+	INC	HL
+	OR	A
+	JR	NZ,Compare
+	RET
+
+Compare2:	LD	A,(HL)
+	OR	A
+	RET	Z
+	LD	A,(BC)
+	CP	(HL)
+	RET	NZ
+	INC	BC
+	INC	HL
+	OR	A
+	JR	NZ,Compare2
+	RET
+
+Compare3:	LD	A,(BC)
+	CALL	MakeUpper
+	CP	(HL)
+	RET	NZ
+	INC	BC
+	INC	HL
+	OR	A
+	JR	NZ,Compare3
+	RET
+
+Compare4:	LD	A,H
+	SUB	D
+	RET	NZ
+	LD	A,L
+	SUB	E
+	RET
+
+Word_Not:	DEFB	"NOT",0
+Word_Exist:	DEFB	"EXIST",0
+Word_And:	DEFB	"AND",0
+Word_Or:	DEFB	"OR",0
+Word_Xor:	DEFB	"XOR",0
+
+Cmd_Color:	AND	(HL)
+	LD	A,.NOPAR
+	RET	Z
+	CALL	GetValue_8
+	RET	NZ
+	LD	A,E
+	CP	#10
+	JR	NC,Next_0156
+	LD	(FORCLR),A
+	CALL	FndFirstChr
+	JR	Z,Next_0555
+	CALL	GetValue_8
+	RET	NZ
+	LD	A,E
+	CP	#10
+	JR	NC,Next_0156
+	LD	(BAKCLR),A
+	CALL	FndFirstChr
+	JR	Z,Next_0555
+	CALL	GetValue_8
+	CALL	Z,LastDigit
+	CALL	Z,LastByte
+	RET	NZ
+	LD	A,E
+	CP	#10
+	JR	NC,Next_0156
+	LD	(BDRCLR),A
+Next_0555:	LD	IX,#62
+	JR	Next_0557
+
+Cmd_Mode:	AND	(HL)
+	LD	A,.NOPAR
+	RET	Z
+	LD	A,(CRTCNT)
+	LD	(BufExtra),A
+	CALL	GetValue_8
+	RET	NZ
+	CALL	FndFirstChr
+	JR	Z,Next_0556
+	PUSH	DE
+	CALL	GetValue_8
+	LD	C,E
+	POP	DE
+	CALL	Z,LastDigit
+	CALL	Z,LastByte
+	RET	NZ
+	LD	A,C
+	LD	(BufExtra),A
+	XOR	A
+Next_0556:	OR	E
+	JR	Z,Next_0156
+	CP	#51
+	JR	NC,Next_0156
+	LD	IX,#6C
+	LD	HL,LINL40
+	CP	#21
+	JR	NC,Next_0155
+	LD	IX,#6F
+	INC	HL
+Next_0155:	LD	(HL),A
+	LD	A,(BufExtra)
+	OR	A
+	JR	Z,Next_0156
+	CP	#1B
+	JR	NC,Next_0156
+	LD	(CRTCNT),A
+Next_0557:	JP	CallSlot
+
+Next_0156:	LD	A,.IPARM
+	RET
+
+Cmd_Inkey:	SCF
+Cmd_Input:	EX	AF,AF'
+	XOR	A
+	LD	(BufEnvName),A
+	OR	(HL)
+	LD	A,.NOPAR
+	RET	Z
+	CALL	ParseEnvName
+	JR	NZ,Next_0558
+	CALL	FndFirstChr
+	JR	Z,Next_0560
+Next_0558:	LD	DE,BufEnvData
+Next_0559:	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0560
+	CP	"%"
+	JR	Z,Next_0560
+	LD	(DE),A
+	INC	DE
+	INC	HL
+	JR	Next_0559
+Next_0560:	PUSH	AF
+	XOR	A
+	LD	(DE),A
+	POP	AF
+	OR	A
+	CALL	NZ,ParseEnvName
+	LD	A,.INP
+	RET	NZ
+	CALL	FndFirstChr
+	LD	A,.INP
+	RET	NZ
+	LD	A,(BufEnvName)
+	OR	A
+	LD	A,.NOPAR
+	RET	Z
+	LD	DE,BufEnvData
+	CALL	PrintString
+	EX	AF,AF'
+	JR	NC,Next_0561
+	CALL	WaitKey
+	LD	A,L
+	LD	HL,BufEnvData
+	LD	(HL),A
+	INC	HL
+	LD	(HL),0
+	DEC	HL
+	EX	DE,HL
+	JR	Next_0562
+Next_0561:	LD	HL,BufEnvData
+	LD	(HL),#7F
+	EX	DE,HL
+	LD	C,_BUFIN
+	CALL	BDOS
+	CALL	LPrint
+	LD	HL,BufEnvData+1
+	PUSH	HL
+	LD	C,(HL)
+	LD	B,0
+	INC	HL
+	ADD	HL,BC
+	LD	(HL),0
+	POP	DE
+	INC	DE
+Next_0562:	LD	HL,BufEnvName
+	LD	C,_SENV
+	JP	BDOS
+
+ParseEnvName:	LD	A,(HL)
+	CP	"%"
+	RET	NZ
+	LD	DE,BufEnvName
+Next_0563:	INC	HL
+	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0564
+	CP	" "
+	JR	Z,Next_0564
+	LD	(DE),A
+	INC	DE
+	JR	Next_0563
+Next_0564:	XOR	A
+	LD	(DE),A
+	RET
+
+Cmd_Reset:	AND	(HL)
+	LD	A,.INP
+	RET	NZ
+	LD	IY,(EXPTBL-1)
+	LD	SP,#F51F
+	LD	IX,#00
+	JP	CALSLT
+
+Cmd_Cdpath:	PUSH	HL
+	LD	HL,Env_Cdpath
+	JR	Next_0565
+
+Cmd_Path:	PUSH	HL
+	LD	HL,Env_Path
+Next_0565:	PUSH	HL
+	EXX
+	POP	HL
+	EXX
+	CALL	GetEnvData2
+	POP	HL
+	RET	NZ
+	OR	(HL)
+	JP	Z,NPrintString
+	INC	HL
+	CP	"-"
+	JR	Z,Next_0163
+	CP	"+"
+	JR	Z,Next_0157
+	XOR	A
+	LD	(DE),A
+	DEC	HL
+Next_0157:	EX	DE,HL
+	PUSH	HL
+	CALL	FndFirstChr
+	POP	HL
+	JR	NZ,Next_0158
+	LD	(HL),A
+Next_0158:	EX	DE,HL
+Next_0159:	CALL	FndFirstChr
+	JR	Z,Next_0162
+	LD	BC,BufExtra
+	PUSH	BC
+	CALL	MakePath
+	PUSH	HL
+	CALL	NC,Next_0164
+	POP	HL
+	POP	BC
+	RET	C
+	LD	DE,BufEnvData-1
+Next_0160:	INC	DE
+	LD	A,(DE)
+	OR	A
+	JR	NZ,Next_0160
+	LD	A,";"
+	LD	(DE),A
+	INC	DE
+	LD	A," "
+	LD	(DE),A
+Next_0161:	INC	DE
+	LD	A,(BC)
+	INC	BC
+	LD	(DE),A
+	OR	A
+	JR	NZ,Next_0161
+	JR	Next_0159
+
+Next_0162:	EXX
+	PUSH	HL
+	EXX
+	POP	HL
+	JP	PutEnvItem2
+
+Next_0163:	CALL	FndFirstChr
+	JR	Z,Next_0162
+	LD	BC,BufExtra
+	CALL	MakePath
+	PUSH	HL
+	CALL	NC,Next_0164
+	POP	HL
+	RET	C
+	LD	A,.IPATH
+	RET	Z
+	JR	Next_0163
+
+Next_0164:	LD	HL,BufEnvData
+Next_0165:	PUSH	HL
+	POP	IX
+	CALL	FndFirstChr
+	RET	Z
+	LD	BC,BufExtra+#80
+	PUSH	BC
+	CALL	MakePath
+	POP	BC
+	RET	C
+	LD	DE,BufExtra
+Next_0166:	LD	A,(BC)
+	EX	DE,HL
+	CP	(HL)
+	EX	DE,HL
+	JR	NZ,Next_0165
+	INC	DE
+	INC	BC
+	OR	A
+	JR	NZ,Next_0166
+	PUSH	IX
+	POP	DE
+	CALL	NCopy
+	INC	A
+	RET
+
+MakePath:	LD	D,#00
+Next_0168:	LD	E,(HL)
+	PUSH	BC
+	PUSH	HL
+	LD	C,_CHKCHR
+	CALL	BDOS
+	POP	HL
+	POP	BC
+	SCF
+	RET	NZ
+	LD	(BC),A
+	OR	E
+	RET	Z
+	CALL	SkipChar
+	RET	Z
+	LD	A,E
+	LD	(BC),A
+	INC	BC
+	INC	HL
+	JR	Next_0168
+
+MakePath2:	LD	D,#01
+	XOR	A
+	LD	(Value_L),A
+Next_0169:	LD	A,(HL)
+	CP	"{"
+	JR	NZ,Next_0566
+	LD	(Value_L),A
+	INC	HL
+	JR	Next_0169
+Next_0566:	CP	"}"
+	JR	NZ,Next_0567
+	XOR	A
+	LD	(Value_L),A
+	INC	HL
+	JR	Next_0169
+Next_0567:	LD	E,(HL)
+	PUSH	BC
+	PUSH	HL
+	LD	C,_CHKCHR
+	CALL	BDOS
+	POP	HL
+	POP	BC
+	SCF
+	RET	NZ
+	LD	(BC),A
+	OR	E
+	RET	Z
+	LD	A,(Value_L)
+	OR	A
+	LD	A,E
+	CALL	Z,SkipChar
+	RET	Z
+	LD	A,E
+	LD	(BC),A
+	INC	BC
+	INC	HL
+	JR	Next_0169
+
+Cmd_Pause:	EX	DE,HL
+	CALL	NPrintString
+AskAnyKey:	LD	A,#0F
+	CALL	PrintCode
+	JP	WaitKey
+
+Cmd_Ramdisk:	AND	(HL)
+	JR	NZ,Next_0170
+	LD	BC,#FF68
+	CALL	BDOS
+	RET	NZ
+	LD	H,A
+	OR	B
+	LD	A,.NRAMD
+	RET	Z
+	LD	L,B
+	ADD	HL,HL
+	ADD	HL,HL
+	ADD	HL,HL
+	ADD	HL,HL
+	LD	A,#29
+	CALL	PrintCode
+	LD	IX,BufEnvData
+	PUSH	IX
+	CALL	Convert16
+	POP	DE
+	CALL	PrintString
+	LD	A,"K"
+	CALL	PrintChar
+	JP	LPrint
+
+Next_0170:	EX	AF,AF'
+	CALL	Find_D
+	RET	NZ
+	EX	AF,AF'
+	JR	NZ,Next_0171
+	OR	(HL)
+	LD	B,A
+	JR	Z,Next_0176
+	XOR	A
+Next_0171:	EX	AF,AF'
+	CALL	GetValue_16
+	RET	NZ
+	LD	A,(HL)
+	CALL	MakeCapital
+	CP	"K"
+	JR	NZ,Next_0172
+	INC	HL
+Next_0172:	LD	A,(HL)
+	CP	"/"
+	CALL	NZ,LastDigit
+	CALL	Z,Find_D
+	RET	NZ
+	CALL	FndFirstChr
+	LD	A,.INP
+	RET	NZ
+	LD	B,#04
+	LD	HL,#0F
+	ADD	HL,DE
+Next_0173:	SRL	H
+	RR	L
+	DJNZ	Next_0173
+	LD	A,.IPARM
+	INC	H
+	DEC	H
+	RET	NZ
+	LD	B,L
+	INC	L
+	RET	Z
+	EXX
+	EX	AF,AF'
+	JR	Z,Next_0174
+	LD	BC,#FF68
+	CALL	BDOS
+	RET	NZ
+	OR	B
+	JR	Z,Next_0175
+	LD	A,#34
+	CALL	Find_YyNn
+	LD	A,#00
+	RET	Z
+Next_0174:	LD	BC,_RAMDISK
+	CALL	BDOS
+	RET	NZ
+Next_0175:	EXX
+Next_0176:	LD	C,_RAMDISK
+	JP	BDOS
+
+Find_D:	LD	A,(HL)
+	CP	"/"
+	JR	NZ,Next_0177
+	INC	HL
+	LD	A,(HL)
+	CALL	MakeCapital
+	CP	"D"
+	LD	A,.IOPT
+	RET	NZ
+	INC	HL
+	XOR	A
+	EX	AF,AF'
+	CALL	FndFirstChr
+	JR	Find_D
+
+Next_0177:	XOR	A
+	RET
+
+Cmd_Set:	AND	(HL)
+	JR	NZ,Next_0569
+Next_0568:	LD	HL,#01
+Next_0178:	PUSH	HL
+	EX	DE,HL
+	CALL	FindEnvItem
+	JR	NZ,Next_0179
+	POP	BC
+	OR	(HL)
+	RET	Z
+	PUSH	BC
+	CALL	GetEnvData
+	JR	NZ,Next_0179
+	EX	DE,HL
+	CALL	PrintString
+	LD	A,#41
+	CALL	PrintCode
+	EX	DE,HL
+	CALL	LPrintString
+Next_0179:	POP	HL
+	INC	HL
+	JR	Next_0178
+
+Next_0180:	PUSH	HL
+	LD	D,#00
+	DEC	HL
+Next_0181:	INC	HL
+	LD	E,(HL)
+	PUSH	HL
+	LD	C,_CHKCHR
+	CALL	BDOS
+	POP	HL
+	POP	BC
+	RET	NZ
+	PUSH	BC
+	OR	E
+	JR	Z,Next_0182
+	CALL	SkipChar
+	JR	NZ,Next_0181
+	PUSH	HL
+	CALL	SkipSpace2
+	POP	HL
+	LD	(HL),#00
+	JR	Z,Next_0182
+	INC	HL
+	CALL	FndFirstChr
+	EX	DE,HL
+	POP	HL
+	LD	C,_SENV
+	JP	BDOS
+
+Next_0182:	POP	HL
+	CALL	GetEnvData2
+	RET	NZ
+NPrintString:	LD	A,(DE)
+	OR	A
+	RET	Z
+	JP	LPrintString
+
+Next_0569:	LD	A,(HL)
+	CP	"/"
+	JR	NZ,Next_0180
+	INC	HL
+	LD	A,(HL)
+	CALL	MakeUpper
+	CP	"P"
+	LD	A,.IOPT
+	RET	NZ
+	CALL	FindScrSize
+	INC	HL
+	CALL	FndFirstChr
+	JR	NZ,Next_0180
+	JR	Next_0568
+
+Cmd_Alias:	AND	(HL)
+	JR	NZ,Next_0575
+Next_0570:	LD	BC,#00
+Next_0571:	LD	HL,BufEnvName
+	LD	DE,BufEnvData
+	CALL	FindAlias
+	LD	A,(HL)
+	OR	A
+	RET	Z
+	PUSH	BC
+	EX	DE,HL
+	CALL	PrintString
+	LD	A,#41
+	CALL	PrintCode
+	EX	DE,HL
+	CALL	LPrintString
+	POP	BC
+	JR	Next_0571
+
+Next_0572:	PUSH	HL
+	LD	D,#00
+	DEC	HL
+Next_0573:	INC	HL
+	LD	E,(HL)
+	PUSH	HL
+	LD	C,_CHKCHR
+	CALL	BDOS
+	POP	HL
+	LD	(HL),E
+	POP	BC
+	RET	NZ
+	PUSH	BC
+	OR	E
+	JR	Z,Next_0574
+	CALL	SkipChar
+	JR	NZ,Next_0573
+	PUSH	HL
+	CALL	SkipSpace2
+	POP	HL
+	LD	(HL),#00
+	JR	Z,Next_0574
+	INC	HL
+	CALL	FndFirstChr
+	EX	DE,HL
+	POP	HL
+	JP	SetAlias
+
+Next_0574:	POP	HL
+	LD	DE,BufEnvData
+	CALL	GetAlias
+	JP	NPrintString
+
+Next_0575:	LD	A,(HL)
+	CP	"/"
+	JR	NZ,Next_0572
+	INC	HL
+	LD	A,(HL)
+	CALL	MakeUpper
+	CP	"S"
+	JR	Z,Next_0577
+	CP	"L"
+	JR	Z,Next_0582
+	CP	"R"
+	JP	Z,Next_0583
+	CP	"P"
+	JR	Z,Next_0576
+	DEC	HL
+	JR	Next_0572
+
+Next_0576:	CALL	FindScrSize
+	INC	HL
+	CALL	FndFirstChr
+	JR	NZ,Next_0572
+	JR	Next_0570
+
+Next_0577:	CALL	ParsePath
+	OR	A
+	RET	NZ
+	LD	BC,_CREATE
+	CALL	BDOS
+	RET	NZ
+	PUSH	BC
+	LD	C,_WRITE
+	LD	DE,Text_Alias
+	LD	HL,#0C
+	CALL	BDOS
+	POP	BC
+	RET	NZ
+	PUSH	BC
+	CALL	SetPage2
+	CALL	GetAliasAdres
+	SET	7,H
+Next_0578:	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	DEC	HL
+	LD	A,D
+	OR	E
+	JR	Z,Next_0579
+	ADD	HL,DE
+	JR	Next_0578
+
+Next_0579:	PUSH	HL
+	CALL	GetAliasAdres
+	SET	7,H
+	DEC	HL
+	DEC	HL
+	EX	DE,HL
+	POP	HL
+	SBC	HL,DE
+	INC	DE
+	INC	DE
+	POP	BC
+	PUSH	BC
+	LD	C,_WRITE
+Next_0580:	CALL	BDOS
+	LD	E,A
+	POP	BC
+Next_0581:	PUSH	DE
+	LD	C,_CLOSE
+	CALL	BDOS
+	PUSH	AF
+	CALL	RestorePage2
+	POP	AF
+	POP	DE
+	RET	NZ
+	LD	A,E
+	RET
+
+Next_0582:	CALL	ParsePath
+	OR	A
+	RET	NZ
+	LD	C,_OPEN
+	CALL	BDOS
+	RET	NZ
+	PUSH	BC
+	LD	C,_READ
+	LD	DE,BufEnvName
+	LD	HL,#0C
+	CALL	BDOS
+	POP	BC
+	RET	NZ
+	PUSH	BC
+	LD	HL,BufEnvName
+	LD	BC,Text_Alias
+	CALL	Compare
+	POP	BC
+	LD	E,.IFNM
+	JR	NZ,Next_0581
+	PUSH	BC
+	CALL	SetPage2
+	POP	BC
+	PUSH	BC
+	LD	HL,(AliasAdres+#8000)
+	SET	7,H
+	EX	DE,HL
+	LD	HL,(AliasEnd+#8000)
+	SET	7,H
+	OR	A
+	SBC	HL,DE
+	LD	C,_READ
+	JR	Next_0580
+
+Next_0583:	INC	HL
+	CALL	FndFirstChr
+	LD	A,.INP
+	RET	NZ
+	CALL	GetAliasAdres
+	XOR	A
+	CALL	Wr_Char
+	INC	HL
+	CALL	Wr_Char
+	RET
+
+Text_Alias:	DEFB	"Alias File",26,0
+
+ParsePath:	INC	HL
+	CALL	FndFirstChr
+	LD	A,.NOPAR
+	RET	Z
+	LD	BC,_PARSE
+	EX	DE,HL
+	PUSH	DE
+	CALL	BDOS
+	POP	HL
+	RET	NZ
+	EX	DE,HL
+	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0584
+	CP	" "
+	LD	A,.IPATH
+	RET	NZ
+	LD	(HL),#00
+	INC	HL
+	CALL	FndFirstChr
+	LD	A,.INP
+	RET	NZ
+Next_0584:	XOR	A
+	RET
+
+Cmd_History:	AND	(HL)
+	JP	Z,Next_0900
+	LD	A,(HL)
+	CP	"/"
+	JP	Z,Check_P
+	CALL	GetValue_16
+	CALL	Z,LastItem
+	RET	NZ
+	EX	DE,HL
+	LD	DE,(MaxBufferLeng)
+	CALL	Compare4
+	LD	A,.BADNO
+	RET	NC
+	LD	DE,128
+	CALL	Compare4
+	LD	A,.BADNO
+	RET	C
+	CALL	SetBufferLeng	; stel nieuwe bufferlengte in
+	LD	DE,BufferAdres	; start van buffer
+	ADD	HL,DE	; tel lengte erbij
+	PUSH	HL	; dit is start van aliasbuffer
+	CALL	GetAliasAdres	; haal huidige aliasbuffer
+	POP	DE	; nieuw start adres
+	CALL	Compare4	; zijn die gelijk?
+	RET	Z	; ja, dan zijn we klaar
+	EX	AF,AF'                  ; bewaar vergelijking voor later
+	SET	7,H	; echte adres in geheugen
+	PUSH	HL	; bewaar dit
+	CALL	SetPage2	; schakel pagina 2 permanent in
+Next_0902:	LD	C,(HL)	; lengte van deze alias
+	INC	HL
+	LD	B,(HL)
+	DEC	HL
+	ADD	HL,BC	; tel bij adres op
+	LD	A,B	; is lengte nul?
+	OR	C
+	JR	NZ,Next_0902	; nee, dan volgende
+	INC	HL
+	INC	HL	; eind adres aliasbuffer
+	PUSH	HL	; bewaar dit in HL'
+	EXX
+	POP	HL
+	EXX
+	POP	DE	; haal startadres aliasbuffer
+	PUSH	DE	; en bewaar weer
+	SBC	HL,DE	; trek van eindadres af
+	LD	B,H	; dit is dus de lengte
+	LD	C,L
+	PUSH	BC	; bewaar de lengte
+	EXX
+	PUSH	HL
+	EXX
+	CALL	GetBufferLeng	; haal lengte van buffer
+	LD	DE,BufferAdres	; startadres van buffer
+	ADD	HL,DE	; tel op
+	EX	DE,HL	; naar DE
+	PUSH	DE
+	EXX
+	POP	HL	; en terug in HL'
+	POP	DE	; ook DE' terug
+	POP	BC	; en BC'
+	ADD	HL,BC	; tel lengte bij startadres aliasbuffer
+	EX	DE,HL
+	EXX
+	POP	HL	; startadres aliasbuffer terug
+	EX	AF,AF'                  ; resultaat van vergelijking
+	JR	C,Next_0905	; C betekent achteruit kopieren
+	PUSH	DE	; bewaar nieuwe startadres
+	SET	7,D	; maak echte adres
+	LDIR		; kopieer
+	CALL	RestorePage2	; zet pagina 2 terug
+	POP	HL	; haal nieuwe startadres terug
+	CALL	SetAliasAdres	; en stel dit in
+	JR	Next_0903	; wis history buffer
+
+Next_0905:	EXX		; haal alternatieve registers
+	DEC	HL
+	DEC	DE
+	SET	7,D	; maak echte adres
+	LDDR		; en kopieer achteruit
+	CALL	GetBufferLeng	; lengte buffer
+	LD	DE,BufferAdres	; start buffer
+	ADD	HL,DE	; tel op
+	PUSH	HL	; bewaar start aliasbuffer
+	CALL	RestorePage2	; zet pagina 2 terug
+	POP	HL	; haal terug
+	CALL	SetAliasAdres	; dit is nieuwe startadres aliasbuffer
+	JR	Next_0903	; wis history buffer
+
+Next_0900:	CALL	GetReadAdres
+	LD	(Value_L),HL
+	CALL	GetPutAdres
+	LD	DE,BufferAdres
+	CALL	Compare4
+	RET	Z
+	CALL	SetReadAdres
+	CALL	Less
+	CALL	GetReadAdres
+	LD	D,H
+	LD	E,L
+Next_0585:	CALL	More
+	JR	NZ,Next_0587
+Next_0586:	CALL	GetReadAdres
+	CALL	Compare4
+	JR	NZ,Next_0585
+	LD	HL,(Value_L)
+	CALL	SetReadAdres
+	XOR	A
+	RET
+
+Next_0587:	CALL	Z,LPrint
+	JR	Z,Next_0586
+	CALL	PrintChar
+	CALL	More
+	JR	Next_0587
+
+Check_P:	INC	HL
+	LD	A,(HL)
+	CALL	MakeUpper
+	CP	"D"
+	JR	Z,Check_D
+	CP	"P"
+	LD	A,.IOPT
+	RET	NZ
+	INC	HL
+	CALL	FindScrSize
+	CALL	FndFirstChr
+	JR	Z,Next_0900
+	LD	A,.INP
+	RET
+
+Check_D:	INC	HL
+	CALL	FndFirstChr
+	LD	A,.INP
+	RET	NZ
+Next_0903:	LD	HL,BufferAdres
+	CALL	SetPutAdres
+	CALL	SetReadAdres
+	DEC	HL
+	CALL	SetEndAdres
+	XOR	A
+	RET
+
+Cmd_Time:	PUSH	HL
+	CALL	GetTimeForm
+	POP	HL
+	LD	A,(HL)
+	OR	A
+	JR	NZ,Next_0186
+	LD	A,#24
+	CALL	PrintCode
+	LD	C,_GTIME
+	CALL	BDOS
+	PUSH	DE
+	LD	A,L
+	ADD	A,A
+	ADD	A,A
+	LD	B,#03
+Next_0183:	ADD	A,A
+	RL	H
+	DJNZ	Next_0183
+	LD	C,H
+	LD	HL,BufEnvName
+	LD	(HL),A
+	INC	HL
+	LD	(HL),C
+	LD	IX,BufEnvName+2
+	PUSH	IX
+	CALL	PrintTime
+	POP	DE
+	POP	BC
+	PUSH	AF
+	CALL	PrintString
+	LD	A,":"
+	CALL	PrintChar
+	LD	A,B
+	LD	D,#FF
+	CALL	PrintFigure
+	POP	AF
+	CP	" "
+	CALL	NZ,PrintChar
+	LD	A,#0E
+	CALL	LPrintCode
+Next_0184:	LD	A,#26
+	CALL	PrintCode
+	CALL	GetLine
+	JR	Z,Next_0185
+	CP	.EOF
+	RET	NZ
+Next_0185:	INC	HL
+	CALL	FndFirstChr
+	RET	Z
+Next_0186:	EXX
+	LD	C,_GTIME
+	CALL	BDOS
+	EXX
+	CALL	GetDigit2
+	JR	C,Next_0187
+	EXX
+	LD	H,A
+	EXX
+Next_0187:	CALL	SkipSepars
+	CALL	NC,GetDigit2
+	JR	C,Next_0188
+	EXX
+	LD	L,A
+	EXX
+Next_0188:	CALL	SkipSepars
+	CALL	NC,GetDigit2
+	JR	C,Next_0189
+	EXX
+	LD	D,A
+	EXX
+Next_0189:	CALL	SkipSepars
+	CALL	NC,GetDigit2
+	JR	C,Next_0190
+	EXX
+	LD	E,A
+	EXX
+Next_0190:	CALL	FndFirstChr
+	CALL	MakeCapital
+	CP	"A"
+	JR	Z,Next_0193
+	CP	"P"
+	SCF
+	JR	Z,Next_0193
+	OR	A
+	EXX
+	JR	Z,Next_0197
+	DEFB	#3E
+Next_0191:	POP	AF
+Next_0192:	LD	B,.ITIME
+	JR	Next_0198
+
+Next_0193:	PUSH	AF
+	INC	HL
+	CALL	FndFirstChr
+	JR	NZ,Next_0191
+	POP	AF
+	EXX
+	LD	B,#0C
+	LD	A,H
+	JR	C,Next_0195
+	CP	B
+	JR	Z,Next_0194
+	JR	NC,Next_0192
+	DEFB	#D2
+Next_0194:	LD	H,#00
+	JR	Next_0197
+
+Next_0195:	OR	A
+	JR	Z,Next_0192
+	CP	B
+	JR	NC,Next_0196
+	ADD	A,B
+Next_0196:	LD	H,A
+Next_0197:	LD	C,_STIME
+	CALL	BDOS
+	AND	.ITIME
+	RET	Z
+	LD	B,A
+Next_0198:	LD	DE,BufEnvName
+	LD	C,_EXPLAIN
+	CALL	BDOS
+	PUSH	DE
+	CALL	LPrint
+	LD	A,#0D
+	CALL	PrintCode
+	POP	DE
+	CALL	PrintString
+	LD	A,#0E
+	CALL	LPrintCode
+	JP	Next_0184
+
+Cmd_Ver:	AND	(HL)
+	LD	A,.INP
+	RET	NZ
+	LD	HL,#4039
+	CALL	ReadDiskRom
+	PUSH	AF
+	DEC	HL
+	CALL	ReadDiskRom
+	POP	HL
+	LD	L,A
+	SCF
+Next_0199:	CALL	NC,PrintChar
+	CALL	ReadDiskRom
+	INC	HL
+	OR	A
+	JR	NZ,Next_0199
+	CALL	LPrint
+	LD	HL,(#01)
+	LD	DE,#30
+	ADD	HL,DE
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	CALL	LPrintString
+	LD	DE,Text_Version
+	JP	LPrintString
+
+ReadDiskRom:	LD	A,(#F348)
+ReadSlot:	EX	DE,HL
+	PUSH	DE
+	LD	HL,#00
+	ADD	HL,SP
+	LD	SP,#F51F
+	PUSH	HL
+	EX	DE,HL
+	CALL	RDSLT
+	POP	HL
+	LD	SP,HL
+	POP	HL
+	RET
+
+Text_Version:	DEFB	"COMMAND2.COM version 2.41",13,10
+	DEFB	"Copyright (c) 1995-1997 by C.P.U.",13,10,0
+
+Cmd_Verify:	AND	(HL)
+	JR	NZ,Next_0201
+	LD	C,_GETVFY
+	CALL	BDOS
+	LD	HL,Adres_OFF+1
+	INC	B
+	DEC	B
+	JR	Z,Next_0200
+	LD	HL,Adres_ON+1
+Next_0200:	LD	A,#28
+	CALL	PrintCode
+	EX	DE,HL
+	JP	LPrintString
+
+Next_0201:	EX	DE,HL
+	DEC	DE
+	LD	HL,Adres_ON
+	LD	B,(HL)
+	LD	C,#FF
+	CALL	Compare_DEHL
+	JR	NC,Next_0202
+	INC	B
+	INC	C
+	INC	HL
+	CALL	C,Compare_DEHL
+	LD	A,.IPARM
+	RET	C
+Next_0202:	INC	DE
+	DJNZ	Next_0202
+	INC	DE
+	EX	DE,HL
+	LD	A,(HL)
+	CALL	SkipChar
+	LD	A,.IPARM
+	RET	NZ
+	CALL	FndFirstChr
+	LD	A,.INP
+	RET	NZ
+	LD	E,C
+	LD	C,_VERIFY
+	JP	BDOS
+
+Cmd_Dskchk:	AND	(HL)
+	JR	NZ,Next_0589
+	LD	C,_DSKCHK
+	XOR	A
+	CALL	BDOS
+	LD	HL,Adres_ON+1
+	INC	B
+	DEC	B
+	JR	Z,Next_0588
+	LD	HL,Adres_OFF+1
+Next_0588:	LD	A,#47
+	CALL	PrintCode
+	EX	DE,HL
+	JP	LPrintString
+
+Next_0589:	EX	DE,HL
+	DEC	DE
+	LD	HL,Adres_ON
+	LD	B,(HL)
+	LD	C,#00
+	CALL	Compare_DEHL
+	JR	NC,Next_0590
+	INC	B
+	DEC	C
+	INC	HL
+	CALL	C,Compare_DEHL
+	LD	A,.IPARM
+	RET	C
+Next_0590:	INC	DE
+	DJNZ	Next_0590
+	INC	DE
+	EX	DE,HL
+	LD	A,(HL)
+	CALL	SkipChar
+	LD	A,.IPARM
+	RET	NZ
+	CALL	FndFirstChr
+	LD	A,.INP
+	RET	NZ
+	LD	B,C
+	LD	A,#01
+	LD	C,_DSKCHK
+	JP	BDOS
+
+Cmd_Cdd:	SCF
+Cmd_Chdir:	EX	AF,AF'
+	CALL	CheckPath
+	CALL	Z,LastItem
+	RET	NZ
+	LD	(HL),A
+	PUSH	DE
+	PUSH	BC
+	LD	B,C
+	LD	C,_GETCD
+	LD	DE,BufEnvData
+	CALL	BDOS
+	POP	BC
+	POP	DE
+	RET	NZ
+	EX	DE,HL
+	LD	A,(HL)
+	CP	"-"
+	JR	NZ,Next_0591
+	INC	HL
+	CALL	FndFirstChr
+	LD	A,.IPARM
+	RET	NZ
+	SET	0,B
+	LD	HL,DirBuffer
+Next_0591:	LD	A,C
+	BIT	0,B
+	LD	DE,BufEnvData
+	JR	Z,PrintDir
+	PUSH	HL
+	LD	A,(LogiDrive)
+	LD	B,A
+	LD	DE,BufEnvData
+	LD	C,_GETCD
+	CALL	BDOS
+	POP	HL
+	LD	DE,BufExtra
+	CALL	NCopy
+	LD	DE,BufExtra
+	PUSH	DE
+	LD	BC,_PARSE
+	CALL	BDOS
+	LD	A,C
+	LD	(LogiDrive),A
+	POP	DE
+	LD	C,_CHDIR
+	CALL	BDOS
+	JR	Z,Next_0593
+	CP	.NODIR
+	LD	HL,Env_Cdpath
+	LD	DE,BufExtra2
+	CALL	Z,GetEnvData3
+	RET	NZ
+	EX	DE,HL
+Next_0592:	CALL	FndFirstChr
+	LD	A,.NODIR
+	RET	Z
+	LD	BC,BufEnvName
+	CALL	MakePath
+	RET	C
+	PUSH	HL
+	CALL	FindDir
+	POP	HL
+	JR	NZ,Next_0592
+	EX	AF,AF'
+	SCF
+	EX	AF,AF'
+Next_0593:	LD	BC,#40
+	LD	DE,DirBuffer+3
+	LD	HL,BufEnvData
+	LDIR
+	LD	C,_CURDRV
+	CALL	BDOS
+	ADD	A,"A"
+	LD	(DirBuffer),A
+	EX	AF,AF'
+	LD	A,0
+	JR	NC,Next_0595
+	LD	A,(LogiDrive)
+	DEC	A
+	LD	E,A
+Next_0594:	LD	C,_SELDSK
+	CALL	BDOS
+	LD	C,_ERROR
+	CALL	BDOS
+	LD	A,B
+Next_0595:	OR	A
+	RET
+
+PrintDir:	ADD	A,"@"
+	CALL	PrintChar
+	LD	A,":"
+	CALL	PrintChar
+	LD	A,"\"
+	CALL	PrintChar
+	JP	LPrintString
+
+FindDir:	LD	DE,BufEnvName
+	LD	BC,_PARSE
+	CALL	BDOS
+	SCF
+	RET	NZ
+	LD	A,C
+	LD	(LogiDrive),A
+	LD	HL,BufExtra
+	LD	A,B
+	AND	#18
+	JR	Z,Next_0596
+	LD	A,"\"
+	LD	(DE),A
+	INC	DE
+Next_0596:	CALL	NCopy
+	LD	DE,BufEnvName
+	LD	C,_CHDIR
+	JP	BDOS
+
+CheckPath:	LD	B,#00
+CheckVolume:	LD	C,_PARSE
+	EX	DE,HL
+	PUSH	DE
+	CALL	BDOS
+	EX	DE,HL
+	POP	DE
+	RET	NZ
+	LD	A,(HL)
+	CALL	SkipChar
+	LD	A,.IPATH
+	RET	NZ
+	LD	A,B
+	AND	#18
+	JR	NZ,Next_0203
+	SET	5,B
+Next_0203:	XOR	A
+	RET
+
+Cmd_Pushd:	AND	(HL)
+	JR	Z,Next_0598
+	CALL	Cmd_Cdd
+	RET	NZ
+	LD	HL,DirBuffer
+Next_0597:	LD	DE,BufEnvName
+	CALL	NCopy
+	DEC	DE
+	LD	A,";"
+	LD	(DE),A
+	INC	DE
+	PUSH	DE
+	LD	HL,Env_Pushd
+	CALL	GetEnvData2
+	EX	DE,HL
+	POP	DE
+	CALL	NCopy
+	LD	HL,Env_Pushd
+	LD	DE,BufEnvName
+	LD	C,_SENV
+	JP	BDOS
+
+Next_0598:	LD	DE,BufExtra+3
+	LD	A,(LogiDrive)
+	LD	B,A
+	LD	C,_GETCD
+	CALL	BDOS
+	RET	NZ
+	LD	A,(LogiDrive)
+	ADD	A,"@"
+	LD	HL,BufExtra+2
+	LD	(HL),"\"
+	DEC	HL
+	LD	(HL),":"
+	DEC	HL
+	LD	(HL),A
+	JR	Next_0597
+
+Cmd_Popd:	AND	(HL)
+	JR	Z,Next_0599
+	LD	A,(HL)
+	CP	"/"
+	LD	A,.IPARM
+	RET	NZ
+	INC	HL
+	LD	A,(HL)
+	CALL	MakeCapital
+	CP	"N"
+	LD	A,.IOPT
+	RET	NZ
+	INC	HL
+	LD	A,(HL)
+	CALL	SkipChar
+	LD	A,.IOPT
+	RET	NZ
+	CALL	FndFirstChr
+	LD	A,.INP
+	RET	NZ
+	CALL	GetPopd
+	XOR	A
+	RET
+
+Next_0599:	CALL	GetPopd
+	RET	Z
+	PUSH	BC
+	LD	C,_CHDIR
+	CALL	BDOS
+	POP	DE
+	RET	NZ
+	JP	Next_0594
+
+GetPopd:	LD	HL,Env_Pushd
+	CALL	GetEnvData2
+	LD	A,(DE)
+	OR	A
+	RET	Z
+	EX	DE,HL
+	LD	DE,BufEnvName
+Next_0600:	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0602
+	CP	";"
+	JR	Z,Next_0601
+	LDI
+	JR	Next_0600
+
+Next_0601:	INC	HL
+Next_0602:	XOR	A
+	LD	(DE),A
+	EX	DE,HL
+	LD	HL,Env_Pushd
+	LD	C,_SENV
+	CALL	BDOS
+	RET	NZ
+	LD	DE,BufEnvName+1
+	LD	A,(DE)
+	DEC	DE
+	CP	":"
+	JR	NZ,Next_0603
+	LD	A,(DE)
+	CALL	MakeCapital
+	SUB	"A"
+	LD	C,A
+	INC	A
+	RET
+
+Next_0603:	LD	A,(LogiDrive)
+	DEC	A
+	LD	C,A
+	INC	A
+	RET
+
+Cmd_Free:	AND	(HL)
+	JR	NZ,Next_0604
+	LD	A,(LogiDrive)
+	JR	Next_0605
+Next_0604:	CALL	GetDriveLet
+	CALL	Z,LastItem
+	RET	NZ
+	LD	A,D
+Next_0605:	ADD	A,"@"
+	LD	HL,BufEnvName
+	LD	E,L
+	LD	D,H
+	LD	(HL),A
+	INC	HL
+	LD	(HL),":"
+	INC	HL
+	LD	(HL),0
+	CALL	FindVolume
+	RET	NZ
+	LD	A,(BufEnvName)
+	SUB	"@"
+	LD	E,A
+	LD	C,_ALLOC
+	CALL	BDOS
+	LD	B,A
+	PUSH	DE
+	PUSH	HL
+	EX	DE,HL
+	PUSH	BC
+	CALL	Compute
+	LD	A,#3E
+	CALL	LPrintCode
+	POP	BC
+	POP	DE
+	POP	HL
+	PUSH	DE
+	SBC	HL,DE
+	PUSH	BC
+	CALL	Compute
+	LD	A,#3F
+	CALL	LPrintCode
+	POP	BC
+	POP	HL
+	CALL	Compute
+	LD	A,#40
+	JP	LPrintCode
+
+Compute:	DEFB	#3E
+Next_0606:	ADD	HL,HL
+	SRL	B
+	JR	NZ,Next_0606
+	LD	E,#00
+	LD	D,L
+	LD	L,H
+	LD	H,E
+	SLA	D
+	ADC	HL,HL
+	LD	(Value_L),DE
+	LD	(Value_H),HL
+	LD	A," "
+	CALL	PrintLen2
+	RET
+
+Cmd_Dir:	PUSH	HL
+	CALL	GetTimeForm
+	CALL	GetDateForm
+	POP	HL
+	LD	DE,BufEnvData
+	PUSH	DE
+	CALL	NCopy
+	POP	HL
+	LD	DE,ListOption1
+	CALL	CountItem
+	CALL	Z,LastByte
+	RET	NZ
+	LD	A,(LogiDrive2)
+	ADD	A,"@"
+	LD	HL,BufEnvName
+	LD	E,L
+	LD	D,H
+	LD	(HL),A
+	INC	HL
+	LD	(HL),":"
+	INC	HL
+	LD	(HL),#00
+	CALL	FindVolume
+	RET	NZ
+	LD	A,(OptionFlag1)
+	BIT	2,A
+	JR	NZ,Next_0205
+	LD	HL,OptionFlag2
+	SET	4,(HL)
+Next_0205:	SET	1,(IY+#08)
+	CALL	FirstFile
+	JR	Z,Next_0206
+	CP	.NOFIL
+	RET	NZ
+	XOR	A
+	SCF
+Next_0206:	EX	AF,AF'
+	LD	C,_WPATH
+	LD	DE,BufEnvName+1
+	CALL	BDOS
+	RET	NZ
+	LD	(HL),A
+	DEC	HL
+	LD	(HL),A
+	PUSH	DE
+	LD	A,#02
+	CALL	PrintCode
+	POP	DE
+	LD	A,(LogiDrive2)
+	CALL	PrintDir
+	CALL	LPrint
+	LD	HL,#00
+	LD	(Value_L),HL
+	LD	(Value_H),HL
+	LD	(CountFile),HL
+	LD	BC,#014B
+	LD	A,#04
+	CALL	BDOS
+	JR	NZ,Next_0207
+	OR	E
+	JR	NZ,Next_0208
+Next_0207:	LD	A,#50
+Next_0208:	LD	(ColumnMax2),A
+	CP	#13
+	JR	NC,Next_0209
+	LD	A,#13
+Next_0209:	ADD	A,#03
+	RRCA
+	RRCA
+	RRCA
+	RRCA
+	AND	#0F
+	LD	B,A
+	LD	C,#00
+	EXX
+	EX	AF,AF'
+Next_0210:	JP	C,Next_0216
+	LD	HL,(CountFile)
+	INC	HL
+	LD	(CountFile),HL
+	CALL	PrintFile
+	LD	HL,FIB1+#15
+	LD	DE,Value_L
+	CALL	RestSubt
+	BIT	0,(IY+#05)
+	JP	NZ,Next_0213
+	LD	A,#0F
+	CALL	MakeMaxLen
+	LD	A,(ColumnMax2)
+	CP	D
+	JP	C,Next_0212
+	LD	C,(IX+#0E)
+	LD	A,"s"
+	BIT	2,C
+	CALL	PrintDigit
+	LD	A,"h"
+	BIT	1,C
+	CALL	PrintDigit
+	LD	A,"r"
+	BIT	0,C
+	CALL	PrintDigit
+	LD	A,#17
+	CALL	MakeMaxLen
+	LD	A,(ColumnMax2)
+	CP	D
+	JR	C,Next_0212
+	BIT	4,C
+	JR	NZ,Next_0211
+	LD	A," "
+	LD	DE,FIB1+#15
+	LD	IX,BufExtra
+	PUSH	IX
+	CALL	Convert32
+	POP	DE
+	INC	DE
+	CALL	PrintString
+	XOR	A
+Next_0211:	LD	A,#03
+	CALL	NZ,PrintCode
+	LD	A,#20
+	CALL	MakeMaxLen
+	LD	A,(ColumnMax2)
+	CP	D
+	JR	C,Next_0212
+	LD	HL,FIB1+#12
+	LD	A,(HL)
+	DEC	HL
+	OR	(HL)
+	LD	A,#1F
+	CALL	Z,PrintCode
+	JR	Z,Next_0212
+	LD	C,#00
+	LD	IX,BufExtra+2
+	PUSH	IX
+	CALL	PrintDate
+	POP	DE
+	CALL	PrintString
+	LD	A,#27
+	CALL	MakeMaxLen
+	LD	A,(ColumnMax2)
+	CP	D
+	JR	C,Next_0212
+	LD	HL,FIB1+#0F
+	LD	A,(HL)
+	INC	HL
+	OR	(HL)
+	LD	A,#25
+	CALL	Z,PrintCode
+	JR	Z,Next_0212
+	LD	IX,BufExtra+2
+	PUSH	IX
+	CALL	PrintTime
+	POP	DE
+	PUSH	AF
+	CALL	PrintString
+	POP	AF
+	CALL	PrintChar
+Next_0212:	BIT	3,(IY+#05)
+	JR	Z,Next_0607
+	EXX
+	LD	A,C
+	OR	A
+	JR	Z,Next_0608
+	LD	C,#00
+	EXX
+Next_0607:	CALL	LPrint
+	JR	Next_0215
+
+Next_0608:	LD	C,#28
+	EXX
+	LD	A," "
+	CALL	PrintChar
+	LD	A," "
+	CALL	PrintChar
+	JR	Next_0215
+
+Next_0213:	EXX
+	INC	C
+	LD	A,C
+	CP	B
+	JR	C,Next_0214
+	CALL	LPrint
+	XOR	A
+	LD	C,A
+Next_0214:	EXX
+	LD	B,#04
+	CALL	C,Next_0228
+Next_0215:	CALL	NextFile
+	JP	Next_0210
+
+Next_0216:	RET	NZ
+	EXX
+	OR	C
+	CALL	NZ,LPrint
+	LD	A,#04
+	CALL	PrintCode
+	CALL	PrintLength
+	LD	A,#05
+	CALL	PrintCode
+	LD	HL,(CountFile)
+	PUSH	HL
+	LD	IX,BufExtra
+	PUSH	IX
+	CALL	Convert16
+	POP	DE
+	CALL	PrintString
+	POP	HL
+	DEC	HL
+	LD	A,H
+	OR	L
+	LD	A,#09
+	JR	Z,Next_0217
+	LD	A,#0A
+Next_0217:	CALL	PrintCode
+	LD	A,(LogiDrive2)
+	LD	E,A
+	LD	C,_ALLOC
+	CALL	BDOS
+	LD	B,A
+	DEFB	#3E
+Next_0218:	ADD	HL,HL
+	SRL	B
+	JR	NZ,Next_0218
+	LD	E,#00
+	LD	D,L
+	LD	L,H
+	LD	H,E
+	SLA	D
+	ADC	HL,HL
+	LD	(Value_L),DE
+	LD	(Value_H),HL
+	CALL	PrintLength
+	LD	A,#06
+	CALL	PrintCode
+	JP	LPrint
+
+PrintFile:	LD	HL,FIB1+1
+	LD	B,#08
+	LD	A,(HL)
+	CP	"."
+	JR	NZ,Next_0220
+	INC	HL
+	CP	(HL)
+	JR	NZ,Next_0219
+	DEC	B
+	CALL	PrintChar
+	LD	A,(HL)
+	INC	HL
+Next_0219:	CALL	PrintChar
+	CALL	Next_0228
+	JR	Next_0223
+
+Next_0220:	CALL	Next_0225
+	LD	A,"."
+	LD	C," "
+	BIT	0,(IY+#05)
+	JR	Z,Next_0221
+	CP	(HL)
+	JR	NZ,Next_0222
+	LD	C,A
+Next_0221:	CP	(HL)
+	JR	NZ,Next_0222
+	INC	HL
+Next_0222:	LD	A,C
+	CALL	PrintChar
+Next_0223:	LD	B,#03
+Next_0225:	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0228
+	INC	HL
+	PUSH	AF
+	BIT	0,(IY+#05)
+	JR	Z,Next_0227
+	LD	A,(FIB1+14)
+	BIT	4,A
+	JR	Z,Next_0227
+	POP	AF
+	CALL	MakeLower
+	PUSH	AF
+Next_0227:	POP	AF
+	CP	"."
+	JR	NZ,Next_0226
+	DEC	HL
+Next_0228:	CALL	PrintSpace
+	DJNZ	Next_0228
+	RET
+
+Next_0226:	CALL	PrintChar
+	DJNZ	Next_0225
+	RET
+
+MakeMaxLen:	EXX
+	BIT	3,(IY+#05)
+	JR	Z,Next_0609
+	ADD	A,C
+Next_0609:	EXX
+	LD	D,A
+	RET
+
+ListOption1:	DEFB	"W"
+	DEFB	#01
+	DEFB	"2"
+	DEFB	#08
+ListOption3:	DEFB	"S"
+	DEFB	#04
+	DEFB	"P"
+	DEFB	#00
+	DEFB	"H"
+	DEFB	#02
+	DEFB	0
+
+Cmd_Mkdir:	AND	(HL)
+	LD	A,.NOPAR
+	RET	Z
+	CALL	CheckPath
+	CALL	Z,LastItem
+	RET	NZ
+	LD	(HL),A
+	LD	A,B
+	AND	#18
+	LD	A,.IPATH
+	RET	Z
+	BIT	5,B
+	RET	NZ
+	LD	BC,#1042
+	LD	IX,FIB1
+	JP	BDOS
+
+Cmd_Vol:	LD	B,#08
+	CALL	CheckVolume
+	CALL	Z,LastItem
+	RET	NZ
+	LD	(HL),A
+	LD	IX,FIB1
+	LD	C,_FNEW
+	BIT	0,B
+	LD	B,#08
+	JP	NZ,BDOS
+FindVolume:	LD	IX,FIB1
+	LD	BC,#0840
+	CALL	BDOS
+	JR	Z,Next_0229
+	CP	.NOFIL
+	RET	NZ
+Next_0229:	PUSH	AF
+	LD	A,#10
+	CALL	PrintCode
+	LD	A,(FIB1+#19)
+	ADD	A,"@"
+	CALL	PrintChar
+	LD	A,#11
+	CALL	PrintCode
+	POP	AF
+	OR	A
+	LD	A,#12
+	JP	NZ,LPrintCode
+	LD	A,#13
+	CALL	PrintCode
+	LD	DE,FIB1+1
+	JP	LPrintString
+
+Cmd_Atdir:	SCF
+Cmd_Attrib:	EX	AF,AF'
+	LD	DE,#00
+	LD	(Attribute1),DE
+	CALL	FindAttr
+	RET	NZ
+	EXX
+	LD	HL,Attribute1
+	LD	A,(HL)
+	LD	C,A
+	INC	HL
+	AND	(HL)
+	LD	A,.IATTR
+	RET	NZ
+	LD	A,C
+	OR	(HL)
+	LD	A,.NOPAR
+	RET	Z
+	LD	A,(HL)
+	CPL
+	LD	(HL),A
+	EXX
+	EX	AF,AF'
+	LD	DE,ListOption3
+	CALL	CountItem
+	CALL	Z,NoParameter
+	CALL	Z,LastByte
+	RET	NZ
+	CALL	FirstFile
+Next_0230:	RET	C
+	LD	A,(FIB1+#0E)
+	LD	HL,Attribute1
+	OR	(HL)
+	INC	HL
+	AND	(HL)
+	LD	L,A
+	LD	DE,FIB1
+	LD	C,_ATTR
+	LD	A,#01
+	CALL	BDOS
+	CALL	NZ,FileError
+	CALL	NextFile
+	JR	Next_0230
+
+Next_0231:	CALL	FndFirstChr
+FindAttr:	LD	BC,Attribute1
+	LD	A,(HL)
+	CP	"+"
+	JR	Z,Next_0232
+	INC	BC
+	CP	"-"
+	JR	NZ,Next_0234
+Next_0232:	INC	HL
+	LD	A,(HL)
+	INC	HL
+	CALL	MakeCapital
+	CP	"R"
+	JR	NZ,Next_0610
+	EX	AF,AF'
+	PUSH	AF
+	EX	AF,AF'
+	POP	AF
+	SBC	A,A
+	AND	.IATTR
+	RET	NZ
+	LD	A,(BC)
+	SET	0,A
+	LD	(BC),A
+	JR	Next_0231
+
+Next_0610:	CP	"S"
+	JR	NZ,Next_0611
+	EX	AF,AF'
+	PUSH	AF
+	EX	AF,AF'
+	POP	AF
+	SBC	A,A
+	AND	.IATTR
+	RET	NZ
+	LD	A,(BC)
+	SET	2,A
+	LD	(BC),A
+	JR	Next_0231
+
+Next_0611:	CP	"A"
+	JR	NZ,Next_0233
+	EX	AF,AF'
+	PUSH	AF
+	EX	AF,AF'
+	POP	AF
+	SBC	A,A
+	AND	.IATTR
+	RET	NZ
+	LD	A,(BC)
+	SET	5,A
+	LD	(BC),A
+	JR	Next_0231
+
+Next_0233:	CP	"H"
+	LD	A,.IATTR
+	RET	NZ
+	LD	A,(BC)
+	SET	1,A
+	LD	(BC),A
+	JR	Next_0231
+
+Next_0234:	XOR	A
+	RET
+
+Cmd_Rmdir:	SCF
+Cmd_Delete:	LD	DE,ListOption3
+	CALL	CountItem
+	CALL	Z,NoParameter
+	CALL	Z,LastByte
+	CALL	Z,FirstFile
+	LD	DE,BufEnvData
+	LD	C,_WPATH
+	CALL	Z,BDOS
+	RET	NZ
+	BIT	4,(IY+#08)
+	JR	NZ,Next_0235
+	CALL	CheckAmbi
+	LD	A,#14
+	CALL	Z,Find_YyNn
+	LD	A,#00
+	RET	Z
+Next_0235:	LD	DE,FIB1
+	LD	C,_DELETE
+	CALL	BDOS
+	CALL	NZ,FileError
+	CALL	NextFile
+	JR	NC,Next_0235
+	RET
+
+CheckAmbi:	LD	B,#08
+	CALL	Next_0236
+	RET	NZ
+	LD	A,(HL)
+	CP	#2E
+	RET	NZ
+	INC	HL
+	LD	B,#03
+Next_0236:	LD	A,(HL)
+	CP	#3F
+	RET	NZ
+	INC	HL
+	DJNZ	Next_0236
+	RET
+
+Find_YyNn:	LD	C,A
+Next_0237:	CALL	PrintCode
+	PUSH	BC
+	CALL	WaitKey
+	POP	BC
+	LD	A,#01
+	CALL	FindChar
+	RET	C
+	LD	A,#00
+	CALL	FindChar
+	SBC	A,A
+	RET	C
+	LD	A,C
+	JR	Next_0237
+
+FindChar:	CALL	GetAdres
+Next_0238:	LD	A,(DE)
+	OR	A
+	RET	Z
+	INC	DE
+	CP	L
+	JR	NZ,Next_0238
+	SCF
+	RET
+
+FileError:	LD	C,A
+	LD	DE,FIB1+1
+FileError2:	CALL	PrintString
+	LD	A,#15
+	CALL	PrintCode
+	LD	B,C
+	LD	C,#66
+	LD	DE,BufEnvData
+	CALL	BDOS
+	CALL	PrintString
+	JP	LPrint
+
+Cmd_Mvdir:	SCF
+Cmd_Move:	INC	A
+	DEFB	#06
+Cmd_Rndir:	SCF
+Cmd_Rename:	PUSH	AF
+	LD	DE,ListOption3
+	CALL	CountItem
+	CALL	Z,NoParameter
+	EX	AF,AF'
+	POP	AF
+	EX	AF,AF'
+	RET	NZ
+	EX	AF,AF'
+	LD	A,_MOVE
+	JR	Z,Next_0239
+	LD	A,_RENAME
+	EX	AF,AF'
+	OR	(HL)
+	LD	A,.NOPAR
+	RET	Z
+	EX	AF,AF'
+Next_0239:	EX	AF,AF'
+	CALL	CheckPath
+	CALL	Z,LastItem
+	RET	NZ
+	LD	(HL),A
+	PUSH	DE
+	CALL	FirstFile
+	POP	HL
+Next_0240:	RET	C
+	PUSH	HL
+	LD	DE,FIB1
+	EX	AF,AF'
+	LD	C,A
+	EX	AF,AF'
+	CALL	BDOS
+	CALL	NZ,FileError
+	CALL	NextFile
+	POP	HL
+	JR	Next_0240
+
+Cmd_Copy:	LD	DE,ListOption2
+	CALL	CountItem
+	CALL	Z,NoParameter
+	CALL	Z,ParseDestin
+	RET	NZ
+	LD	(IY+#18),B
+	EX	DE,HL
+	LD	(DestinAdres),HL
+	LD	HL,OptionFlag2
+	BIT	5,(HL)
+	JR	NZ,Next_0241
+	SET	6,(HL)
+Next_0241:	SET	7,(HL)
+	LD	A,(HL)
+	LD	HL,OptionFlag1
+	LD	B,(HL)
+	LD	(HL),A
+	LD	L,E
+	LD	H,D
+	CALL	FndFirstChr
+	CALL	ParseOption
+	RET	NZ
+	CALL	FndFirstChr
+	LD	A,.INP
+	RET	NZ
+	LD	HL,OptionFlag1
+	LD	A,(HL)
+	LD	(OptionFlag4),A
+	AND	#DF
+	OR	B
+	LD	(HL),A
+	XOR	A
+	LD	(DE),A
+	LD	(FIB3+#0E),A
+	LD	(FIB2),A
+	LD	(IY+#15),#FF
+	LD	L,A
+	LD	H,A
+	LD	(CountFile),HL
+	LD	(Unknown2),HL
+	CALL	FirstFile
+	RET	C
+	RES	0,(IY+#06)
+	CALL	OpenNul
+	RET	NZ
+	LD	C,_GETVFY
+	CALL	BDOS
+	LD	(IY+#16),B
+	LD	DE,AbortExit6
+	PUSH	DE
+	LD	C,_DEFAB
+	CALL	BDOS
+	RET	NZ
+	LD	HL,OptionFlag3
+	LD	A,(HL)
+	XOR	#01
+	LD	(HL),A
+	BIT	3,(HL)
+	JR	Z,Next_0242
+	LD	E,#FF
+	LD	C,_VERIFY
+	CALL	BDOS
+Next_0242:	LD	DE,BufEnvData
+	EXX
+Next_0243:	LD	DE,FIB1
+	LD	C,_OPEN
+	LD	A,#01
+	CALL	BDOS
+	JR	Z,Next_0244
+	CALL	CopyFile
+	EXX
+	LD	B,(IY+#17)
+	LD	C,_JOIN
+	CALL	Z,BDOS
+	CALL	Z,OpenNul
+	RET	NZ
+	LD	DE,FIB1
+	LD	C,_OPEN
+	LD	A,#01
+	CALL	BDOS
+	RET	NZ
+Next_0244:	LD	A,B
+	LD	(TypeHandle),A
+	EXX
+	LD	HL,(ExitAdres)
+	OR	A
+	SBC	HL,DE
+	LD	BC,#0800
+	SBC	HL,BC
+	JR	NC,Next_0245
+	CALL	CopyFile
+	RET	NZ
+Next_0245:	LD	HL,(Unknown2)
+	LD	B,(IY+#14)
+Next_0246:	LD	(Unknown2),DE
+	LD	A,H
+	OR	L
+	JR	Z,Next_0247
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+Next_0247:	EX	DE,HL
+	LD	(HL),#00
+	INC	HL
+	LD	(HL),#00
+	INC	HL
+	LD	DE,FIB1+1
+Next_0248:	LD	A,(DE)
+	LD	(HL),A
+	INC	HL
+	INC	DE
+	OR	A
+	JR	NZ,Next_0248
+	LD	(HL),B
+	INC	HL
+	EX	DE,HL
+	LD	HL,FIB1+#11
+	LDI
+	LDI
+	LD	HL,FIB1+#0F
+	LDI
+	LDI
+	LD	HL,#0203
+	ADD	HL,DE
+	LD	L,#00
+	RES	0,H
+	EX	DE,HL
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	INC	HL
+	PUSH	HL
+	CALL	TypeFile
+	POP	HL
+	RET	NZ
+	CALL	C,SetEOF
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	JR	C,Next_0249
+	CALL	CopyFile
+	RET	NZ
+	OR	A
+	JR	NZ,Next_0249
+	LD	B,#FF
+	JR	Next_0246
+
+Next_0249:	EXX
+	CALL	NextFile
+	JP	NC,Next_0243
+	CALL	Z,CopyFile
+	RET	NZ
+	BIT	5,(IY+#0A)
+	RET	Z
+	LD	A,#2E
+	CALL	PrintCode
+	LD	HL,(CountFile)
+	PUSH	HL
+	LD	IX,BufExtra
+	PUSH	IX
+	CALL	Convert16
+	POP	DE
+	CALL	PrintString
+	POP	HL
+	DEC	HL
+	LD	A,H
+	OR	L
+	LD	A,#2F
+	JR	Z,Next_0250
+	LD	A,#30
+Next_0250:	JP	LPrintCode
+
+CopyFile:	LD	HL,(Unknown2)
+	LD	A,H
+	OR	L
+	JP	Z,Next_0261
+	LD	HL,BufEnvData
+Next_0251:	LD	C,(HL)
+	INC	HL
+	LD	B,(HL)
+	INC	HL
+	LD	E,L
+	LD	D,H
+Next_0252:	LD	A,(HL)
+	INC	HL
+	OR	A
+	JR	NZ,Next_0252
+	LD	A,(HL)
+	INC	A
+	JP	Z,Next_0259
+	EXX
+	LD	B,(IY+#15)
+	LD	(IY+#15),#FF
+	LD	C,_CLOSE
+	CALL	BDOS
+	LD	DE,(DestinAdres)
+	BIT	5,(IY+#18)
+	JR	NZ,Next_0255
+	LD	HL,(CountFile)
+	LD	A,H
+	OR	L
+	JR	NZ,Next_0253
+	CALL	CreateNew
+	CP	.DIRX
+	JR	NZ,Next_0256
+	LD	HL,FIB2
+	LD	DE,FIB3
+	LD	BC,#40
+	LDIR
+	JR	Next_0254
+
+Next_0253:	LD	A,(FIB2+#0E)
+	AND	#80
+	JR	NZ,Next_0255
+	LD	A,(FIB3+#0E)
+	AND	#10
+	LD	A,.OVDEST
+	JR	Z,Next_0257
+Next_0254:	LD	DE,FIB3
+Next_0255:	CALL	CreateNew
+Next_0256:	OR	A
+	JR	Z,Next_0258
+	PUSH	AF
+	CALL	NZ,OpenNul2
+	POP	AF
+	CP	.FOPEN
+	JR	NZ,Next_0257
+	EXX
+	LD	A,(HL)
+	EXX
+	LD	B,A
+	LD	DE,FIB2
+	LD	C,_HTEST
+	CALL	BDOS
+	JR	NZ,Next_0257
+	OR	B
+	LD	A,.COPY
+	JR	NZ,Next_0257
+	LD	A,.BADEST
+Next_0257:	EXX
+	PUSH	BC
+	LD	C,A
+	XOR	A
+	LD	(FIB2),A
+	PUSH	DE
+	LD	DE,FIB2+1
+	CALL	FileError2
+	POP	DE
+	POP	HL
+	INC	A
+	JR	Next_0260
+
+Next_0258:	EXX
+	PUSH	DE
+	EXX
+	POP	DE
+	BIT	5,(IY+#0A)
+	CALL	NZ,LPrintString
+	LD	HL,(CountFile)
+	INC	HL
+	LD	(CountFile),HL
+	LD	DE,FIB2
+	LD	A,#02
+	LD	C,_OPEN
+	CALL	BDOS
+	RET	NZ
+	LD	(IY+#15),B
+	EXX
+Next_0259:	PUSH	BC
+	INC	HL
+	LD	DE,FileDate
+	LDI
+	LDI
+	LD	DE,FileTime
+	LDI
+	LDI
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	INC	HL
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	EX	DE,HL
+	CALL	WriteFile
+	POP	HL
+	RET	NZ
+Next_0260:	LD	C,A
+	LD	A,H
+	OR	L
+	JP	NZ,Next_0251
+	LD	(Unknown2),HL
+	LD	A,C
+Next_0261:	LD	DE,BufEnvData
+	RET
+
+OpenNul:	LD	C,_FORK
+	CALL	BDOS
+	RET	NZ
+	LD	A,B
+	LD	(ID_Copy),A
+OpenNul2:	LD	DE,DeviceNul
+	LD	C,_OPEN
+	LD	A,#03
+	CALL	BDOS
+	RET	NZ
+	LD	(IY+#15),B
+	RET
+
+SetEOF:	BIT	5,(IY+#06)
+	RET	Z
+	LD	A,#1A
+	LD	(DE),A
+	INC	DE
+	RET
+
+CreateNew:	EXX
+	PUSH	DE
+	EXX
+	POP	BC
+	LD	HL,FIB2+1
+Next_0262:	LD	A,(BC)
+	LD	(HL),A
+	INC	HL
+	INC	BC
+	OR	A
+	JR	NZ,Next_0262
+	LD	HL,DeviceNul+3
+	LD	IX,FIB2
+	LD	BC,_FNEW
+	JP	BDOS
+
+DeviceNul:	DEFB	"NUL",0
+
+Cmd_Help:	CALL	FindScrSize
+	LD	A,(HL)
+	OR	A
+	LD	A,#31
+	JP	Z,LPrintCode
+	PUSH	HL
+	EXX
+	POP	DE
+	LD	BC,_PARSE
+	CALL	BDOS
+	RET	NZ
+	EX	DE,HL
+	LD	A,(HL)
+	CALL	SkipChar
+	LD	A,.NOHELP
+	CALL	Z,LastItem
+	RET	NZ
+	LD	(HL),A
+	LD	HL,Env_Help
+	CALL	GetEnvData2
+	RET	NZ
+	LD	A,(DE)
+	OR	A
+	JR	NZ,Next_0266
+	LD	HL,Data_Help
+	PUSH	DE
+	CALL	NCopy
+	POP	DE
+Next_0266:	LD	B,#00
+	LD	C,_PARSE
+	PUSH	DE
+	CALL	BDOS
+	EX	DE,HL
+	POP	DE
+	RET	NZ
+	LD	A,B
+	AND	#18
+	JR	Z,Next_0267
+	LD	(HL),"\"
+	INC	HL
+Next_0267:	EXX
+	PUSH	HL
+	EXX
+	POP	BC
+Next_0268:	LD	A,(BC)
+	LD	(HL),A
+	INC	BC
+	INC	HL
+	OR	A
+	JR	NZ,Next_0268
+	DEC	HL
+	LD	(HL),"."
+	INC	HL
+	LD	(HL),"H"
+	INC	HL
+	LD	(HL),"L"
+	INC	HL
+	LD	(HL),"P"
+	INC	HL
+	LD	(HL),A
+	EX	DE,HL
+	LD	DE,Null2
+	CALL	Type2
+	OR	A
+	RET	Z
+	CP	.IDRV
+	JR	Z,Next_0269
+	CP	.IPATH
+	JR	Z,Next_0269
+	CP	.NODIR
+	JR	Z,Next_0269
+	CP	.NOFIL
+	RET	NZ
+Next_0269:	LD	A,.NOHELP
+	RET
+
+Cmd_Type:	LD	DE,ListOption5
+Type2:	PUSH	AF
+	CALL	CountItem
+	CALL	Z,NoParameter
+	CALL	Z,LastByte
+	POP	BC
+	RET	NZ
+	LD	HL,OptionFlag2
+	OR	B
+	JR	NZ,Next_0270
+	BIT	5,(IY+#0A)
+	JR	NZ,Next_0269
+Next_0270:	BIT	6,(HL)
+	JR	NZ,Next_0271
+	SET	5,(HL)
+Next_0271:	SET	7,(HL)
+	CALL	FirstFile
+	RET	C
+	SET	0,(IY+#06)
+Next_0272:	BIT	5,(IY+#0A)
+	JR	Z,Next_0275
+	LD	DE,FIB1+1
+	PUSH	DE
+	CALL	LPrintString
+	POP	DE
+Next_0273:	LD	A,(DE)
+	OR	A
+	JR	Z,Next_0274
+	INC	DE
+	LD	A,"-"
+	CALL	PrintChar
+	JR	Next_0273
+
+Next_0274:	CALL	LPrint
+Next_0275:	LD	DE,FIB1
+	LD	BC,_OPEN
+	LD	A,#01
+	CALL	BDOS
+	RET	NZ
+	LD	(IY+#14),B
+Next_0276:	LD	DE,BufEnvData+#EB
+	CALL	TypeFile
+	RET	NZ
+	JR	NC,Next_0276
+	CALL	LPrint
+	LD	C,_CLOSE
+	LD	B,(IY+#14)
+	CALL	BDOS
+	RET	NZ
+	CALL	NextFile
+	JR	NC,Next_0272
+	RET
+
+Cmd_Concat:	LD	DE,ListOption4
+	CALL	CountItem
+	CALL	Z,NoParameter
+	CALL	Z,ParseDestin
+	RET	NZ
+	LD	A,B
+	AND	#05
+	LD	A,.NOPAR
+	RET	Z
+	EX	DE,HL
+	LD	(DestinAdres),HL
+	LD	HL,OptionFlag2
+	BIT	6,(HL)
+	JR	NZ,Next_0277
+	SET	5,(HL)
+Next_0277:	SET	7,(HL)
+	LD	A,(HL)
+	LD	HL,OptionFlag1
+	LD	B,(HL)
+	LD	(HL),A
+	LD	L,E
+	LD	H,D
+	CALL	FndFirstChr
+	CALL	ParseOption
+	RET	NZ
+	CALL	FndFirstChr
+	LD	A,.INP
+	RET	NZ
+	LD	HL,OptionFlag1
+	LD	A,(HL)
+	LD	(OptionFlag4),A
+	AND	#BF
+	OR	B
+	LD	(HL),A
+	XOR	A
+	LD	(DE),A
+	LD	(FIB2),A
+	LD	(IY+#15),#FF
+	CALL	FirstFile
+	RET	C
+	LD	C,_GETVFY
+	CALL	BDOS
+	LD	(IY+#16),B
+	LD	DE,(DestinAdres)
+	LD	BC,_FNEW
+	LD	IX,FIB2
+	CALL	BDOS
+	RET	NZ
+	LD	DE,AbortExit6
+	PUSH	DE
+	LD	C,_DEFAB
+	CALL	BDOS
+	RET	NZ
+	LD	DE,FIB2
+	LD	A,#02
+	LD	C,_OPEN
+	CALL	BDOS
+	RET	NZ
+	LD	(IY+#15),B
+	BIT	3,(IY+#05)
+	JR	Z,Next_0278
+	LD	E,#FF
+	LD	C,_VERIFY
+	CALL	BDOS
+Next_0278:	LD	DE,BufEnvName-#14
+Next_0279:	EXX
+	LD	DE,FIB1
+	LD	B,(IY+#15)
+	LD	C,_HTEST
+	CALL	BDOS
+	RET	NZ
+	OR	B
+	LD	A,.NOCAT
+	JR	NZ,Next_0282
+	BIT	5,(IY+#0A)
+	LD	DE,FIB1+1
+	CALL	NZ,LPrintString
+	LD	DE,FIB1
+	LD	C,_OPEN
+	LD	A,#01
+	CALL	BDOS
+	RET	NZ
+	LD	(IY+#14),B
+	EXX
+Next_0280:	CALL	TypeFile
+	RET	NZ
+	JR	C,Next_0281
+	CALL	WriteFile2
+	RET	NZ
+	JR	Next_0280
+
+Next_0281:	EXX
+	LD	C,_CLOSE
+	LD	B,(IY+#14)
+	CALL	BDOS
+	RET	NZ
+Next_0282:	CALL	NZ,FileError
+	CALL	NextFile
+	EXX
+	JR	NC,Next_0279
+	CALL	Z,WriteFile2
+	RET	NZ
+	BIT	6,(IY+#06)
+	RET	NZ
+	LD	HL,BufEnvData
+	LD	(HL),#1A
+	EX	DE,HL
+	LD	HL,#01
+	LD	C,_WRITE
+	LD	B,(IY+#15)
+	JP	BDOS
+
+ListOption2:	DEFB	"T"
+	DEFB	#01
+ListOption4:	DEFB	"V"
+	DEFB	#08
+ListOption5:	DEFB	"A"
+	DEFB	#20
+	DEFB	"B"
+	DEFB	#40
+	DEFB	"H"
+	DEFB	#02
+	DEFB	"P"
+	DEFB	#00
+	DEFB	"S"
+	DEFB	#04
+Null2:	DEFB	0
+
+Next_0283:	EX	DE,HL
+	LD	A,H
+	OR	L
+	SCF
+	RET	Z
+	PUSH	IX
+	POP	BC
+	XOR	A
+	SBC	HL,BC
+	RET	Z
+TypeFile:	LD	HL,(ExitAdres)
+	DEC	HL
+	XOR	A
+	SBC	HL,DE
+	LD	L,A
+	RES	0,H
+	RET	Z
+	BIT	0,(IY+#06)
+	JR	Z,Next_0284
+	LD	BC,#1800
+	SBC	HL,BC
+	ADD	HL,BC
+	JR	C,Next_0284
+	LD	H,B
+Next_0284:	PUSH	DE
+	PUSH	HL
+	PUSH	HL
+	POP	IX
+	LD	C,_READ
+	LD	B,(IY+#14)
+	CALL	BDOS
+	POP	BC
+	POP	DE
+	JR	Z,Next_0285
+	CP	.EOF
+	RET	NZ
+Next_0285:	EX	DE,HL
+	ADD	HL,DE
+	BIT	0,(IY+#06)
+	JR	NZ,Next_0286
+	BIT	5,(IY+#03)
+	JR	Z,Next_0283
+Next_0286:	SBC	HL,DE
+	LD	C,E
+	LD	B,D
+	LD	DE,#00
+	JR	Next_0288
+
+Next_0287:	INC	HL
+	INC	DE
+	DEC	BC
+Next_0288:	LD	A,B
+	OR	C
+	JR	Z,Next_0283
+	LD	A,(HL)
+	BIT	5,(IY+#03)
+	JR	Z,Next_0289
+	EX	DE,HL
+	SUB	#1A
+	SCF
+	RET	Z
+	EX	DE,HL
+	LD	A,(HL)
+Next_0289:	BIT	0,(IY+#06)
+	JR	Z,Next_0287
+	BIT	5,(IY+#03)
+	JR	Z,Next_0291
+	CP	#7F
+	JR	Z,Next_0290
+	CP	#20
+	JR	NC,Next_0291
+	CP	#0D
+	JR	Z,Next_0291
+	CP	#0A
+	JR	Z,Next_0291
+	CP	#09
+	JR	Z,Next_0291
+Next_0290:	XOR	#40
+	PUSH	AF
+	LD	A,"^"
+	CALL	PrintChar
+	POP	AF
+Next_0291:	CALL	PrintChar
+	JR	Next_0287
+
+WriteFile2:	LD	HL,BufEnvName-#14
+WriteFile:	PUSH	HL
+	EX	DE,HL
+	OR	A
+	SBC	HL,DE
+	LD	B,(IY+#15)
+	LD	C,_WRITE
+	PUSH	BC
+	CALL	BDOS
+	POP	BC
+	JR	NZ,Next_0293
+	BIT	0,(IY+#05)
+	JR	Z,Next_0292
+	LD	IX,(FileTime)
+	LD	HL,(FileDate)
+	LD	A,#01
+	LD	C,_HFTIME
+	PUSH	BC
+	CALL	BDOS
+	POP	BC
+Next_0292:	LD	C,_ENSURE
+	CALL	Z,BDOS
+Next_0293:	POP	DE
+	RET
+
+AbortExit6:	LD	DE,AbortExit2
+	PUSH	DE
+	PUSH	BC
+	PUSH	AF
+	LD	C,_DEFAB
+	CALL	BDOS
+	LD	E,(IY+#16)
+	LD	C,_VERIFY
+	CALL	BDOS
+	LD	B,(IY+#15)
+	LD	C,_CLOSE
+	CALL	BDOS
+	POP	AF
+	PUSH	AF
+	LD	DE,FIB2
+	LD	C,_DELETE
+	OR	A
+	JR	Z,Next_0294
+	CP	.ABORT
+Next_0294:	CALL	NZ,BDOS
+	POP	AF
+	POP	BC
+	RET
+
+ParseDestin:	LD	B,#00
+	LD	C,_PARSE
+	EX	DE,HL
+	PUSH	DE
+	CALL	BDOS
+	EX	DE,HL
+	POP	DE
+	RET	NZ
+	PUSH	HL
+	CALL	FndFirstChr
+	POP	HL
+	JR	Z,Next_0295
+	CP	"/"
+	JR	Z,Next_0295
+	LD	A,.IPATH
+	RET
+
+Next_0295:	LD	A,B
+	AND	#18
+	JR	NZ,Next_0296
+	SET	5,B
+Next_0296:	XOR	A
+	RET
+
+LPrintCode:	CALL	GetAdres
+LPrintString:	CALL	PrintString
+
+LPrint:	LD	A,#0D
+	CALL	PrintChar
+	LD	A,#0A
+PrintChar:	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+	LD	E,A
+	LD	A,(RowMax)
+	AND	A
+	JR	Z,Next_0301
+	LD	A,E
+	CP	#0D
+	JR	NZ,Next_0297
+	XOR	A
+	LD	(ColumnCount),A
+	JR	Next_0301
+
+Next_0297:	CP	#0A
+	JR	Z,Next_0302
+	CP	#09
+	JR	NZ,Next_0299
+	LD	A,(ColumnMax)
+	LD	D,A
+	LD	A,(ColumnCount)
+	OR	#07
+	INC	A
+	LD	(ColumnCount),A
+	CP	D
+	JR	C,Next_0301
+	LD	A,(ColumnCount)
+Next_0298:	SUB	D
+	JR	NC,Next_0298
+	ADD	A,D
+	LD	(ColumnCount),A
+	JR	Next_0302
+
+Next_0299:	LD	A,(ColumnCount)
+	INC	A
+	LD	(ColumnCount),A
+	LD	D,A
+	LD	A,(ColumnMax)
+	CP	D
+	JR	NZ,Next_0301
+	XOR	A
+	LD	(ColumnCount),A
+Next_0302:	CALL	ConsoleOutput
+	CALL	LineCount
+Next_0303:	XOR	A
+	POP	BC
+	POP	DE
+	POP	HL
+	RET
+
+Next_0301:	CALL	ConsoleOutput
+	JR	Next_0303
+
+LineCount:	LD	A,(RowMax)
+	DEC	A
+	LD	(RowMax),A
+	RET	NZ
+	CALL	AskAnyKey
+	CALL	FindScrSize
+	RET
+
+ConsoleOutput:	LD	C,_CONOUT
+	JP	BDOS
+
+PrintDigit:	JP	NZ,PrintChar
+PrintSpace:	LD	A," "
+	JP	PrintChar
+
+PrintDigit2:	JR	Z,PrintSpace2
+Next_0612:	LD	(IX),A
+	INC	IX
+	RET
+PrintSpace2:	LD	A," "
+	JR	Next_0612
+
+FindScrSize:	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+	LD	BC,#014B
+	LD	A,#04
+	CALL	BDOS
+	LD	A,E
+	LD	(ColumnMax),A
+	LD	A,D
+	POP	BC
+	POP	DE
+	POP	HL
+	RET	NZ
+	DEC	A
+	LD	(RowMax),A
+	RET
+
+PrintCode:	CALL	GetAdres
+PrintString:	LD	A,(DE)
+	OR	A
+	RET	Z
+	INC	DE
+	CALL	PrintChar
+	JR	PrintString
+
+GetAdres:	LD	B,A
+	LD	DE,StrAdr_Norm
+	INC	B
+Next_0305:	DEC	B
+	RET	Z
+Next_0306:	LD	A,(DE)
+	INC	DE
+	OR	A
+	JR	NZ,Next_0306
+	JR	Next_0305
+
+FindAlias:	PUSH	DE
+	PUSH	HL
+	CALL	SetPage2
+	CALL	GetAliasAdres
+	SET	7,H
+	BIT	7,B
+	JR	Z,Next_0613
+	LD	H,B
+	LD	L,C
+	JR	Next_0615
+
+Next_0613:	LD	A,B
+	OR	C
+	JR	Z,Next_0615
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	DEC	HL
+	ADD	HL,DE
+	DEC	BC
+	LD	A,D
+	OR	E
+	JR	NZ,Next_0613
+Next_0614:	POP	HL
+	LD	(HL),A
+	POP	DE
+	LD	(DE),A
+	LD	B,A
+	LD	C,A
+	CALL	RestorePage2
+	RET
+
+Next_0615:	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	INC	HL
+	LD	A,D
+	OR	E
+	JR	Z,Next_0614
+	POP	DE
+	PUSH	DE
+	CALL	NCopy
+	POP	BC
+	POP	DE
+	PUSH	DE
+	PUSH	BC
+	CALL	NCopy
+	LD	B,H
+	LD	C,L
+	POP	HL
+	POP	DE
+	CALL	RestorePage2
+	RET
+
+GetAlias:	PUSH	DE
+	PUSH	HL
+	CALL	SetPage2
+	CALL	GetAliasAdres
+	SET	7,H
+Next_0616:	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	INC	HL
+	POP	BC
+	LD	A,D
+	OR	E
+	JR	Z,Next_0619
+	PUSH	BC
+	PUSH	HL
+	CALL	Compare
+	JR	Z,Next_0617
+	POP	HL
+	ADD	HL,DE
+	DEC	HL
+	DEC	HL
+	JR	Next_0616
+
+Next_0617:	POP	BC
+	POP	BC
+	POP	DE
+	PUSH	DE
+	CALL	NCopy
+Next_0618:	CALL	RestorePage2
+	POP	DE
+	RET
+
+Next_0619:	POP	DE
+	XOR	A
+	LD	(DE),A
+	PUSH	DE
+	JR	Next_0618
+
+SetAlias:	PUSH	DE
+	PUSH	HL
+	CALL	SetPage2
+	CALL	GetAliasAdres
+	SET	7,H
+Next_0620:	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	DEC	HL
+	POP	BC
+	LD	A,D
+	OR	E
+	EX	DE,HL
+	PUSH	BC
+	JR	Z,Next_0623
+	EX	DE,HL
+	PUSH	HL
+	INC	HL
+	INC	HL
+	CALL	Compare
+	JR	Z,Next_0621
+	POP	HL
+	ADD	HL,DE
+	JR	Next_0620
+
+Next_0621:	POP	HL
+	LD	C,(HL)
+	INC	HL
+	LD	B,(HL)
+	DEC	HL
+	LD	D,H
+	LD	E,L
+	ADD	HL,BC
+Next_0622:	LD	C,(HL)
+	INC	HL
+	LD	B,(HL)
+	DEC	HL
+	LD	A,B
+	OR	C
+	JR	Z,Next_0623
+	LDIR
+	JR	Next_0622
+
+Next_0623:	LD	B,D
+	LD	C,E
+	POP	HL
+	POP	DE
+	LD	A,(DE)
+	OR	A
+	JR	Z,Next_0629
+	PUSH	BC
+	PUSH	DE
+	LD	D,B
+	LD	E,C
+	INC	DE
+	INC	DE
+	LD	BC,#02
+Next_0624:	LD	A,(HL)
+	LD	(DE),A
+	INC	HL
+	PUSH	HL
+	LD	HL,(AliasEnd)
+	SET	7,H
+	SBC	HL,DE
+	POP	HL
+	JR	Z,Next_0627
+	INC	DE
+	INC	BC
+	OR	A
+	JR	NZ,Next_0624
+	POP	HL
+Next_0625:	LD	A,(HL)
+	LD	(DE),A
+	INC	HL
+	BIT	6,D
+	JR	NZ,Next_0628
+	INC	DE
+	INC	BC
+	OR	A
+	JR	NZ,Next_0625
+	LD	(DE),A
+	INC	DE
+	LD	(DE),A
+	POP	HL
+	LD	(HL),C
+	INC	HL
+	LD	(HL),B
+Next_0626:	CALL	RestorePage2
+	RET
+
+Next_0627:	POP	HL
+Next_0628:	POP	HL
+	CALL	RestorePage2
+	LD	A,.NORAM
+	OR	A
+	RET
+
+Next_0629:	LD	(BC),A
+	INC	BC
+	LD	(BC),A
+	JR	Next_0626
+
+GetMapSupport:	PUSH	AF
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	EXX
+	EX	AF,AF'
+	PUSH	AF
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	PUSH	IX
+	PUSH	IY
+	EX	AF,AF'
+	EXX
+	XOR	A
+	LD	H,A
+	LD	L,A
+	ADD	HL,SP
+	LD	SP,#F51F
+	PUSH	HL
+	LD	DE,#0402
+	CALL	EXTBIO
+	LD	(MapperAdres),HL
+	LD	DE,#0401
+	CALL	EXTBIO
+	LD	(MapperTable),HL
+	LD	A,(EXPTBL)
+	LD	HL,#2D
+	CALL	RDSLT
+	LD	(MSXVersion),A
+	POP	HL
+	LD	SP,HL
+	EXX
+	EX	AF,AF'
+	POP	IY
+	POP	IX
+	POP	HL
+	POP	DE
+	POP	BC
+	POP	AF
+	EX	AF,AF'
+	EXX
+	POP	HL
+	POP	DE
+	POP	BC
+	POP	AF
+	RET
+
+ALL_SEG:	PUSH	DE
+	LD	DE,#00
+	JR	XCAL
+
+FRE_SEG:	PUSH	DE
+	LD	DE,#03
+	JR	XCAL
+
+RD_SEG:	PUSH	DE
+	LD	DE,#06
+	JR	XCAL
+
+WR_SEG:	PUSH	DE
+	LD	DE,#09
+	JR	XCAL
+
+PUT_P2:	PUSH	DE
+	LD	DE,#24
+	JR	XCAL
+
+GET_P2:	PUSH	DE
+	LD	DE,#27
+XCAL:	PUSH	HL
+	LD	HL,(MapperAdres)
+	ADD	HL,DE
+	LD	(JumpAdres+1),HL
+	POP	HL
+	POP	DE
+	PUSH	BC
+	PUSH	HL
+	PUSH	DE
+	EXX
+	LD	HL,#00
+	ADD	HL,SP
+	LD	SP,#F51F
+	PUSH	HL
+	EXX
+JumpAdres:	CALL	#00
+	POP	HL
+	LD	SP,HL
+	POP	DE
+	LD	HL,#00
+	LD	(JumpAdres+1),HL
+	POP	HL
+	POP	BC
+	RET
+
+SetPage2:	CALL	GET_P2
+	LD	(TemporaryPage),A
+	LD	A,(MapperPage)
+	CALL	PUT_P2
+	RET
+
+RestorePage2:	LD	A,(TemporaryPage)
+	CALL	PUT_P2
+	RET
+
+GetKey:	LD	C,_INNOE
+	CALL	BDOS
+WaitKey:	LD	C,_CONST
+	CALL	BDOS
+	JR	NZ,GetKey
+	LD	C,_CONIN
+	CALL	BDOS
+	JP	LPrint
+
+GetLine:	LD	DE,BufEnvData
+	LD	A,#7F
+	LD	(DE),A
+	LD	HL,Env_Expand
+	CALL	Check_OFF
+	SBC	A,A
+	LD	C,_BUFIN
+	CALL	Z,BDOS
+	CALL	NZ,BufInput
+	CALL	LPrint
+	LD	HL,BufEnvData+1
+	PUSH	HL
+	LD	E,(HL)
+	XOR	A
+	LD	D,A
+	ADD	HL,DE
+	INC	HL
+	LD	(HL),D
+	POP	HL
+	RET
+
+ReadBatLine:	LD	DE,ErrorHand2
+	LD	C,_DEFER
+	CALL	BDOS
+	LD	A,#3B
+	LD	(StringCode),A
+	LD	HL,BufEnvData
+	LD	(HL),#00
+	CALL	GetBatLine
+	PUSH	AF
+	PUSH	HL
+	LD	DE,#00
+	LD	C,_DEFER
+	CALL	BDOS
+	POP	HL
+	POP	AF
+	RET	NZ
+	DEC	A
+	LD	(StringCode),A
+	BIT	7,(HL)
+	LD	A,.BUFUL
+	RET	NZ
+	LD	A,(BatchHandle)
+	CP	#FE
+	JR	NZ,Next_0630
+	PUSH	HL
+	LD	HL,BufEnvData+1
+	CALL	FndFirstChr
+	LD	A,(HL)
+	POP	HL
+	CP	"~"
+	SCF
+	RET	Z
+Next_0630:	XOR	A
+	RET
+
+GetBatLine:	INC	HL
+	LD	(HL),#00
+Next_0307:	CALL	GetBatChar
+	LD	HL,BufEnvData
+	RET	NZ
+	LD	D,A
+	LD	A,C
+	CP	#0A
+	JR	Z,Next_0307
+	CP	#1A
+	JR	Z,Next_0308
+	SUB	#0D
+	RET	Z
+	BIT	7,(HL)
+	JR	NZ,Next_0307
+	INC	(HL)
+	LD	E,(HL)
+	ADD	HL,DE
+	LD	(HL),C
+	JR	GetBatLine
+
+Next_0308:	LD	A,.EOF
+	OR	A
+	RET
+
+GetBatChar:	LD	A,(BatchHandle)
+	CP	#FE
+	JR	NZ,Next_0632
+	CALL	GET_P2
+	LD	(TemporaryPage),A
+	LD	A,(BatchPage)
+	LD	HL,(BatLineAdr)
+	CALL	RD_SEG
+	LD	C,A
+	INC	HL
+	LD	(BatLineAdr),HL
+	CP	#1A
+	JR	NZ,Next_0631
+	LD	A,(BatchPage)
+	CALL	FRE_SEG
+Next_0631:	XOR	A
+	RET
+
+Next_0632:	LD	HL,(BatLineLen)
+	LD	A,H
+	OR	L
+	JR	NZ,Next_0309
+	LD	HL,#0100
+	LD	DE,BatchBuffer
+	LD	(BatLineAdr),DE
+	LD	A,(BatchHandle)
+	LD	B,A
+	LD	C,_READ
+	CALL	BDOS
+	RET	NZ
+	PUSH	HL
+	LD	DE,#0100
+	SBC	HL,DE
+	POP	HL
+	JR	Z,Next_0309
+	PUSH	HL
+	LD	DE,BatchBuffer
+	ADD	HL,DE
+	LD	(HL),#1A
+	LD	A,(BatchHandle)
+	LD	B,A
+	LD	C,_CLOSE
+	CALL	BDOS
+	POP	HL
+	INC	HL
+Next_0309:	DEC	HL
+	LD	(BatLineLen),HL
+	LD	HL,(BatLineAdr)
+	LD	C,(HL)
+	INC	HL
+	LD	(BatLineAdr),HL
+	XOR	A
+	RET
+
+ErrorHand2:	CP	.WFILE
+	JR	Z,Next_0310
+	CP	.WDISK
+	LD	A,#00
+	RET	NZ
+Next_0310:	PUSH	BC
+	CALL	LPrint
+	LD	A,#37
+	CALL	PrintCode
+	POP	AF
+	ADD	A,"@"
+	CALL	PrintChar
+	LD	A,#38
+	CALL	PrintCode
+	CALL	LPrint
+	CALL	AskAnyKey
+	LD	A,#02
+	RET
+
+OpenBTM:	LD	HL,FIB1+#18
+	LD	D,(HL)
+	DEC	HL
+	LD	A,(HL)
+	OR	D
+	JR	Z,Next_0634
+Next_0633:	LD	A,.NORAM
+	CP	A
+	RET
+
+Next_0634:	DEC	HL
+	LD	A,(HL)
+	CP	#40
+	JR	NC,Next_0633
+	XOR	A
+	LD	B,A
+	INC	A
+	CALL	ALL_SEG
+	LD	(BatchPage),A
+	LD	A,.NORAM
+	RET	C
+	LD	DE,FIB1
+	LD	A,#01
+	LD	C,_OPEN
+	CALL	BDOS
+	RET	NZ
+	PUSH	BC
+	CALL	GET_P2
+	LD	(TemporaryPage),A
+	LD	A,(BatchPage)
+	CALL	PUT_P2
+	LD	DE,#8000
+	LD	HL,#3FFF
+	POP	BC
+	PUSH	BC
+	PUSH	DE
+	LD	C,_READ
+	CALL	BDOS
+	POP	DE
+	PUSH	AF
+	ADD	HL,DE
+	LD	(HL),#1A
+	LD	A,(TemporaryPage)
+	CALL	PUT_P2
+	POP	DE
+	POP	BC
+	PUSH	DE
+	LD	C,_CLOSE
+	CALL	BDOS
+	POP	DE
+	RET	NZ
+	LD	H,A
+	LD	L,A
+	LD	(BatLineAdr),HL
+	OR	D
+	RET
+
+ReleaseBTM:	LD	A,(BatchPage)
+	CALL	FRE_SEG
+	XOR	A
+	LD	(BatchPage),A
+	RET
+
+PrintDate:	LD	A,(HL)
+	AND	#1F
+	LD	B,A
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	SRL	H
+	RLA
+	RLA
+	RLA
+	RLA
+	AND	#0F
+	LD	L,A
+	LD	A,H
+	CP	#14
+	LD	A,#14
+	SBC	A,#00
+	AND	C
+	LD	C,A
+	LD	A,(DateForm)
+	ADD	A,A
+	ADD	A,A
+	JR	NZ,Next_0311
+	LD	A,#6C
+Next_0311:	LD	D,#03
+	LD	E,#20
+Next_0312:	RLCA
+	RLCA
+	PUSH	AF
+	PUSH	DE
+	AND	#03
+	JR	Z,Next_0313
+	SUB	#02
+	LD	A,L
+	JR	Z,Next_0313
+	LD	A,B
+	CCF
+	JR	NC,Next_0313
+	LD	A,H
+	ADD	A,#50
+	SCF
+Next_0313:	LD	(IX),E
+	INC	IX
+	PUSH	AF
+	SBC	A,A
+	AND	C
+	CALL	NZ,PrintFigure2
+	POP	AF
+	CP	#64
+	JR	C,Next_0314
+	SUB	#64
+Next_0314:	LD	D,#FF
+	CALL	PrintFigure2
+	POP	DE
+	POP	AF
+	LD	E,#2D
+	DEC	D
+	JR	NZ,Next_0312
+	LD	(IX),D
+	RET
+
+PrintTime:	CALL	PrintSpace2
+	LD	B,#00
+	LD	A,(HL)
+	RRA
+	RRA
+	RRA
+	AND	#1F
+	LD	D,A
+	LD	B,#20
+	LD	A,(TimeForm)
+	OR	A
+	LD	A,D
+	JR	Z,Next_0316
+	LD	B,#61
+	CP	#0C
+	JR	C,Next_0315
+	SUB	#0C
+	LD	B,#70
+Next_0315:	OR	A
+	JR	NZ,Next_0316
+	LD	A,#0C
+Next_0316:	LD	D,"0"
+	CALL	PrintFigure2
+	LD	(IX),":"
+	INC	IX
+	LD	A,(HL)
+	DEC	HL
+	RL	(HL)
+	RLA
+	RL	(HL)
+	RLA
+	RL	(HL)
+	RLA
+	AND	#3F
+	LD	D,#FF
+	CALL	PrintFigure2
+	LD	A,B
+	LD	(IX),#00
+	RET
+
+PrintFigure:	LD	E,"0"-1
+Next_0317:	SUB	#0A
+	INC	E
+	JR	NC,Next_0317
+	PUSH	AF
+	LD	A,E
+	CP	D
+	CALL	PrintDigit
+	POP	AF
+	ADD	A,":"
+	JP	PrintChar
+
+PrintFigure2:	LD	E,"0"-1
+Next_0635:	SUB	#0A
+	INC	E
+	JR	NC,Next_0635
+	PUSH	AF
+	LD	A,E
+	CP	D
+	CALL	PrintDigit2
+	POP	AF
+	ADD	A,":"
+	LD	(IX),A
+	INC	IX
+	RET
+
+PrintLength:	XOR	A
+PrintLen2:	EX	AF,AF'
+	LD	HL,Value_L
+	LD	D,#0B
+	LD	E,#0C
+	LD	C,(HL)
+	INC	HL
+	LD	B,(HL)
+	INC	HL
+	LD	A,(HL)
+	INC	HL
+	OR	(HL)
+	JR	NZ,Next_0318
+	LD	A,B
+	AND	#FC
+	JR	Z,Next_0321
+Next_0318:	LD	D,#07
+	LD	E,#08
+	LD	C,#0A
+Next_0319:	PUSH	HL
+	LD	B,#04
+	OR	A
+Next_0320:	RR	(HL)
+	DEC	HL
+	DJNZ	Next_0320
+	POP	HL
+	DEC	C
+	JR	NZ,Next_0319
+Next_0321:	LD	A,(HL)
+	DEC	HL
+	OR	(HL)
+	DEC	HL
+	OR	(HL)
+	DEC	HL
+	LD	C,(HL)
+	DEC	C
+	OR	C
+	LD	A,D
+	JR	Z,Next_0322
+	LD	A,E
+Next_0322:	PUSH	AF
+	EX	DE,HL
+	EX	AF,AF'
+	LD	IX,BufExtra
+	PUSH	IX
+	CALL	Convert32
+	POP	DE
+	CALL	PrintString
+	POP	AF
+	JP	PrintCode
+
+Convert8:	LD	L,A
+	LD	H,#00
+Convert16:	XOR	A
+	LD	(Value_L),HL
+	LD	H,A
+	LD	L,A
+	LD	(Value_H),HL
+	LD	DE,Value_L
+Convert32:	EXX
+	LD	E,A
+	LD	D,"0"
+	EXX
+	LD	HL,ListFigs
+Next_0323:	LD	A,(HL)
+	DEC	A
+	JR	NZ,Next_0324
+	EXX
+	LD	E,D
+	EXX
+Next_0324:	XOR	A
+	LD	C,A
+Next_0325:	PUSH	HL
+	PUSH	DE
+	LD	B,#04
+Next_0326:	LD	A,(DE)
+	SBC	A,(HL)
+	LD	(DE),A
+	INC	HL
+	INC	DE
+	DJNZ	Next_0326
+	POP	DE
+	POP	HL
+	INC	C
+	JR	NC,Next_0325
+	CALL	RestSubt
+	LD	A,C
+	EXX
+	DEC	A
+	JR	Z,Next_0636
+	ADD	A,D
+	LD	E,D
+	DEFB	#2E
+Next_0636:	OR	E
+	JR	Z,Next_0637
+	LD	(IX),A
+	INC	IX
+Next_0637:	EXX
+	LD	A,(HL)
+	INC	A
+	JR	NZ,Next_0323
+	LD	(IX),#00
+	RET
+
+ListFigs:	DEFB	#80,#96,#98,#00
+	DEFB	#40,#42,#0F,#00
+	DEFB	#A0,#86,#01,#00
+	DEFB	#10,#27,#00,#00
+	DEFB	#E8,#03,#00,#00
+	DEFB	#64,#00,#00,#00
+	DEFB	#0A,#00,#00,#00
+	DEFB	#01,#00,#00,#00
+	DEFB	#FF
+
+RestSubt:	PUSH	DE
+	LD	B,#04
+	OR	A
+Next_0327:	LD	A,(DE)
+	ADC	A,(HL)
+	LD	(DE),A
+	INC	HL
+	INC	DE
+	DJNZ	Next_0327
+	POP	DE
+	RET
+
+FndFirstChr:	LD	A,(HL)
+	CALL	SkipChar
+	RET	NZ
+	LD	A,(HL)
+	CALL	CheckBlank
+	JR	NZ,SkipSpace
+	CALL	SkipSpace2
+	CALL	SkipSpace
+	OR	A
+	RET
+
+SkipSpace:	OR	A
+	RET	Z
+	CALL	SkipChar
+	SCF
+	RET	NZ
+Next_0328:	INC	HL
+SkipSpace2:	LD	A,(HL)
+	CALL	CheckBlank
+	JR	C,Next_0328
+	RET
+
+SkipChar:	CP	","
+	RET	Z
+	CP	";"
+	RET	Z
+	CP	"="
+	RET	Z
+	CP	" "
+	RET	Z
+	CP	#09
+	RET	Z
+	OR	A
+	RET
+
+CheckBlank:	CP	" "
+	SCF
+	RET	Z
+	CP	#09
+	SCF
+	RET	Z
+	OR	A
+	RET
+
+SkipSepars:	LD	A,(HL)
+	CALL	CheckBlank
+	JR	NZ,SkipSepar
+	CALL	SkipSpace2
+	CALL	SkipSepar
+	OR	A
+	RET
+
+SkipSepar:	OR	A
+	RET	Z
+	CALL	SkipChar
+	JR	Z,Next_0328
+	CP	":"
+	JR	Z,Next_0328
+	CP	","
+	RET	C
+	CP	"/"+1
+	CCF
+	RET	C
+	JR	Next_0328
+
+CountItem:	LD	(OptionAdres),DE
+	EX	DE,HL
+	SBC	A,A
+	AND	#10
+	LD	(OptionFlag1),A
+	LD	HL,DirFlag
+	OR	(HL)
+	LD	(HL),A
+	EX	DE,HL
+	LD	(SearchAdr),HL
+	CALL	ParseOption
+	RET	NZ
+	DEC	A
+	LD	(Unknown3),A
+	LD	A,(OptionFlag1)
+	LD	(OptionFlag2),A
+	CALL	ParseItem
+	RET	NZ
+	LD	(IY+#0A),B
+	LD	A,C
+	LD	(LogiDrive2),A
+	XOR	A
+Next_0329:	CALL	NZ,ParseItem
+	RET	NZ
+	LD	A,(HL)
+	OR	A
+	RET	Z
+	CP	"+"
+	JR	NZ,Next_0331
+	INC	HL
+	CALL	FndFirstChr
+	CALL	ParseOption
+	RET	NZ
+	LD	A,(Unknown3)
+	INC	A
+	LD	(Unknown3),A
+	SET	5,(IY+#0A)
+	INC	A
+	JR	Next_0329
+
+ParseItem:	LD	BC,_PARSE
+	EX	DE,HL
+	CALL	BDOS
+	LD	(LastItemAdr),HL
+	LD	L,E
+	LD	H,D
+	RET	NZ
+	LD	A,B
+	AND	#18
+	JR	NZ,Next_0330
+	SET	5,B
+Next_0330:	LD	A,(HL)
+	CALL	SkipChar
+	JR	Z,Next_0332
+	CP	"+"
+	JR	Z,Next_0331
+	CP	"/"
+	JR	Z,Next_0333
+	LD	A,.IPATH
+	RET
+
+Next_0331:	XOR	A
+	RET
+
+Next_0332:	CALL	FndFirstChr
+ParseOption:	LD	A,(HL)
+	CP	"/"
+	JR	NZ,Next_0331
+Next_0333:	INC	HL
+	LD	A,(HL)
+	INC	HL
+	EXX
+	PUSH	HL
+	PUSH	BC
+	CALL	MakeCapital
+	LD	C,A
+	LD	HL,(OptionAdres)
+Next_0334:	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0337
+	INC	HL
+	INC	HL
+	CP	C
+	JR	NZ,Next_0334
+	DEC	HL
+	CP	"A"
+	JR	NZ,Next_0335
+	RES	6,(IY+#03)
+Next_0335:	CP	"B"
+	JR	NZ,Next_0336
+	RES	5,(IY+#03)
+Next_0336:	SUB	"P"
+	OR	(IY+#0E)
+	CALL	Z,FindScrSize
+	LD	A,(HL)
+	LD	HL,OptionFlag1
+	OR	(HL)
+	LD	(HL),A
+	OR	H
+Next_0337:	POP	BC
+	POP	HL
+	EXX
+	JR	NZ,Next_0332
+	OR	.IOPT
+	RET
+
+LastItem:	PUSH	HL
+	CALL	FndFirstChr
+	POP	HL
+	LD	A,.INP
+	RET	NZ
+	XOR	A
+	RET
+
+LastByte:	LD	A,(HL)
+	OR	A
+	RET	Z
+	LD	A,.INP
+	RET
+
+NoParameter:	LD	A,B
+	AND	#05
+	SUB	#01
+	SBC	A,A
+	AND	.NOPAR
+	RET
+
+NCopy:	LD	A,(HL)
+	LD	(DE),A
+	INC	HL
+	INC	DE
+	OR	A
+	RET	Z
+	JR	NCopy
+
+FirstFile:	LD	A,(OptionFlag1)
+	LD	(OptionFlag3),A
+	LD	HL,(SearchAdr)
+	LD	(SearchAdr2),HL
+Next_0338:	LD	HL,Next_0349
+	PUSH	HL
+	LD	HL,(SearchAdr2)
+Next_0339:	LD	A,(OptionFlag2)
+	LD	(OptionFlag1),A
+	CALL	ParseOption
+	RET	NZ
+	PUSH	HL
+	CALL	ParseItem
+	BIT	1,(IY+#08)
+	JR	Z,Next_0341
+	BIT	3,B
+	JR	NZ,Next_0340
+	PUSH	HL
+	LD	HL,(LastItemAdr)
+	CALL	InsertStar
+	POP	HL
+	INC	HL
+	INC	DE
+Next_0340:	LD	(BufEnvName+2),DE
+	BIT	5,B
+	JR	Z,Next_0341
+	BIT	4,B
+	JR	Z,Next_0344
+Next_0341:	LD	A,(HL)
+	CP	"+"
+	JR	NZ,Next_0342
+	INC	HL
+	CALL	FndFirstChr
+	LD	(SearchAdr2),HL
+Next_0342:	LD	HL,Unknown3
+	DEC	(HL)
+	LD	HL,#00
+	LD	(FilesFound),HL
+	EX	DE,HL
+	POP	DE
+	PUSH	DE
+	LD	C,(HL)
+	LD	(HL),#00
+	PUSH	HL
+	PUSH	BC
+	LD	IX,FIB1
+	CALL	FindFirst
+	POP	BC
+	POP	HL
+	LD	(HL),C
+	POP	DE
+	BIT	4,(IY+#08)
+	JR	NZ,Next_0346
+	CP	.NOFIL
+	JR	Z,Next_0343
+	OR	A
+	RET	NZ
+	BIT	4,(IX+#0E)
+	JR	Z,Next_0343
+	BIT	5,B
+	JR	Z,Next_0345
+Next_0343:	BIT	1,(IY+#08)
+	RET	Z
+	BIT	4,B
+	RET	NZ
+	LD	HL,Unknown3
+	INC	(HL)
+	PUSH	DE
+Next_0344:	LD	HL,(BufEnvName+2)
+	LD	C,"."
+	CALL	InsertByte
+	INC	HL
+	CALL	InsertStar
+	POP	HL
+	JP	Next_0339
+
+Next_0345:	SET	5,(IY+#0A)
+	PUSH	IX
+	POP	DE
+	LD	HL,Null
+FindFirst:	PUSH	BC
+	LD	BC,#1640
+	CALL	BDOS
+	POP	BC
+Next_0346:	OR	A
+	RET
+
+InsertStar:	LD	C,"*"
+	SET	5,B
+	SET	5,(IY+#0A)
+InsertByte:	PUSH	DE
+	PUSH	BC
+	LD	BC,#00
+Next_0347:	LD	A,(HL)
+	INC	HL
+	INC	C
+	OR	A
+	JR	NZ,Next_0347
+	LD	E,L
+	LD	D,H
+	DEC	HL
+	LDDR
+	POP	BC
+	EX	DE,HL
+	LD	(HL),C
+	POP	DE
+	RET
+
+NextFile:	LD	A,.NOFIL
+	BIT	5,(IY+#0A)
+	JR	Z,Next_0349
+	LD	IX,FIB1
+Next_0348:	PUSH	BC
+	LD	C,_FNEXT
+	CALL	BDOS
+	POP	BC
+Next_0349:	OR	A
+	CALL	Z,Routine02
+	JR	C,Next_0348
+	LD	HL,(FilesFound)
+	JR	NZ,Next_0350
+	INC	HL
+	LD	(FilesFound),HL
+	RET
+
+Next_0350:	CP	.NOFIL
+	SCF
+	RET	NZ
+	LD	A,H
+	OR	L
+	JR	Z,Next_0351
+	LD	A,(Unknown3)
+	INC	A
+	JP	P,Next_0338
+	XOR	A
+	SCF
+	RET
+
+Next_0351:	LD	A,(DirFlag)
+	AND	#10
+	LD	A,.NODIR
+	SCF
+	RET	NZ
+	SBC	A,A
+	LD	A,.NOFIL
+	RET
+
+Routine02:	LD	A,(OptionFlag1)
+	CPL
+	AND	(IX+#0E)
+	AND	#96
+	SCF
+	RET	NZ
+	LD	A,(IX+#0E)
+	CPL
+	AND	(IY+#08)
+	AND	#10
+	RET	Z
+	SCF
+	RET
+
+CheckEcho:	LD	HL,Env_Echo
+Check_ON:	PUSH	BC
+	LD	BC,Adres_ON
+	JR	Check_OnOff
+
+Check_OFF:	PUSH	BC
+	LD	BC,Adres_OFF
+Check_OnOff:	PUSH	DE
+	LD	DE,BufExtra2
+	CALL	GetEnvData3
+	SCF
+	JR	NZ,Next_0353
+	LD	H,B
+	LD	L,C
+	DEC	DE
+	LD	B,(HL)
+	CALL	Compare_DEHL
+Next_0353:	POP	DE
+	POP	BC
+	RET
+
+Adres_ON:	DEFB	2
+	DEFB	"ON",0
+Adres_OFF:	DEFB	3
+	DEFB	"OFF",0
+
+FindEnvItem:	LD	HL,BufEnvName
+	LD	B,#FF
+	LD	C,_FENV
+	JP	BDOS
+
+GetEnvData:	LD	HL,BufEnvName
+GetEnvData2:	LD	DE,BufEnvData
+GetEnvData3:	PUSH	BC
+	LD	B,#FF
+	LD	C,_GENV
+	PUSH	HL
+	CALL	BDOS
+	POP	HL
+	POP	BC
+	RET	Z
+	PUSH	AF
+	XOR	A
+	LD	(DE),A
+	POP	AF
+	RET
+
+PutEnvItem:	LD	HL,BufEnvName
+PutEnvItem2:	LD	DE,BufEnvData
+	LD	C,_SENV
+	JP	BDOS
+
+GetValue_8:	CALL	GetValue_16
+	RET	NZ
+	INC	D
+	DEC	D
+	RET	Z
+	JR	Next_0355
+
+GetValue_16:	CALL	GetDigit
+	JR	C,Next_0356
+	LD	DE,#00
+	LD	B,E
+Next_0354:	CALL	GetDigit
+	LD	C,A
+	CCF
+	SBC	A,A
+	RET	Z
+	INC	HL
+	PUSH	HL
+	LD	L,E
+	LD	H,D
+	CALL	NextDigit
+	CALL	NC,NextDigit
+	POP	DE
+	JR	C,Next_0355
+	ADD	HL,BC
+	EX	DE,HL
+	JR	NC,Next_0354
+Next_0355:	LD	A,.IPARM
+	OR	A
+	RET
+
+Next_0356:	LD	A,.BADNO
+	OR	A
+	RET
+
+NextDigit:	ADD	HL,DE
+	RET	C
+	ADD	HL,HL
+	RET
+
+LastDigit:	LD	A,(HL)
+	CALL	SkipChar
+	LD	A,.BADNO
+	RET	NZ
+	CALL	FndFirstChr
+	XOR	A
+	RET
+
+GetDigit2:	CALL	GetDigit
+	LD	E,A
+	RET	C
+Next_0357:	LD	A,(HL)
+	INC	HL
+	CP	"0"
+	JR	Z,Next_0357
+	DEC	HL
+	CALL	GetDigit
+	JR	C,Next_0358
+	INC	HL
+GetDigit3:	LD	E,A
+	CALL	GetDigit
+	LD	D,A
+Next_0358:	LD	A,E
+	CCF
+	RET	NC
+	INC	HL
+	ADD	A,A
+	ADD	A,A
+	ADD	A,E
+	ADD	A,A
+	ADD	A,D
+	RET
+
+GetDigit:	LD	A,(HL)
+	SUB	"0"
+	RET	C
+	CP	#0A
+	CCF
+	RET
+
+MakeDigit:	AND	%00001111
+	ADD	A,"0"
+	CP	"9"+1
+	RET	C
+	ADD	A,"A"-"0"-10
+	RET
+
+MakeByte:	PUSH	AF
+	RRA
+	RRA
+	RRA
+	RRA
+	CALL	MakeDigit
+	LD	(HL),A
+	INC	HL
+	POP	AF
+	CALL	MakeDigit
+	LD	(HL),A
+	INC	HL
+	RET
+
+GetTimeForm:	LD	HL,Env_Time
+	CALL	GetEnvData2
+	EX	DE,HL
+	CALL	FndFirstChr
+	LD	D,(HL)
+	INC	HL
+	LD	E,(HL)
+	LD	HL,#3234
+	XOR	A
+	SBC	HL,DE
+	JR	Z,Next_0359
+	DEC	A
+Next_0359:	LD	(TimeForm),A
+	RET
+
+GetDateForm:	LD	HL,Env_Date
+	CALL	GetEnvData2
+	EX	DE,HL
+	LD	B,#00
+	CALL	FndFirstChr
+Next_0360:	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0363
+	CALL	MakeCapital
+	LD	C,#03
+	CP	"Y"
+	JR	Z,Next_0361
+	DEC	C
+	CP	"M"
+	JR	Z,Next_0361
+	CP	"D"
+	JR	NZ,Next_0363
+	DEC	C
+Next_0361:	LD	E,A
+	INC	HL
+	LD	A,(HL)
+	CALL	MakeCapital
+	CP	E
+	JR	NZ,Next_0362
+	INC	HL
+Next_0362:	LD	A,B
+	ADD	A,A
+	ADD	A,A
+	OR	C
+	LD	B,A
+	CALL	SkipSepars
+	JR	Next_0360
+
+Next_0363:	LD	A,B
+	OR	A
+	JR	NZ,Next_0364
+	LD	A,(DateFormat)
+	AND	#07
+	CP	#01
+	LD	A,#39
+	JR	C,Next_0364
+	LD	A,#27
+	JR	Z,Next_0364
+	LD	A,#1B
+Next_0364:	LD	(DateForm),A
+	RET
+
+BufInput:	PUSH	IY
+	LD	A,(InsertFlag)
+	AND	4
+	LD	(InsertFlag),A
+	XOR	A
+	LD	(Toevoeg),A
+	LD	(Invul),A
+	LD	(MinInvul),A
+	EX	DE,HL
+	INC	HL
+	LD	(HL),0
+ReadLine:	CALL	ReadKey
+	CP	9
+	JP	Z,Tab
+	PUSH	AF
+	LD	A,(InsertFlag)
+	RES	1,A
+	LD	(InsertFlag),A
+	POP	AF
+	CP	13
+	JP	Z,Return
+	CP	30
+	JP	Z,CursorUp
+	CP	31
+	JP	Z,CursorDown
+	CP	28
+	JP	Z,CursorRight
+	CP	29
+	JP	Z,CursorLeft
+	CP	11
+	JP	Z,Home
+	CP	127
+	JP	Z,Delete
+	CP	8
+	JP	Z,BackSpace
+	CP	18
+	JP	Z,Ins
+	CALL	Reset
+	CP	27
+	JP	Z,Select
+	CP	24
+	JP	Z,Select
+	CP	21
+	JP	Z,Select
+	CP	32
+	JR	C,ReadLine
+	CALL	PutLine
+	CALL	PrintChar
+	JR	ReadLine
+
+ReadKey:	PUSH	HL
+	LD	C,_INNOE
+	CALL	BDOS
+	POP	HL
+	RET
+
+PutLine:	EX	AF,AF'
+	LD	A,(InsertFlag)
+	BIT	0,A
+	JR	NZ,Insert
+	DEC	HL
+	LD	A,(Invul)
+	CP	(HL)
+	INC	HL
+	JR	Z,Beep
+	INC	A
+	LD	(Invul),A
+	LD	C,A
+	LD	B,#00
+	ADD	HL,BC
+	EX	AF,AF'
+	LD	(HL),A
+	OR	A
+	SBC	HL,BC
+	LD	C,A
+	LD	A,(Invul)
+	CP	(HL)
+	LD	A,C
+	RET	C
+	RET	Z
+	INC	(HL)
+	RET
+
+Insert:	LD	A,(HL)
+	DEC	HL
+	CP	(HL)
+	INC	HL
+	JR	Z,Beep
+	PUSH	HL
+	LD	A,(Invul)
+	CP	(HL)
+	JR	Z,Next_0639
+	LD	C,A
+	LD	A,(HL)
+	SUB	C
+	LD	C,A
+	LD	B,#00
+	INC	BC
+	PUSH	BC
+	LD	C,(HL)
+	INC	BC
+	ADD	HL,BC
+	LD	E,L
+	LD	D,H
+	INC	DE
+	POP	BC
+	LDDR
+	INC	HL
+Next_0638:	EX	AF,AF'
+	LD	(HL),A
+	POP	HL
+	INC	(HL)
+	INC	(HL)
+	CALL	PrintLine
+	DEC	(HL)
+	LD	A,(Invul)
+	INC	A
+	LD	(Invul),A
+	LD	A,28
+	RET
+
+Next_0639:	LD	C,A
+	LD	B,#00
+	INC	BC
+	ADD	HL,BC
+	JR	Next_0638
+
+Beep:	LD	A,7
+	RET
+
+ReadLine2:	XOR	A
+	LD	(MinInvul),A
+	JP	ReadLine
+
+CursorLeft:	LD	A,(#FBEB)
+	BIT	1,A
+	JP	Z,Home
+	BIT	0,A
+	JP	Z,WordLeft
+	LD	A,(Invul)
+	OR	A
+	JP	Z,ReadLine2
+	CALL	MoveLeft
+	JP	ReadLine2
+
+MoveLeft:	LD	A,(Invul)
+	DEC	A
+	LD	(Invul),A
+	LD	A,29
+	CALL	PrintChar
+	RET
+
+CursorRight:	LD	A,(#FBEB)
+	BIT	1,A
+	JP	Z,Eind
+	BIT	0,A
+	JP	Z,WordRight
+	LD	A,(Invul)
+	CP	(HL)
+	JP	Z,ReadLine2
+	CALL	MoveRight
+	JP	ReadLine2
+
+MoveRight:	LD	A,(Invul)
+	INC	A
+	LD	(Invul),A
+	LD	A,28
+	CALL	PrintChar
+	RET
+
+BackSpace:	LD	A,(HL)
+	OR	A
+	JP	Z,ReadLine2
+	LD	A,(Invul)
+	OR	A
+	JR	Z,Next_0640
+	DEC	A
+	LD	(Invul),A
+	LD	A,29
+	CALL	PrintChar
+	CALL	Reset
+Next_0640:	PUSH	HL
+	LD	A,(Invul)
+	LD	C,A
+	LD	A,(HL)
+	SUB	C
+	JR	Z,Next_0641
+	LD	C,A
+	LD	B,0
+	PUSH	BC
+	LD	A,(Invul)
+	LD	C,A
+	LD	B,#00
+	INC	BC
+	ADD	HL,BC
+	LD	E,L
+	LD	D,H
+	INC	HL
+	POP	BC
+	LDIR
+Next_0641:	POP	HL
+	CALL	PrintLine
+	DEC	(HL)
+	JP	ReadLine2
+
+Delete:	LD	A,(#FBEB)
+	BIT	1,A
+	JR	Z,Ctrl_Del
+	BIT	0,A
+	JP	Z,Ctrl_E
+	LD	A,(HL)
+	OR	A
+	JP	Z,ReadLine2
+	CALL	Reset
+	LD	B,A
+	LD	A,(Invul)
+	CP	B
+	JP	Z,ReadLine2
+	JR	Next_0640
+
+Reset:	PUSH	AF
+	LD	A,(InsertFlag)
+	RES	2,A
+	LD	(InsertFlag),A
+	POP	AF
+	RET
+
+Ctrl_Del:	PUSH	HL
+	LD	HL,BufferAdres
+	CALL	SetPutAdres
+	CALL	SetReadAdres
+	DEC	HL
+	CALL	SetEndAdres
+	POP	HL
+	LD	A,7
+	CALL	PrintChar
+	JP	ReadLine2
+
+PrintLine:	PUSH	HL
+	LD	A,(Invul)
+	LD	C,A
+	LD	A,(HL)
+	SUB	C
+	LD	B,#00
+	ADD	HL,BC
+	DEC	A
+	LD	B,A
+	PUSH	BC
+	OR	A
+	JR	Z,Next_0643
+Next_0642:	INC	HL
+	LD	A,(HL)
+	CALL	PrintChar
+	DJNZ	Next_0642
+Next_0643:	LD	A," "
+	CALL	PrintChar
+	POP	BC
+	INC	B
+Next_0644:	LD	A,29
+	CALL	PrintChar
+	DJNZ	Next_0644
+	POP	HL
+	RET
+
+Home:	LD	A,(Invul)
+	OR	A
+	JP	Z,ReadLine2
+	DEC	A
+	LD	(Invul),A
+	LD	A,29
+	CALL	PrintChar
+	JR	Home
+
+Eind:	LD	A,(Invul)
+	CP	(HL)
+	JP	Z,ReadLine2
+	INC	A
+	LD	(Invul),A
+	LD	A,28
+	CALL	PrintChar
+	JR	Eind
+
+WordLeft:	CALL	WordLeftC
+	JP	Z,ReadLine2
+	CP	" "
+	JR	NZ,WordLeft2
+	CALL	MoveLeft
+	JR	WordLeft
+WordLeft2:	CALL	WordLeftC
+	JP	Z,ReadLine2
+	CP	" "
+	JP	Z,ReadLine2
+	CALL	MoveLeft
+	JR	WordLeft2
+WordLeftC:	LD	A,(Invul)
+	OR	A
+	RET	Z
+	LD	C,A
+	LD	B,#00
+	ADD	HL,BC
+	LD	A,(HL)
+	SBC	HL,BC
+	OR	A
+	RET
+
+WordRight:	CALL	WordRightC
+	JP	Z,ReadLine2
+	CP	" "
+	JR	Z,WordRight2
+	CALL	MoveRight
+	JR	WordRight
+WordRight2:	CALL	WordRightC
+	JP	Z,ReadLine2
+	CP	" "
+	JP	NZ,ReadLine2
+	CALL	MoveRight
+	JR	WordRight2
+
+WordRightC:	LD	A,(Invul)
+	CP	(HL)
+	RET	Z
+	LD	C,A
+	LD	B,#00
+	INC	BC
+	ADD	HL,BC
+	LD	A,(HL)
+	SBC	HL,BC
+	OR	A
+	RET
+
+Select:	CALL	Wis
+	CALL	BlockCursor
+	JP	ReadLine2
+
+Wis:	PUSH	HL
+	LD	HL,MinInvul
+Next_0645:	LD	A,(Invul)
+	CP	(HL)
+	JR	Z,Next_0646
+	DEC	A
+	LD	(Invul),A
+	LD	A,29
+	CALL	PrintChar
+	JR	Next_0645
+Next_0646:	POP	HL
+	JR	S_Delete
+
+Ins:	LD	A,(#FBEB)
+	BIT	1,A
+	JR	Z,Ctrl_Ins
+	LD	A,(InsertFlag)
+	XOR	#01
+	LD	(InsertFlag),A
+	BIT	0,A
+	JR	Z,Next_0648
+	LD	A,27
+	CALL	PrintChar
+	LD	A,"y"
+	CALL	PrintChar
+	LD	A,"4"
+	CALL	PrintChar
+	LD	A,(Invul)
+	LD	(MinInvul),A
+Next_0647:	JP	ReadLine
+Next_0648:	CALL	BlockCursor
+	JR	Next_0647
+
+Ctrl_Ins:	PUSH	HL
+	CALL	Zet
+	CALL	Less
+	POP	HL
+	CALL	Wis
+	CALL	Reset
+	JP	ReadLine2
+
+BlockCursor:	LD	A,(InsertFlag)
+	RES	0,A
+	LD	(InsertFlag),A
+	LD	A,27
+	CALL	PrintChar
+	LD	A,"x"
+	CALL	PrintChar
+	LD	A,"4"
+	CALL	PrintChar
+	XOR	A
+	LD	(MinInvul),A
+	RET
+
+Ctrl_E:	CALL	S_Delete
+	JP	ReadLine2
+
+S_Delete:	LD	A,(Invul)
+	CP	(HL)
+	RET	Z
+	CALL	Reset
+	LD	A,(Invul)
+	LD	B,A
+	LD	A,(HL)
+	LD	(HL),B
+	SUB	B
+	LD	B,A
+	PUSH	BC
+Next_0649:	LD	A," "
+	CALL	PrintChar
+	DJNZ	Next_0649
+	POP	BC
+Next_0650:	LD	A,29
+	CALL	PrintChar
+	DJNZ	Next_0650
+	RET
+
+Tab:	PUSH	HL
+	LD	A,(InsertFlag)
+	BIT	1,A
+	JP	NZ,Next_Tab
+	SET	1,A
+	RES	2,A
+	LD	(InsertFlag),A
+	LD	HL,Env_TabOrder
+	LD	DE,BufExtra2
+	CALL	GetEnvData3
+	PUSH	DE
+	LD	B,#00
+Next_0651:	LD	A,(DE)
+	OR	A
+	JR	Z,Next_0652
+	INC	B
+	INC	DE
+	JR	Next_0651
+
+Next_0652:	POP	DE
+	DEC	DE
+	LD	HL,Orders-1
+	XOR	A
+Next_0653:	JR	NZ,Next_0654
+	INC	HL
+	LD	A,(HL)
+	OR	A
+	JR	Z,Next_0654
+	CALL	Compare_DEHL
+	JR	C,Next_0653
+	LD	A,(HL)
+	DEFB	#21
+Next_0654:	LD	A,%00000011
+	LD	(FileOrDir),A
+	POP	HL
+	PUSH	HL
+	CALL	S_Delete
+	LD	C,(HL)
+	LD	B,0
+	INC	BC
+	ADD	HL,BC
+	LD	(HL),0
+	POP	HL
+	PUSH	HL
+	LD	A,(Invul)
+	OR	A
+	JR	Z,Next_0658
+	LD	C,A
+	LD	B,0
+	ADD	HL,BC
+Next_0655:	LD	DE,StopList
+Next_0656:	LD	A,(DE)
+	OR	A
+	JR	Z,Next_0657
+	CP	(HL)
+	JR	Z,Next_0658
+	INC	DE
+	JR	Next_0656
+Next_0657:	DEC	HL
+	DEC	C
+	JR	NZ,Next_0655
+Next_0658:	EX	DE,HL
+	INC	DE
+	PUSH	DE
+	LD	BC,_PARSE
+	CALL	BDOS
+	EX	DE,HL
+	BIT	4,B
+	JR	NZ,Next_0659
+	LD	(HL),"*"
+	INC	HL
+	LD	(HL),"."
+	INC	HL
+Next_0659:	LD	(HL),"*"
+	INC	HL
+	LD	(HL),0
+	POP	BC
+	POP	HL
+	PUSH	HL
+	PUSH	BC
+	EX	DE,HL
+	SBC	HL,DE
+	LD	A,L
+	DEC	A
+	LD	(Toevoeg),A
+	LD	DE,ErrorHand1
+	LD	C,_DEFER
+	CALL	BDOS
+	LD	DE,AbortExit7
+	LD	C,_DEFAB
+	CALL	BDOS
+	POP	HL
+	LD	DE,BufExtra
+	PUSH	DE
+	CALL	NCopy
+	POP	DE
+Next_0660:	CALL	FFirst
+	POP	HL
+	JP	NZ,Fout
+	PUSH	HL
+Next_0661:	LD	A,(FIB1+1)
+	CP	"."
+	JP	Z,Next_Tab2
+	LD	A,(Invul)
+	LD	B,A
+	LD	A,(Toevoeg)
+	LD	(Invul),A
+	LD	C,A
+	LD	A,B
+	SUB	C
+	JR	Z,Next_0663
+	LD	B,A
+Next_0662:	LD	A,29
+	CALL	PrintChar
+	DJNZ	Next_0662
+Next_0663:	POP	HL
+	PUSH	HL
+	CALL	S_Delete
+	PUSH	HL
+	LD	DE,FIB1+1
+	CALL	Lower
+	POP	HL
+Next_0664:	LD	A,(DE)
+	OR	A
+	JR	Z,Next_0665
+	CALL	PutLine
+	CALL	PrintChar
+	INC	DE
+	JR	Next_0664
+
+Next_0665:	LD	A,(FIB1+14)
+	BIT	4,A
+	JR	Z,Next_0666
+	LD	A,"\"
+	CALL	PutLine
+	CALL	PrintChar
+Next_0666:	LD	DE,0
+	LD	C,_DEFER
+	CALL	BDOS
+	LD	DE,AbortExit2
+	LD	C,_DEFAB
+	CALL	BDOS
+	POP	HL
+	JP	ReadLine2
+
+StopList:	DEFB	" +^<>|['",#22,0
+
+FFirst:	LD	B,#06
+	LD	A,(FileOrDir)
+	BIT	1,A
+	JR	Z,Next_0667
+	SET	4,B
+Next_0667:	LD	IX,FIB1
+	LD	C,_FFIRST
+	CALL	BDOS
+Next_0668:	JR	Z,Next_0669
+	CP	.NOFIL
+	CALL	Z,CheckNext
+	RET	NZ
+Next_0669:	LD	A,(FileOrDir)
+	BIT	0,A
+	JR	Z,Next_0671
+Next_0670:	XOR	A
+	RET
+
+Next_0671:	LD	A,(FIB1+14)
+	BIT	4,A
+	JR	NZ,Next_0670
+	LD	IX,FIB1
+	LD	C,_FNEXT
+	CALL	BDOS
+	JR	Next_0668
+
+FNext:	LD	IX,FIB1
+	LD	C,_FNEXT
+	CALL	BDOS
+	JR	Z,Next_0700
+	CP	.NOFIL
+	RET	NZ
+	CALL	CheckNext
+	JR	Z,Next_0700
+	CP	.NOFIL
+	RET	NZ
+	LD	DE,BufExtra
+	JR	FFirst
+
+Next_0700:	LD	A,(FileOrDir)
+	BIT	0,A
+	JR	NZ,Next_0670
+	LD	A,(FIB1+14)
+	BIT	4,A
+	JR	NZ,Next_0670
+	JR	FNext
+
+CheckNext:	LD	A,(FileOrDir)
+	BIT	2,A
+	JR	NZ,Next_0672
+	LD	A,.NOFIL
+	OR	A
+	RET
+
+Next_0672:	XOR	%00000011
+	LD	(FileOrDir),A
+	LD	DE,BufExtra
+	LD	B,#06
+	BIT	1,A
+	JR	Z,Next_0673
+	SET	4,B
+Next_0673:	LD	IX,FIB1
+	LD	C,_FFIRST
+	CALL	BDOS
+	RET
+
+Next_Tab:	LD	A,(#FBEB)
+	BIT	1,A
+	JR	NZ,Next_Tab2
+	LD	A,"+"
+	CALL	PutLine
+	CALL	PrintChar
+	LD	A,(Invul)
+	LD	(Toevoeg),A
+Next_Tab2:	LD	DE,ErrorHand1
+	LD	C,_DEFER
+	CALL	BDOS
+	LD	DE,AbortExit7
+	LD	C,_DEFAB
+	CALL	BDOS
+	CALL	FNext
+	JP	Z,Next_0661
+	POP	HL
+Fout:	LD	A,7
+	CALL	PrintChar
+	LD	A,(InsertFlag)
+	RES	1,A
+	RES	2,A
+	LD	(InsertFlag),A
+	PUSH	HL
+	LD	DE,#00
+	LD	C,_DEFER
+	CALL	BDOS
+	LD	DE,AbortExit2
+	LD	C,_DEFAB
+	CALL	BDOS
+	POP	HL
+	JP	ReadLine2
+
+PutCircle:	PUSH	HL
+	PUSH	DE
+	LD	A,(HL)
+	EX	DE,HL
+	EX	AF,AF'
+	CALL	Rd_Char
+	OR	A
+	EX	AF,AF'
+	CALL	Wr_Char
+	POP	DE
+	INC	DE
+	PUSH	DE
+	PUSH	HL
+	CALL	GetBufferLeng
+	PUSH	DE
+	LD	DE,BufferAdres
+	ADD	HL,DE
+	POP	DE
+	CALL	Compare4
+	POP	HL
+	POP	DE
+	JR	NZ,Next_0674
+	LD	DE,BufferAdres
+Next_0674:	CALL	GetEndAdres
+	INC	HL
+	PUSH	DE
+	PUSH	HL
+	EX	DE,HL
+	CALL	GetBufferLeng
+	PUSH	DE
+	LD	DE,BufferAdres
+	ADD	HL,DE
+	POP	DE
+	CALL	Compare4
+	POP	HL
+	POP	DE
+	JR	Z,Next_0675
+	CALL	SetEndAdres
+	XOR	A
+	EX	AF,AF'
+Next_0675:	POP	HL
+	EX	AF,AF'
+	RET
+
+Return:	LD	A,(InsertFlag)
+	BIT	2,A
+	JR	NZ,Next_0676
+	LD	A,(#FBEB)
+	BIT	1,A
+	CALL	NZ,Zet
+	JR	Next_0677
+
+Next_0676:	CALL	More
+Next_0677:	CALL	BlockCursor
+	POP	IY
+	RET
+
+Zet:	LD	A,(HL)
+	OR	A
+	RET	Z
+	LD	B,A
+	PUSH	HL
+	CALL	GetPutAdres
+	INC	HL
+	CALL	SetReadAdres
+	DEC	HL
+	EX	DE,HL
+	POP	HL
+Next_0678:	INC	HL
+	CALL	PutCircle
+	DJNZ	Next_0678
+	INC	HL
+	LD	(HL),0
+	CALL	PutCircle
+	JR	Z,Next_0680
+	PUSH	DE
+Next_0679:	CALL	PutCircle
+	JR	NZ,Next_0679
+	POP	DE
+Next_0680:	EX	DE,HL
+	CALL	SetPutAdres
+	RET
+
+Less:	PUSH	HL
+	PUSH	DE
+	CALL	GetReadAdres
+	LD	DE,BufferAdres
+	CALL	Compare4
+	DEC	HL
+	CALL	SetReadAdres
+	JR	NZ,Next_0682
+	CALL	GetEndAdres
+Next_0681:	CALL	SetReadAdres
+Next_0682:	CALL	Rd_Char
+	OR	A
+	POP	DE
+	POP	HL
+	RET
+
+More:	PUSH	HL
+	PUSH	DE
+	CALL	GetReadAdres
+	PUSH	HL
+	CALL	GetEndAdres
+	EX	DE,HL
+	POP	HL
+	OR	A
+	SBC	HL,DE
+	CALL	GetReadAdres
+	INC	HL
+	CALL	SetReadAdres
+	JR	C,Next_0682
+	JR	NZ,Next_0682
+	LD	HL,BufferAdres
+	JR	Next_0681
+
+Rd_Char:	LD	A,(MapperPage)
+	CALL	RD_SEG
+	RET
+
+Wr_Char:	PUSH	DE
+	PUSH	AF
+	LD	E,A
+	LD	A,(MapperPage)
+	CALL	WR_SEG
+	POP	AF
+	POP	DE
+	RET
+
+CursorUp:	PUSH	HL
+	CALL	GetEndAdres
+	LD	DE,BufferAdres
+	CALL	Compare4
+	POP	HL
+	JP	C,ReadLine
+	PUSH	HL
+Next_0683:	CALL	Less
+	JR	Z,Next_0683
+Next_0684:	CALL	Less
+	JR	NZ,Next_0684
+	CALL	More
+Next_0685:	POP	HL
+	CALL	Wis
+	PUSH	HL
+	CALL	GetReadAdres
+	EX	DE,HL
+	POP	HL
+	PUSH	DE
+	CALL	Less
+Next_0686:	CALL	More
+	OR	A
+	JR	Z,Next_0687
+	CALL	PutLine
+	CALL	PrintChar
+	JR	Next_0686
+Next_0687:	POP	DE
+	EX	DE,HL
+	CALL	SetReadAdres
+	EX	DE,HL
+	LD	A,(InsertFlag)
+	SET	2,A
+	LD	(InsertFlag),A
+	JP	ReadLine
+
+CursorDown:	PUSH	HL
+	CALL	GetEndAdres
+	LD	DE,BufferAdres
+	CALL	Compare4
+	POP	HL
+	JP	C,ReadLine
+	PUSH	HL
+	CALL	Less
+Next_0688:	CALL	More
+	JR	NZ,Next_0688
+Next_0689:	CALL	More
+	JR	Z,Next_0689
+	JR	Next_0685
+
+AbortExit7:	POP	DE
+	OR	#01
+	RET
+
+GetAliasAdres:	LD	HL,AliasAdres
+	JR	Next_0690
+GetBufferLeng:	LD	HL,BufferLengte
+	JR	Next_0690
+GetReadAdres:	LD	HL,ReadAdres
+	JR	Next_0690
+GetPutAdres:	LD	HL,PutAdres
+	JR	Next_0690
+GetEndAdres:	LD	HL,EndAdres
+Next_0690:	CALL	Rd_Char
+	PUSH	AF
+	INC	HL
+	CALL	Rd_Char
+	LD	H,A
+	POP	AF
+	LD	L,A
+	RET
+
+SetAliasEnd:	PUSH	DE
+	PUSH	HL
+	LD	HL,AliasEnd
+	JR	Next_0691
+SetAliasAdres:	PUSH	DE
+	PUSH	HL
+	LD	HL,AliasAdres
+	JR	Next_0691
+SetBufferLeng:	PUSH	DE
+	PUSH	HL
+	LD	HL,BufferLengte
+	JR	Next_0691
+SetReadAdres:	PUSH	DE
+	PUSH	HL
+	LD	HL,ReadAdres
+	JR	Next_0691
+SetPutAdres:	PUSH	DE
+	PUSH	HL
+	LD	HL,PutAdres
+	JR	Next_0691
+SetEndAdres:	PUSH	DE
+	PUSH	HL
+	LD	HL,EndAdres
+Next_0691:	POP	DE
+	PUSH	DE
+	LD	A,E
+	CALL	Wr_Char
+	INC	HL
+	LD	A,D
+	CALL	Wr_Char
+	POP	HL
+	POP	DE
+	RET
+
+StrAdr_Norm:	DEFB	"Yy",0
+	DEFB	"Nn",0
+	DEFB	" Directory of ",0
+	DEFB	" <dir> ",0
+	DEFB	" ",0
+	DEFB	" in ",0
+	DEFB	" free",0
+	DEFB	"K",0
+	DEFB	"K",0
+	DEFB	" file   ",0
+	DEFB	" files",9,0
+	DEFB	" byte",0
+	DEFB	" bytes",0
+	DEFB	"*** ",0
+	DEFB	0
+	DEFB	"Press any key to continue ",0
+	DEFB	" Volume in drive ",0
+	DEFB	": ",0
+	DEFB	"has no name",0
+	DEFB	"is ",0
+	DEFB	"Delete all files (Y/N)? ",0
+	DEFB	" -- ",0
+	DEFB	"Current date is ",0
+	DEFB	"Sun",0
+	DEFB	"Mon",0
+	DEFB	"Tues",0
+	DEFB	"Wednes",0
+	DEFB	"Thurs",0
+	DEFB	"Fri",0
+	DEFB	"Satur",0
+	DEFB	"day",0
+	DEFB	"                ",0
+	DEFB	"Enter new date",0
+	DEFB	": ",0
+	DEFB	" (",0
+	DEFB	")",0
+	DEFB	"Current time is",0
+	DEFB	"       ",0
+	DEFB	"Enter new time: ",0
+	DEFB	"Buffers is ",0
+	DEFB	"Verify is ",0
+	DEFB	"RAM disk is ",0
+	DEFB	"Drive name? (",0
+	DEFB	") ",0
+	DEFB	"All data on drive ",0
+	DEFB	": will be destroyed",0
+	DEFB	"      ",0
+	DEFB	" file copied",0
+	DEFB	" files copied",0
+
+	DEFB	"The following standard commands are available.",13,10
+	DEFB	"For more information on a specific command, type:",13,10
+	DEFB	"   HELP  command name",13,10
+	DEFB	13,10
+	DEFB	"ALIAS .... displays/sets aliases",13,10
+	DEFB	"ASSIGN ... logical to physical drive assignment",13,10
+	DEFB	"ATDIR .... changes the attributes of directories",13,10
+	DEFB	"ATTRIB ... changes the attributes of files",13,10
+	DEFB	"BASIC .... goes into MSX disk BASIC",13,10
+	DEFB	"BEEP ..... makes beeping sound",13,10
+	DEFB	"BUFFERS .. displays/sets the number of disk buffers",13,10
+	DEFB	"CD ....... see CHDIR",13,10
+	DEFB	"CDD ...... displays/sets the current directory and drive",13,10
+	DEFB	"CDPATH ... displays/sets the directory search path",13,10
+	DEFB	"CHDIR .... displays/sets the current directory",13,10
+	DEFB	"CHKDSK ... checks the integrity of a disk",13,10
+	DEFB	"CLS ...... clears the screen",13,10
+	DEFB	"COLOR .... changes screen colors",13,10
+	DEFB	"CONCAT ... joins files together",13,10
+	DEFB	"COPY ..... copies files",13,10
+	DEFB	"CPU ...... displays/sets the CPU mode",13,10
+	DEFB	"DATE ..... displays/sets the current date",13,10
+	DEFB	"DEL ...... deletes files",13,10
+	DEFB	"DIR ...... displays the file names on a disk",13,10
+	DEFB	"DISKCOPY . copies a whole disk to another",13,10
+	DEFB	"DSKCHK ... displays/sets the current disk check status",13,10
+	DEFB	"ECHO ..... prints the following text",13,10
+	DEFB	"ECHOS .... prints the following text without a trailing CR/LF",13,10
+	DEFB	"ELSE ..... toggles Command Mode",13,10
+	DEFB	"END ...... ends batch file execution [.BTM]",13,10
+	DEFB	"ENDIFF ... restores Command Mode",13,10
+	DEFB	"EXIT ..... exits COMMAND2.COM",13,10
+	DEFB	"FIXDISK .. updates MSX-DOS 1 disks to MSX-DOS 2",13,10
+	DEFB	"FORMAT ... formats a disk",13,10
+	DEFB	"FREE ..... displays total, used and free disk space",13,10
+	DEFB	"GOSUB .... calls a batch file sub-routine [.BTM]",13,10
+	DEFB	"GOTO ..... continues batch file from label [.BTM]",13,10
+	DEFB	"HELP ..... gives help information on a command",13,10
+	DEFB	"HISTORY .. displays the command history list or resizes the history buffer",13,10
+	DEFB	"IF ....... executes command if equation is true",13,10
+	DEFB	"IFF ...... sets Command Mode ON if equation is true",13,10
+	DEFB	"INKEY .... reads character into environment item",13,10
+	DEFB	"INPUT .... reads string into environment item",13,10
+	DEFB	"KMODE .... sets or resets ",34,"Kanji Mode",34,13,10
+	DEFB	"MD ....... see MKDIR",13,10
+	DEFB	"MEMORY ... displays the amount and status of system RAM",13,10
+	DEFB	"MKDIR .... creates a new sub-directory",13,10
+	DEFB	"MODE ..... changes the screen mode",13,10
+	DEFB	"MOVE ..... moves files on a disk",13,10
+	DEFB	"MVDIR .... moves sub-directories",13,10
+	DEFB	"PATH ..... displays/sets the command search path",13,10
+	DEFB	"PAUSE .... prompts for a keypress",13,10
+	DEFB	"POPD ..... restores the current drive and directory",13,10
+	DEFB	"PUSHD .... stores the current drive and directory",13,10
+	DEFB	"RAMDISK .. displays/sets the size of the RAM disk",13,10
+	DEFB	"RD ....... see RMDIR",13,10
+	DEFB	"REM ...... remark... Ignores the following text.",13,10
+	DEFB	"REN ...... renames files",13,10
+	DEFB	"RESET .... resets system",13,10
+	DEFB	"RETURN ... returns from a batch file sub-routine [.BTM]",13,10
+	DEFB	"RMDIR .... removes empty sub-directories",13,10
+	DEFB	"RNDIR .... renames sub-directories",13,10
+	DEFB	"SET ...... displays/sets environment strings",13,10
+	DEFB	"THEN ..... executes the following command",13,10
+	DEFB	"TIME ..... displays/sets the current time",13,10
+	DEFB	"TO ....... changes to another directory",13,10
+	DEFB	"TREE ..... displays directories in a tree format",13,10
+	DEFB	"TYPE ..... displays the contents of files",13,10
+	DEFB	"UNDEL .... recovers deleted files",13,10
+	DEFB	"VER ...... displays MSX-DOS version numbers",13,10
+	DEFB	"VERIFY ... displays/sets the current verify state",13,10
+	DEFB	"VOL ...... displays/sets disk volume name",13,10
+	DEFB	"XCOPY .... copies files from a directory tree",13,10
+	DEFB	"XDIR ..... displays filenames in a directory tree",13,10
+	DEFB	13,10
+	DEFB	"Help for other MSX-DOS features is also available.",13,10
+	DEFB	"The standard topics are:",13,10
+	DEFB	13,10
+	DEFB	"ALI ...... aliases and executable extensions",13,10
+	DEFB	"BATCH .... batch files",13,10
+	DEFB	"EDITING .. command line editing and re-entering",13,10
+	DEFB	"ENV ...... environment strings",13,10
+	DEFB	"ERRORS ... error messages and Abort, Retry errors",13,10
+	DEFB	"IO ....... redirection, piping and standard I/O",13,10
+	DEFB	"SYNTAX ... notation used in command descriptions",13,10
+	DEFB	0
+
+	DEFB	"Insert COMMAND2.COM disk in drive ",0,":",0
+	DEFB	"Destroy all data on RAM disk (Y/N)? ",0
+	DEFB	"Wrong version of MSX-DOS, system halted",0
+	DEFB	"Terminate batch file (Y/N)? ",0
+	DEFB	"Insert batch file disk in drive ",0,":",0
+	DEFB	"Redirection error: ",0
+	DEFB	"Piping error: ",0
+	DEFB	"Batch file error: ",0
+	DEFB	"Standard input error: ",0
+	DEFB	"Standard output error: ",0
+	DEFB	" total disk space",0
+	DEFB	" used by files and directories",0
+	DEFB	" available disk space",0
+	DEFB	" = ",0
+	DEFB	"Not enough memory, system halted",0
+	DEFB	"CPU mode is ",0
+	DEFB	"Z80",0
+	DEFB	"R800-ROM",0
+	DEFB	"R800-RAM",0
+	DEFB	"DiskCheck is ",0
+	DEFB	" bytes",0
+	DEFB	" total RAM in Slot ",0
+	DEFB	" used by system",0
+	DEFB	" used by user",0
+	DEFB	" total TPA memory",0
+	DEFB	" total history buffer",0
+	DEFB	" total alias memory",0
+	DEFB	" total variable swap memory",0,0,0,0,0
+
+Stack:	DEFS	256
+BootStrap:	DEFS	8
+ID_Execute:	DEFB	0
+ExitAdres:	DEFW	0
+WarmBoot:	DEFW	0
+ComlinChar1:	DEFB	0
+ComlinChar2:	DEFB	0
+BatchPage:	DEFB	0
+MapperPage:	DEFB	0
+TemporaryPage:	DEFB	0
+MSXVersion:	DEFB	0
+MapperAdres:	DEFW	0
+MapperTable:	DEFW	0
+StringCode:	DEFB	0
+PipeAdres:	DEFW	0
+NextAdres:	DEFW	0
+InputHandle:	DEFB	0
+OutputHandle:	DEFB	0
+ID_Pipelin:	DEFB	0
+PipeFileName:	DEFB	"            "
+IffAdres:	DEFW	0
+IffList:	DEFS	17
+GosubAdres:	DEFW	0
+GosubList:	DEFS	16
+FileCount:	DEFW	0
+FileTotal1:	DEFW	0
+FileTotal2:	DEFW	0
+BatchHandle:	DEFB	0
+ID_Redir2:	DEFB	0
+ErrorCode:	DEFB	0
+OrigLine:	DEFS	#82
+LineAdres:	DEFW	0
+BatchBuffer:	DEFS	256
+BatLineLen:	DEFW	0
+BatLineAdr:	DEFW	0
+ID_Redir:	DEFB	0
+EndTPA:	DEFW	0
+DirBuffer:	DEFB	"A:\"
+	DEFS	#40
+LineBuffer:	DEFS	256
+Buffer2:	DEFS	#83
+Buffer1:	DEFS	#83
+PathLen:	DEFB	0
+AbortError:	DEFB	0
+FIB1:	DEFS	#40
+FIB2:	DEFS	#40
+FIB3:	DEFS	#40
+LineAdres2:	DEFW	0
+Value_L:	DEFW	0
+Value_H:	DEFW	0
+FilesFound:	DEFW	0
+CountFile:	DEFW	0
+Attribute1:	DEFB	0
+Attribute2:	DEFB	0
+OptionAdres:	DEFW	0
+LastItemAdr:	DEFW	0
+SearchAdr:	DEFW	0
+SearchAdr2:	DEFW	0
+DestinAdres:	DEFW	0
+Unknown2:	DEFW	0
+FileDate:	DEFW	0
+FileTime:	DEFW	0
+FileOrDir:	DEFB	0  ; b3 = gevonden; b2=mag wisselen; b1=dirs; b0=files
+RedirState:	DEFB	0  ; IY+#00
+ExtraCRLF:	DEFB	0
+	DEFB	0
+OptionFlag1:	DEFB	0
+OptionFlag2:	DEFB	0
+OptionFlag3:	DEFB	0
+OptionFlag4:	DEFB	0
+Unknown3:	DEFB	0
+DirFlag:	DEFB	0
+CurrentDrive:	DEFB	0
+ParseFlags:	DEFB	0
+LogiDrive:	DEFB	0
+LogiDrive2:	DEFB	0
+ColumnMax2:	DEFB	0
+RowMax:	DEFB	0
+ColumnMax:	DEFB	0
+ColumnCount:	DEFB	0
+	DEFB	0
+DateForm:	DEFB	0
+TimeForm:	DEFB	0
+TypeHandle:	DEFB	0
+NulHandle:	DEFB	0
+VerifyState:	DEFB	0
+ID_Copy:	DEFB	0
+DestinFlags:	DEFB	0
+FileBuffer:	DEFB	"           "
+Position:	DEFW	0
+InsertFlag:	DEFB	0
+Toevoeg:	DEFB	0
+Invul:	DEFB	0
+AliasState:	DEFB	0  ; IY+#29
+SeparState:	DEFB	0  ; IY+#2A
+MinInvul:	DEFB	0
+BufEnvData:	DEFS	255
+BufEnvName:	DEFS	255
+BufExtra:	DEFS	255
+BufExtra2:	DEFS	255
+BufExtra3:	DEFS	255
+

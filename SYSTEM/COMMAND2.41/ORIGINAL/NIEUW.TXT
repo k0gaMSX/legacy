@@ -1,0 +1,206 @@
+Nieuw in COMMAND2 versie 2.40 (release datum: 23-09-95)
+
+    Items met een * aangegeven in plaats van met een - worden door
+    mijzelf als niet echt nuttig beschouwd.
+
+     - Nieuwe command line editor:
+                 - buffer naar 1024 bytes
+                 - filenaam aanvullen met TAB
+                 - CTRL-DEL buffer wissen
+                 - CTRL-INS huidige regel in buffer zonder uit te voeren
+                 - CTRL-LEFT/RIGHT naar begin/eind regel
+                 - SHIFT-LEFT/RIGHT naar vorig/volgend woord
+                 - SHIFT-DEL verwijder rest van regel na cursor
+     * SET TIME staat standaard op 24
+     * volledige dagnaam bij DATE
+     - andere drive instellen tijdens reload COMMAND2.COM
+     - extra spaties tussen environment naam en inhoud bij SET
+     - commando's ERA en ERASE verwijderd
+     - commando DEL *.* vraagt nu 'Delete all files' i.p.v. 'Erase...'
+     - commando RENAME verwijderd
+     - commando FREE [d:] toegevoegd
+     - commando BEEP toegevoegd
+     - commando ALIAS [name] [seperator] [value] toegevoegd
+     - meerdere commando's op ‚‚n regel door scheidingsteken ^ te gebruiken
+     - wisselen van directory's zonder CD door directory direct in te voeren
+       en te laten eindigen op een \
+     - commando CD - keert terug naar de vorige directory
+     - gebruik van ALIASes in een commando regel
+     * commando RESET toegevoegd
+     - commando COLOR forclr [bakclr [brdclr]] toegevoegd
+     - commando INPUT [string] %%envname toegevoegd
+     - commando INKEY [string] %%envname toegevoegd
+     - commando CPU [n] toegevoegd
+     - lengte command line:
+                 - invoeren maximaal 127 tekens
+                 - na invullen aliases maximaal 255 tekens
+                 - na opdelen in commando's maximaal 127 tekens
+     - Environment Item ALIAS toegevoegd
+     - Environment Item SEPAR toegevoegd
+     - Environment Item EXPAND toegevoegd
+     - Environment Item CDPATH toegevoegd
+     - commando CDPATH [[+|-] [d:]path [[d:]path [[d:]path...]]] toegevoegd
+     - wanneer een directory met CD niet wordt gevonden, dan wordt ook een
+       path doorzocht
+     - commando CDD [d:][path] toegevoegd
+     - commando PUSHD [d:][path] toegevoegd
+     - commando POPD toegevoegd
+     * in batch-file %n uitgebreid. n mag nu maximaal 255 zijn i.p.v. 9.
+     - Environment Item LOWER toegevoegd
+     - Internal Variables toegevoegd. Gebruik als: %naam%, waar naam is:
+                 _BG, _BOOT, _COLUMN, _COLUMNS, _CPU, _CWD, _CWDS,
+                 _CWP, _CWPS, _DATE, _DATEF, _DIRBUFFER, _DISK, _DOSVER,
+                 _DOW, _ERROR, _FG, _FILECOUNT, _FNEXT, _MSXVER, _ROW,
+                 _ROWS, _TIME
+     - Internal Variable Functions toegevoegd. Gebruik als:
+       %naam[parameters]%, waar naam is:
+                 @ALIAS, @ASCII, @ATTRIB, @CHAR, @DISKFREE, @DISKTOTAL,
+                 @DISKUSED, @DRIVE, @EXT, @FFIRST, @FILE, @FILEATTR,
+                 @FILEDATE, @FILESIZE, @FILETIME, @FILETOTAL, @FULL,
+                 @HEX, @INSTR, @LABEL, @LEFT, @LEN, @LOWER, @MID, @NAME,
+                 @NEWFILE, @PARSE, @PATH, @RIGHT, @UPPER
+     - in plaats van parameters mogen ook weer (internal) variabelen worden
+       gebruikt: %naam1[%naam2[parameters]%]%. Nestbaar voor zover de
+       lengte van de command line dat toelaat.
+     - Executable Extensions toegevoegd. Te bereiken via alias.
+     - prompt kan iedere tekst hebben. Tekst instellen met SET PROMPT. Mag
+       ook %naam% bevatten.
+     - SET PROMPT staat standaard op %_CWD%>
+     - commando's IFF, THEN, ELSE en ENDIFF toegevoegd. IFF is nestbaar tot
+       maximaal 16 levels.
+     - een extern commando (file) mag ook wildcards bevatten. In dat geval
+       wordt de eerste de beste passende file gestart.
+     - SET EXPERT staat standaard op ON
+     - commando HISTORY toegevoegd
+     * commando DSKCHK toegevoegd
+     - bij de commando's ALIAS en SET is ook de /P optie mogelijk
+     - command line editor: CTRL-RETURN voert commando uit zonder deze in
+       de buffer te plaatsen
+     - commando MEMORY toegevoegd
+     * MODE kan ook scherm lengte instellen
+     - in batch file mag nu ook %n&, wat staat voor alle parameters vanaf
+       parameter n. Default voor n is 1, dus %& is hetzelfde als %1&.
+     - voor een alias geldt hetzelfde als voor een batch file:
+       parameters moeten doorgegeven worden met %n. Ook hier is %n&
+       mogelijk.
+     - bij IF(F) nu ook EQ, LT and GT i.p.v. alleen ==
+     - bij DIR is ook de /2 optie mogelijk voor een twee koloms output
+     - behalve .BAT files nu ook .BTM files. Deze worden in een keer in het
+       geheugen geladen (max. 16K groot, min. 16K geheugen vrij).
+       Daarbinnen zijn ook labels, GOTO, GOSUB, RETURN en END mogelijk.
+     - commando GOTO ~label toegevoegd
+     - commando GOSUB ~label toegevoegd
+     - commando RETURN [~label] toegevoegd
+     - commando END toegevoegd
+     - voorbeeld file COPY.BAT aangepast met labels. Zie COPY.BTM.
+     - bij IF(F) nu ook meerdere vergelijkingen gecombineerd met AND, OR of
+       XOR mogelijk. Aantal combinaties is onbeperkt voor zover de lengte
+       van de command line dat toelaat. Bij combinaties van verschillende
+       voorwaarden (bijv. AND en OR) worden de combinaties van ACHTEREN
+       NAAR VOREN afgewerkt. Haakjes zijn NIET mogelijk.
+     - commando ATTRIB mag nu ook +A en +S (en dus ook -A en -S) hebben om
+       een file system file of archived te maken
+     - alle commando's die een compound-filespec mee kunnen krijgen, kunnen
+       nu ook /S meekrijgen om system files ook mee te laten doen in de
+       bewerking
+     - DIR geeft behalve read-only en hidden files nu ook system files aan
+       met een s (naast h en r)
+     - voorbeeld file DIR.BTM toegevoegd. Format: DIR.BTM [filespec]. Doet
+       hetzelfde als het DIR commando, alleen niet zo snel. Laat als
+       extraatje ook de attributen van een file zien.
+
+NB.1:  DOS heeft sowieso 4 pagina's geheugen nodig als werk geheugen (TPA
+       geheugen). Verder worden nog 2 extra pagina's gebruikt voor
+       environment items, disk buffers en nog wat gegevens. Standaard heeft
+       DOS dus 6 pagina's (=96K) nodig om te kunnen werken. COMMAND2.COM
+       versie 2.40 heeft 1 pagina extra nodig om aliasen en de command line
+       buffer in op te slaan. Wanneer een .BTM file gestart wordt is nog
+       een extra pagina nodig, zodat in totaal dus 8 pagina's (=128K) nodig
+       zijn. Op een 128K machine is dus het volledige geheugen in gebruik
+       voor DOS. Wanneer een .BTM file wordt be‰indigd, wordt het geheugen
+       weer vrij gegeven. Op een 128K machine is dan dus 16K vrij voor
+       gebruik door andere programma's.
+
+NB.2:  COMMAND2.COM versie 2.40 is een Europese versie, wat betekent dat
+       alle Japanse teksten zijn verdwenen. Zelfs in KANA mode worden nu
+       Engelse teksten afgedrukt. Het enige wat nog in het Kana verschijnt
+       zijn de foutmeldingen, omdat deze uit het ROM komen.
+
+
+Nieuw in COMMAND2 versie 2.41 (release datum: 12-04-97)
+
+     - Bij DIR /W worden directory's in kleine letters aangegeven
+     - Benodigde variabelen worden in alias-geheugen opgeslagen, waardoor 
+       veel meer ruimte in de TPA overblijft
+     - Internal Variables toegevoegd:
+       _DRIVEMAP - Geeft in 8 bits de aanwezige drives weer. Links is drive 
+                   H:, rechts is drive A:
+       _SHELL    - Geeft het nummer van de shell van command2.com. 0 is het 
+                   originele programma, 1 is de eerste shell, enz.
+     - Internal Variable Functions toegevoegd:
+       @READY - Geeft een 1 als de opgegeven drive klaar is, een 0 als die 
+                niet klaar is of een lege string bij een fout
+     - Bij IF(F) zijn ook vergelijkingen met spaties erin mogelijk. In dat 
+       geval moet de string tussen { } staan.
+     - CTRL-TAB kan gebruikt worden om volgende file achter de vorige te 
+       plaatsen
+     - Wanneer INS aanstaat, kan met cursor op en neer een vorige opdracht 
+       gehaald worden die achter de huidige wordt geplaatst
+     - Speciale alias UNKNOWN_CMD toegevoegd. Deze alias wordt uitgevoerd 
+       wanneer normaal een *** Unrecognized command foutmelding gegeven zou 
+       worden. Bestaat deze alias niet, dan volgt alsnog de foutmelding. 
+       Let op de deze alias niet zelf een *** Unrecognized command 
+       veroorzaakt, anders ontstaat een niet te doorbreken loop.
+     - TAB-toets is nu circulair. Na de laatste naam, volgt niet een 
+       beep, maar komt de eerste naam weer.
+     - Environment item TABORDER toegevoegd. Hiermee wordt bepaald of er 
+       directory's of bestanden gevonden worden, en in welke volgorde. De 
+       waarde kan zijn:
+                BOTH - zowel bestanden als directory's worden gevonden, in 
+                       de volgorde waarin ze voorkomen
+                FILE - alleen bestanden worden gevonden
+                 DIR - alleen directory's worden gevonden
+            FILE,DIR - eerst worden bestanden gevonden, daarna pas 
+                       directory's
+            DIR,FILE - eerst worden directory's gevonden, daarna pas beú 
+                       standen
+     - HISTORY /D toegevoegd om history lijst leeg te maken
+     - HISTORY n toegevoegd om de history buffer te vergroten of te verú 
+       kleinen. n moet tussen 128 en 4096 liggen.
+     - Wanneer met HOME ingedrukt wordt opgestart, wordt de AUTOEXEC.BAT 
+       niet uitgevoerd.
+
+NB.3:  Alle versies van Multi Mente die ouder zijn dan versie 2.03, werken 
+       niet goed met deze versie van COMMAND2.COM. Het is vanuit Multi 
+       Mente niet mogelijk een SHELL te starten. Vanaf Multi Mente versie 
+       2.03 wordt een SHELL op een andere (de juiste) manier gestart, zodat 
+       deze wel perfect met COMMAND2.COM versie 2.41 samenwerken.
+
+Bekende bugs verwijderd uit versie 2.40:
+
+     - Bij commando TIME werd in 12-uurs mode geen 'a' of 'p' achter de 
+       tijd gezet. De 'a' of 'p' wordt er nu wel achter gezet.
+     - Wanneer met IFF een niet waar conditie gold, en er werd nog een IFF 
+       gegeven, dan kon met ELSE alsnog de niet waar conditie van de vorige 
+       IFF waar gemaakt worden. ELSE geldt nu alleen voor de huidige IFF, 
+       niet voor de vorige.
+     - Bij het verwijderen van de quotes werd het eerste teken na de quote 
+       niet meegeteld. De situatie "''" werd niet omgezet naar '', "' '" 
+       ging wel weer goed. Het eerste teken wordt nu wel meegeteld.
+     - Bij de functie @LABEL werd niet gecontroleerd of de opgegeven drive 
+       wel geldig was. Bij een niet geldige drive werd de laatst gebruikte 
+       bestandsnaam als label terug gegeven. Bij een niet geldige drive 
+       wordt nu een lege string terug gegeven.
+     - Wanneer een .BTM file met CTRL-C of CTRL-STOP werd afgebroken, werd 
+       het geheugen wat op dat moment in gebruik was door de .BTM file niet 
+       meer vrijgegeven. Na een aantal keren afbreken zat dus het hele 
+       geheugen vol. Het geheugen wordt nu wel vrijgegeven.
+     - Een .BTM file die niet eindigde op een ^Z teken (bijvoorbeeld 
+       wanneer deze met COPY CON FILE.BTM was ingevoerd) leverde soms rare 
+       effecten op. Het was de bedoeling dat er automatisch een ^Z werd 
+       toegevoegd, maar die kwam voorbij het einde van de file te staan. Nu 
+       komt de ^Z wel aan het einde van de file te staan.
+     - Een uitvoerbare extensie van minder dan drie tekens werd niet uitgeú 
+       voerd. Nu worden ook extensie van een of twee tekens gewoon uitgeú 
+       voerd.
+

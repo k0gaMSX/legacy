@@ -1,0 +1,154 @@
+IFF                                                          [Nieuw]
+---
+
+Formaat:     IFF [NOT] EXIST [d:][pad]bestandsnaam [THEN] [opdracht]
+                 .
+                 .
+             ENDIFF [opdracht]
+
+                  of
+
+             IFF [NOT] expr.1 ==|EQ|LT|GT expr.2 [AND|OR|XOR [NOT]
+               expr.3 ==|EQ|LT|GT expr.4 [AND|OR|XOR ...]] [THEN]
+               [opdracht]
+                 .
+                 .
+             ENDIFF [opdracht]
+
+Doel:        Zet de  Opdracht Mode aan als de vergelijking 'waar' is 
+        anders wordt de Opdracht Mode uitgezet.
+
+Gebruik:     Zie HELP IF voor meer voorbeelden van vergelijkingen.
+
+             Wanneer de  Opdracht Mode  AAN is  (dat is default) dan 
+        worden alle gegeven opdrachten uitgevoerd.
+
+             Wanneer de  Opdracht Mode  UIT is dan zullen opdrachten 
+        behalve ELSE en ENDIFF worden genegeerd. Wanneer de Opdracht 
+        Mode  uit is,  en er  wordt naar een hoger level gegaan, dan 
+        wordt ook de ELSE opdracht genegeerd.
+
+             Elke daaropvolgende  IFF opdracht gaat een niveau hoger 
+        tot  een maximum van 16 levels. Als geprobeerd wordt een nog 
+        hoger niveau  te bereiken, wordt de foutmelding *** Too many 
+        parameters gegeven.
+
+             Zie ook HELP THEN, HELP ELSE en HELP ENDIFF.
+
+Voorbeelden:
+
+        iff %@mid[%@parse[%1]%,3,1]% == 0
+          then set temporary = %2
+               iff %@len[%temporary% ]% == 1
+                 then set temporary = *.*
+               endiff
+               iff %@right[%temporary%,1]% == \
+                 then set temporary = %temporary%*.*
+               endiff
+               iff %@right[%@parse[%temporary%]%,1]% == 0
+                 then set temporary = %temporary%*.*
+               endiff
+               iff %@mid[%@parse[%temporary%]%,4,2]% == 00
+                 then set file = %temporary%%@file[%1]%
+                 else iff %@len[%@fileattr[%temporary%]% ]% == 1
+        rem De volgende opdracht moet op 1 regel.
+                        then set file =
+               %@path[%temporary%]%%@newfile[%1 %@file[%temporary%]%]%
+                        else iff %@fileattr[%temporary%]% == D
+                               then set file = %temporary%\%@file[%1]%
+        rem De volgende opdracht moet op 1 regel.
+                               else set file =
+               %@path[%temporary%]%%@newfile[%1 %@file[%temporary%]%]%
+                               endiff
+                        endiff
+               endiff
+
+               iff exist %file%
+                 then echo Bestand %file% bestaat al
+                      inkey Back-up maken? %%key
+                      iff %@upper[%key%]% == Y
+        rem De volgende opdracht moet op 1 regel.
+                                then copy %file%
+                              %@path[%file%]%%@newfile[%file% *.BAK]%
+                      endiff
+               endiff
+               set key =
+               set file =
+               set temporary =
+        endiff
+        @copy %1 %2
+
+             Dit  voorbeeld programma is ook als batch bestand gege- 
+        ven genaamd:  COPY.BAT. Het  kopieert een  bestand naar  een 
+        andere  drive en/of  directory net  als de  gewone COPY  op- 
+        dracht, alleen  als dat  bestand al  bestaat, geeft het pro- 
+        gramma een waarschuwing en vraagt of er ook een .BAK bestand 
+        gemaakt moet worden.
+
+             Dit voorbeeld maakt ook veel gebruik van Interne Varia- 
+        bele  Funkties. Zie  HELP ENV  voor meer informatie over dit 
+        onderwerp.
+
+             Ten eerste wordt de eerste optie ontleed en bit 5 beke- 
+        ken  of er  'wildcards' in voor komen. Als dat zo is, worden 
+        alle volgende opdrachten genegeerd en wordt er verder gegaan 
+        bij gaat  pas verder bij de laatste ENDIFF. Dit betekent dat 
+        als  de eerste optie meerdere bestanden aangewijst, COPY.BAT 
+        geen  .BAK  bestanden kan  aanmaken omdat  de namen  van die 
+        bestanden onbekend zijn.
+
+             Een tijdelijke environment variabele wordt gmaakt om de 
+        tweede optie in te bewaren.
+
+             Als  de lengte  van deze variabele, inclusief de spatie 
+        aan het eind, maar ‚‚n is, dan krijgt die variabele de waar- 
+        de '*.*'  waarde. De  spatie aan  het eind  is noodzakelijk, 
+        omdat  een optie  zonder waarde  geen resultaten teruggeeft, 
+        ongeacht de functie.
+
+             Als het  laatste teken  van die variabele een '\' teken 
+        is dan wordt ook *.* toegevoegd. Dit is nodig voor de onder- 
+        zoek functie in de volgende regel.
+
+             Dan  wordt de tijdelijke variabele onderzocht, en bit 0 
+        wordt bekeken  om uit te maken of er een pad en/of bestands- 
+        naam  is opgegeven  in plaats van alleen een drive naam. Als 
+        alleen een  drive is  opgegeven dan  wordt ook  '*.*' toege- 
+        voegd.
+
+             Daarna worden  bit 3 en 4 onderzocht om uit te maken of 
+        er  een bestandsnaam  en/of extensie is opgegeven. Als beide 
+        niet zijn  opgegeven dan  eindigt de tweede opdracht met een 
+        '\' en de bestandsnaam uit de eerste opdracht kan dan achter 
+        de  tweede opdracht gezet worden. Het resultaat hiervan komt 
+        in de variabele FILE.
+
+             Als een  bestandsnaam en/of extensie zijn opgegeven dan 
+        wordt  de tweede opdracht onderzocht of het een directory of 
+        een bestand is.
+
+             Bevat de optie wildcards, wat kan worden bepaald met de 
+        lengte  van de  FILEATTR Variabele Functie, dan kan het geen 
+        directory zijn. De environment variabele FILE krijgt dan het 
+        pad van  de eerste  optie, met  een nieuwe bestandsnaam, die 
+        wordt  verkregen  uit  de bestandnaam  van de  tweede optie, 
+        waarbij  de wildcards  ('?' of  '*') zijn  vervangen door de 
+        overeenkomstige tekens uit de eerste optie.
+
+             Als bij  onderzoek blijkt,  dat het  directory atribuut 
+        aan  staat, dan  zal in  de variabele FILE een '\' geplaatst 
+        worden met  de bestandsnaam  uit de eerste opdracht. Als het 
+        directory atribuut uit staat dan zal een nieuwe bestandsnaam 
+        gemaakt worden zoals hierboven werd omschreven.
+
+             Daarna  wordt bekeken  of de  bestandsnaam die gebruikt 
+        wordt om naar te kopi‰ren al bestaat op die plaats waar naar 
+        gekopieerd gaat  worden. Als dit zo is wordt er en waarschu- 
+        wing  getoond en  gevraagd of  er een  back-up van  die file 
+        gemaakt  moet  worden. Wordt  deze vraag  bevestigend beant- 
+        woord, dan wordt er een back-up gemaakt.
+
+             Uiteindelijk  worden  alle  environment variabelen  die 
+        gebruikt  zijn, verwijderd  en de  echte COPY opdracht wordt 
+        uitgevoerd.
+

@@ -1,0 +1,161 @@
+COPY                                                    [Uitgebreid]
+----
+
+Formaat:     COPY [/A] [/H] [S] [/T] [/V] [/P] [/B] bron doel
+
+Doel:        Kopieert gegevens van bestanden of apparaten naar ande- 
+        re bestanden of apparaten.
+
+Gebruik:     De definitie van de bron is:
+
+                  samengestelde bestandsspec
+
+             De  samengestelde  bestandsspec  geeft de  bestanden of 
+        apparaten  aan die gekopieerd moeten worden. Als de /H optie 
+        wordt opgegeven  kunnen ook  verborgen bestanden  gekopieerd 
+        worden  en als  de /S  optie wordt  opgegeven kunnen  ook de 
+        systeem bestanden gekopieerd worden.
+
+             De definitie van het doel is:
+
+                  [d:][pad][bestandsnaam] | apparaat
+
+        waarin d: en pad verwijzen naar de standaard drive en direc- 
+        tory als  ze niet  zijn opgegeven.  Als een  deel van de be- 
+        standsnaam  dubbelzinnig is,  dan wordt  het passende  teken 
+        vanuit  het  bronbestand  vervangen,  het zodoende  mogelijk 
+        makend om  bestanden te  hernoemen. Als de bestandsnaam niet 
+        opgegeven  wordt, wordt  de hele  bronbestandsnaam gebruikt. 
+        Als het  doel een directory is, worden de bestanden naar die 
+        directory gekopieerd met de naam *.*.
+
+             COPY zal  zoveel mogelijk  bronbestanden inlezen in het 
+        geheugen  alvorens ze weg te schrijven. Als het niet meer in 
+        het geheugen  in kan lezen (bijvoorbeeld als het alle geheu- 
+        genruimte heeft gebruikt), zal het de bestanden wegschrijven 
+        in  de volgorde  waarin ze  ingelezen zijn.  Wanneer het een 
+        doelbestand aanmaakt, toont het de naam van het bronbestand. 
+        Als het niet mogelijk is een doelbestand aan te maken, volgt 
+        er  een  foutmelding, en  gaat het  verder met  het volgende 
+        bestand. De  /P optie kan gegeven worden om de schermuitvoer 
+        onderaan  het scherm  te pauzeren  tot er op een toets wordt 
+        gedrukt.
+
+             Er zijn  veel redenen mogelijk waarom COPY geen doelbe- 
+        stand  aan kan  maken, als er bijvoorbeeld een schrijfbevei- 
+        ligd bestand  bestaat met  die naam.  Soms zal COPY weigeren 
+        een  doelbestand aan  te maken,  omdat de gebruiker een fout 
+        heeft  gemaakt.  Bijvoorbeeld  een  bestand kan  niet worden 
+        gekopieerd naar  zichzelf of  verschillende bestanden kunnen 
+        niet  worden gekopieerd  naar ‚‚n  bestand. Een  '*** Cannot 
+        create destination file' melding wordt gegeven als het doel- 
+        bestand een  vorig bronbestand zou wissen of als het doelbe- 
+        stand reeds voor iets anders in gebruik is (bijvoorbeeld het 
+        nu  gebruikte  batch  bestand).  Een  '*** Cannot  overwrite 
+        previous destination file' melding volgt als er wordt gepro- 
+        beerd  meerdere bestanden  in ‚‚n  bestand te  kopi‰ren. Dit 
+        betekent meestal  dat het  doel bedoeld  was als  directory, 
+        maar verkeerd gespeld was.
+
+             Als  de /A  optie wordt  opgegeven, wordt  er een ASCII 
+        copy uitgevoerd. Dit betekent dat bronbestanden worden gele- 
+        zen tot het eerste end-of-file teken (^Z) en dat ieder doel- 
+        bestand een  enkel end-of-file  teken toegevoegd krijgt. Het 
+        is  ook mogelijk  de /A  optie alleen  in te  geven voor het 
+        doelbestand of  voor iedere bestandsspec in de samengestelde 
+        bestandsspec, zodat het alleen voor die bestanden geldt.
+
+             Met  de /B  optie kan  worden gekozen  voor het binaire 
+        kopi‰ren, d.w.z.  dat het  gelezen bestand  wordt gekopieerd 
+        zoals het is, zonder te letten op het end-of-file teken.
+
+             De /V  optie kan  worden gegeven, om een schrijfverifi- 
+        catie tijdens de duur van de COPY opdracht te activeren (zie 
+        de  VERIFY opdracht).  Dit zorgt  ervoor dat de gegevens die 
+        worden geschreven correct worden geschreven.
+
+             Normaal  wordt aan  het doelbestand  dezelfde datum  en 
+        tijd toegekend  als van het bronbestand. Maar, wanneer de /T 
+        optie wordt opgegeven, dan krijgt het doelbestand de huidige 
+        datum en tijd. Het doelbestand is niet verborgen of schrijf- 
+        beveiligd,  ongeacht wat  het bronbestand was. De ATTRIB op- 
+        dracht kan worden gebruikt om dit te veranderen.
+
+             Als COPY een '*** Not enough memory' melding geeft, dan 
+        zal  het  verminderen  van  het  aantal  buffers  (zie  HELP 
+        BUFFERS) of  het verwijderen van environment items (zie HELP 
+        ENV) waarschijnlijk weer voldoende ruimte opleveren.
+
+             Merk  op dat  de COPY  opdracht eenvoudiger  is dan  in 
+        MS-DOS en  MSX-DOS1, omdat  het geen bestanden kan samenvoe- 
+        gen. Om dat te doen is er de CONCAT opdracht.
+
+
+ Voorbeelden:
+
+        COPY FILE1 B:
+
+             Het  bestand  FILE1  wordt  gekopieerd  van  de huidige 
+        directory en  de huidige drive, naar de huidige directory op 
+        drive B:
+
+        COPY /H MSXDOS2.SYS + COMMAND2.COM B:
+
+             De twee verborgen bestanden MSXDOS2.SYS en COMMAND2.COM 
+        worden  gekopieerd naar  drive B:,  zodat dit  een boot disk 
+        wordt.
+
+        COPY A:\DIR1 B:\DIR1 /V
+
+             Alle  bestanden in de directory DIR1 van de root direc- 
+        tory op drive A: worden gekopieerd naar een zelfde directory 
+        op drive B:, met de verifieer optie aan, zodat alles correct 
+        wordt geschreven.
+
+        COPY B:
+
+             Alle bestanden  in de  huidige directory  van drive  B: 
+        worden gekopieerd naar de huidige drive in de huidige direc- 
+        tory.
+
+        COPY /A AUX CON
+
+             Tekens worden  gelezen van  het apparaat  AUX (wat  ge- 
+        bruikt mag worden voor een seri‰le RS232), naar het apparaat 
+        CON,  wat het  scherm is.  Dit wordt  gedaan tot  het eerste 
+        end-of-file teken.  Als de /A optie niet was gegeven, was er 
+        mischien  geen andere mogelijkheid geweest om deze COPY stop 
+        te zetten zonder de CONTROL-STOP toets in te drukken.
+
+        COPY A:*.DOC B:/T
+
+             Alle   in   *.DOC   passende   bestanden  (bijvoorbeeld 
+        FILE1.DOC,  FILE2.DOC,  FILE3.DOC,  enz.)  worden gekopieerd 
+        naar de  huidige directory  op drive B: en krijgen tevens de 
+        huidige datum en tijd en niet die van de *.DOC bestanden.
+
+        COPY *.BAT
+        AUTOEXEC.BAT -- File cannot be copied onto itself
+        REBOOT.BAT -- File cannot be copied onto itself
+ 
+             Deze  opdracht  vertelde  COPY alle  in *.BAT  passende 
+        bestanden   te  kopi‰ren   (in  dit  geval  AUTOEXEC.BAT  en 
+        REBOOT.BAT) van  de huidige  directory in  de huidige  drive 
+        naar dezelfde plaats, en COPY gaf de foutmelding om hiervoor 
+        te  waarschuwen. Er  zijn in dit geval geen gegevens gekopi- 
+        eerd.
+
+        COPY *.BAT DIR2
+        AUTOEXEC.BAT
+        REBOOT.BAT -- Cannot overwrite previous destination file
+ 
+             Deze  opdracht  vertelde  COPY alle  in *.BAT  passende 
+        bestanden  (in dit  geval AUTOEXEC.BAT en REBOOT.BAT) te ko- 
+        pi‰ren naar  een directory  genoemd DIR2.  De directory DIR2 
+        bestond echter niet en AUTOEXEC.BAT werd gekopieerd naar een 
+        bestand  genaamd DIR2,  toen werd  een poging  ondernomen om 
+        REBOOT.BAT naar  datzelfde bestand  te kopi‰ren. De foutmel- 
+        ding  werd getoond als een waarschuwing voor een waarschijn- 
+        lijk gemaakte  fout (in  dit geval  dat DIR2  niet bestond). 
+        REBOOT.BAT is nergens heen gekopieerd.
+

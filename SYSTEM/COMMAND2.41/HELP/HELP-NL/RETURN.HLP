@@ -1,0 +1,61 @@
+RETURN                                                       [Nieuw]
+------
+
+Formaat:     RETURN [~label]
+
+Doel:        Keert terug van een sub-routine.
+
+Gebruik:     RETURN  keert terug  van een sub-routine, naar de regel 
+        direkt na  de GOSUB  opdracht die  verwees naar die sub-rou- 
+        tine. Als achter RETURN een label is opgegeven, dan gaat het 
+        verder bij het opgegeven label.
+
+             Een label  is een  string van  willekeurige tekens.  Er 
+        wordt  geen bewerking  uitgevoerd op  de tekens, dus hoofden 
+        kleine letters  blijven behouden.  Een label moet altijd met 
+        het  '~' teken  beginnen om het van andere opdrachten te on- 
+        derscheiden.
+
+             Er  wordt  een  '*** Unrecognized  command' foutmelding 
+        gegeven  als GOSUB vanaf de opdrachtregel of vanuit een .BAT 
+        bestand wordt gegeven.
+
+             Er wordt  een '*** Invalid parameter' foutmelding gege- 
+        ven  als het label niet wordt gevonden in het batch bestand. 
+        De uitvoering  van het bestand wordt dan gestopt, omdat ver- 
+        der gaan geen zin heeft.
+
+             Zie ook HELP GOSUB en HELP END.
+
+
+Voorbeelden:
+
+             Het  volgende voorbeeld  werkt alleen  in als  .BTM be- 
+        stand.
+
+        ECHO Dit is de eerste regel
+        GOSUB ~label1
+        ECHO Dit is de derde regel
+        END
+        ~label2
+        ECHO Dit is de tweede regel
+        RETURN
+        ~label1
+        GOSUB ~label2
+        RETURN
+
+        Dit is de eerste regel
+        Dit is de tweede regel
+        Dit is de derde regel
+
+             Eerst werd  de tekst  'Dit is de eerste regel' getoond. 
+        Daarna  gaat  het  batch  bestand  verder met  de subroutine 
+        '~label1',  die weer de subroutine '~label2' aanroept, zodat 
+        de tekst  'Dit is de tweede regel' werd getoond. Daarna werd 
+        een RETURN gevonden die er voor zorgde dat de opdracht na de 
+        opdracht,  GOSUB '~label2',  verder ging. Daar werd ook weer 
+        een RETURN  als opdracht  gevonden, waardoor hij terugkeerde 
+        na  de opdracht, GOSUB '~label1'. Hier werd 'Dit is de derde 
+        regel' op het scherm getoond. Daarna wordt het batch bestand 
+        be‰indigd en wordt er teruggekeerd naar MSX-DOS.
+

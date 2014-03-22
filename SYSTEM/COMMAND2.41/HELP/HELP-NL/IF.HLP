@@ -1,0 +1,167 @@
+IF                                               [gewijzigd]
+--
+
+Formaat:     IF [NOT] EXIST [d:][pad] bestandsnaam [THEN] opdracht
+                  of
+             IF [NOT] expr.1 ==|EQ|LT|GT expr.2 [AND|OR|XOR [NOT]
+               expr.3 ==|EQ|LT|GT expr.4 [AND|OR|XOR ...]] [THEN]
+               opdracht
+
+Doel:        Voert de  gegeven opdracht uit als de gegeven vergelij- 
+        king waar is.
+
+Gebruik:     Als  NOT  is  gegeven, dan  zal de  opdracht uitgevoerd 
+        worden  als de  vergelijking onwaar  is anders  wordt de op- 
+        dracht uitgevoerd als de vergelijking waar is.
+
+             Als EXIST  is gegeven,  dan zal  gezocht worden naar de 
+        opgegeven  bestandsnaam en de opdracht zal worden uitgevoerd 
+        als de  bestandsnaam wordt gevonden in de opgegeven drive en 
+        pad.  AIs NOT  ook was gegeven, dan wordt de opdracht uitge- 
+        voerd als het bestand niet wordt gevonden.
+
+             Als geen EXIST is gegeven, dan wordt de opdracht uitge- 
+        voerd als expr.1 gelijk is aan expr.2.
+
+             Behalve vergelijken,  kunnen de volgende vergelijkingen 
+        worden gemaakt:
+
+        a == b     : waar als a gelijk is aan b        (a =  b)
+        a eq b     : waar als a gelijk is aan b        (a =  b)
+        a lt b     : waar als a kleiner is dan b       (a <  b)
+        a gt b     : waar als a groter is dan b        (a >  b)
+        not a == b : waar als a niet gelijk is aan b   (a <> b)
+        not a eq b : waar als a niet gelijk is aan b   (a <> b)
+        not a lt b : waar als a niet kleiner is dan b  (a >= b)
+        not a gt b : waar als a niet groter is dan b   (a <= b)
+
+             Houd er  rekening mee  dat alles  wordt bekeken als een 
+        string.  Daarom is  '2' kleiner  dan '12',  omdat het eerste 
+        teken eerst  wordt vergeleken,  en '2'  is kleiner  dan '1'. 
+        Juist  is om  '02' te  vergelijken met  '12' omdat  dan naar 
+        beide cijfers  wordt gekeken. Een andere methode om getallen 
+        te  vergelijken die  verschillend van 'maat' zijn, is de ge- 
+        tallen  over  te zetten  naar hexadecimale  getallen met  de 
+        interne funktie  '@HEX'. Dit  zet beide getallen om naar een 
+        4-cijferig  hexadecimaal getal.  Deze kunnen  altijd normaal 
+        vergeleken worden  omdat '0002' kleiner is dan '000C'. Beide 
+        getallen  worden geacht  16-bit waarden te zijn en mogen dus 
+        de waarde 65,535 niet overschrijden.
+
+             Elke volgende  vergelijking kan gecombineerd worden met 
+        de  voorafgaande door gebruik te maken van de AND, OR of XOR 
+        optie. Wanneer  meer dan twee vergelijkingen worden gecombi- 
+        neerd  dan wordt  eerst de  laatste vergelijking  bekeken en 
+        daarna zal  het resultaat  worden gecombineerd met de vorige 
+        vergelijking.
+
+             THEN is optioneel en is alleen toegevoegd om compatibi- 
+        liteit met andere talen te garanderen.
+
+             De opdracht  mag elke interne of externe opdracht zijn, 
+        een batch bestand of een alias.
+
+Voorbeelden:
+
+        IF EXIST A:\COMMAND2.COM ECHO COMMAND2.COM werd gevonden!
+
+             Als er een bestand COMMAND2.COM in de root van drive A: 
+        wordt  gevonden, dan  zal de tekst 'COMMAND2.COM werd gevon- 
+        den!' worden getoond.
+
+        IF NOT EXIST H:\COMMAND2.COM COPY A:\COMMAND2.COM H:\
+
+             Als COMMAND2.COM  niet gevonden wordt (not exist) in de 
+        root van drive H:, dan zal het gekopieerd worden van de root 
+        van drive A: naar drive H:.
+
+        IF 2 LT 12 THEN BEEP
+
+             Als  '2' kleiner  is dan  '12', vergeleken als strings, 
+        dan wordt de BEEP opdracht uitgevoerd. Omdat '2' nooit klei- 
+        ner dan  '12' is  (omdat het  eerste teken van '2' groter is 
+        dan  het eerste  teken van '12'), zal de BEEP opdracht nooit 
+        gehoord worden.  Als je echter '02' in de plaats van '2' zet 
+        gaat alles natuurlijk wel goed.
+
+        IF %@HEX[2]% LT %@HEX[12]% THEN BEEP
+
+             Als '2' kleiner is dan '12', vergeleken als hexadecima- 
+        le  waarden,  dan  zal de  BEEP opdracht  worden uitgevoerd. 
+        Omdat  hexadecimaal een 4-cijferige uitvoering heeft, worden 
+        dus 4  cijfers vergeleken  als string  en dat gaat wel goed. 
+        Omdat  '2' altijd  kleiner is dan '12', zal de BEEP opdracht 
+        altijd uitgevoerd worden.
+
+        IF NOT %@FILEDATE[MYFILE.DAT]% EQ %_DATE% DEL MYFILE.DAT
+
+             Als  de datum  van het bestand 'MYFILE.DAT' niet gelijk 
+        is aan de huidige datum, dan wordt het bestand verwijderd.
+
+             Het volgende voorbeeld moet als 1 regel worden getypt:
+
+        IF NOT %@FILEDATE[MYFILE.DAT]% EQ %_DATE% AND NOT
+        %@FILETIME[MYFILE.DAT]% LT %_TIME% DEL MYFILE.DAT
+
+             Als de  datum van  het bestand 'MYFILE.DAT' niet gelijk 
+        is  aan  de  huidige  datum  en  de  tijd  van  het  bestand 
+        'MYFILE.DAT' is niet minder dan de huidige tijd, dan zal het 
+        bestand 'MYFILE.DAT' worden verwijderd.
+
+        IF 1 == 1 AND 2 == 2 OR 3 == 4 opdracht
+
+             Eerst  worden de  laatste twee  vergelijkingen bekeken, 
+        dus 2 == 2 OR 3 == 4 is 'waar', omdat ‚‚n van de twee verge- 
+        lijkingen waar  is. Dit resultaat wordt gecombineerd met het 
+        resultaat  van de  eerste vergelijking  dus omdat 1 == 1 AND 
+        'waar' is  'waar' omdat  beide vergelijkingen  waar zijn. De 
+        opdracht wordt dus uitgevoerd.
+
+        IF 1 == 1 OR 2 == 2 AND 3 == 4 opdracht
+
+             Het  resultaat van  de laatste  twee vergelijkingen  is 
+        'niet  waar',  gecombineerd met  de eerste  vergelijking die 
+        'waar' is,  wordt het  totale resultaat  'waar', dus  de op- 
+        dracht wordt uitgevoerd.
+
+        IF (1 == 1 OR 2 == 3) AND (3 == 4 OR 4 == 5) opdracht
+
+             De  haakjes in  bovenstaand voorbeeld zijn alleen om te 
+        laten zien hoe de vergelijkingen zou moeten worden opgelost, 
+        zij worden namelijk niet geaccepteerd door de IF opdracht om 
+        de volgorde te bepalen.
+
+             Het resultaat van bovenstaand voorbeeld is 'niet waar'. 
+        Maar de IF opdracht onderzoekt de regel als volgt:
+
+        IF (1 == 1 OR (2 == 3 AND (3 ==4 OR 4 == 5))) opdracht
+
+        waardoor het  resultaat 'waar' is, en dat was niet de bedoe- 
+        ling van de programmeur.
+
+             Het volgende  voorbeeld kan  wel gebruikt worden om het 
+        gewenste resultaat te krijgen.
+
+        SET EX1 = 0
+        SET EX2 = 0
+        IF 1 == 1 OR 2 == 3 SET EX1 = 1
+        IF 3 == 4 OR 4 == 5 SET EX2 = 1
+        IF %EX1% == 1 AND %EX2% == 1 opdracht
+        SET EX1 =
+        SET EX2 =
+
+             Eerst  worden twee environment items EX1 en EX2 gemaakt 
+        en de waarde '0' gegeven. Daarna worden de twee vergelijkin- 
+        gen  in  de eerste  IF regel  doorlopen en  omdat de  eerste 
+        'waar' is  wordt EX1 op de waarde '1' gebracht. In de tweede 
+        IF regel is de vergelijking 'niet waar', dus EX2 blijft '0'. 
+        Daarna  in de  derde IF regel wordt gekeken of EX1 gelijk is 
+        aan '1'  en EX2  op de zelfde manier, maar die is '0' geble- 
+        ven,  dus ‚‚n van de twee vergelijkingen bij de AND opdracht 
+        is 'waar' maar bij AND moeten beide 'waar' zijn om de gehele 
+        vergelijking 'waar' te laten zijn dus de opdracht wordt niet 
+        uitgevoerd.
+
+             Uiteindelijk worden  de twee  environment items verwij- 
+        derd van de lijst door ze de geen waarde te geven.
+

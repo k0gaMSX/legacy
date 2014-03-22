@@ -1,0 +1,88 @@
+CONCAT                                                  [Uitgebreid]
+------
+
+Formaat:     CONCAT  [/S]  [/H]  [/P] [/A]  [/B] [/V]  samengestelde 
+        bestandsspec bestandsspec
+
+Doel:        Schakelt bestanden aaneen.
+
+Gebruik:     De samengestelde  bestandsspec geeft  de bestanden aan, 
+        die aaneen geschakeld moeten worden. Wanneer /H is opgegeven 
+        dan  kunnen ook verborgen bestanden aaneen geschakeld worden 
+        en  als  /S is  opgegeven dan  kunnen ook  systeem bestanden 
+        aaneen geschakeld worden.
+ 
+             De tweede  parameter is  een bestandsspec die ondubbel- 
+        zinnig  moet zijn en die wordt aangemaakt voordat de bronbe- 
+        standen worden gelezen. Ieder bronbestand wordt dan gelezen, 
+        aan het  eind van  het vorige  bestand geschakeld  en wegge- 
+        schreven naar het doelbestand.
+
+             Iedere keer als er een bronbestand wordt gelezen, wordt 
+        de naam  op het  scherm gezet. Als om de een of andere reden 
+        het  bestand niet  kan worden  gelezen (bijvoorbeeld als het 
+        het bestand is dat wordt aangemaakt als het doelbestand) dan 
+        wordt de bestandsnaam gevolgd door een foutmelding en CONCAT 
+        gaat verder  met het  volgende bronbestand.  Als er veel be- 
+        standen  worden  samengevoegd  dan kan  de /P  optie gegeven 
+        worden  om de  schermuitvoer onderaan het scherm te pauzeren 
+        tot er op een toets wordt gedrukt.
+
+             Normaal  gesproken wordt  de aaneenschakeling toegepast 
+        op  ASCII  bestanden. Bronbestanden  worden gelezen  tot het 
+        eerste end-of-file teken (^Z) en een enkel end-of-file teken 
+        wordt toegevoegd  aan het doelbestand als alle gegevens zijn 
+        geschreven. Als /B wordt opgegeven, dan wordt er niet gecon- 
+        troleerd  op het  end-of-file teken  en er worden geen extra 
+        gegevens toegevoegd aan het doelbestand.
+
+             Het  is ook mogelijk de /B optie te geven aan het doel- 
+        bestand of  aan elk van de bestandsspecs in de samengestelde 
+        bestandsspec,  zodat het alleen voor die bestanden geldt. /A 
+        mag opgegeven  worden om  het tegengestelde effect van /B te 
+        bereiken.
+
+             De /V optie kan worden gegeven om de schrijfverificatie 
+        aan te zetten (zie de VERIFY opdracht) voor CONCAT opdracht. 
+        Dit zorgt  ervoor dat de gegevens die geschreven worden cor- 
+        rect  worden geschreven, maar vertraagt de CONCAT uitvoering 
+        door het verifi‰ren.
+
+             Als  CONCAT de  melding '***  Not enough memory' geeft, 
+        zal  het  verminderen  van  het  aantal  buffers  (zie  HELP 
+        BUFFERS) of  het verwijderen  van sommige  environment items 
+        (zie HELP ENV) voldoende geheugen vrij maken.
+
+
+Voorbeelden:
+
+        CONCAT *.DOC ALL.PRN
+ 
+             Een nieuw bestand met de naam ALL.PRN wordt aangemaakt, 
+        en alle in *.DOC passende bestanden (bijvoorbeeld FILE1.DOC, 
+        FILE2.DOC en  FILE3.DOC) zullen  worden samengevoegd  en ge- 
+        schreven naar het nieuwe bestand in de volgorde waarin ze op 
+        disk  gevonden  worden.  Een  bestaand  bestand met  de naam 
+        ALL.PRN wordt overgeschreven.
+
+        CONCAT /H /P *.DOC ALL.DOC
+        ALL.DOC -- Cannot concatenate destination file
+
+             Een nieuw bestand met de naam ALL.DOC wordt aangemaakt, 
+        en alle  in *.DOC  passende bestanden worden samengevoegd en 
+        in  de nieuwe  file geschreven,  in de volgorde waarin ze op 
+        disk worden  gevonden. Aangezien het doelbestand ook past in 
+        de  specificatie *.DOC wordt de melding gegeven en het wordt 
+        niet samengevoegd.  Omdat de  /H optie  was opgegeven worden 
+        ook  verborgen  bestanden  meegenomen en  omdat de  /P optie 
+        opgegeven  was wordt  de lijst met namen gepauzeerd onderaan 
+        het scherm als de lijst langer is dan het scherm.
+
+        CONCAT /B FILE2.DOC + FILE3.DOC + FILE1.DOC ALL.DOC
+
+             Een nieuw bestand met de naam ALL.DOC wordt aangemaakt, 
+        en  de bestanden FILE2.DOC. FILE3.DOC en FILE1.DOC worden in 
+        die  volgorde  naar  het  bronbestand geschreven.  Ze worden 
+        samengevoegd in  binaire mode,  dus zonder  te letten op het 
+        end-of-file teken.
+

@@ -1,0 +1,210 @@
+ALIASSEN EN UITVOERBARE EXTENSIES                            [Nieuw]
+---------------------------------
+
+ALIASSEN
+
+             COMMAND2.COM  ondersteunt een  mogelijkheid tot het ge- 
+        bruik  van  aliassen,  die  hieronder beschreven  worden. Er 
+        bestaat echter  een environment item ALIAS, dat op OFF gezet 
+        kan  worden (met  de opdracht SET ALIAS OFF) om COMMAND2.COM 
+        de aliassen te laten negeren. De opdracht SET ALIAS ON stelt 
+        dit weer terug in de normale staat.
+
+             MSX-DOS houdt  een lijst van aliassen bij. Een alias is 
+        een  opdrachtnaam waar een bestaande DOS opdracht aan toege- 
+        voegd wordt.  Als nu deze opdrachtnaam wordt gegeven dan zal 
+        die  vervangen worden  door de DOS opdracht die bij deze op- 
+        drachtnaam hoort.
+
+             Een  alias mag  iedere door  de gebruiker bedachte naam 
+        hebben en mag elk teken bevatten, behalve een spatie.
+
+             De  waarde van  de alias is eenvoudigweg een string met 
+        willekeurige tekens.  De tekens  worden zondermeer overgeno- 
+        men,  zodat hoofd-  en kleine  letters bewaard  blijven. Een 
+        alias die  niet bestaat  heeft een  waarde nul  (d.w.z. geen 
+        tekens).
+
+             Een  alias  kan  veranderd of  ingevoerd worden  met de 
+        opdracht  ALIAS. Deze opdracht kan ook gebruikt worden om de 
+        huidige aliaslijst te tonen.
+
+             Wanneer  een  aliaswaarde  een  speciaal  opdrachtteken 
+        (zoals %  @ <  > |  ^ ' ") bevat, dan zal deze waarde tussen 
+        enkele  (') of  dubbele (") aanhalingstekens moeten staan om 
+        de opdracht juist te lezen.
+
+             Als er  parameters worden  meegegeven aan een alias dan 
+        worden  deze genegeerd.  Als er wel een parameter meegegeven 
+        moet worden, dan moet de aliaswaarde een %n bevatten. Iedere 
+        keer wanneer  een %n wordt verwerkt dan wordt deze vervangen 
+        door de n-de parameter.
+
+Voorbeelden:
+
+        ALIAS D = DIR
+
+             Een alias genaamd D krijgt de waarde DIR.
+
+        D
+
+             De opdracht D werd ingegeven. Omdat er een alias is met 
+        de  naam D, wordt de opdracht D vervangen door DIR en de DIR 
+        opdracht wordt uitgevoerd.
+
+        D *.COM
+
+             De parameters achter een alias worden niet doorgegeven, 
+        dus de opdracht D *.COM heeft hetzelfde effect als D.
+
+        ALIAS D = "DIR %1"
+        D *.COM
+
+             De  D opdracht  werkt nu wel goed omdat deze wordt ver- 
+        vangen door  DIR *.COM. De %1 wordt vervangen door de eerste 
+        parameter die achter de alias staat, in dit geval dus *.COM.
+
+        ALIAS DH = "DIR H:%&"
+        DH *.COM
+
+             Deze   DH  *.COM  opdracht  wordt  vervangen  door  DIR 
+        H:*.COM. De  %& wordt  vervangen door alle parameters achter 
+        de alias, te beginnen bij de eerste parameter.
+
+        ALIAS DH = "DIR H:%2&"
+        DH *.COM *.BAT
+
+             Deze  DH *.COM  *.BAT opdracht wordt vervangen door DIR 
+        H:*.BAT. De  %2& wordt vervangen door alle parameters achter 
+        de alias, te beginnen bij de tweede parameter.
+
+        ALIAS DAL = DEL *.* ^ BEEP
+
+             Een alias genaamd DAL wordt op de waarde DEL *.* gezet. 
+        Vervolgens wordt het commando BEEP uitgevoerd.
+
+        ALIAS DAL = 'DEL *.* ^ BEEP'
+
+             Een alias genaamd DAL wordt op de waarde DEL *.* ^ BEEP 
+        gezet.
+
+        DAL
+
+             Deze  opdracht  wordt  vervangen door  DEL *.*  ^ BEEP. 
+        Eerst  worden alle bestanden verwijderd (nadat om een beves- 
+        tiging is gevraagd) en vervolgens is er een beep te horen.
+
+        ALIAS C = "COPY %&"
+        ALIAS CAL = 'C *.* H:'
+
+             De  CAL opdracht  wordt vervangen  door C  *.* H:. Deze 
+        wordt vervolgens weer vervangen door COPY *.* H:.
+
+             Men  moet oppassen  niet per ongeluk in een lus terecht 
+        te komen  doordat de  ene alias  een tweede aanroept en deze 
+        tweede weer de eerste, zoals hieronder.
+
+        ALIAS A = B
+        ALIAS B = A
+
+             Het  commando A  wordt vervangen door B, wat vervolgens 
+        weer vervangen  wordt door  A, wat weer vervangen wordt door 
+        B, enz. Deze lus kan worden verbroken met CTRL-STOP.
+
+        ALIAS DIR = "DIR %& /W"
+
+             Deze alias doet ook niets omdat DIR, DIR aanroept, enz. 
+        Om te voorkomen dat een opdracht als een alias wordt gezien, 
+        moet de opdracht worden voorafgegaan door een '@'.
+
+        ALIAS DIR = "@DIR %& /W"
+
+             Nu wordt de tweede DIR altijd als opdracht gezien.
+
+        DIR
+
+             Dit wordt vervangen door DIR /W.
+
+        @DIR
+
+             Dit commando  wordt niet  gezien als  een alias  en dus 
+        wordt het normale DIR commando uitgevoerd.
+
+
+UITVOERBARE EXTENSIES
+
+             Er zijn  ook een aantal speciale aliassen, die reageren 
+        op  een bestand  in plaats  van een  commando. Deze aliassen 
+        beginnen altijd  met een punt en hebben dezelfde naam als de 
+        extensie  van het  bestand waar ze naar verwijzen. De waarde 
+        van deze  alias mag  een interne of externe opdracht, of een 
+        batch bestand zijn.
+
+             .COM,  .BAT and  .BTM zijn standaard uitvoerbare exten- 
+        sies en  kunnen niet  onderdrukt worden door een nieuwe uit- 
+        voerbare extensie met dezelfde naam te maken.
+
+             Anders  dan bij gewone aliassen, worden alle parameters 
+        achter de bestandsnaam, inclusief de bestandsnaam zelf auto- 
+        matisch achter de aliaswaarde geplaatst.
+
+             Als de  bestandsnaam die  op de opdrachtregel is getypt 
+        niet kan worden gevonden in de huidige directory, dan worden 
+        de  directory's  opgegeven  door het  environment item  PATH 
+        doorzocht.  Wordt op die manier de bestandsnaam gevonden dan 
+        zal het  met de  komplete padnaam  achter de  alias opdracht 
+        worden gezet.
+
+Voorbeelden:
+
+        ALIAS .TXT = A:\TED\TED
+
+             Een uitvoerbare  extensie met  de naam  TXT wordt op de 
+        waarde A:\TED\TED gezet.
+
+        INFO.TXT
+
+             Een bestand  INFO.TXT zal  worden uitgevoerd.  Omdat de 
+        extensie een uitvoerbare extensie is, wordt de opdracht:
+
+        A:\TED\TED INFO.TXT
+
+        uitgevoerd.
+
+             Indien  het bestand  INFO.TXT niet wordt gevonden in de 
+        huidige directory,  dan worden ook de directory's aangegeven 
+        door  het  zoekpad  doorzocht en  met hun  volledige padnaam 
+        achter de opdracht geplaatst, bijvoorbeeld:
+
+        A:\TED\TED B:\TEKST\INFO\INFO.TXT
+
+             Als er geen extensie is gegeven in de opdrachtregel dan 
+        zal het  eerste bestand  dat wordt  gevonden en dat een uit- 
+        voerbare extensie heeft, worden uitgevoerd. Bijvoorbeeld, er 
+        zijn   drie  bestanden  in  de  directory  aanwezig  genaamd 
+        INFO.TXT, INFO.COM en INFO.BAT.
+
+        INFO
+
+             Het  eerste  bestand  dat wordt  gevonden is  INFO.TXT. 
+        Omdat .TXT een uitvoerbare extensie is, wordt de opdracht:
+
+        A:\TED\TED INFO.TXT
+
+        uitgevoerd. Om nu het programma INFO.COM te starten moet:
+
+        INFO.COM
+
+        gebruikt worden.
+
+        ALIAS .TXT =
+
+             De  uitvoerbare extensie  .TXT wordt  verwijderd uit de 
+        alias lijst.
+
+        INFO
+
+             Het  eerste bestand dat wordt gevonden met een uitvoer- 
+        bare extensie, is INFO.COM. Omdat dit een standaard uitvoer- 
+        bare extensie is, wordt het bestand INFO.COM uitgevoerd.
+

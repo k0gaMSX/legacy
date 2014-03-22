@@ -1,0 +1,1396 @@
+
+		ORG   &H0100
+
+BDOS:		EQU   &H05
+
+		JP    Start
+
+; De volgende tekst wordt afgedrukt met het TYPE commando.
+
+		DEFB  13,10
+		DEFB  "TO - To Directory",13,10
+		DEFB  "Version 1.56",13,10
+		DEFB  "Copyright (c) 1993/1994 by C.P.U.",13,10,10,&H1A
+
+; DOS1? Jammer, dat werkt niet.
+
+Start:		LD    C,&H6F
+		CALL  BDOS
+		LD    A,B
+		CP    2
+		JP    C,DOS1
+
+; Lengte nul? Druk handleiding af.
+
+		LD    HL,&H80
+		LD    A,(HL)
+		OR    A
+		JP    Z,Explain
+
+; Zoek naar opties.
+
+		PUSH  HL
+		PUSH  AF
+		CALL  GetOption
+		POP   AF
+		POP   HL
+		LD    IX,Option
+		LD    IY,Attribute
+		LD    B,0
+		LD    C,A
+SearchOption:	INC   C
+		DEC   C
+		JP    Z,ParsePath
+		LD    A,"/"
+		CPIR
+		JP    NZ,ParsePath
+		LD    A,(HL)
+		OR    &B00100000
+Check_H:	CP    "h"
+		JR    NZ,Check_N
+		SET   1,(IY)
+		JR    DelOption
+Check_N:	CP    "n"
+		JR    NZ,Check_V
+		SET   6,(IX)
+		JR    DelOption
+Check_V:	CP    "v"
+		JR    NZ,Check_R
+		SET   5,(IX)
+		JR    DelOption
+Check_R:	CP    "r"
+		JR    NZ,Check_D
+		SET   4,(IX)
+		JR    DelOption
+Check_D:	CP    "d"
+		JR    NZ,Check_C
+		SET   3,(IX)
+		JR    DelOption
+Check_C:	CP    "c"
+		JR    NZ,Check_M
+		SET   2,(IX)
+		SET   1,(IX)
+		JR    DelOption
+Check_M:	CP    "m"
+		JR    NZ,Check_S
+		SET   1,(IX)
+		JR    DelOption
+Check_S:	CP    "s"
+		JR    NZ,Check_X
+		SET   0,(IX)
+		JR    DelOption
+Check_X:	LD    IX,Option2
+		CP    "x"
+		JR    NZ,Check_F
+		LD    (IX),&B00000011
+		JR    DelOption
+Check_F:	CP    "f"
+		JR    NZ,Check_L
+		LD    (IX),&B00000010
+		JR    DelOption
+Check_L:	CP    "l"
+		JR    NZ,Check_P
+		LD    (IX),&B00000001
+		JR    DelOption
+Check_P:	CP    "p"
+		JP    NZ,Error136
+		LD    (IX),&B00000000
+
+; Verwijder optie.
+
+DelOption:	DEC   HL
+		LD    (HL)," "
+		INC   HL
+		LD    (HL)," "
+		LD    IX,Option
+		JP    SearchOption
+
+; Zoek begin pathname.
+
+ParsePath:	LD    DE,&H80
+		CALL  SkipSpace
+		JR    NZ,Next_0001
+		BIT   0,(IX)
+		JP    Z,Explain
+Next_0001:	LD    (Expression1),DE
+		LD    BC,&H5B
+		CALL  BDOS
+		LD    A,C
+		ADD   A,"@"
+		LD    (Drive),A
+		LD    (Drive2),A
+		LD    A,B
+		LD    (ParseFlag),A
+		LD    IX,Option
+		BIT   0,(IX)
+		JR    Z,Next_0002
+		BIT   0,B
+		JP    NZ,Error138
+		JP    Scan
+Next_0002:	CALL  Compare
+		JR    Z,Next_0003
+		BIT   1,B
+		JR    NZ,Next_0004
+Next_0003:	LD    A,(IX)
+		OR    A
+		JR    NZ,Next_0004
+		EX    DE,HL
+		LD    A,(DE)
+		CP    "-"
+		JP    Z,Minus
+		CP    "."
+		JP    Z,Points
+		DEC   DE
+		LD    A,(DE)
+		CP    "\"
+		JP    Z,Root
+		INC   DE
+		EX    DE,HL
+Next_0004:	BIT   0,B
+		JP    Z,Error137
+		BIT   4,(IX)
+		JR    NZ,Next_0005
+		BIT   5,(IX)
+		JR    NZ,Next_0005
+		LD    A,(DE)
+		OR    A
+		JR    Z,Search
+		XOR   A
+		LD    (DE),A
+		CALL  SkipSpace
+		JR    Z,Search
+		JP    Error138
+Next_0005:	LD    A,(DE)
+		OR    A
+		JP    Z,Error137
+		XOR   A
+		LD    (DE),A
+		CALL  SkipSpace
+		JP    Z,Error137
+		LD    (Expression2),DE
+		LD    BC,&H5B
+		CALL  BDOS
+		LD    IX,Option
+		LD    A,(DE)
+		OR    A
+		JR    Z,Search
+		XOR   A
+		LD    (DE),A
+		CALL  SkipSpace
+		JR    Z,Search
+		JP    Error138
+Search: 	LD    DE,(Expression1)
+		BIT   0,(IX)
+		JP    NZ,Scan
+		BIT   1,(IX)
+		JP    NZ,Create
+		BIT   3,(IX)
+		JP    NZ,Delete
+		BIT   4,(IX)
+		JP    NZ,Rename
+		BIT   5,(IX)
+		JP    NZ,Move
+
+; Zoek opgegeven expressie in de directory tree.
+
+Next_0006:	CALL  Load
+		LD    DE,(Expression1)
+		LD    A,(ParseFlag)
+		BIT   2,A
+		JR    Z,Next_0007
+		INC   DE
+		INC   DE
+Next_0007:	LD    HL,(StoreList)
+		LD    (StringAdres),HL
+		LD    (HL),0
+		LD    A,1
+Next_0008:	CALL  GetAdres
+		LD    B,12
+		LD    C,A
+Next_0009:	LD    A,(HL)
+		CP    26
+		JR    Z,StopSearch
+		PUSH  BC
+		LD    B,A
+		LD    A,(DE)
+		CALL  MakeCapital
+		CP    B
+		POP   BC
+		JR    NZ,Different
+		CALL  NextChar
+		JR    NZ,Different
+		LD    A,(ParseFlag)
+		BIT   2,A
+		JR    Z,Next_0011
+		LD    A,C
+		CALL  GetAdres
+		LD    A,(Drive)
+		CP    (IX+13)
+		JR    Z,Next_0011
+Different:	LD    IX,Option2
+		BIT   1,(IX)
+		JR    NZ,Next_0010
+		INC   HL
+		DJNZ  Next_0009
+Next_0010:	LD    A,C
+		INC   A
+		JR    Next_0008
+
+; Sla nummer op in lijst.
+
+Next_0011:	PUSH  HL
+		LD    HL,Option
+		BIT   6,(HL)
+		POP   HL
+		LD    A,C
+		JP    NZ,Make
+		PUSH  HL
+		LD    HL,(StringAdres)
+		LD    (HL),C
+		INC   HL
+		LD    (HL),0
+		LD    (StringAdres),HL
+		LD    A,C
+		INC   A
+		POP   HL
+		JR    Next_0008
+
+; Druk lijst af en wacht op keuze.
+
+StopSearch:	LD    HL,Option
+		BIT   6,(HL)
+		JP    NZ,Stop
+Next_0012:	LD    HL,(StoreList)
+		LD    A,(HL)
+		OR    A
+		JP    Z,Stop
+		INC   HL
+		LD    A,(HL)
+		OR    A
+		DEC   HL
+		LD    A,(HL)
+		JP    Z,Make
+		LD    DE,TextChoose
+		CALL  PrintString
+		LD    HL,(StoreList)
+		LD    B,1
+Next_0013:	LD    A,(HL)
+		OR    A
+		JR    Z,Next_0014
+		PUSH  HL
+		PUSH  BC
+		LD    DE,Drive
+		CALL  Build
+		POP   BC
+		LD    A,B
+		ADD   A,"@"
+		LD    E,A
+		LD    C,&H02
+		PUSH  BC
+		CALL  BDOS
+		LD    DE,TextStripe
+		CALL  PrintString
+		CALL  PrintPath
+		POP   BC
+		POP   HL
+		INC   HL
+		INC   B
+		LD    A,B
+		CP    16
+		JR    C,Next_0013
+		LD    HL,SaveAttribute
+		SET   0,(HL)
+		LD    DE,TextMore
+		PUSH  BC
+		CALL  PrintString
+		POP   BC
+Next_0014:	LD    A,B
+		ADD   A,"@"
+		LD    B,A
+Next_0015:	PUSH  BC
+		LD    C,&H07
+		CALL  BDOS
+		CALL  MakeCapital
+		POP   BC
+		LD    HL,SaveAttribute
+		BIT   0,(HL)
+		JR    Z,Next_0016
+		CP    "P"
+		JR    NZ,Next_0016
+		RES   0,(HL)
+		LD    HL,(StoreList)
+		LD    DE,15
+		ADD   HL,DE
+		LD    (StoreList),HL
+		JR    Next_0012
+Next_0016:	CP    27
+		JP    Z,Stop
+		CP    "A"
+		JR    C,Next_0015
+		CP    B
+		JR    NC,Next_0015
+		LD    H,0
+		SUB   A,"A"
+		LD    L,A
+		LD    DE,(StoreList)
+		ADD   HL,DE
+		LD    A,(HL)
+		JR    Make
+
+; Onderzoek de volgende tekens.
+
+NextChar:	PUSH  HL
+		PUSH  DE
+		PUSH  BC
+		PUSH  IX
+Next_0017:	INC   HL
+		INC   DE
+		LD    A,(HL)
+		CP    26
+		JR    Z,Stop
+		LD    B,A
+		LD    A,(DE)
+		LD    IX,Option2
+		BIT   0,(IX)
+		JR    NZ,Next_0018
+		CP    0
+		JR    Z,Return
+Next_0018:	CALL  MakeCapital
+		CP    B
+		JR    NZ,Return
+		CP    0
+		JR    NZ,Next_0017
+Return: 	POP   IX
+		POP   BC
+		POP   DE
+		POP   HL
+		RET
+
+; Maak complete directory waarin de expressie voorkomt.
+
+Make:		LD    DE,Drive
+		CALL  Build
+		EX    DE,HL
+		DEC   HL
+		LD    (HL),0
+
+; Change Drive and Directory.
+
+Cdd2:		CALL  Cdd
+
+; Stoppen maar.
+
+Stop:		LD    A,0
+
+; Foutmelding.
+
+Error:		LD    B,A
+Error3: 	LD    C,&H62
+		CALL  BDOS
+
+; Speciale foutmelding.
+
+Error2: 	CP    215
+		JR    NZ,Error
+		LD    DE,TextError
+		JR    Print
+
+Error136:	LD    B,136
+		JR    Error3
+Error137:	LD    B,137
+		JR    Error3
+Error138:	LD    B,138
+		JR    Error3
+Error139:	LD    B,139
+		JR    Error3
+
+; Melding voor DOS 1.
+
+DOS1:		LD    DE,TextDos1
+Print:		CALL  PrintString
+		JR    Stop
+
+; Korte handleiding.
+
+Explain:	LD    HL,TextList
+Explain2:	LD    E,(HL)
+		INC   HL
+		LD    D,(HL)
+		LD    A,D
+		OR    E
+		JR    Z,Stop
+		PUSH  HL
+		CALL  PrintString
+		POP   HL
+		INC   HL
+		JR    Explain2
+
+; Druk status regel af.
+
+Print2: 	PUSH  DE
+		LD    DE,Text1
+		CALL  PrintString
+		POP   DE
+		CALL  PrintString
+		LD    DE,Text2
+		CALL  PrintString
+		JR    Stop
+
+; Druk halve status regel af.
+
+Print3: 	PUSH  DE
+		LD    DE,Text1
+		CALL  PrintString
+		POP   DE
+		CALL  PrintString
+		JR    Stop
+
+; Hier begint de routine /S(can).
+
+Scan:		LD    DE,TextScan
+		CALL  PrintString
+		CALL  MakeDrives
+Next_0019:	LD    (Drive),A
+		XOR   A
+		LD    (Path+1),A
+FindFirst:	LD    DE,Drive
+		LD    A,(Attribute)
+		LD    B,A
+		LD    IX,FIB
+		LD    C,&H40
+		CALL  BDOS
+FindNext:	JR    NZ,NextDir
+		CALL  PutDir
+		LD    IX,FIB
+		LD    C,&H41
+		CALL  BDOS
+		JR    FindNext
+
+; Doorzoek volgende directory.
+
+NextDir:	CP    215
+		JP    NZ,Error
+		LD    A,(Get_Nr)
+		INC   A
+		LD    (Get_Nr),A
+		LD    DE,Drive
+		CALL  Build
+		JR    NZ,FindFirst
+		LD    DE,(DriveAdres)
+		INC   DE
+		LD    (DriveAdres),DE
+		LD    A,(DE)
+		OR    A
+		JP    Z,MakeFile
+		LD    A,(Get_Nr)
+		DEC   A
+		LD    (Offset),A
+		LD    (Get_Nr),A
+		LD    A,(DE)
+		JR    Next_0019
+
+; Voeg directory aan lijst toe.
+
+PutDir: 	LD    A,(FIB+14)
+		BIT   4,A
+		RET   Z
+		LD    A,(FIB+1)
+		CP    "."
+		RET   Z
+		LD    BC,15
+		LD    DE,(StartList)
+		PUSH  DE
+		LD    H,D
+		LD    L,E
+		LD    (HL),0
+		INC   DE
+		LDIR
+		LD    BC,12
+		POP   DE
+		PUSH  DE
+		LD    HL,FIB+1
+		LDIR
+		LD    A,(Get_Nr)
+		POP   IX
+		LD    B,A
+		LD    A,(Offset)
+		CP    B
+		JR    NZ,Next_0020
+		LD    B,0
+Next_0020:	LD    (IX+12),B
+		LD    HL,(DriveAdres)
+		LD    A,(HL)
+		CALL  MakeCapital
+		LD    (IX+13),A
+		LD    (IX+16),26
+		LD    DE,16
+		ADD   IX,DE
+		LD    (StartList),IX
+		RET
+
+; Bouw hele pathstring.
+
+Build:		PUSH  HL
+		PUSH  DE
+		EX    DE,HL
+		INC   HL
+		LD    (HL),":"
+		INC   HL
+		LD    (HL),"\"
+		INC   HL
+		EX    DE,HL
+		CALL  Build2
+		POP   HL
+		LD    A,(IX+13)
+		LD    (HL),A
+		POP   HL
+		RET
+
+Build2: 	OR    A
+		RET   Z
+		CALL  GetAdres
+		LD    A,(IX)
+		CP    26
+		RET   Z
+		LD    A,(IX+12)
+		PUSH  IX
+		CALL  Build2
+		POP   HL
+Next_0021:	LD    A,(HL)
+		OR    A
+		JR    Z,Next_0022
+		LDI
+		JR    Next_0021
+Next_0022:	EX    DE,HL
+		LD    (HL),"\"
+		INC   HL
+		LD    (HL),0
+		EX    DE,HL
+		INC   A
+		RET
+
+; Breek pathstring en geef nummer in D_TREE.
+
+Break:		LD    DE,Path+1
+		LD    A,(DE)
+		OR    A
+		RET   Z
+		LD    BC,&H5B
+		CALL  BDOS
+		XOR   A
+		BIT   1,B
+		RET   Z
+		DEC   HL
+		LD    (HL),0
+Break2: 	LD    DE,Path+1
+		LD    A,(DE)
+		OR    A
+		RET   Z
+		LD    BC,&H5B
+		CALL  BDOS
+		EX    DE,HL
+		LD    A,1
+		LD    (Dir_Nr),A
+Next_0023:	CALL  GetAdres
+		LD    A,(HL)
+		CP    26
+		JR    Z,Next_0024
+		LD    BC,12
+		PUSH  DE
+		CALL  CMPIR
+		CALL  Final
+		POP   DE
+		JR    Z,Next_0025
+		LD    A,(Dir_Nr)
+		INC   A
+		LD    (Dir_Nr),A
+		JR    Next_0023
+Next_0024:	LD    HL,Path
+		LD    BC,64
+		XOR   A
+		CPIR
+		DEC   HL
+		LD    A,255
+Next_0025:	LD    (HL),"\"
+		INC   HL
+		RET
+
+; Routine CoMPare Increment and Repeat.
+
+CMPIR:		LD    A,(DE)
+		CP    (HL)
+		RET   NZ
+		OR    A
+		RET   Z
+		INC   HL
+		INC   DE
+		DEC   BC
+		LD    A,B
+		OR    C
+		JR    NZ,CMPIR
+		RET
+
+; Final check als path gevonden.
+
+Final:		RET   NZ
+		LD    DE,FIB
+		LD    A,(Dir_Nr)
+		CALL  Build
+		EX    DE,HL
+		DEC   HL
+		LD    (HL),0
+		LD    HL,Drive
+		LD    DE,FIB
+		LD    BC,64
+		CALL  CMPIR
+		LD    A,(Dir_Nr)
+		RET
+
+; Haal adres van directory.
+
+GetAdres:	LD    H,0
+		LD    L,A
+		ADD   HL,HL
+		ADD   HL,HL
+		ADD   HL,HL
+		ADD   HL,HL
+		PUSH  DE
+		LD    DE,D_TREE-16
+		ADD   HL,DE
+		PUSH  HL
+		POP   IX
+		POP   DE
+		RET
+
+; Bewaar gevonden directories (directory tree) in een bestand.
+
+MakeFile:	LD    DE,D_TREE
+		LD    A,(Get_Nr)
+		CALL  GetAdres
+		SBC   HL,DE
+		INC   HL
+		CALL  Save
+		JP    Stop
+
+; Schrijf de file TO.LST naar disk.
+
+Save:		PUSH  HL
+		CALL  MakePath
+		LD    A,(SaveAttribute)
+		LD    B,A
+		LD    C,&H44
+		LD    DE,EnvString
+		XOR   A
+		CALL  BDOS
+		JP    NZ,Error
+		POP   HL
+		PUSH  BC
+		LD    C,&H49
+		LD    DE,D_TREE
+		CALL  BDOS
+		JP    NZ,Error
+		POP   BC
+		LD    C,&H45
+		CALL  BDOS
+		RET
+
+; Haal de file TO.LST van disk.
+
+Load:		CALL  MakePath
+		LD    BC,&H43
+		LD    DE,EnvString
+		XOR   A
+		CALL  BDOS
+		JP    NZ,Error2
+		PUSH  BC
+		LD    C,&H55
+		XOR   A
+		CALL  BDOS
+		LD    A,L
+		LD    (SaveAttribute),A
+		LD    C,&H48
+		LD    DE,D_TREE
+		LD    HL,4096
+		CALL  BDOS
+		JP    NZ,Error
+		POP   BC
+		PUSH  HL
+		PUSH  DE
+		LD    C,&H45
+		CALL  BDOS
+		POP   DE
+		POP   HL
+		LD    A,(D_TREE)
+		CP    "\"
+		JR    Z,Next_0026
+		LD    A,(D_TREE+13)
+		OR    A
+		RET   NZ
+Next_0026:	LD    DE,TextWrong
+		JP    Print
+
+; Maak een path waarin de directory tree kan worden opgeslagen.
+
+MakePath:	LD    BC,&H406B
+		LD    DE,EnvString
+		LD    HL,EnvVar
+		CALL  BDOS
+		LD    HL,EnvString
+		LD    A,(HL)
+		OR    A
+		JR    NZ,Next_0027
+		LD    A,(Drive2)
+		LD    (HL),A
+		INC   HL
+		LD    (HL),":"
+		INC   HL
+		LD    (HL),0
+		DEC   HL
+		DEC   HL
+Next_0027:	LD    A,(HL)
+		INC   HL
+		OR    A
+		JR    NZ,Next_0027
+		DEC   HL
+		DEC   HL
+		LD    A,(HL)
+		CP    "\"
+		JR    Z,Next_0028
+		INC   HL
+Next_0028:	EX    DE,HL
+		LD    HL,D_Path
+		LD    BC,8
+		LDIR
+		RET
+
+; Haal lijst met te scannen drives.
+
+MakeDrives:	LD    BC,&H0A6B
+		LD    DE,Drives
+		LD    HL,EnvVar2
+		CALL  BDOS
+		LD    A,(Drives)
+		OR    A
+		RET   NZ
+		LD    (Drives+1),A
+		LD    A,(Drive)
+		LD    (Drives),A
+		RET
+
+; Maak een hoofdletter van het teken in A.
+
+MakeCapital:	CP    "a"
+		RET   C
+		CP    "z"+1
+		RET   NC
+		AND   &B11011111
+		RET
+
+; Vergelijk HL met DE (standaard routine RST #20).
+
+Compare:	LD    A,H
+		SUB   D
+		RET   NZ
+		LD    A,L
+		SUB   E
+		RET
+
+; Druk string af.
+
+PrintString:	PUSH  AF
+		PUSH  BC
+		PUSH  DE
+		PUSH  HL
+		LD    C,&H09
+		CALL  BDOS
+		POP   HL
+		POP   DE
+		POP   BC
+		POP   AF
+		RET
+
+; Sla spaties over.
+
+SkipSpace:	INC   DE
+		LD    A,(DE)
+		CP    9
+		JR    Z,SkipSpace
+		CP    " "
+		JR    Z,SkipSpace
+		OR    A
+		RET
+
+; Print directory.
+
+PrintPath:	LD    HL,Drive
+		LD    E,(HL)
+Next_0029:	INC   HL
+		LD    A,(HL)
+		OR    A
+		JR    Z,Next_0030
+		PUSH  AF
+		PUSH  HL
+		LD    C,&H02
+		CALL  BDOS
+		POP   HL
+		POP   AF
+		LD    E,A
+		JR    Next_0029
+Next_0030:	LD    E,10
+		CALL  BDOS
+		LD    E,13
+		CALL  BDOS
+		RET
+
+; Controleer of drive ge-update moet worden.
+
+Check:		CALL  MakeDrives
+		LD    A,(Drive)
+		CALL  MakeCapital
+		LD    B,A
+		LD    HL,Drives
+Next_0031:	LD    A,(HL)
+		OR    A
+		JR    Z,Next_0032
+		CALL  MakeCapital
+		CP    B
+		RET   Z
+		INC   HL
+		JR    Next_0031
+Next_0032:	INC   A
+		RET
+
+; Haal standaard opties.
+
+GetOption:	LD    BC,&H0A6B
+		LD    DE,Drives
+		LD    HL,EnvVar3
+		CALL  BDOS
+		LD    A,(Drives)
+		CALL  MakeCapital
+		CP    "X"
+		JR    NZ,Test_F
+		LD    A,&B00000011
+Next_0033:	LD    (Option2),A
+		RET
+Test_F: 	CP    "F"
+		JR    NZ,Test_L
+		LD    A,&B00000010
+		JR    Next_0033
+Test_L: 	CP    "L"
+		JR    NZ,Test_P
+		LD    A,&B00000001
+		JR    Next_0033
+Test_P: 	CP    "P"
+		RET   NZ
+		LD    A,&B00000000
+		JR    Next_0033
+
+; Ga aantal directories omhoog (opgegeven met aantal puntjes).
+
+Points: 	LD    B,0
+Next_0034:	LD    A,(DE)
+		CP    "."
+		JR    NZ,Next_0035
+		INC   B
+		INC   DE
+		JR    Next_0034
+Next_0035:	OR    A
+		JR    Z,Next_0036
+		CP    " "
+		JP    NZ,Error139
+		CALL  SkipSpace
+		JP    NZ,Error138
+Next_0036:	DEC   B
+		JP    Z,Stop
+		LD    C,&H5A
+Next_0037:	PUSH  BC
+		LD    DE,Drive2
+		CALL  BDOS
+		JP    NZ,Error
+		POP   BC
+		DJNZ  Next_0037
+		JP    Stop
+
+; Ga aantal directories omhoog (opgegeven met getal).
+
+Minus:		INC   DE
+		LD    A,(DE)
+		SUB   "1"
+		JP    C,Stop
+		CP    9
+		JP    NC,Stop
+		PUSH  AF
+		INC   DE
+		LD    A,(DE)
+		OR    A
+		JR    Z,Next_0038
+		CP    " "
+		JP    NZ,Error139
+		CALL  SkipSpace
+		JP    NZ,Error138
+Next_0038:	POP   AF
+		INC   A
+		LD    B,A
+		LD    C,&H5A
+		JR    Next_0037
+
+; Ga naar Root-directory.
+
+Root:		XOR   A
+		LD    (Path+1),A
+		JP    Cdd2
+
+; Maak een directory aan en voeg deze toe aan de lijst.
+
+Create: 	LD    A,(Attribute)
+		LD    B,A
+		LD    C,&H44
+		XOR   A
+		CALL  BDOS
+		JP    NZ,Error
+		LD    DE,Path+1
+		LD    C,&H5E
+		CALL  BDOS
+		JP    NZ,Error
+		CALL  Check
+		JP    NZ,Next_0052
+		CALL  Load
+		PUSH  HL
+		PUSH  DE
+		LD    B,4
+Next_0039:	SRL   H
+		RR    L
+		DJNZ  Next_0039
+		LD    A,L
+		LD    (Maximum),A
+Next_0040:	CALL  GetAdres
+		LD    C,A
+		LD    B,(IX+13)
+		LD    A,(Drive)
+		CP    B
+		LD    A,C
+		JR    Z,Next_0041
+		DEC   A
+		JR    NZ,Next_0040
+		POP   HL
+		DEC   HL
+		PUSH  HL
+		POP   IX
+		LD    (IX+16),26
+		JR    Next_0042
+Next_0041:	LD    (Maximum),A
+		INC   A
+		CALL  GetAdres
+		POP   DE
+		PUSH  DE
+		EX    DE,HL
+		SBC   HL,DE
+		LD    B,H
+		LD    C,L
+		INC   BC
+		POP   HL
+		PUSH  HL
+		LD    DE,16
+		ADD   HL,DE
+		EX    DE,HL
+		POP   HL
+		LDDR
+		CALL  GetAdres
+Next_0042:	PUSH  HL
+		LD    B,16
+Next_0043:	LD    (HL),0
+		INC   HL
+		DJNZ  Next_0043
+		CALL  Break
+		CP    255
+		JR    Z,Next_0050
+		POP   DE
+		PUSH  DE
+		PUSH  AF
+		LD    B,12
+Next_0044:	LD    A,(HL)
+		OR    A
+		JR    Z,Next_0045
+		LD    (DE),A
+		INC   HL
+		INC   DE
+		DJNZ  Next_0044
+Next_0045:	POP   AF
+		POP   IX
+		LD    (IX+12),A
+		LD    A,(Drive)
+		LD    (IX+13),A
+		LD    A,1
+Next_0046:	PUSH  AF
+		CALL  GetAdres
+		LD    A,(HL)
+		CP    26
+		JR    Z,Next_0048
+		LD    B,(IX+12)
+		LD    A,(Maximum)
+		CP    B
+		JR    NC,Next_0047
+		INC   (IX+12)
+Next_0047:	POP   AF
+		INC   A
+		JR    Next_0046
+Next_0048:	POP   AF
+		POP   HL
+		LD    DE,16
+		ADD   HL,DE
+		CALL  Save
+		LD    A,(Option)
+		BIT   2,A
+		JR    Z,Next_0049
+		CALL  Cdd
+Next_0049:	LD    DE,TextCreated
+		JP    Print2
+Next_0050:	LD    A,(Option)
+		BIT   2,A
+		JR    Z,Next_0051
+		CALL  Cdd
+Next_0051:	LD    DE,TextDirectory
+		JP    Print
+Next_0052:	LD    A,(Option)
+		BIT   2,A
+		JR    Z,Next_0053
+		CALL  Cdd
+Next_0053:	LD    DE,TextCreated
+		JP    Print3
+
+; Change Drive and Directory.
+
+Cdd:		LD    A,(Drive)
+		SUB   A,"A"
+		LD    E,A
+		LD    C,&H0E
+		CALL  BDOS
+		LD    A,C
+		OR    A
+		JP    NZ,Error
+		LD    C,&H5A
+		LD    DE,Path
+		CALL  BDOS
+		JP    NZ,Error
+		RET
+
+; Verwijder een directory en verwijder deze uit de lijst.
+
+Delete: 	LD    C,&H4D
+		CALL  BDOS
+		JP    NZ,Error
+		CALL  Check
+		JR    NZ,Next_0058
+		LD    DE,Path+1
+		LD    C,&H5E
+		CALL  BDOS
+		JP    NZ,Error
+		CALL  Load
+		PUSH  HL
+		CALL  Break2
+		CP    255
+		JP    Z,Next_0051
+		CALL  GetAdres
+		EX    DE,HL
+		PUSH  AF
+		INC   A
+		CALL  GetAdres
+Next_0054:	LD    BC,8
+		LDIR
+		LD    A,(HL)
+		CP    26
+		JR    NZ,Next_0054
+		LDI
+		POP   AF
+		LD    C,A
+Next_0055:	LD    B,A
+		CALL  GetAdres
+		LD    A,(HL)
+		CP    26
+		JR    Z,Next_0057
+		LD    A,(IX+12)
+		CP    C
+		JR    C,Next_0056
+		DEC   A
+		LD    (IX+12),A
+Next_0056:	LD    A,B
+		INC   A
+		JR    Next_0055
+Next_0057:	POP   HL
+		LD    DE,-16
+		ADD   HL,DE
+		CALL  Save
+		LD    DE,TextDeleted
+		JP    Print2
+Next_0058:	LD    DE,TextDeleted
+		JP    Print3
+
+; Rename een directory en rename deze in de lijst.
+
+Rename: 	LD    HL,(Expression2)
+		PUSH  HL
+		LD    C,&H4E
+		CALL  BDOS
+		JP    NZ,Error
+		CALL  Check
+		JR    NZ,Next_0065
+		LD    DE,Path+1
+		LD    C,&H5E
+		CALL  BDOS
+		JP    NZ,Error
+		CALL  Load
+		PUSH  HL
+		CALL  Break2
+		CP    255
+		JP    Z,Next_0051
+		CALL  GetAdres
+		LD    (StringAdres),HL
+		EX    DE,HL
+		LD    C,&H5C
+		LD    HL,FileBuffer1
+		CALL  BDOS
+		POP   HL
+		POP   DE
+		PUSH  HL
+		LD    C,&H5C
+		LD    HL,FileBuffer2
+		CALL  BDOS
+		LD    DE,FileBuffer1
+		LD    B,11
+Next_0059:	LD    A,(HL)
+		CP    "?"
+		JR    Z,Next_0060
+		LD    (DE),A
+Next_0060:	INC   DE
+		INC   HL
+		DJNZ  Next_0059
+		LD    BC,3
+		LD    DE,FileBuffer1+11
+		LD    HL,FileBuffer1+10
+		LDDR
+		LD    A,(FileBuffer1+8)
+		CP    " "
+		JR    Z,Next_0061
+		LD    A,"."
+Next_0061:	LD    (DE),A
+		LD    B,12
+		LD    HL,(StringAdres)
+Next_0062:	LD    (HL),0
+		INC   HL
+		DJNZ  Next_0062
+		LD    B,12
+		LD    DE,(StringAdres)
+		LD    HL,FileBuffer1
+Next_0063:	LD    A,(HL)
+		CP    " "
+		JR    Z,Next_0064
+		LD    (DE),A
+		INC   DE
+Next_0064:	INC   HL
+		DJNZ  Next_0063
+		POP   HL
+		CALL  Save
+		LD    DE,TextRenamed
+		JP    Print2
+Next_0065:	LD    DE,TextRenamed
+		JP    Print3
+
+; Verplaats een directory en verplaats deze in de lijst.
+
+Move:		PUSH  DE
+		LD    BC,&H1240
+		LD    IX,FIB
+		CALL  BDOS
+		JP    NZ,Error
+		CALL  Check
+		JR    NZ,Next_0066
+		LD    C,&H5E
+		LD    DE,Path+1
+		CALL  BDOS
+		CALL  Load
+		LD    (StringAdres),HL
+		CALL  Break2
+Next_0066:	POP   DE
+		PUSH  AF
+		LD    HL,(Expression2)
+		LD    C,&H4F
+		CALL  BDOS
+		JP    NZ,Error
+		CALL  Check
+		JR    NZ,Next_0067
+		POP   AF
+		PUSH  AF
+		CP    255
+		JP    Z,Next_0051
+		LD    DE,Path+1
+		LD    C,&H5E
+		CALL  BDOS
+		CALL  Break2
+		CP    255
+		JP    Z,Next_0051
+		LD    B,A
+		POP   AF
+		CALL  GetAdres
+		LD    (IX+12),B
+		LD    HL,(StringAdres)
+		CALL  Save
+		LD    DE,TextMoved
+		JP    Print2
+Next_0067:	LD    DE,TextMoved
+		JP    Print3
+
+; opslagruimte voor verschillende variabelen.
+
+Option: 	DEFB  0
+Option2:	DEFB  0
+Attribute:	DEFB  &H10
+SaveAttribute:	DEFB  0
+Get_Nr: 	DEFB  0
+Maximum:
+Offset: 	DEFB  0
+Dir_Nr: 	DEFB  0
+ParseFlag:	DEFB  0
+StringAdres:	DEFW  0
+Expression1:	DEFW  0
+Expression2:	DEFW  0
+DriveAdres:	DEFW  Drives
+StartList:	DEFW  D_TREE
+StoreList:	DEFW  EnvString
+D_Path: 	DEFB  "\TO.LST",0
+EnvVar: 	DEFB  "TO_Path",0
+EnvVar2:	DEFB  "TO_Drives",0
+EnvVar3:	DEFB  "TO_INIT",0
+Drive2: 	DEFB  "A:"
+		DEFB  "..",0
+Drive:		DEFB  "A:"
+Path:		DEFB  "\"
+		DEFS  64
+Drives: 	DEFS  10
+
+; De volgende buffer van 64 bytes wordt voor verschillende
+; doeleinden gebruikt.
+
+EnvString:
+FIB:
+FileBuffer1:	DEFS  11
+FileBuffer2:	DEFS  11
+		DEFS  44
+
+; De volgende lijst bevat alle adressen die tezamen het hulp
+; menu vormen.
+
+TextList:	DEFW  TextExplain
+		DEFW  TextExplain9
+		DEFW  TextExplain1
+		DEFW  TextExplain2
+		DEFW  TextExplain3
+		DEFW  TextExplain9
+		DEFW  TextExplainI
+		DEFW  TextExplain2
+		DEFW  TextExplain4
+		DEFW  TextExplain3
+		DEFW  TextExplain9
+		DEFW  TextExplainJ
+		DEFW  TextExplain4
+		DEFW  TextExplain5
+		DEFW  TextExplain9
+		DEFW  TextExplain2
+		DEFW  TextExplain6
+		DEFW  TextExplain7
+		DEFW  TextExplain2
+		DEFW  TextExplain8
+		DEFW  TextExplain9
+		DEFW  TextExplain2
+		DEFW  TextExplain6
+		DEFW  TextExplainA
+		DEFW  TextExplain2
+		DEFW  TextExplain8
+		DEFW  TextExplain9
+		DEFW  TextExplain2
+		DEFW  TextExplain6
+		DEFW  TextExplainB
+		DEFW  TextExplain2
+		DEFW  TextExplain8
+		DEFW  TextExplain9
+		DEFW  TextExplainC
+		DEFW  TextExplain2
+		DEFW  TextExplain8
+		DEFW  TextExplain9
+		DEFW  TextExplainD
+		DEFW  TextExplain2
+		DEFW  TextExplain8
+		DEFW  TextExplain3+1
+		DEFW  TextExplain9
+		DEFW  TextExplainF
+		DEFW  TextExplain2
+		DEFW  TextExplainG
+		DEFW  TextExplain9
+		DEFW  TextExplainH
+		DEFW  TextExplain9
+		DEFW  TextExplainK
+		DEFW  TextExplain9
+		DEFW  TextExplainM
+		DEFW  0
+
+; Diverse teksten.
+
+TextDos1:	DEFB  13,10
+		DEFB  "Sorry, DOS 2.xx required.",13,10,7,"$"
+
+TextError:	DEFB  13,10
+		DEFB  "*** File for TO not found$"
+
+TextDirectory:	DEFB  13,10
+		DEFB  "*** Directory not found in list$"
+
+TextWrong:	DEFB  13,10
+		DEFB  "*** Wrong version of TO.LST$"
+
+Text1:		DEFB  "TO - directory $"
+Text2:		DEFB  "; database updated$"
+
+TextCreated:	DEFB  "created$"
+TextDeleted:	DEFB  "deleted$"
+TextRenamed:	DEFB  "renamed$"
+TextMoved:	DEFB  "moved$"
+
+TextChoose:	DEFB  "Choose one of these directories:",13,10,10,"$"
+TextStripe:	DEFB  "  -  $"
+
+TextMore:	DEFB  "P  -  more",13,10,"$"
+
+TextScan:	DEFB  "Scanning...",13,10,"$"
+
+TextExplain:	DEFB  13,10
+		DEFB  "TO Version 1.56",13,10
+		DEFB  "Copyright (c) 1993/1994 by C.P.U.",13,10,10
+		DEFB  "TO is Public Domain!",13,10,10
+		DEFB  "Usage:",13,10,"$"
+TextExplain1:	DEFB  "partial_subdir_name [/N] [/x] : change to a $"
+TextExplain2:	DEFB  "directory$"
+TextExplain3:	DEFB  13,10,"$"
+TextExplainI:	DEFB  ".. [...] [....] [etc.]        : go up one [two] [three] $"
+TextExplain4:	DEFB  " levels$"
+TextExplainJ:	DEFB  "-n                            : go up 'n'$"
+TextExplain5:	DEFB  " (e.g. TO -5)",13,10,10,"$"
+TextExplain6:	DEFB  "_name$"
+TextExplain7:	DEFB  "   /M [/H]      : create $"
+TextExplain8:	DEFB  "; update database now",13,10,"$"
+TextExplain9:	DEFB  "  TO $"
+TextExplainA:	DEFB  "   /D           : delete $"
+TextExplainB:	DEFB  "   /C [/H]      : M & CD $"
+TextExplainC:	DEFB  "oldname newname  /R           : rename $"
+TextExplainD:	DEFB  "source  destin.  /V           :  move  $"
+TextExplainF:	DEFB  "[d:] /S [/H]                  : scan drive and build $"
+TextExplainG:	DEFB  " database",13,10,10,"$"
+TextExplainH:	DEFB  "[ ] /H                        : create / scan for hidden "
+		DEFB  "directories",13,10,"$"
+TextExplainK:	DEFB  "[ ] /N                        : do not show list with multiple"
+		DEFB  " matches",13,10,"$"
+TextExplainM:	DEFB  "[ ] /x   : where x can be: X = exact; F = first; L = last; "
+		DEFB  "P = partial",13,10,10
+		DEFB  "                   See HELP TO for more information!$"
+
+D_TREE: 	DEFB  26
+

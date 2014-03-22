@@ -1,0 +1,167 @@
+Items marked with a * instead of a - are considered to be less useful.
+
+New in COMMAND2 version 2.40 (release date: 09-23-95)
+
+     - New command line editor:
+		 - buffer increased to 1024 bytes
+		 - filename expanding with TAB
+		 - CTRL-DEL clear buffer
+		 - CTRL-INS current line in buffer without executing
+		 - CTRL-LEFT/RIGHT to start/end of line
+		 - SHIFT-LEFT/RIGHT to previous/next word
+		 - SHIFT-DEL delete from cursor to end of line
+     * SET TIME defaults to 24
+     * full dayname with DATE
+     - set other drive during reload COMMAND2.COM
+     - extra space between environment name and value with SET
+     - commands ERA and ERASE deleted
+     - command DEL *.* now prompts 'Delete all files' instead of 'Erase...'
+     - command RENAME deleted
+     - command FREE [d:] added
+     - command BEEP added
+     - command ALIAS [name [seperator] [value]] added
+     - more commands in one line by using seperator-character ^
+     - changing directories without CD by typing directoryname ending with 
+       a \
+     - command CD - returns to previous directory
+     - using ALIASes in a command line
+     * command RESET added
+     - command COLOR forclr [bakclr [brdclr]] added
+     - command INPUT [string] %%envname added
+     - command INKEY [string] %%envname added
+     - command CPU [n] added
+     - command line length:
+		 - input 127 characters maximum
+		 - after alias replacement 255 characters maximum
+		 - after seperating commands 127 characters maximum
+     - Environment Item ALIAS added
+     - Environment Item SEPAR added
+     - Environment Item EXPAND added
+     - Environment Item CDPATH added
+     - command CDPATH [[+|-] [d:]path [[d:]path [[d:]path...]]] added
+     - when a directory is not found using CD, a path is searched
+     - command CDD [d:][path] added
+     - command PUSHD [d:][path] added
+     - command POPD added
+     * in batch-file %n extended. n can be 255 max. instead of 9.
+     - Environment Item LOWER added
+     - Internal Variables added. Usage: %name%, where name is:
+                 _BG, _BOOT, _COLUMN, _COLUMNS, _CPU, _CWD, _CWDS,
+                 _CWP, _CWPS, _DATE, _DATEF, _DIRBUFFER, _DISK, _DOSVER,
+                 _DOW, _ERROR, _FG, _FILECOUNT, _FNEXT, _MSXVER, _ROW,
+                 _ROWS, _TIME
+     - Internal Variable Functions added. Usage:
+       %name[parameters]%, where name is:
+                 @ALIAS, @ASCII, @ATTRIB, @CHAR, @DISKFREE, @DISKTOTAL,
+                 @DISKUSED, @DRIVE, @EXT, @FFIRST, @FILE, @FILEATTR,
+                 @FILEDATE, @FILESIZE, @FILETIME, @FILETOTAL, @FULL,
+                 @HEX, @INSTR, @LABEL, @LEFT, @LEN, @LOWER, @MID, @NAME,
+                 @NEWFILE, @PARSE, @PATH, @RIGHT, @UPPER
+     - instead of parameters other (internal) variables can be used:
+       %name1[%name2[parameters]%]%. Nestable until command line is full.
+     - Executable Extensions added. Usage through ALIASes.
+     - prompt can contain any text. Set text with SET PROMPT. Can also
+       contain %name%.
+     - SET PROMPT defaults to %_CWD%>
+     - commands IFF, THEN, ELSE and ENDIFF added. IFF is nestable up to
+       16 levels.
+     - any external command (file) may also contain wildcards. In that case 
+       the first matching file will be executed.
+     - SET EXPERT defaults to ON
+     - command HISTORY added
+     * command DSKCHK added
+     - /P option added to commands ALIAS and SET
+     - command line editor: CTRL-RETURN executes command without storing
+       it in the buffer
+     - command MEMORY added
+     * MODE can also set screen height
+     - in batch file %n& is available, which means every parameter from
+       parameter n. n defaults to 1, so %& is the same as %1&.
+     - the same applies to aliases: parameters are passed with %n. %n& is 
+       also possible.
+     - IF(F) also uses EQ, LT and GT instead of just ==
+     - DIR option /2 added for two column output
+     - instead of .BAT files also .BTM files. These are read into memory 
+       completely (max. size 16K, min. 16K of free memory must be available).
+       Within these .BTM files labels, GOTO, GOSUB, RETURN and END are 
+       possible.
+     - command GOTO ~label added
+     - command GOSUB ~label added
+     - command RETURN [~label] added
+     - command END added
+     - example file COPY.BAT adapted using labels. See COPY.BTM.
+     - IF(F) uses multiple equations combined with AND, OR or XOR. Maximum
+       number of combinations depends on the length of the command line.
+       Multiple equations are executed FROM THE LAST TILL THE FIRST.
+       Parentheses are NOT allowed.
+     - command ATTRIB also uses +A en +S (and -A en -S) to make a file
+       system file or archived.
+     - all commands expecting a compound-filespec, can also have /S to 
+       allow system files to be found too
+     - DIR also shows system files with an s (as opposed to h and r)
+     - example file DIR.BTM added. Format: DIR.BTM [filespec]. Same as DIR
+       command, only not so fast. Also shows file attributes.
+
+New in COMMAND2 version 2.41 (release date: 04-12-97)
+
+     - DIR /W shows directories in lower case
+     - Mandatory variables are stored in alias-memory, which leaves more 
+       space in TPA
+     - Internal Variables added:
+       _DRIVEMAP - Returns available drives as 8-bit value. Left is drive 
+		   H:, right is drive A:
+       _SHELL	 - Returns the shell-number of COMMAND2.COM. Original proú 
+		   gram is 0, first shell is 1, etc.
+     - Internal Variable Functions added:
+       @READY	 - Returns 1 if specified drive is ready or a 0 if it is 
+		   not ready, or an empty string when an error occurs
+     - IF(F) can also compare expression with spaces. If so, a string needs 
+       to be included in brackets { and }.
+     - CTRL-TAB puts the new file behind the current one on the command 
+       line
+     - When in insert mode, cursor up and down put previous command lines 
+       behind the current one
+     - Special alias UNKNOWN_CMD added. It is executed when an *** Unrecogú 
+       nized command error occurs. If this alias does not exist, then the 
+       error is generated. Make sure that the alias itself does not raise 
+       an *** Unrecognized command error, otherwise an unbreakable loop is 
+       entered.
+     - TAB is circular. After the last filename, the first one is displayed 
+       again.
+     - Environment item TABORDER added. This determines whether directories 
+       or files are found and in which order. Its value can be:
+               BOTH - both directories and file are found, in the order that
+                      they appear on disk
+	       FILE - only files are found
+		DIR - only directories are found
+	   FILE,DIR - first files are found, then directories
+	   DIR,FILE - first directories are found, then files
+     - HISTORY /D added to clear the history buffer
+     - HISTORY n added to increase or decrease the history buffer size. n 
+       must be between 128 and 4096.
+     - Booting with HOME pressed, prevents AUTOEXEC.BAT from being executú 
+       ed.
+
+New in COMMAND2 version 2.44 (release date: 11-11-2010)
+
+     - Fixed a bug causing TAB completion to go into an infinite loop in a 
+       subdirectory with only the . and .. entries. In such a case a BEEP 
+       will occur indicating it couldn't find any name to complete.
+     - The COMPATCH is implemented natively. This is to display the free 
+       size of a FAT16 partition.
+     - Added SHIFT command for batch files. This allows to shift arguments 
+       1 position to the left, including an option to specify from which 
+       argument the shift will take place.
+     - New external command: TYPEWW to type text with word-wrap.
+     - New external command: MORE   piping command to pause output display
+       per screen.
+     * Added BOOT command. Sets the boot drive for when leaving MSX-BASIC.
+     * Added HERTZ command. Sets VDP refresh frequency.
+     - SET PROMPT ON and SET PROMPT OFF are restored to their respective
+       defaults. If PROMPT wasn't set, it defaults to %_CWD%>.
+     - Restored ERA, ERASE and RENAME commands for compatibility reasons.
+     - Added missing COMMAND2.COM version 2.41 features to the help files.
+     - Internal Variable _MSXVER now supports all MSX generations.
+     - Added @STRING Internal Variable Function. Returns a string of the
+       specified length containing the first character of a string.
+

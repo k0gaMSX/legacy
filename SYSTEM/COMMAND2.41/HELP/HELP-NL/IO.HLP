@@ -1,0 +1,133 @@
+HERLEIDEN EN DOORSLUIZEN                               [Ongewijzigd]
+------------------------
+
+             COMMAND2.COM  biedt mogelijkheden  die herleiden (redi- 
+        rection)  en  doorsluizen  (piping)  worden genoemd,  en die 
+        hieronder worden  beschreven. Er bestaat echter een environ- 
+        ment item REDIR dat op OFF gezet kan worden (met de opdracht 
+        SET  REDIR  OFF),  waardoor COMMAND2.COM  de verwerking  van 
+        herleid-  en  doorsluis-symbolen zal  overslaan. Wanneer  de 
+        opdrachtregel wordt uitgevoerd, dan worden deze tekens door- 
+        gegeven aan  de opdracht.  De opdracht SET REDIR ON herstelt 
+        de normale situatie.
+
+
+HERLEIDEN
+
+             De  meeste opdrachten, CP/M programma's en MSX-DOS pro- 
+        gramma's sturen  hun teksten naar het scherm door te schrij- 
+        ven  naar  de  'standaard uitvoer'  en lezen  tekst van  het 
+        toetsenbord   door  te  lezen  van  de  'standaard  invoer'. 
+        COMMAND2.COM geeft  de mogelijkheid de 'standaard invoer' en 
+        'standaard  uitvoer' te veranderen tijdens het uitvoeren van 
+        de opdracht,  om naar  andere MSX-DOS  apparaten of naar be- 
+        standen  op disk  te verwijzen, door het opnemen van een van 
+        de herleid-symbolen  <, > en >> in de opdrachtregel, gevolgd 
+        door een bestandsnaam.
+
+             De  ECHO opdracht  bijvoorbeeld stuurt  zijn parameters 
+        normaalgesproken  naar  het scherm  door de  tekens naar  de 
+        standaard uitvoer  te schrijven.  Er kan voor worden gezorgd 
+        dat  de uitvoer naar de printer wordt gestuurd, door de uit- 
+        voer als volgt te herleiden:
+
+                 ECHO tekst >PRN
+
+        wat de standaard uitvoer nu naar het apparaat PRN laat gaan, 
+        voor de  duur van de ECHO opdracht. Op dezelfde manier zorgt 
+        de opdracht:
+
+                 ECHO tekst >FILE1
+
+        ervoor dat  het bestand FILE1 wordt aangemaakt en de uitvoer 
+        van  de ECHO  opdracht daarheen wordt geschreven. Om de uit- 
+        voer van  een opdracht  toe te  voegen aan  het eind van een 
+        bestaand  bestand,  kan  het >>  symbool worden  gebruikt in 
+        plaats  van het  > symbool.  Het bestand wordt alleen aange- 
+        maakt als het nog niet bestond.
+
+             Om de  standaard invoer  te veranderen wordt het < sym- 
+        bool  gebruikt op  dezelfde wijze  als het > symbool. In dit 
+        geval  moet  het bestand  al bestaan  en moet  het geschikte 
+        invoer voor  de opdracht  bevatten. Als  de opdracht  invoer 
+        tracht  te lezen  terwijl het  einde van  het bestand  al is 
+        bereikt, dan  wordt de  opdracht afgebroken,  omdat het niet 
+        door kan gaan.
+
+             Als  herleid informatie wordt opgegeven in de opdracht- 
+        regel, wordt het door COMMAND2.COM gebruikt om de herleiding 
+        in te  stellen, waarna het wordt verwijderd van de opdracht- 
+        regel. Dus in bovenstaande voorbeelden, zal de ECHO opdracht 
+        de herleid symbolen en de bestandsnamen niet herhalen.
+
+             Als de  in- of  uitvoer  van  een  batch  bestand wordt 
+        herleid, wordt de herleiding gebruikt in alle opdrachten van 
+        een  batch bestand.  Aparte opdrachten  in een batch bestand 
+        kunnen nog  steeds worden herleid, daarbij voorrang krijgend 
+        op  de herleiding van het batch bestand. Zie HELP BATCH over 
+        batch  bestanden  voor  meer  informatie over  opdrachten in 
+        batch bestanden.
+
+DOORSLUIZEN
+
+             Net als  het herleiden  van de  in- en  uitvoer van op- 
+        drachten  en programma's naar een ander apparaat of bestand, 
+        is  mogelijk  de standaard  uitvoer van  een opdracht  in de 
+        standaard invoer  van een andere opdracht te herleiden (pip- 
+        ing).  De tweede  opdracht zal  een programma zijn dat leest 
+        van  zijn  standaard  invoer,  de gegevens  aanpast en  weg- 
+        schrijft naar  zijn standaard  uitvoer. Zo'n programma wordt 
+        een  'filter' genoemd. Er zou bijvoorbeeld een filter kunnen 
+        worden gemaakt  die zijn  gegevens leest  van zijn standaard 
+        invoer,  deze sorteert  in alfabetische volgorde en schrijft 
+        weg  naar  zijn standaard  uitvoer. De  uitvoer van  een DIR 
+        opdracht zou dus kunnen worden gesorteerd.
+
+             Doorsluizen wordt  op de  opdrachtregel aangegeven door 
+        de twee opdrachten te scheiden door het '|' symbool.
+
+             De  opdracht links van het '|' symbool zal eerst worden 
+        uitgevoerd, de uitvoer zal worden herleid naar een tijdelijk 
+        bestand, aangemaakt  door COMMAND2.COM.  Dan wordt de tweede 
+        opdracht uitgevoerd met zijn standaard invoer herleid vanuit 
+        hetzelfde  tijdelijke bestand. Als de tweede opdracht uitge- 
+        voerd is,  wordt het tijdelijke bestand verwijderd. De stan- 
+        daard  uitvoer van de tweede opdracht kan natuurlijk herleid 
+        zijn in  de standaard  invoer van  een derde opdracht, enzo- 
+        voorts.
+
+             Als  in  een opdrachtregel  waarin doorsluizing  plaats 
+        vindt, ook  de standaard  invoer wordt herleid, dan zal deze 
+        herleiding  alleen worden  toegepast op  de eerste opdracht, 
+        omdat alle andere opdracht hun standaard invoer van de stan- 
+        daard uitvoer  van de  vorig opdracht  krijgen. Op  dezelfde 
+        manier  zal ook, wanneer de standaard uitvoer wordt herleid, 
+        dit alleen  betrekking hebben  op de  laatste opdracht in de 
+        opdrachtregel.
+
+             Het  is niet mogelijk het doorsluizen direct te gebrui- 
+        ken voor  de in-  en uitvoer  van een  batch bestand. Het is 
+        echter  wel mogelijk  het doorsluizen te gebruiken met batch 
+        bestanden die  worden uitgevoerd door COMMAND2 opdracht (zie 
+        HELP  COMMAND2) omdat dan de COMMAND2 opdracht herleid wordt 
+        en niet het batch bestand.
+
+             Zoals  hierboven   al werd genoemd,  zullen, om de uitvoer 
+        van  de ene  opdracht door  te sluizen naar de invoer van de 
+        volgende opdracht, tijdelijke  bestanden worden aangemaakt en 
+        verwijderd door COMMAND2.COM. De plaats waar deze tijdelijke 
+        bestanden   terecht   komen,  wordt   aangegeven  door   het 
+        environment item  TEMP (zie HELP ENV over Environment Items) 
+        en  dit  kan  veranderd worden  om naar  iedere willekeurige 
+        drive   of  directory  te  verwijzen  (het  doorsluizen  van 
+        gegevens kan  aanzienlijk worden  versneld als TEMP naar een 
+        directory op de RAM disk verwijst).
+
+             Standaard verwijst  TEMP naar  de root directory van de 
+        boot disk. De bestandsnaam die wordt gebruikt voor de tijde- 
+        lijke  bestanden wordt gecre‰‰rd door COMMAND2.COM, dus TEMP 
+        mag alleen  een drive  en directory aangeven. De bestandnaam 
+        heeft de vorm %PIPExxx.$$$ waar xxx staat voor een getal van 
+        3 cijfers gekozen door COMMAND2.COM om conflicten met andere 
+        bestanden in de TEMP directory te voorkomen.
+
