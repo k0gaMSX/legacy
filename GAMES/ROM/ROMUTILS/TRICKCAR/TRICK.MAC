@@ -1,0 +1,83 @@
+;
+; _
+; NACA Trick ("tell the cartridge game i am japanese")
+;
+
+	di
+; copiamos BIOS a pagina 3 del mapper...
+	ld a,3
+	out (0feh),a
+	ld hl,0
+	ld de,8000h
+	ld bc,4000h
+	ldir
+	ld a,1
+	out (0feh),a
+
+; preparamos el slot
+	in a,(0a8h)
+	ld (old),a
+	and 11000000b
+	ld b,a
+	rlca
+	rlca
+	ld (slotmapper),a
+	or b
+	ld b,a
+	
+	ld a,(numero)
+	and 3
+	rlca
+	rlca
+	ld c,a
+	rlca
+	rlca
+	or c
+	or b
+	out (0a8h),a
+; hay cartucho?
+
+	ld a,(4000h)
+	cp 41h
+	jr nz,fin
+	ld a,(4001h)
+	cp 42h
+	jr nz,fin
+
+; ahora el subslot
+	ld a,(slotmapper)
+	add a,0c1h
+	ld l,a
+	ld h,0fch
+	ld a,(hl)
+	rlca
+	ld a,(0ffffh)
+	jr nc,notexpanded      ; hum
+	cpl
+notexpanded:
+	and 11110000b
+	ld b,a
+	rlca
+	rlca
+	rlca
+	rlca
+	or b
+	ld (0ffffh),a
+; Parcheamos (japo)
+	ld hl,(parche)
+	ld (2bh),hl
+;ejecutamos
+	ld hl,(04002h)
+	ei
+	jp (hl)
+fin:
+	ld a,(old)
+	out (0a8h),a
+	ei
+	ret
+
+slotmapper: db 0
+numero::     db 1
+parche::    dw 0111 ; teclado internacional
+old: db 0
+
