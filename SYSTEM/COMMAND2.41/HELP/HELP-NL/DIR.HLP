@@ -1,0 +1,131 @@
+DIR                                                     [Uitgebreid]
+---
+
+Formaat:     DIR [/S]  [/H] [/W]  [/P] [/2] [samengestelde bestands- 
+        spec]
+
+Doel:        Toont de namen van de bestanden op disk.
+
+Gebruik:     De  samengestelde bestandsspec  geeft de  bestanden aan 
+        die getoond  moeten worden. Als de /H optie wordt opgegeven, 
+        worden  de verborgen  bestanden ook getoond. Als de /S optie 
+        wordt opgegeven, worden de systeem bestanden ook getoond.
+
+             Anders dan  bij andere  opdrachten, is  het bij  de DIR 
+        opdracht toegestaan om de bestandsnamen of extensies niet te 
+        op  te geven, die dan standaard gezet worden op '*'. Dus een 
+        file naam  'MM' is gelijk aan 'MM.*' en een file naam '.COM' 
+        is  gelijk aan  '*.COM'. Als de '.' aan het eind van een be- 
+        standsnaam  wordt  opgegeven,  dan  wordt aangenomen  dat de 
+        extensie is  opgegeven, dus  de bestandsnaam  'MM.' is  niet 
+        gelijk aan 'MM.*'.
+
+             Er  zijn drie vormen van lijsten. Als de /W optie wordt 
+        opgegeven, wordt er een 'brede' lijst getoond, met verschil- 
+        lende bestandsnamen op een regel. Sub-directory's, bestands- 
+        kenmerken en  de datum en tijd wanneer elk bestand werd aan- 
+        gemaakt worden niet getoond.
+
+             Als  /W optie niet wordt opgegeven, worden de bestanden 
+        getoond met  ‚‚n bestandsnaam  per regel,  samen met  de be- 
+        standskenmerken,  de grootte  en de  datum en  tijd dat  het 
+        bestand voor  het laatst werd gewijzigd. De kenmerken worden 
+        getoond  met een  'r' als het schrijfbeveiligd is en een 'h' 
+        als het  verborgen is  (en de  /H optie werd gegeven) en een 
+        's'  als het  een systeem  bestand is  (en de  /S optie werd 
+        gegeven). Als  de tijd van een bestand 0 is (als er dus geen 
+        tijd  is toegekend  aan het  bestand) wordt de tijd niet ge- 
+        toond. Als de datum van een bestand 0 is wordt noch de datum 
+        noch de  tijd getoond.  Het formaat  waarin de datum en tijd 
+        wordt  getoond kan  worden veranderd  (zie HELP DATE en HELP 
+        TIME).
+
+             De niet-/W  vorm is  ontworpen om  binnen een 40 koloms 
+        scherm  te passen.  Als er  minder kolommen beschikbaar zijn 
+        zullen sommige  velden van de lijst niet getoond worden. Het 
+        aantal  bestanden per  regel dat wordt getoond als /W wel is 
+        gegeven wordt  ook aangepast  aan de  schermbreedte. Als  de 
+        breedte  van het  scherm kleiner  is dan 13 tekens worden in 
+        beide gevallen  de bestandsnamen omgeslagen naar de volgende 
+        regel.
+
+             Als  de /2  optie is opgegeven, worden de bestandsnamen 
+        in 2 kolommen per regel getoond. De /2 optie is ontworpen om 
+        binnen een  80 koloms scherm te passen. Als er minder kolom- 
+        men beschikbaar zijn zullen sommige velden van de lijst niet 
+        getoond worden.
+
+             Boven  aan de lijst met bestandsnamen, staat de volume- 
+        naam van  de disk  en de naam van de directory die wordt ge- 
+        toond.  Onderaan  de  lijst staat  het aantal  bestanden dat 
+        getoond  is, het  totaal aantal bytes in de bestanden en het 
+        aantal vrije bytes op disk.
+
+             Als de directory of sub-directory's worden getoond zijn 
+        de eerste  twee items  altijd twee  speciale sub-directory's 
+        genaamd  '.' en '..'. Deze worden automatisch aangemaakt als 
+        er een  nieuwe sub-directory  wordt gecre‰erd  en deze maken 
+        het  mogelijk dat  '.' en  '..' kunnen  worden opgegeven bij 
+        padnamen om de huidige en vorige directory aan te geven (zie 
+        HELP SYNTAX).
+
+             Als het  aantal bytes  wordt getoond,  wordt het aantal 
+        afgerond  en getoond  in kilobytes,  indien het  getal 1K of 
+        groter is.
+
+             De  /P  optie kan  gegeven worden  om de  schermuitvoer 
+        onderaan het  scherm te  pauzeren tot  er op een toets wordt 
+        gedrukt.
+
+
+Voorbeelden:
+
+       DIR
+
+             Alle  bestandsnamen  en directory  namen in de huidige 
+        directory van de huidige drive worden getoond. Dit kan zijn 
+        als volgt:
+
+         Volume in drive A:  is MSX-DOS 2.4
+         Directory of A: \
+
+        MSXDOS2  SYS   r   4992 94-03-16  4:12p
+        COMMAND2 COM   r  22124 95-08-26 12:37p
+        UTILS            <dir>  96-06-19  2:50p
+        HELP             <dir>  92-06-19  2:50p
+         27K in 2 files    412K free
+
+             De  disk bevat  dus de  twee MSX-DOS  systeem bestanden 
+        MSXDOS2.SYS  en  COMMAND2.COM die  schrijfbeveiligd zijn  en 
+        twee directory's genaamd UTILS en HELP.
+
+        DIR B:\HELP/W
+
+             Een brede lijst wordt gevraagd van de HELP directory in 
+        drive B:. Dit kan er als volgt uitzien:
+
+        Volume in drive B: is MSX-DOS 2.4
+        Directory of B:\HELP
+
+        BUFFERS .HLP     ATTRIB.HLP      ASSIGN.HLP
+        ATDIR.HLP        CHDIR.HLP       CD.HLP
+        SYNTAX .HLP      ENV.HLP         BATCH.HLP
+        EDTING.HLP
+         25K in 10 files    222K free
+
+        DIR UTILS + HELP/P
+
+             Dit zal alle bestanden in de UTILS en alle bestanden in 
+        de HELP directory tonen en pauzeren elke keer als het scherm 
+        vol is.
+
+        DIR .COM
+
+             Er is  geen bestandsnaam  opgegeven en  de standaard is 
+        *. Deze opdracht is dus gelijk aan de opdracht DIR *.COM.
+
+        DIR COMMAND2
+
+             Er is geen extensie opgegeven, de standaard is .*. Deze 
+        opdracht is dus gelijk aan de opdracht DIR COMMAND2.*
+

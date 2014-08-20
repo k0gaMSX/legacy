@@ -1,0 +1,4371 @@
+*u+,q-
+	org 04000h-7
+	db 0feh
+	dw start+04000h
+	dw einde+04000h
+	dw start+04000h
+
+xpos	equ 08000h	;->in song maar 200 lang!
+xleng	equ xpos+200	;->last position
+xuser1	equ xleng+1	;->usercode #1
+xmmvoc	equ xuser1+2	;->module instrumenten
+xmmsti	equ xmmvoc+16*9	;->instrumenten module
+xpasti	equ xmmsti+16	;->instrumenten/volumes pac
+xstpr	equ xpasti+32	;->stereo-instellingen
+xtempo	equ xstpr+10	;->begintempo
+xsust	equ xtempo+1	;->modulation depth
+xnaam	equ xsust+1	;->songnaam
+xchip	equ xnaam+40	;->voorkeurchip
+xbegvm	equ xchip+1	;->begininstrumenten module
+xbegvp	equ xbegvm+9	;->begininstrumenten pac
+xorgp1	equ xbegvp+9	;->data van softwarevoices pac
+xorgnr	equ xorgp1+6*8	;->nummers van software voices
+xsmpkt	equ xorgnr+6	;->samplekitnaam
+xdrblk	equ xsmpkt+8	;->drumblokken pac
+xdrvol	equ xdrblk+15	;->volumes drum pac
+xdrfrq	equ xdrvol+3	;->frequenties drum pac
+xfmdrm	equ xdrfrq
+xuser2	equ xdrfrq+3*6	;->usercode#2 (=1 op met andere codering)
+xrever	equ xuser2+2	;->reverb instellingen
+xloop	equ xrever+9	;->loop position
+
+xbegmd	equ 08240h
+
+smpnr	equ 0f975h
+loaded	equ 0f976h
+notvcm	equ 0f977h
+notvcp	equ 0f977h+9
+smpadr	equ notvcp+9
+smknam	equ smpadr+56
+vcenr	equ smknam+8
+fkndat	equ vcenr+1
+keybdt	equ fkndat+1
+midint	equ keybdt+1	;0=musmod   1=turbo-r   2=vak
+
+sngpag	equ	1
+edtpag	equ	2
+dskpag	equ	3
+em1pag	equ	4
+em2pag	equ	5
+vocpag	equ	6
+smppag	equ	7
+
+vdat1	equ 0c400h
+vdat2	equ 0c400h+48*25
+vdat3	equ 0c400h+96*25
+vdat4	equ 0c400h+144*25
+vdatp2	equ 0c400h+32*25
+vdatp3	equ 0c400h+64*25
+vdatp4	equ 0c400h+96*25
+vdatp5	equ 0c400h+128*25
+vdatp6	equ 0c400h+160*25
+ownvdt	equ 0c400h+176*25
+hwvdat	equ 0c400h+192*25
+
+subs	equ	0d900h
+subs2	equ	0d914h
+subs3	equ	0d928h
+
+
+
+start:	push	hl
+	ld	hl,(0f3dch)
+	push	hl
+	add	a,a
+	ld	e,a
+	ld	d,0
+	ld	hl,jmpdat-2
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	call	exec
+	pop	hl
+	ld	(0f3dch),hl
+	pop	hl
+	ret
+exec:	jp	(hl)
+
+
+
+
+voice:	call	savscr
+
+	ld	hl,5*80+22
+	ld	(stvrm),hl
+	call	setwrt
+	ld	hl,blddt1
+	call	decrc
+
+	ld	a,25
+	ld	(0f3dch),a
+	ld	a,(xsust)
+	and	011000000b
+	ld	c,0bdh
+	call	mmout
+	ld	a,8
+	ld	c,018h
+	call	mmout
+	ld	a,8
+	ld	c,019h
+	call	mmout
+	call	menblk
+
+;**** hoofmenu ****
+
+main:	ld	ix,maind
+	call	keyhn2
+	jr	main
+
+maind:	db	30
+	dw	curup
+	db	31
+	dw	curdow
+	db	27
+	dw	endvoc
+	db	" "
+	dw	selmen
+	db	0
+
+endvc2:	pop	af
+endvoc:	pop	af	;ret adres
+	ret
+
+curup:	ld	a,(blkdt2)
+	dec	a
+	ret	z
+	ld	(blkdt2),a
+	jp	menblk
+
+curdow:	ld	a,(blkdt2)
+	cp	4
+	ret	z
+	inc	a
+	ld	(blkdt2),a
+
+menblk:	ld	a,(blkdt2)
+	call	wiscol
+	add	a,a
+	ld	b,0
+	ld	c,a
+	ld	hl,blkdat-2
+	add	hl,bc
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	call	setwrt
+	ld	hl,blkdt3
+	ld	b,3
+	otir
+	ret
+
+selmen:	call	savsc2
+	ld	ix,selmnd
+	ld	a,(blkdt2)
+	call	keyhan
+	jp	ressc2
+
+selmnd:	db	1
+	dw	submen
+	db	2
+	dw	setsta
+	db	3
+	dw	makvoc
+	db	4
+	dw	endvc2
+	db	0
+
+
+
+wiscol:	push	af
+	ld	hl,0800h
+	call	setwrt
+	ld	b,0
+wiscl2:	ld	a,0
+	out	(c),a
+	djnz	wiscl2
+	pop	af
+	ret
+
+wiscl3:	push	af
+	ld	hl,0800h
+	ld	b,23
+wiscl5:	push	bc
+	call	setwrt
+	ld	b,7
+wiscl4:	xor	a
+	out	(c),a
+	djnz	wiscl4
+	ld	bc,10
+	add	hl,bc
+	pop	bc
+	djnz	wiscl5
+	pop	af
+	ret
+
+wiscl6:	push	af
+	ld	hl,0803h
+	ld	b,23
+wiscl7:	push	bc
+	call	setwrt
+	ld	b,7
+wiscl8:	xor	a
+	out	(c),a
+	djnz	wiscl8
+	ld	bc,10
+	add	hl,bc
+	pop	bc
+	djnz	wiscl7
+	pop	af
+	ret
+
+wiscl9:	ld	hl,0802h
+	ld	b,23
+wiscla:	push	bc
+	call	setwrt
+	ld	a,0
+	out	(c),a
+	ld	a,0
+	out	(c),a
+	ld	a,0
+	out	(c),a
+	ld	bc,10
+	add	hl,bc
+	pop	bc
+	djnz	wiscla
+
+	ld	hl,0807h
+	ld	b,23
+wisclb:	push	bc
+	call	setwrt
+	ld	a,0
+	out	(c),a
+	ld	a,0
+	out	(c),a
+	ld	a,0
+	out	(c),a
+	ld	bc,10
+	add	hl,bc
+	pop	bc
+	djnz	wisclb
+	ret
+
+
+hexdec:	ld	hl,aankar
+	ld	(hl),0
+hexdc2:	xor	a
+	ld	b,16
+decls1:	rl	e
+	rl	d
+	adc	a,a
+	daa
+	djnz	decls1
+	rl	e
+	rl	d
+	push	af
+	inc	(hl)
+	ld	a,d
+	or	e
+	jp	nz,hexdc2
+
+	ld	hl,decwar
+	ld	bc,dectxt
+decls2:	pop	af
+	ld	(hl),a
+	call	decasc
+	call	decasc
+	ld	a,(aankar)
+	dec	a
+	or	a
+	jp	z,decvrv
+	ld	(aankar),a
+	jp	decls2
+
+decvrv:	xor	a	;controlegetal voor print
+	ld	(bc),a
+	ret
+
+decasc:	xor	a
+	rld
+	add	a,030h	  ;zet om in ascii
+	ld	(bc),a
+	inc	bc
+	ret
+
+dectxt:	ds	10
+decwar:	db	0
+aankar:	db	0
+
+
+
+
+clrlin:	ld	hl,emptxt
+print:	push	hl
+	ld	hl,22*80+2
+	call	setwrt
+	pop	hl
+	jp	decrc
+
+
+setrd:	ld	a,(0007)
+	di
+	inc	a
+	ld	c,a
+	ld	a,h
+	and	0c0h
+	rlca
+	rlca
+	out	(c),a
+	ld	a,08eh
+	out	(c),a
+	ld	a,h
+	out	(c),l
+	and	03fh
+	out	(c),a
+	dec	c
+	ret
+
+
+setwrt:	push	af
+	ld	a,(0007)
+	di
+	inc	a
+	ld	c,a
+	ld	a,h
+	and	0c0h
+	rlca
+	rlca
+	out	(c),a
+	ld	a,08eh
+	out	(c),a
+	ld	a,h
+	out	(c),l
+	and	03fh
+	or	040h
+	out	(c),a
+	dec	c
+	pop	af
+	ret
+
+pacout:	push	af
+	ld	a,c
+	out	(07ch),a
+	pop	af
+	out	(07dh),a
+	ex	(sp),hl
+	ex	(sp),hl
+	ex	(sp),hl
+	ex	(sp),hl
+	ret
+
+
+
+; ******* make own voice ********
+
+makvoc:	ld	a,1
+	ld	(ownnr),a
+makvc2:	call	wiscol
+	ld	hl,0
+	call	setwrt
+	ld	hl,blddt7
+	call	decrc
+	call	prtown
+	call	praudi
+	ld	a,(audit)
+	ld	(audi2),a
+	call	setint
+
+	call	mkvls3
+mkvlus:	ld	ix,mkvlsd
+	call	keyhn2
+	jr	mkvlus
+
+mkvlsd:	db	24
+	dw	audil2
+	db	30
+	dw	ownup
+	db	31
+	dw	owndow
+	db	" "
+	dw	edtfun
+	db	"M"
+	dw	nxtint
+	db	"m"
+	dw	nxtint
+	db	0c0h
+	dw	fkndow	;fkndo7
+	db	0c1h
+	dw	fknup	;fknup7
+	db	0c2h
+	dw	keybsw
+	db	0c3h
+	dw	calvoc
+	db	0c4h
+	dw	vocdis	;disk menu
+	db	27
+	dw	endmkv
+	db	0
+
+
+endmkv:	pop	af	;make voice call
+	call	getint
+	call	wiscol
+	jp	stpall
+
+mkvls3:	call	prtfkn
+	call	prtkbd
+mkvls2:	call	ownblk
+	call	setens
+	ld	a,(keybdt)
+	cp	2
+	jp	nz,prtfun
+	call	midiof
+	call	midiin
+	jp	prtfun
+
+
+calvoc:	call	clrlin
+	ld    hl,caltxt
+	call  print
+	ld    a,(ownnr)
+	push  af
+	ld    a,1
+	ld    (ownnr),a
+	ld    (ownn2),a
+	call	calls3
+callus:	ld	ix,callsd
+	call	keyhn2
+	jr	callus
+
+callsd:	db	24
+	dw	audil4
+	db	30
+	dw	calup
+	db	31
+	dw	caldow
+	db	29
+	dw	callef
+	db	28
+	dw	calri
+	db	" "
+	dw	chsvoc
+	db	27
+	dw	calesc
+	db	0
+
+calesc:	pop	af	;geen stackvervuiling
+cales2:	pop	af
+	ld	(ownnr),a
+	xor	a
+	ld	(ownn2),a
+	call	stpall
+	call	clrlin
+	call  prtown
+	ld	hl,22*80
+	call	setwrt
+	ld	hl,blddt8
+	call	decrc
+	jp    mkvls3
+
+calls3:	call	prtow3
+calls2:	call	ownblk
+	call	setens
+	jp	prtfn2
+
+
+chsvoc:	pop	af	;no pollution
+	call	bepowb
+	pop	af
+	push	af
+	push	hl
+	ld	hl,ownvdt+16-25
+	ld	b,a
+	ld	de,25
+chsvcl:	add	hl,de
+	djnz	chsvcl
+	ex	de,hl
+	pop	hl
+	ld	bc,9
+	ldir
+	jp	cales2
+
+
+
+
+
+calup:	ld	a,(ownnr)	;balk omhoog
+	dec	a
+	ret	z
+	ld	(ownnr),a
+	jp	calls2
+
+caldow:	ld	a,(ownnr)	;balk omlaag
+	cp	16
+	ret	z
+	inc	a
+	ld	(ownnr),a
+	jp	calls2
+
+callef:	call	ctrl
+	ret	nz
+	ld	a,(ownn2)	;balk 'links'
+	dec	a
+	ret	z
+	ld	(ownn2),a
+	jp	calls3
+
+calri:	call	ctrl
+	ret	nz
+	ld	a,(ownn2)	;balk 'rechts'
+	cp	12
+	ret	z
+	inc	a
+	ld	(ownn2),a
+	jp	calls3
+
+ownup:	ld	a,(ownnr)	;balk omhoog
+	dec	a
+	ret	z
+	ld	(ownnr),a
+	jp	mkvls2
+
+owndow:	ld	a,(ownnr)	;balk omlaag
+	cp	16
+	ret	z
+	inc	a
+	ld	(ownnr),a
+	jp	mkvls2
+
+prtow3:	ld	a,(ownn2)
+	ld	b,a
+	ld	hl,vdat1-16*25
+	ld	de,16*25
+prtow5:	add	hl,de
+	djnz	prtow5
+	ex	de,hl
+	jr	prtow4
+prtown:	ld	de,ownvdt	 ;print own voices
+prtow4:	ld	hl,5*80+2
+	ld	b,16
+prtow2:	push	bc
+	push	hl
+	call	setwrt
+	ex	de,hl
+	ld	b,16
+	otir
+	ld	de,9
+	add	hl,de
+	ex	de,hl
+	pop	hl
+	ld	bc,80
+	add	hl,bc
+	pop	bc
+	djnz	prtow2
+	ret
+
+ownblk:	call	wiscol	 ;zet balk op juiste plek neer
+	ld	a,(ownnr)
+	ld	b,a
+	ld	hl,0800h+4*10
+	ld	de,10
+ownbl2:	add	hl,de
+	djnz	ownbl2
+	call	setwrt
+	ld	hl,blkdt5
+	ld	b,3
+	otir
+	ret
+
+prtfn2:	ld	hl,prtfdt
+	ld	(prtfd2),hl
+	call	bepowb
+	jr	prtfn3
+
+prtfun:	ld	hl,prtfdt	  ;print alle registers/functies
+	ld	(prtfd2),hl
+	call	bepowa
+prtfn3:	ex	de,hl
+	call	prtfu3
+	inc	de
+	call	prtfu3
+	call	prtfu4
+	call	prtfu4
+	ld	b,4
+prtful:	push	bc
+	call	prtfu5
+	pop	bc
+	djnz	prtful
+	call	prtfu6
+	ret
+
+prtfu3:	ld	a,(de)
+	and	01111b
+	call	funsub
+	ld	a,(de)
+	and	010000b
+	rlca
+	rlca
+	rlca
+	rlca
+	call	funsub
+	ld	a,(de)
+	and	0100000b
+	rlca
+	rlca
+	rlca
+	call	funsub
+	ld	a,(de)
+	and	01000000b
+	rlca
+	rlca
+	call	funsub
+	ld	a,(de)
+	and	010000000b
+	rlca
+	jp	funsub
+
+prtfu4:	inc	de
+	ld	a,(de)
+	and	0111111b
+	call	funsub
+	ld	a,(de)
+	and	011000000b
+	rlca
+	rlca
+	jp	funsub
+
+
+prtfu5:	inc	de
+	ld	a,(de)
+	and	01111b
+	call	funsub
+	ld	a,(de)
+	and	011110000b
+	rlca
+	rlca
+	rlca
+	rlca
+	jp	funsub
+
+prtfu6:	inc	de
+	ld	a,(de)
+	and	01110b
+	rrca
+	call	funsub
+	ld	hl,19*80+52
+	call	setwrt
+	ld	a,(de)
+	bit	0,a
+	jr	z,prtfu7
+	ld	hl,ammodt
+	ld	b,7
+	otir
+	ret
+prtfu7:	ld	hl,fmmodt
+	ld	b,7
+	otir
+	ret
+
+
+funsub:	push	de
+	push	af
+	ld	hl,(prtfd2)
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	(prtfd2),hl
+	ex	de,hl
+	call	setwrt
+	call	prtdec
+	pop	af
+	pop	de
+	ret
+
+
+praudi:	ld	hl,20*80+51
+	call	setwrt
+	ld	a,(audit)
+	or	a
+	jr	nz,p2audi
+	ld	hl,mmautx
+	ld	b,9
+	otir
+	ret
+p2audi:	ld	hl,paautx
+	ld	b,9
+	otir
+	ret
+
+bepowa:	ld	hl,ownvdt+16-25
+	ld	a,(ownnr)
+	ld	b,a
+	ld	de,25
+bepow2:	add	hl,de
+	djnz	bepow2
+	ret
+
+bepowb:	ld	hl,vdat1-16*25+16-25
+	ld	a,(ownn2)
+	ld	b,a
+	ld	de,16*25
+bepow3:	add	hl,de
+	djnz	bepow3
+	ld	a,(ownnr)
+	ld	b,a
+	ld	de,25
+bepow4:	add	hl,de
+	djnz	bepow4
+	ret
+
+
+edtfun:	call	bepowa	  ;edit registers/functies
+	ld	de,ownbuf
+	ld	bc,9
+	ldir
+	ld	a,1
+	ld	(edtyco),a
+	ld	(edtxco),a
+	call	edtblk
+edtlus:	ld	ix,edtlsd
+	call	keyhn2
+	jr	edtlus
+
+edtlsd:	db	24
+	dw	audil2
+	db	28
+	dw	edtri
+	db	29
+	dw	edtlef
+	db	30
+	dw	edtup
+	db	31
+	dw	edtdow
+	db	0c0h
+	dw	fkndow	;fkndo7
+	db	0c1h
+	dw	fknup	;fknup7
+	db	0c2h
+	dw	keybsw
+	db	"M"
+	dw	nxtint
+	db	"m"
+	dw	nxtint
+	db	0c4h
+	dw	vocdis	 ;disk menu voices
+	db	11
+	dw	resown
+	db	27
+	dw	endedt
+	db	0
+
+endedt:	pop	af	;call edtlus weg
+	jp	mkvls2
+
+vocdis:	ld	a,(ownnr)
+	ld	(vcenr),a
+	call	getint
+	call	savsc3
+	ld	a,3
+	call	subs3
+	call	ressc3
+	call	prtfun
+	call	setint
+	jp	setens
+
+resown:	call	bepowa
+	ex	de,hl
+	ld	hl,ownbuf
+	ld	bc,9
+	ldir
+	call	prtfun
+	call	setens
+	jp	edtblk
+
+edtup:	ld	a,(edtyco)
+	dec	a
+	ret	z
+	cp	7
+	call	z,edtup2
+	cp	13
+	call	z,edtup2
+	ld	(edtyco),a
+	jp	edtblk
+edtup2:	dec	a
+	ret
+
+edtdow:	ld	a,(edtyco)
+	cp	16
+	ret	z
+	cp	12
+	jr	nz,edtdo3
+	ld	a,(edtxco)
+	cp	2
+	ret	z
+	ld	a,12
+edtdo3:	inc	a
+	cp	7
+	call	z,edtdo2
+	cp	13
+	call	z,edtdo2
+	ld	(edtyco),a
+	jp	edtblk
+edtdo2:	inc	a
+	ret
+
+edtlef:	call	ctrl
+	jp	z,edtcsl
+	ld	a,(edtxco)
+	dec	a
+	ret	z
+	ld	(edtxco),a
+	jp	edtblk
+
+edtri:	call	ctrl
+	jp	z,edtcsr
+	ld	a,(edtyco)
+	cp	14
+	ret	nc
+	ld	a,(edtxco)
+	cp	2
+	ret	z
+	inc	a
+	ld	(edtxco),a
+
+edtblk:	call	wiscl6
+	ld	a,(edtyco)
+	ld	b,a
+	ld	hl,0800h+4*10+4
+	ld	de,10
+edtbl2:	add	hl,de
+	djnz	edtbl2
+	ld	a,(edtxco)
+	add	a,a
+	ld	e,a
+	add	hl,de
+	call	setwrt
+	ld	hl,blkdtb
+	ld	b,2
+	otir
+	ret
+
+
+edtcsl:	ld	b,16	;ctrl+links
+	ld	hl,edtcdt-2
+edtcs4:	ld	a,(edtyco)
+edtcs3:	dec	a
+	jr	z,edtcs2
+	djnz	edtcs3
+	jp	edtblk
+
+edtcsr:	ld	b,16	;ctrl+rechts
+	ld	hl,edtcd2-2
+	jr	edtcs4
+
+edtcs2:	ld	a,(edtyco)
+	add	a,a	;zoek juiste sprong-adres
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	push	de
+	pop	ix
+	jp	(ix)
+
+audil4:	ld	a,(audit)
+	xor	1
+	ld	(audit),a
+	ld	(audi2),a
+	call	stppac
+	call	stpaud
+	call	praudi
+	jp	calls2
+
+audil2:	ld	a,(audit)
+	xor	1
+	ld	(audit),a
+	ld	(audi2),a
+	call	stppac
+	call	stpaud
+	call	prtfun
+	call	praudi
+	jp	setens
+
+ksrlef:	call	ksrle3	      ;key scale rate links
+	xor	010000b
+ksrle2:	ld	(hl),a
+	call	prtfun
+	jp	setens
+
+egtlef:	call	ksrle3	;eq-type links
+	xor	0100000b
+	jr	ksrle2
+
+viblef:	call	ksrle3	;vibration links
+	xor	01000000b
+	jr	ksrle2
+
+amplef:	call	ksrle3	;am-links
+	xor	010000000b
+	jr	ksrle2
+
+mullef:	call	ksrle3	;multi sample wave links
+mulle3:	push	af
+	and	011110000b
+	ld	b,a
+	pop	af
+	and	01111b
+	dec	a
+	cp	255
+	jr	nz,mulle2
+	ld	a,15
+mulle2:	add	a,b
+	jp	ksrle2
+
+mulri:	call	ksrle3	;multi sample wave rechts
+mulri2:	push	af
+	and	011110000b
+	ld	b,a
+	pop	af
+	and	01111b
+	inc	a
+	cp	16
+	jr	nz,mulle2
+	xor	a
+	jr	mulle2
+
+declef:	call	ksrle4	;decay rate links
+	jr	mulle3
+
+decri:	call	ksrle4	;decay rate rechts
+	jr	mulri2
+
+rellef:	call	ksrle5	;release rate links
+	jr	mulle3
+
+relri:	call	ksrle5	;release rate rechts
+	jr	mulri2
+
+suslef:	call	ksrle5	;sustain mode links
+	jr	attle3
+
+susri:	call	ksrle5	;sustain mdoe rechts
+	jr	attri3
+
+attlef:	call	ksrle4	;attack rate links
+attle3:	push	af
+	and	01111b
+	ld	b,a
+	pop	af
+	and	011110000b
+	rrca
+	rrca
+	rrca
+	rrca
+	dec	a
+	cp	255
+	jr	nz,attle2
+	ld	a,15
+attle2:	rlca
+	rlca
+	rlca
+	rlca
+	add	a,b
+	jp	ksrle2
+
+attri:	call	ksrle4	;attack rate rechts
+attri3:	push	af
+	and	00001111b
+	ld	b,a
+	pop	af
+	and	011110000b
+	rrca
+	rrca
+	rrca
+	rrca
+	inc	a
+	cp	16
+	jr	nz,attle2
+	xor	a
+	jr	attle2
+
+totlef:	call	ksrle7	;total level links
+totle3:	push	af
+	and	011000000b
+	ld	b,a
+	pop	af
+	and	0111111b
+	dec	a
+	cp	255
+	jr	nz,totle2
+	ld	a,63
+totle2:	add	a,b
+	jp	ksrle2
+
+totri:	call	ksrle7	;total level rechts
+totri3:	push	af
+	and	011000000b
+	ld	b,a
+	pop	af
+	and	0111111b
+	inc	a
+	cp	64
+	jr	nz,totle2
+	xor	a
+	jr	totle2
+
+ksllef:	call	ksrle7	;key scale level links
+kslle3:	push	af
+	and	0111111b
+	ld	b,a
+	pop	af
+	and	011000000b
+	rlca
+	rlca
+	dec	a
+	cp	255
+	jr	nz,kslle2
+	ld	a,3
+kslle2:	rrca
+	rrca
+	add	a,b
+	jp	ksrle2
+
+kslri:	call	ksrle7	;key scale level rechts
+kslri3:	push	af
+	and	0111111b
+	ld	b,a
+	pop	af
+	and	011000000b
+	rlca
+	rlca
+	inc	a
+	cp	4
+	jr	nz,kslle2
+	xor	a
+	jp	kslle2
+
+feelef:	call	ksrle8	;feedback links
+	push	af
+	and	01b
+	ld	b,a
+	pop	af
+	and	011111110b
+	rrca
+	dec	a
+	cp	255
+	jr	nz,feele2
+	ld	a,15
+feele2:	rlca
+	add	a,b
+	jp	ksrle2
+
+feeri:	call	ksrle8	;feedback rechts
+	push	af
+	and	011111110b
+	ld	b,a
+	pop	af
+	and	01b
+	rrca
+	inc	a
+	cp	16
+	jr	nz,feele2
+	xor	a
+	jr	feele2
+
+conlef:	call	ksrle8	 ;connect links
+	xor	1
+	jp	ksrle2
+
+ksrle3:	ld	hl,(jstonc)
+	ld	a,(edtxco)
+	dec	a
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	ret
+ksrle4:	ld	hl,(jstonc)
+	ld	a,(edtxco)
+	add	a,3
+ksrle6:	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	ret
+ksrle5:	ld	hl,(jstonc)
+	ld	a,(edtxco)
+	add	a,5
+	jr	ksrle6
+ksrle7:	ld	hl,(jstonc)
+	ld	a,(edtxco)
+	inc	a
+	jr	ksrle6
+ksrle8:	ld	hl,(jstonc)
+	ld	de,8
+	add	hl,de
+	ld	a,(hl)
+	ret
+
+
+
+
+setens:	call	stppac
+	call	stpaud
+	ld	a,(audi2)
+	ld	(audit),a
+	call	praudi
+sete2s:	ld	a,(audit)	;stel huidige own voice in op alle
+	or	a	;audio kanalen
+	jp	nz,seten5
+	call	seten6
+	ld	b,9
+	ld	de,mmrgad
+seten3:	push	bc
+	push	hl
+	ld	b,8
+seten4:	ld	a,(de)
+	ld	c,a
+	ld	a,(hl)
+	inc	de
+	inc	hl
+	call	mmout
+	djnz	seten4
+	ld	a,(de)
+	ld	c,a
+	xor	a
+	call	mmout
+	inc	de
+	ld	a,(de)
+	ld	c,a
+	xor	a
+	call	mmout
+	inc	de
+	ld	a,(de)
+	ld	c,a
+	ld	a,(hl)
+	call	mmout
+	inc	de
+	pop	hl
+	pop	bc
+	djnz	seten3
+	ret
+
+seten5:	call	seten6	 ;stel huidige own voice in op alle
+	push	hl	 ;msx-music kanalen
+	ld	de,8
+	add	hl,de
+	ld	a,(hl)
+	pop	hl
+	rra
+	jr	nc,seten9
+	xor	a
+	ld	(audit),a
+	call	praudi
+	jp	sete2s
+seten9:	and	01111111b
+	push	af
+	xor	a
+	ld	b,3
+	call	seten7
+	pop	bc
+	push	af
+	ld	c,a
+	ld	a,(hl)
+	and	011000000b
+	or	b
+	call	pacout
+	inc	hl
+	pop	af
+	inc	a
+	ld	b,4
+	call	seten7
+	ld	hl,pargad
+	ld	b,9
+setena:	ld	c,(hl)
+	xor	a
+	call	pacout
+	djnz	setena
+	call	getint
+	xor	a
+	jp	setip2	;zet 9 kanalen op pac
+
+seten7:	push	bc
+	push	af
+	ld	c,a
+	ld	a,(hl)
+	inc	hl
+	call	pacout
+	pop	af
+	inc	a
+	pop	bc
+	djnz	seten7
+	ret
+
+seten6:	ld	a,(ownn2)
+	or	a
+	jp	nz,setenb
+	ld	hl,ownvdt+16-25	 ;bepaal startadres
+	ld	a,(ownnr)
+	ld	b,a
+	ld	de,25
+seten2:	add	hl,de
+	djnz	seten2
+	ld	(jstonc),hl
+	ret
+setenb:	call	bepowb
+	ld	(jstonc),hl
+	ret
+
+
+
+; *******  set start voices  *******
+
+
+setsta:	call	wiscol
+	ld	hl,0
+	call	setwrt
+	ld	hl,blddt5
+	call	decrc
+	call	prtsp7
+	call	prtsv4
+	call	prtstm
+	call	prtstp
+	xor	a
+	ld	(xco),a
+	inc	a
+	ld	(mmchn),a
+	call	sstblk
+sstal:	ld	ix,sstald
+	call	keyhn2
+	jr	sstal
+
+sstald:	db	30
+	dw	sstup
+	db	31
+	dw	sstdow
+	db	28
+	dw	sstrig
+	db	29
+	dw	sstlef
+	db	" "
+	dw	sstsel
+	db	27
+	dw	sstend
+	db	0
+
+sstend:	pop	af	;set start voice call weg
+	ret
+
+sstrig:	ld	a,(xco)
+	cp	5
+	ret	z
+	ld	a,5
+	ld	(xco),a
+	jp	sstblk
+
+sstlef:	ld	a,(xco)
+	or	a
+	ret	z
+	xor	a
+	ld	(xco),a
+	jp	sstblk
+
+
+sstup:	ld	a,(mmchn)
+	dec	a
+	ret	z
+	ld	(mmchn),a
+	jp	sstblk
+
+sstdow:	ld	a,(mmchn)
+	cp	9
+	ret	z
+	inc	a
+	ld	(mmchn),a
+	jp	sstblk
+
+sstsel:	ld	a,1
+	ld	(yco),a
+	call	sstbl4
+sstsl2:	ld	ix,sstsld
+	call	keyhn2
+	jr	sstsl2
+
+sstsld:	db	30
+	dw	sstsup
+	db	31
+	dw	sstsdo
+	db	" "
+	dw	sssel
+	db	27
+	dw	sstsle
+	db	0
+
+sstsle:	pop	af	;sstsel call weg
+	jp	wiscl9
+
+sssel:	ld	a,(xco)
+	or	a
+	jp	nz,sssel2
+	ld	hl,xbegvm-1
+	ld	a,(mmchn)
+	ld	b,0
+	ld	c,a
+	add	hl,bc
+	ld	a,(yco)
+	ld	(hl),a
+	call	prtstm
+	pop	af	;sstsel call weg
+	jp	sstblk
+
+sssel2:	ld	a,(mmchn)
+	ld	hl,xbegvp-1
+	ld	c,a
+	ld	b,0
+	add	hl,bc
+	ld	a,(yco)
+	ld	(hl),a
+	call	prtstp
+	pop	af	;sstsel call weg
+	jp	sstblk
+
+sstsup:	ld	a,(yco)
+	dec	a
+	ret	z
+	ld	(yco),a
+	jp	sstbl4
+
+sstsdo:	ld	a,(yco)
+	cp	16
+	ret	z
+	inc	a
+	ld	(yco),a
+	jp	sstbl4
+
+
+
+
+
+
+; **** keuzemenu msx audio/music ****
+
+
+submen:	ld	hl,9*80+30
+	ld	(stvrm),hl
+	call	setwrt
+	ld	hl,blddt2
+	call	decrc
+	call	subblk
+sublu2:	ld	ix,sublud
+	call	keyhn2
+	jr	sublu2
+
+sublud:	db	30
+	dw	subup
+	db	31
+	dw	subdow
+	db	" "
+	dw	selsub
+	db	27
+	dw	subend
+	db	0
+
+subend:	pop	af	;submenu call weg
+	jp	wiscl3
+
+subup:	ld	a,(subbld)
+	or	a
+	ret	z
+	dec	a
+	ld	(subbld),a
+	jp	subblk
+
+subdow:	ld	a,(subbld)
+	cp	1
+	ret	z
+	inc	a
+	ld	(subbld),a
+	jp	subblk
+
+subblk:	call	wiscl3
+	ld	a,(subbld)
+	or	a
+	jr	z,subbl2
+	ld	hl,0800h+13*10+4
+subbl3:	call	setwrt
+	ld	hl,blkdt4
+	ld	b,2
+	otir
+	ret
+subbl2:	ld	hl,0800h+12*10+4
+	jr	subbl3
+
+selsub:	ld	a,(subbld)
+	or	a
+	jp	z,selvmm
+	jp	selvpa
+
+
+
+
+
+
+
+
+; ******* select voices fm-pac *******
+
+
+
+selvpa:	call	savsc3
+	call	wiscol
+	call	clrlin
+	ld	a,sngpag
+	out	(0feh),a
+	ld	hl,0
+	call	setwrt
+	ld	hl,blddt4
+	call	decrc
+	xor	a
+	ld	(vocbnk),a
+	call	prthwv
+	call	prtvo2
+	call	prtsvp
+	call	prtvlp
+	call	prtfkn
+	call	prtkbd
+	ld	a,1
+	ld	(mmchn),a
+	call	mmvblk
+selvpl:	ld	ix,selvd2
+	call	keyhn2
+	jr	selvpl
+
+selvd2:	db	30
+	dw	selvpu
+	db	31
+	dw	selvpd
+	db	28
+	dw	selvpr
+	db	29
+	dw	selvpf
+	db	" "
+	dw	movvpa
+	db	27
+	dw	selvpe
+	db	0
+
+selvpe:	pop	af	;fm-pac voc call weg
+	jp	ressc3
+
+
+movvpa:	ld	hl,0101h
+	ld	(xco),hl
+	ld	a,1
+	ld	(voccnt),a
+	ld	a,1
+	ld	(audit),a
+	call	prtmob
+	call	setint
+	call	setinp
+movvpl:	ld	ix,movvpd
+	call	keyhn2
+	jr	movvpl
+
+movvpd:	db	30
+	dw	movmpu
+	db	31
+	dw	movmpd
+	db	28
+	dw	movmpr
+	db	29
+	dw	movmpf
+	db	" "
+	dw	movslp
+	db	0c0h
+	dw	fkndow
+	db	0c1h
+	dw	fknup
+	db	0c2h
+	dw	keybsw
+	db	"M"
+	dw	nxtint
+	db	"m"
+	dw	nxtint
+	db	27
+	dw	movvpe
+	db	0
+
+movvpe:	pop	af	;move fm-pac call weg
+	call	wiscl6
+	xor	a
+	ld	(vocbnk),a
+	call	stpall
+	call	prtvo2
+	call	clrlin
+	jp	getint
+
+movmpu:	ld	a,(yco)
+	dec	a
+	ret	z
+	ld	(yco),a
+	ld	hl,voccnt
+	dec	(hl)
+	call	prtmob
+	jp	setinp
+
+movmpd:	ld	a,(xco)
+	cp	1
+	jr	z,movpd2
+	ld	a,(yco)
+	cp	16
+movpd3:	ret	z
+	inc	a
+	ld	(yco),a
+	ld	hl,voccnt
+	inc	(hl)
+	call	prtmob
+	jp	setinp
+movpd2:	ld	a,(yco)
+	cp	15
+	jr	movpd3
+
+
+movmpr:	call	ctrl
+	jp	z,movpr2
+	ld	a,(xco)
+	cp	3
+	ret	z
+	inc	a
+	ld	(xco),a
+	cp	2
+	jr	z,movmr3
+	ld	a,(voccnt)
+	add	a,16
+	ld	(voccnt),a
+movmr3:	call	prtmob
+	jp	setinp
+
+movmpf:	call	ctrl
+	jp	z,movpf2
+	ld	a,(xco)
+	cp	1
+	ret	z
+	cp	2
+	jr	z,movmf4
+movmf5:	ld	a,(xco)
+	dec	a
+	ld	(xco),a
+	cp	1
+	jr	z,movmf3
+	ld	a,(voccnt)
+	sub	16
+	ld	(voccnt),a
+movmf3:	call	prtmob
+	jp	setinp
+movmf4:	ld	a,(yco)
+	cp	16
+	jr	nz,movmf5
+	ret
+
+movpr2:	ld	a,(vocbnk)
+	cp	5
+	ret	z
+	inc	a
+	ld	(vocbnk),a
+	ld	a,(voccnt)
+	add	a,32
+	ld	(voccnt),a
+	call	prtvo2
+	jp	setinp
+
+movpf2:	ld	a,(vocbnk)
+	or	a
+	ret	z
+	dec	a
+	ld	(vocbnk),a
+	ld	a,(voccnt)
+	sub	32
+	ld	(voccnt),a
+	call	prtvo2
+	jp	setinp
+
+movslp:	ld	a,(xco)
+	cp	1
+	jp	nz,movsp3
+	ld	hl,hwvdat+16-18
+	ld	a,(yco)
+	ld	b,a
+	ld	de,18
+movsp2:	add	hl,de
+	djnz	movsp2
+	ex	de,hl
+	ld	hl,xpasti-2
+	ld	a,(mmchn)
+	add	a,a
+	ld	c,a
+	ld	b,0
+	add	hl,bc
+	ld	a,(de)
+	ld	(hl),a
+	inc	de
+	inc	hl
+	ld	a,(de)
+	ld	(hl),a
+	call	wiscl6
+	call	prtsvp
+	call	prtvlp
+	xor	a
+	ld	(vocbnk),a
+	call	prtvo2
+	call	getint
+	call	stpall
+	pop	af
+	ret
+
+movsp3:	ld	d,16
+	ld	hl,xorgnr
+movspl:	ld	a,(voccnt)
+	ld	b,a
+	ld	a,(hl)
+	cp	b
+	jp	z,movspb
+	inc	hl
+	ld	a,d
+	inc	a
+	ld	d,a
+	cp	22
+	jr	nz,movspl
+
+	ld	d,16
+movspk:	xor	a
+	ld	(totsof),a
+	ld	b,16	;software instrument voor pac
+	ld	hl,xpasti
+movsp7:	ld	a,(hl)
+	cp	d
+	call	z,movsp6	;is original 1 al bezet?
+	inc	hl
+	inc	hl
+	djnz	movsp7
+	ld	a,(totsof)
+	or	a
+	jp	z,movspb	;nee?
+	cp	1
+	jr	nz,movsph
+	ld	hl,xpasti-2
+	ld	a,(mmchn)
+	add	a,a
+	ld	b,0
+	ld	c,a
+	add	hl,bc
+	ld	a,(hl)	;maar een keer op zelfde plaats?
+	cp	d
+	jp	z,movspb
+
+movsph:	ld	a,d
+	inc	a
+	cp	22
+	jr	z,movspi
+	ld	d,a
+	jp	movspk
+
+
+movspi:	ld	hl,mx6txt	;maximaal 6 toegestaan...
+	call	print
+	call	getkey
+	jp	clrlin
+
+movsp6:	ld	a,(totsof)
+	inc	a
+	ld	(totsof),a
+	ret
+
+movspb:	ld	a,d
+	push	af
+	sub	16
+	ld	hl,xorgnr
+	ld	b,0
+	ld	c,a
+	add	hl,bc
+
+	ex	de,hl
+	ld	hl,xorgp1
+	rlca
+	rlca
+	rlca
+	ld	c,a
+	add	hl,bc
+	ex	de,hl
+	pop	af
+
+movsp8:	push	hl
+	push	af
+	push	de
+	ld	a,(voccnt)
+	ld	hl,vdat1+16-25
+	ld	b,a
+	ld	de,25
+movsp4:	add	hl,de
+	djnz	movsp4
+	pop	de
+	ld	bc,3
+	ldir
+	ld	a,(hl)
+	and	011000000b
+	ld	b,a
+
+	push	de
+	push	hl
+	ld	de,5
+	add	hl,de
+	ld	a,(hl)
+	bit	0,a
+	jp	nz,movspd
+	srl	a
+	pop	hl
+	pop	de
+
+	add	a,b
+	ld	(de),a
+	inc	hl
+	inc	de
+	ld	bc,4
+	ldir
+
+	ld	hl,xpasti-2
+	ld	a,(mmchn)
+	ld	b,a
+movspe:	inc	hl
+	inc	hl
+	djnz	movspe
+	pop	af
+	ld	(hl),a
+	pop	hl
+	ld	a,(voccnt)
+	ld	(hl),a
+
+	call	wiscl6
+	call	prtsvp
+	call	prtvlp
+	xor	a
+	ld	(vocbnk),a
+	call	prtvo2
+	call	getint
+	pop	af	;move fm-pac call weg
+	ret
+
+movspd:	pop	hl
+	pop	hl
+	pop	hl
+	pop	af	;move fm-pac call weg
+	ret
+
+
+selvpu:	ld	a,(mmchn)
+	dec	a
+	ret	z
+	ld	(mmchn),a
+	jp	mmvblk
+
+selvpd:	ld	a,(mmchn)
+	cp	16
+	ret	z
+	inc	a
+	ld	(mmchn),a
+	jp	mmvblk
+
+selvpf:	ld	hl,xpasti-1
+	ld	a,(mmchn)
+	add	a,a
+	ld	b,0
+	ld	c,a
+	add	hl,bc
+	ld	a,(hl)
+	cp	14
+	ret	z
+	inc	(hl)
+	jp	prtvlp
+
+selvpr:	ld	hl,xpasti-1
+	ld	a,(mmchn)
+	add	a,a
+	ld	b,0
+	ld	c,a
+	add	hl,bc
+	ld	a,(hl)
+	or	a
+	ret	z
+	dec	(hl)
+	jp	prtvlp
+
+
+
+; **** select voices music module ****
+
+selvmm:	call	savsc3
+	call	wiscol
+	call	clrlin
+	ld	a,sngpag
+	out	(0feh),a
+	ld	hl,0
+	call	setwrt
+	ld	hl,blddt3
+	call	decrc
+	xor	a
+	ld	(vocbnk),a
+	call	prtvoc
+	call	prtsvm
+	call	prtvlm
+	call	prtfkn
+	call	prtkbd
+	ld	a,1
+	ld	(mmchn),a
+	call	mmvblk
+selvml:	ld	ix,selvd3
+	call	keyhn2
+	jr	selvml
+
+selvd3:	db	30
+	dw	selvmu
+	db	31
+	dw	selvmd
+	db	28
+	dw	selvmr
+	db	29
+	dw	selvmf
+	db	" "
+	dw	movvmm
+	db	27
+	dw	selvpe
+	db	0
+
+
+movvmm:	ld	hl,0101h
+	ld	(xco),hl
+	ld	a,1
+	ld	(voccnt),a
+	xor	a
+	ld	(audit),a
+	call	prtmob
+	call	setint
+	call	setins
+movvml:	ld	ix,movvmd
+	call	keyhn2
+	jr	movvml
+
+movvmd:	db	30
+	dw	movmmu
+	db	31
+	dw	movmmd
+	db	28
+	dw	movmmr
+	db	29
+	dw	movmmf
+	db	" "
+	dw	movslm
+	db	0c0h
+	dw	fkndow
+	db	0c1h
+	dw	fknup
+	db	0c2h
+	dw	keybsw
+	db	"M"
+	dw	nxtint
+	db	"m"
+	dw	nxtint
+	db	27
+	dw	movvme
+	db	0
+
+movvme:	pop	af	;move module call weg
+	call	setins
+	call	wiscl6
+	xor	a
+	ld	(vocbnk),a
+	call	prtvoc
+	call	getint
+	jp	stpaud
+
+movmmu:	ld	a,(yco)
+	dec	a
+	ret	z
+	ld	(yco),a
+	ld	hl,voccnt
+	dec	(hl)
+	call	prtmob
+	jp	setins
+
+movmmd:	ld	a,(yco)
+	cp	16
+	ret	z
+	inc	a
+	ld	(yco),a
+	ld	hl,voccnt
+	inc	(hl)
+	call	prtmob
+	jp	setins
+
+movmmr:	call	ctrl
+	jp	z,movmr2
+	ld	a,(xco)
+	cp	3
+	ret	z
+	inc	a
+	ld	(xco),a
+	ld	a,(voccnt)
+	add	a,16
+	ld	(voccnt),a
+	call	prtmob
+	jp	setins
+
+movmmf:	call	ctrl
+	jp	z,movmf2
+	ld	a,(xco)
+	dec	a
+	ret	z
+	ld	(xco),a
+	ld	a,(voccnt)
+	sub	16
+	ld	(voccnt),a
+	call	prtmob
+	jp	setins
+
+movmr2:	ld	a,(vocbnk)
+	cp	3
+	ret	z
+	inc	a
+	ld	(vocbnk),a
+	ld	a,(voccnt)
+	add	a,48
+	ld	(voccnt),a
+	call	prtvoc
+	jp	setins
+
+movmf2:	ld	a,(vocbnk)
+	or	a
+	ret	z
+	dec	a
+	ld	(vocbnk),a
+	ld	a,(voccnt)
+	sub	48
+	ld	(voccnt),a
+	call	prtvoc
+	jp	setins
+
+movslm:	ld	hl,vdat1+16-25
+	ld	a,(voccnt)
+	ld	b,a
+	ld	de,25
+movsl2:	add	hl,de
+	djnz	movsl2
+	push	hl
+	ld	hl,xmmvoc-9
+	ld	a,(mmchn)
+	ld	b,a
+	ld	de,9
+movsl3:	add	hl,de
+	djnz	movsl3
+	ex	de,hl
+	pop	hl
+	ld	bc,9
+	ldir
+	ld	hl,xmmsti-1
+	ld	a,(mmchn)
+	ld	c,a
+	ld	b,0
+	add	hl,bc
+	ld	a,(voccnt)
+	ld	(hl),a
+	call	wiscl6
+	call	prtsvm
+	call	prtvlm
+	xor	a
+	ld	(vocbnk),a
+	call	prtvoc
+	call	getint
+	call	stpall
+	pop	af	;move call weg
+	ret
+
+
+;**** set first keyboard note ****
+
+fkndow:	ld	a,(fkndat)
+	or	a
+	ret	z
+	dec	a
+fkndo2:	ld	(fkndat),a
+	call	stpall
+	jp	prtfkn
+
+fknup:	ld	a,(keybdt)
+	or	a
+	jr	z,fknp32
+	cp	2
+	jr	z,fknp32
+	ld	a,(fkndat)
+	cp	3
+fknp33:	ret	z
+	inc	a
+	jr	fkndo2
+fknp32:	ld	a,(fkndat)
+	cp	2
+	jr	fknp33
+
+
+;**** select keyboard ****
+
+keybsw:	call	getint
+	ld	a,(keybdt)
+	inc	a
+	cp	3
+	jr	nz,keybs1
+	xor	a
+keybs1:	ld	(keybdt),a
+	cp	1
+	jr	z,keybs2
+	ld	a,(fkndat)
+	cp	3
+	jr	nz,keybs2
+	dec	a
+	ld	(fkndat),a
+keybs2:	call	prtfkn
+	call	prtkbd
+	ld	a,(blkdt2)
+	cp	3
+	jp	z,setint
+	ld	a,(audit)
+	or	a
+	jp	z,setint
+	jp	setinp
+
+prtkbd:	ld	bc,41
+	call	srchig	;bepaal print hoogte
+prtkb3:	call	setwrt
+	ld	hl,nmsktx
+	ld	a,(keybdt)
+	or	a
+	jp	z,decrc
+	ld	hl,msxktx
+	dec	a
+	jp	z,decrc
+	ld	hl,miditx
+	jp	decrc
+
+srchig:	ld	hl,20*80
+	ld	a,(blkdt2)
+	cp	3
+	jr	nz,srchi2
+	ld	hl,22*80
+srchi2:	add	hl,bc
+	ret
+
+
+
+prtmob:	call	wiscl6
+	ld	hl,0800h+2*10
+	ld	a,(yco)
+	ld	b,a
+	ld	de,10
+prtmo2:	add	hl,de
+	djnz	prtmo2
+	ld	a,(xco)
+	push	af
+	add	a,a
+	inc	a
+	ld	c,a
+	ld	b,0
+	add	hl,bc
+	call	setwrt
+	ld	hl,blkdt6-3
+	ld	de,3
+	pop	af
+	ld	b,a
+prtmo3:	add	hl,de
+	djnz	prtmo3
+	ld	b,3
+	otir
+	ei
+	ret
+
+
+
+
+selvmf:	ld	hl,xmmvoc+3-9
+	ld	a,(mmchn)
+	ld	b,a
+	ld	de,9
+selvf2:	add	hl,de
+	djnz	selvf2
+	ld	a,(hl)
+	and	0111111b
+	cp	62
+	ret	z
+	inc	(hl)
+	jp	prtvlm
+
+selvmr:	ld	hl,xmmvoc+3-9
+	ld	a,(mmchn)
+	ld	b,a
+	ld	de,9
+selvr2:	add	hl,de
+	djnz	selvr2
+	ld	a,(hl)
+	and	0111111b
+	or	a
+	ret	z
+	dec	(hl)
+	jp	prtvlm
+
+
+selvmu:	ld	a,(mmchn)
+	dec	a
+	ret	z
+	ld	(mmchn),a
+	jp	mmvblk
+
+selvmd:	ld	a,(mmchn)
+	cp	16
+	ret	z
+	inc	a
+	ld	(mmchn),a
+	jp	mmvblk
+
+
+
+; ***** print routines *****
+
+
+prtstm:	ld	de,xbegvm
+	ld	hl,5*80+10
+	ld	b,9
+prtsm3:	push	bc
+	push	de
+	push	hl
+	call	setwrt
+	ld	a,(de)
+	call	prtdec
+
+	pop	hl
+	ld	de,80
+	add	hl,de
+	pop	de
+	inc	de
+	pop	bc
+	djnz	prtsm3
+	ei
+	ret
+
+prtstp:	ld	de,xbegvp
+	ld	hl,5*80+50
+	ld	b,9
+prttp3:	push	bc
+	push	de
+	push	hl
+	call	setwrt
+	ld	a,(de)
+	call	prtdec
+prttp6:	pop	hl
+	ld	de,80
+	add	hl,de
+	pop	de
+	inc	de
+	pop	bc
+	djnz	prttp3
+	ei
+	ret
+
+prttp4:	sub	16
+	ld	hl,xorgnr
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	ld	hl,vdat1-25
+	ld	b,a
+	ld	de,25
+prttp5:	add	hl,de
+	djnz	prttp5
+	ld	b,16
+	otir
+	jp	prttp6
+
+
+
+
+prtvoc:	ld	a,(vocbnk)
+	add	a,a
+	ld	c,a
+	ld	b,0
+	ld	hl,vocdat
+	add	hl,bc
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	ld	(vocpnt),hl
+	ld	b,3
+	ld	hl,3*80+27
+prtvl2:	push	bc
+	push	hl
+
+	ld	b,16
+prtvls:	push	bc
+	push	hl
+	call	setwrt
+	ld	hl,(vocpnt)
+	ld	b,16
+	otir
+	ld	de,9
+	add	hl,de
+	ld	(vocpnt),hl
+	pop	hl
+	ld	de,80
+	add	hl,de
+	pop	bc
+	djnz	prtvls
+
+	pop	hl
+	ld	de,18
+	add	hl,de
+	pop	bc
+	djnz	prtvl2
+	ei
+	ret
+
+
+
+prthwv:	ld	hl,hwvdat
+	ld	(vocpnt),hl
+	ld	hl,3*80+27
+	ld	b,15
+prthw2:	push	bc
+	push	hl
+	call	setwrt
+	ld	hl,(vocpnt)
+	ld	b,16
+	otir
+	ld	de,2
+	add	hl,de
+	ld	(vocpnt),hl
+	pop	hl
+	ld	de,80
+	add	hl,de
+	pop	bc
+	djnz	prthw2
+	ret
+
+
+prtvo2:	ld	a,(vocbnk)
+	add	a,a
+	ld	c,a
+	ld	b,0
+	ld	hl,vocdt2
+	add	hl,bc
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	ld	(vocpnt),hl
+	ld	b,2
+	ld	hl,3*80+27+18
+prtvo3:	push	bc
+	push	hl
+
+	ld	b,16
+prtvo4:	push	bc
+	push	hl
+	call	setwrt
+	ld	hl,(vocpnt)
+	ld	b,16
+	otir
+	ld	de,9
+	add	hl,de
+	ld	(vocpnt),hl
+	pop	hl
+	ld	de,80
+	add	hl,de
+	pop	bc
+	djnz	prtvo4
+
+	pop	hl
+	ld	de,18
+	add	hl,de
+	pop	bc
+	djnz	prtvo3
+	ei
+	ret
+
+
+
+
+
+
+prtsv4:	ld	de,xmmsti
+	ld	hl,5*80+22
+	ld	b,16
+	jr	prtsv3
+
+prtsvm:	ld	de,xmmsti
+	ld	hl,3*80+5
+	ld	b,16
+prtsv3:	push	bc
+	push	de
+	push	hl
+
+	call	setwrt
+	ld	a,(de)
+	ld	hl,vdat1-25
+	ld	b,a
+	ld	de,25
+prtsv2:	add	hl,de
+	djnz	prtsv2
+	ld	b,16
+	otir
+
+	pop	hl
+	ld	de,80
+	add	hl,de
+	pop	de
+	inc	de
+	pop	bc
+	djnz	prtsv3
+	ei
+	ret
+
+
+prtsp7:	ld	de,xpasti
+	ld	b,16
+	ld	hl,5*80+62
+	jr	prtsp3
+
+prtsvp:	ld	de,xpasti
+	ld	hl,3*80+5
+	ld	b,16
+prtsp3:	push	bc
+	push	de
+	push	hl
+
+	call	setwrt
+	ld	a,(de)
+	cp	16
+	jr	nc,prtsp4
+	ld	hl,hwvdat-18
+	ld	b,a
+	ld	de,18
+prtsp2:	add	hl,de
+	djnz	prtsp2
+	ld	b,15
+	otir
+	di
+	ld	a,"*"
+	out	(c),a
+
+prtsp6:	pop	hl
+	ld	de,80
+	add	hl,de
+	pop	de
+	inc	de
+	inc	de
+	pop	bc
+	djnz	prtsp3
+	ei
+	ret
+
+prtsp4:	sub	16
+	ld	hl,xorgnr
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	ld	hl,vdat1-25
+	ld	b,a
+	ld	de,25
+prtsp5:	add	hl,de
+	djnz	prtsp5
+	ld	b,16
+	otir
+	jp	prtsp6
+
+
+
+
+
+prtvlm:	ld	hl,3*80+23
+	ld	b,16
+	ld	de,xmmvoc+3
+prtvm2:	push	bc
+	push	hl
+	push	de
+	call	setwrt
+	ld	a,(de)
+	and	0111111b
+	ld	b,a
+	ld	a,63
+	sub	b
+	call	prtdec
+	pop	hl
+	ld	de,9
+	add	hl,de
+	ex	de,hl
+	pop	hl
+	ld	bc,80
+	add	hl,bc
+	pop	bc
+	djnz	prtvm2
+	ei
+	ret
+
+
+
+prtvlp:	ld	hl,3*80+23
+	ld	b,16
+	ld	de,xpasti+1
+prtvp2:	push	bc
+	push	hl
+	push	de
+	call	setwrt
+	ld	a,(de)
+	ld	b,a
+	ld	a,15
+	sub	b
+	call	prtdec
+	pop	de
+	inc	de
+	inc	de
+	pop	hl
+	ld	bc,80
+	add	hl,bc
+	pop	bc
+	djnz	prtvp2
+	ei
+	ret
+
+
+
+
+
+prtdec:	call	bepdec
+	ld	b,2
+	otir
+	ret
+
+bepdec:	ld	hl,decdat
+	or	a
+	ret	z
+	ld	b,a
+bepdcl:	inc	hl
+	inc	hl
+	djnz	bepdcl
+	ret
+
+prtfkn:	ld	bc,23
+	call	srchig
+	call	setwrt
+	ld	hl,c1dat-3
+	ld	a,(fkndat)
+	inc	a
+	ld	b,a
+	xor	a
+prtfk2:	add	a,3
+	djnz	prtfk2
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	b,3
+	otir
+	ei
+	ret
+
+prtdrv:	ld	hl,11*80+43
+	call	setwrt
+	ld	a,(xfmdrm+6)
+	and	01111b
+	call	prtdr2
+	ld	hl,10*80+43
+	call	setwrt
+	ld	a,(xfmdrm+7)
+	push	af
+	and	01111b
+	call	prtdr2
+	ld	hl,7*80+43
+	call	setwrt
+	pop	af
+	and	011110000b
+	rlca
+	rlca
+	rlca
+	rlca
+	call	prtdr2
+	ld	hl,9*80+43
+	call	setwrt
+	ld	a,(xfmdrm+8)
+	push	af
+	and	011110000b
+	rlca
+	rlca
+	rlca
+	rlca
+	call	prtdr2
+	ld	hl,8*80+43
+	call	setwrt
+	pop	af
+	and	01111b
+
+prtdr2:	ld	b,a
+	ld	a,15
+	sub	b
+	jp	prtdec
+
+
+prtfrq:	ld	de,(xfmdrm)
+	call	hexdec
+	ld	hl,15*80+42
+	call	setwrt
+	ld	hl,dectxt
+	call	decrc
+
+	ld	de,(xfmdrm+2)
+	call	hexdec
+	ld	hl,16*80+42
+	call	setwrt
+	ld	hl,dectxt
+	call	decrc
+
+	ld	de,(xfmdrm+4)
+	call	hexdec
+	ld	hl,17*80+42
+	call	setwrt
+	ld	hl,dectxt
+	jp	decrc
+
+
+
+
+
+mmvblk:	call	wiscol
+	ld	a,(mmchn)
+	ld	hl,0800h+2*10
+	ld	de,10
+	ld	b,a
+mmvbl2:	add	hl,de
+	djnz	mmvbl2
+	call	setwrt
+	ld	hl,blkdt5
+	ld	b,3
+	otir
+	ret
+
+sstblk:	call	wiscol
+	ld	a,(mmchn)
+	ld	hl,0800h+4*10
+	ld	de,10
+	ld	b,a
+sstbl2:	add	hl,de
+	djnz	sstbl2
+	ld	a,(xco)
+	ld	c,a
+	ld	b,0
+	add	hl,bc
+	call	setwrt
+	ld	hl,blkdt7
+	ld	b,2
+	otir
+	ret
+
+sstbl4:	call	wiscl9
+	ld	a,(yco)
+	ld	hl,0800h+4*10+2
+	ld	de,10
+	ld	b,a
+sstbl5:	add	hl,de
+	djnz	sstbl5
+	ld	a,(xco)
+	ld	c,a
+	ld	b,0
+	add	hl,bc
+	call	setwrt
+	ld	hl,blkdt8
+	ld	b,3
+	otir
+	ret
+
+ctrl:	ld	a,6
+	call	0141h
+	bit	1,a
+	ret
+
+
+
+; **** keyboard interrupt aan en uit ****
+
+setint:	di
+	xor	a
+	ld	(am2),a
+	ld	hl,0fd9fh
+	ld	de,savint
+	ld	bc,5
+	ldir
+	ld	a,0c3h
+	ld	hl,keyint
+	ld	(0fd9fh),a
+	ld	(0fda0h),hl
+	ld	a,(keybdt)
+	cp	2
+	jp	z,midiin
+	ei
+	ret
+
+getint:	di
+	ld	hl,savint
+	ld	de,0fd9fh
+	ld	bc,5
+	ldir
+	ld	a,(keybdt)
+	cp	2
+	jp	z,midiof
+	ei
+	ret
+
+
+setinp:	call	stppac
+	call	getint
+setin9:	ld	a,(xco)
+	cp	1
+	jr	nz,setip4
+	ld	a,(yco)
+	rlca
+	rlca
+	rlca
+	rlca
+
+setip2:	ld	bc,0930h	 ;zet 9 kanalen aan op pac
+setip3:	call	pacout
+	inc	c
+	djnz	setip3
+	xor	a
+	ld	c,0eh
+	call	pacout
+	ld	a,(blkdt2)
+	cp	3
+	call	nz,clrlin
+	jp	setint
+
+setip4:	ld	a,(voccnt)
+	ld	hl,vdat1+16-25
+	ld	b,a
+	ld	de,25
+setip5:	add	hl,de
+	djnz	setip5
+	push	hl
+	ld	de,8
+	add	hl,de
+	ld	a,(hl)
+	bit	0,a
+	pop	hl
+	jp	nz,setip8
+
+	ld	b,3
+	ld	c,0
+setip6:	ld	a,(hl)
+	call	pacout
+	inc	c
+	inc	hl
+	djnz	setip6	;eerste 3 bytes gelijk
+	ld	a,(hl)
+	and	011000000b
+	ld	b,a	;geen total level
+	push	hl
+	ld	de,5
+	add	hl,de
+	ld	a,(hl)
+	srl	a	;feedback i.p.v. total level
+	pop	hl
+	add	a,b
+	call	pacout
+	inc	hl
+	inc	c
+
+	ld	b,4
+setip7:	ld	a,(hl)
+	call	pacout
+	inc	hl
+	inc	c
+	djnz	setip7	;laatste 4 bytes gelijk
+	xor	a
+	jp	setip2
+
+
+setip8:	ld	a,255
+	ld	(amvoic),a
+	ld	a,(blkdt2)
+	cp	3
+	ret	z
+	ld	hl,tetxt
+	jp	print
+
+
+setins:	ld	hl,vdat1+16-25
+	ld	a,(voccnt)
+	ld	b,a
+	ld	de,25
+setin2:	add	hl,de
+	djnz	setin2
+
+	ld	b,9
+	ld	de,mmrgad
+setin3:	push	bc
+	push	hl
+
+	ld	b,8
+setin4:	ld	a,(de)
+	ld	c,a
+	ld	a,(hl)
+	inc	de
+	inc	hl
+	call	mmout
+	djnz	setin4
+	ld	a,(de)
+	ld	c,a
+	xor	a
+	call	mmout
+	inc	de
+	ld	a,(de)
+	ld	c,a
+	xor	a
+	call	mmout
+	inc	de
+	ld	a,(de)
+	ld	c,a
+	ld	a,(hl)
+	call	mmout
+	inc	de
+	pop	hl
+	pop	bc
+	djnz	setin3
+	ret
+
+
+
+
+; ****	keyboard routine  ****
+
+mmout:	push	af
+	ld	a,c
+	out	(0c0h),a
+	pop	af
+	out	(0c1h),a
+	ret
+
+mmget:	ld	a,c
+	out	(0c0h),a
+	jr	mmget1
+mmget1:	in	a,(0c1h)
+	ret
+
+
+keyint:
+	ld a,0c9h
+	ld (0fd9fh),a
+	ei
+	ld	a,(keybdt)
+	dec	a
+	jr	z,keyin3
+	dec	a
+	jr	z,keyin2
+
+	ld	b,008h
+	ld	hl,keyput
+	ld	de,bufnew
+nxtget:	ld	a,(hl)
+	inc	hl
+	ld	c,006h
+	call	mmout
+	ld	c,005h
+	call	mmget
+	ld	(de),a
+	inc	de
+	djnz	nxtget
+	jr	keyin2
+keyin3:	call	chkmsx
+	jp	in3
+keyin2:	call	redmid
+in3:	ld	b,008h
+	ld	hl,bufnew
+	ld	de,bufold
+keyin4:	push	bc
+	ld	a,b
+	ld	(bytnum),a
+	ld	a,(de)
+	ld	(bytold),a
+	ld	c,a
+	ld	a,(hl)
+	ld	(bytnew),a
+	ld	b,a
+	xor	c
+	ld	(bytdif),a
+	jr	z,keyin5	;bytes zijn gelijk
+	call	keychk
+keyin5:	inc	hl
+	inc	de
+	pop	bc
+	djnz	keyin4
+	ld	hl,bufnew
+	ld	de,bufold
+	ld	bc,00009h
+	ldir
+;	 di
+	ld	a,0c3h
+	ld	(0fd9fh),a
+;	 ei
+ad78e5:	ret
+
+
+keychk:	push	hl
+	push	de
+	xor	a
+	ld	(ad7992),a
+	ld	a,(bytold)
+	xor	0ffh
+	ld	c,a
+	ld	a,(bytdif)
+	and	c
+	jr	z,keych2
+	call	ad791c
+	call	ad7993
+keych2:	ld	a,0ffh
+	ld	(ad7992),a
+	ld	a,(bytnew)
+	xor	0ffh
+	ld	c,a
+	ld	a,(bytdif)
+	and	c
+	jr	z,ad7919
+	call	ad791c
+	call	ad79e9
+ad7919:	pop	de
+	pop	hl
+	ret
+
+ad791c:	push	af
+	ld	a,(bytnum)
+	ld	b,a
+	ld	a,008h
+	sub	b
+	sla	a
+	sla	a
+	sla	a
+	ld	(ad796e),a
+	pop	af
+	ld	hl,ad7b60
+	ld	b,008h
+ad7933:	push	bc
+	srl	a
+	push	af
+	jr	nc,ad794a
+	dec	b
+	ld	a,b
+	xor	007h
+	ld	b,a
+	ld	a,(ad796e)
+	or	b
+	inc	a	;eventuele split mode
+
+ad7948:	ld	(hl),a
+	inc	hl
+ad794a:	pop	af
+	pop	bc
+	djnz	ad7933
+	ld	(hl),000h
+	ret
+
+
+
+
+bufnew:	db	0ffh,0ffh,0ffh,0ffh,0ffh,0ffh,0ffh,0ffh,0ffh
+bufold:	db	0ffh,0ffh,0ffh,0ffh,0ffh,0ffh,0ffh,0ffh,0ffh
+keyput:	db	001h,002h,004h,008h,010h,020h,040h,080h
+bytdif:	db	000h
+bytnew:	db	000h
+bytold:	db	000h
+ad796e:	db	000h
+bytnum:	db	000h
+ad7970:	db	000h,000h,000h,000h,000h,000h,000h,000h,000h
+ad7979:	db	000h,000h,000h,000h,000h,000h,000h,000h,000h
+ad7982:	db	000h
+ad798f:	db	000h
+ad7990:	db	000h
+ad7991:	db	009h
+ad7992:	db	000h
+matrix:	equ	bufnew
+
+
+ad7993:	ld	hl,ad7b60
+ad7996:	ld	a,(hl)
+ad7997:	or	a
+	ret	z
+	ld	de,ad7970
+	ld	a,(ad7991)
+	ld	b,a
+ad79a1:	push	bc
+	ld	a,b
+	ld	(ad798f),a
+	ld	a,(hl)
+	ld	b,a
+	ld	a,(de)
+	cp	b
+	call	z,ad79b5
+	pop	bc
+	inc	de
+	djnz	ad79a1
+	inc	hl
+	jr	ad7996
+
+ad79b5:	push	hl
+	push	de
+	xor	a
+	ld	(de),a
+	ld	a,b
+	dec	a
+	add	a,a
+
+	ex	af,af'            ;splits
+	ld	a,(audit)
+	or	a
+	call	z,keybm1
+	ld	a,(audit)
+	cp	1
+	call	z,keybp1
+
+	pop	de
+	pop	hl
+	ret
+
+keybm1:	ex	af,af'
+	call	ad79de	;music module
+	ld	a,(ad798f)
+	ld	hl,mmrga2
+	ld	b,a
+	ld	a,(ad7991)
+	sub	b
+	add	a,a
+	ld	c,a
+	ld	b,000h
+	add	hl,bc
+	ld	c,(hl)
+	ld	a,(de)
+	call	mmout
+	inc	hl
+	ld	c,(hl)
+	inc	de
+	ld	a,(de)
+	jp	mmout
+
+ad79de:	push	hl
+	ld	b,000h
+	ld	c,a
+	ld	hl,mmfreq-24
+	add	hl,bc
+	ld	a,(fkndat)
+	inc	a
+	ld	b,a
+	ld	de,24
+fknpl1:	add	hl,de
+	djnz	fknpl1
+	ex	de,hl
+	pop	hl
+	ret
+
+keybp1:	ex	af,af'
+	call	keybp2	 ;fm-pac
+	ld	a,(ad798f)
+	ld	hl,pargad
+	ld	b,a
+	ld	a,(ad7991)
+	sub	b
+	add	a,a
+	ld	c,a
+	ld	b,000h
+	add	hl,bc
+	ld	c,(hl)
+	ld	a,(de)
+	call	pacout
+	inc	hl
+	ld	c,(hl)
+	inc	de
+	ld	a,(de)
+	jp	pacout
+
+keybp2:	push	hl
+	ld	b,000h
+	ld	c,a
+	ld	hl,pafreq-24
+	add	hl,bc
+	ld	a,(fkndat)
+	inc	a
+	ld	b,a
+	ld	de,24
+fknpl2:	add	hl,de
+	djnz	fknpl2
+	ex	de,hl
+	pop	hl
+	ret
+
+
+
+
+ad79e9:	ld	hl,ad7b60
+ad79ec:	ld	a,(hl)
+	or	a
+	ret	z
+	push	hl
+	call	ad79f9
+	pop	hl
+	inc	hl
+	jr	ad79ec
+	ret
+
+ad79f9:	push	af
+	ld	hl,ad7979
+	ld	c,a
+	ld	a,(ad7991)
+	ld	b,a
+ad7a02:	push	bc
+	ld	a,(ad7991)
+	sub	b
+	ld	(ad7990),a
+	ld	a,(hl)
+	cp	c
+	jp	z,keybsp	;splits
+
+	inc	hl
+	pop	bc
+	djnz	ad7a02
+	ld	hl,ad7970
+	ld	a,(ad7982)
+	ld	b,000h
+	ld	c,a
+	add	hl,bc
+	ld	a,(ad7991)
+	ld	b,a
+ad7a20:	push	bc
+	ld	a,(hl)
+	or	a
+	jp	z,ad7a4c
+	ld	a,(ad7991)
+	ld	c,a
+	ld	a,(ad7982)
+	inc	a
+	ld	(ad7982),a
+	cp	c
+	call	z,ad7a47
+	ld	hl,ad7970
+	ld	b,000h
+	ld	c,a
+	add	hl,bc
+	pop	bc
+	djnz	ad7a20
+	push	hl
+
+	ld	a,(audit)	;splits
+	or	a
+	call	z,ad7aff
+	ld	a,(audit)
+	cp	1
+	call	z,keybp3
+
+	pop	hl
+	pop	af
+	jr	ad7a4e
+ad7a47:	xor	a
+	ld	(ad7982),a
+	ret
+
+ad7a4c:	pop	bc
+	pop	af
+ad7a4e:	ld	(hl),a
+	ld	hl,ad7979
+	push	af
+	ld	a,(ad7982)
+	ld	b,000h
+	ld	c,a
+	add	hl,bc
+	pop	af
+	ld	(hl),a
+
+	ex	af,af'
+	ld	a,(audit)	;splits
+	or	a
+	jp	z,ad7a89
+	ld	a,(audit)
+	cp	1
+	jp	z,keybp5
+
+ad7a5e:	pop	bc	;music module
+	ld	hl,ad7970
+	ld	a,(ad7990)
+	ld	b,000h
+	ld	c,a
+	add	hl,bc
+	pop	af
+	ld	(hl),a
+	dec	a
+	add	a,a
+	call	ad79de
+	ld	a,(ad7990)
+	add	a,a
+	ld	b,000h
+	ld	c,a
+	ld	hl,mmrga2
+	add	hl,bc
+	ld	a,(ad7982)
+	dec	a
+	cp	0ffh
+	call	z,ad7adb
+	ld	(ad7982),a
+	jp	ad7a99
+
+keybp4:	pop	bc	;fm-pac
+	ld	hl,ad7970
+	ld	a,(ad7990)
+	ld	b,000h
+	ld	c,a
+	add	hl,bc
+	pop	af
+	ld	(hl),a
+	dec	a
+	add	a,a
+	call	keybp2
+	ld	a,(ad7990)
+	add	a,a
+	ld	b,000h
+	ld	c,a
+	ld	hl,pargad
+	add	hl,bc
+	ld	a,(ad7982)
+	dec	a
+	cp	0ffh
+	call	z,ad7adb
+	ld	(ad7982),a
+	jp	keybp6
+
+ad7a89:	ex	af,af'
+	dec	a
+	add	a,a
+	call	ad79de
+	ld	a,(ad7982)
+	add	a,a
+	ld	b,000h
+	ld	c,a
+	ld	hl,mmrga2
+	add	hl,bc
+ad7a99:	ld	c,(hl)
+	ld	a,(de)
+	call	mmout
+	inc	hl
+	ld	c,(hl)
+	inc	de
+	ld	a,(de)
+	set	5,a
+	call	mmout
+	ld	a,(ad7991)
+	ld	c,a
+	ld	a,(ad7982)
+	inc	a
+	ld	(ad7982),a
+	cp	c
+	call	z,ad7a47
+	ret
+
+keybp5:	ex	af,af'
+	dec	a	;fm-pac
+	add	a,a
+	call	keybp2
+	ld	a,(ad7982)
+	add	a,a
+	ld	b,000h
+	ld	c,a
+	ld	hl,pargad
+	add	hl,bc
+keybp6:	ld	c,(hl)
+	ld	a,(de)
+	call	pacout
+	inc	hl
+	ld	c,(hl)
+	inc	de
+	ld	a,(de)
+	set	4,a
+	call	pacout
+	ld	a,(ad7991)
+	ld	c,a
+	ld	a,(ad7982)
+	inc	a
+	ld	(ad7982),a
+	cp	c
+	call	z,ad7a47
+	ret
+
+
+ad7adb:	ld	a,(ad7991)
+	dec	a
+	ret
+
+ad7aff:	ld	a,(hl)	 ;music module
+	dec	a
+	add	a,a
+	call	ad79de
+	ld	a,(ad7982)
+	add	a,a
+	ld	b,000h
+	ld	c,a
+	ld	hl,mmrga2
+	add	hl,bc
+	ld	c,(hl)
+	ld	a,(de)
+	call	mmout
+	inc	hl
+	ld	c,(hl)
+	inc	de
+	ld	a,(de)
+	jp	mmout
+
+keybp3:	ld	a,(hl)	;fm-pac
+	dec	a
+	add	a,a
+	call	keybp2
+	ld	a,(ad7982)
+	add	a,a
+	ld	b,000h
+	ld	c,a
+	ld	hl,pargad
+	add	hl,bc
+	ld	c,(hl)
+	ld	a,(de)
+	call	pacout
+	inc	hl
+	ld	c,(hl)
+	inc	de
+	ld	a,(de)
+	jp	pacout
+
+keybsp:	ld	a,(audit)
+	or	a
+	jp	z,ad7a5e
+	jp	keybp4
+
+ad7b60:	db	0,0,0,0,0,0,0,0,0
+
+
+chkmsx:
+	ld	hl,byt1
+	ld	de,byt2
+	ld	bc,5
+	ld	(hl),0ffh
+	ldir
+rij1:	ld	a,(0fbe5h)
+	cp	0ffh
+	jr	z,rij2
+	ld	hl,byt1
+	rra
+	rra
+	call	nc,set1
+	rra
+	call	nc,set3
+	rra
+	rra
+	call	nc,set6
+	inc	hl
+	rra
+	call	nc,set0
+	rra
+	call	nc,set2
+
+rij2:	ld	hl,byt2
+	ld	a,(0fbe6h)
+	cp	0ffh
+	jr	z,rij3
+	rra
+	call	nc,set5
+	rra
+	call	nc,set7
+	inc	hl
+	rra
+	call	nc,set2
+	rra
+	call	nc,set4
+	rra
+	call	nc,set6
+	rra
+	call	nc,set3
+	rra
+	call	nc,set5
+
+rij3:	ld	a,(0fbe7h)
+	cp	0ffh
+	jr	z,rij4
+	ld	hl,byt4
+	bit	6,a
+	call	z,set1
+	inc	hl
+	bit	2,a
+	call	z,set6
+	bit	7,a
+	call	z,set1
+	inc	hl
+	rra
+	call	nc,set2
+	rra
+	call	nc,set4
+	rra
+	rra
+	call	nc,set0
+	rra
+	call	nc,set1
+	rra
+	call	nc,set3
+
+rij4:	ld	a,(0fbe8h)
+	cp	0ffh
+	jr	z,rij5
+	ld	hl,byt1
+	bit	2,a
+	call	z,set5
+	inc	hl
+	bit	6,a
+	call	z,set6
+	inc	hl
+	inc	hl
+	rra
+	call	nc,set5
+	rra
+	rra
+	rra
+	call	nc,set6
+	inc	hl
+	rra
+	call	nc,set0
+	rra
+	call	nc,set2
+
+rij5:	ld	a,(0fbe9h)
+	cp	0ffh
+	jr	z,rij6
+	ld	hl,byt5
+	rra
+	call	nc,set5
+	rra
+	call	nc,set7
+	rra
+	call	nc,set4
+	rra
+	call	nc,set3
+	dec	hl
+	dec	hl
+	rra
+	call	nc,set0
+	rra
+	call	nc,set1
+	dec	hl
+	dec	hl
+	rra
+	call	nc,set2
+	rra
+	call	nc,set7
+
+rij6:	ld	a,(0fbeah)
+	cp	0ffh
+	jr	z,rij7
+	ld	hl,byt1
+	bit	4,a
+	call	z,set4
+	inc	hl
+	bit	1,a
+	call	z,set1
+	bit	2,a
+	call	z,set4
+	bit	6,a
+	call	z,set3
+	inc	hl
+	inc	hl
+	bit	0,a
+	call	z,set3
+	bit	3,a
+	call	z,set7
+	bit	5,a
+	call	z,set4
+	bit	7,a
+	call	z,set2
+
+rij7:	ld	a,(0fbebh)
+	ld	hl,byt4
+	rra
+	call	nc,set0
+
+rij8:	ld	a,(0fbech)
+	ld	hl,byt1
+	bit	3,a
+	call	z,set0
+	inc	hl
+	inc	hl
+	rla
+	call	nc,set7
+	ret
+
+byt1	equ	bufnew
+byt2	equ	byt1+1
+byt3	equ	byt2+1
+byt4	equ	byt3+1
+byt5	equ	byt4+1
+byt6	equ	byt5+1
+
+set0:	res	0,(hl)
+	ret
+set1:	res	1,(hl)
+	ret
+set2:	res	2,(hl)
+	ret
+set3:	res	3,(hl)
+	ret
+set4:	res	4,(hl)
+	ret
+set5:	res	5,(hl)
+	ret
+set6:	res	6,(hl)
+	ret
+set7:	res	7,(hl)
+	ret
+
+
+
+
+lowtts:	db	36
+hitts:	db	96
+vol:	db	0
+toets:	db	0
+midcod:	db	0	;ingelezen midi code
+midco2:	db	0	;midi code die verwerkt wordt
+overfl:	db	0	;overflow error
+aantal:	db	0
+midco3:	db	0
+syscod:	db	0	;system command code is bezig
+buftop:	db	000h
+bufbot:	db	000h
+
+inter1:	ret
+	ret
+	ret
+	ret
+	ret
+
+waitl:	ld	b,9
+wait1:	push	bc
+	ld	b,255
+wait2:	djnz	wait2
+	pop	bc
+	djnz	wait1
+	ret
+
+turin:	ld	bc,0e8e9h
+	in	a,(c)         ;midi in ?
+	and	00000010b
+	jr	z,mdint1      ;no
+	jp	lees          ;yes
+
+mdint1:	in	a,(c)         ;8253 timer ?
+	and	10000000b
+	jp	z,inter1      ;no
+	xor	a
+	out	(0eah),a
+	jp	inter1
+
+facmid:	ld	bc,00203h
+	in	a,(c)
+	bit	1,a              ;and  002h
+	jp	z,lees           ;interupt van fmi
+	jp	inter1
+
+inmmid:	ld	bc,00504h
+inmid2:	in	a,(c)
+	bit	7,a
+	jp	nz,lees	;interupt van musmod
+	jp	inter1
+
+lees:	ld	c,b
+	in	a,(c)	;lees midi code
+
+inbuf:	ld	(midcod),a
+	ld	d,0fah
+	ld	a,(buftop)
+	ld	e,a
+	ld	a,(bufbot)
+	inc	a
+	cp	e
+	jr	z,overst	;gelijk dan buffer overflow
+	cp	0f5h
+	jp	nz,setbuf
+	xor	a
+setbuf:	ld	(bufbot),a
+	ld	e,a
+	ld	a,(midcod)
+	ld	(de),a
+	jp	inter1
+
+overst:	ld	a,1
+	ld	(overfl),a
+	jp	inter1
+
+
+redmid:	ld	a,(bufbot)
+	ld	e,a
+	ld	a,(buftop)
+	cp	e
+	ret	z	;buffer is leeg
+	inc	a
+	cp	0f5h
+	jp	nz,setbu2
+	xor	a
+setbu2:	ld	(buftop),a
+	ld	d,0fah
+	ld	e,a
+	ld	a,(de)
+	ld	(midco2),a
+
+setmid:	and	0f0h
+	cp	0f0h
+	jr	z,system
+	ld	a,(syscod)
+	or	a
+	jr	nz,redmid	;van system common alles overslaan
+	ld	a,(midco2)
+	cp	080h
+	jp	nc,stuurc	 ;stuurcode
+	ld	a,(aantal)
+	or	a
+	jp	nz,decant
+	ld	a,(midco3)
+	and	0f0h
+	cp	080h
+	jp	z,seta2
+	cp	090h
+	jp	z,seta2
+	jp	redmid
+
+seta2:	ld	a,2
+
+decant:	dec	a
+	ld	(aantal),a
+	jp	sttset
+
+system:	ld	a,(midco2)
+	cp	0f7h
+	jr	z,rstsys
+	cp	0f0h
+	jr	z,setsys
+	jp	redmid
+
+setsys:	ld	a,1
+	ld	(syscod),a
+	jp	redmid
+
+rstsys:	xor	a
+	ld	(syscod),a
+	jp	redmid
+
+stuurc:	xor	a
+	ld	(aantal),a
+	ld	a,(midco2)
+	ld	(midco3),a
+	and	0f0h
+	cp	090h
+	jp	nz,redmid
+	cp	080h
+	jp	nz,redmid
+	ld	a,2
+	ld	(aantal),a
+
+sttset:	ld	a,(aantal)
+	or	a
+	jr	z,setvol
+	dec	a
+	jr	z,settoe
+	jp	redmid
+
+settoe:	ld	a,(midco2)
+	ld	(toets),a
+	jp	redmid
+
+setvol:	ld	a,(midco2)
+	ld	(vol),a
+
+setmat:	ld	de,(vol)	;'e' = volume  'd' = toets nummer
+	ld	hl,(lowtts)
+	inc	h
+	ld	a,d
+	cp	l
+	jp	c,redmid	;toetsnummer te laag
+	cp	h
+	jp	nc,redmid	;toets nummer te hoog
+	sub	l
+	ld	hl,matrix	;rij nummer
+chkrij:	cp	8
+	jr	c,jstrij	;juiste matrixrij gevonden
+	sub	8
+	inc	hl
+	jp	chkrij
+
+jstrij:	ld	b,a
+	inc	b
+	ld	a,e	;(volume)
+	or	a
+	jr	nz,volon
+	ld	a,010000000b
+rot1:	rlca
+	djnz	rot1
+	or	(hl)
+	ld	(hl),a
+	jp	redmid
+
+volon:	ld	a,001111111b
+rot2:	rlca
+	djnz	rot2
+	and	(hl)
+	ld	(hl),a
+	jp	redmid
+
+
+
+stpall:	call	stpaud
+
+;*** stop alle 9 pac-kanalen ***
+
+stppac:	ld	hl,pargad
+	ld	b,18
+stppc2:	ld	c,(hl)
+	xor	a
+	call	pacout
+	inc	hl
+	djnz	stppc2
+	ret
+
+;*** stop alle 9 module kanalen ***
+
+stpaud:	ld	hl,mmrga2
+	ld	b,18
+stpau2:	ld	c,(hl)
+	xor	a
+	call	mmout
+	inc	hl
+	djnz	stpau2
+	ret
+
+
+
+;***	get key    ***
+
+getkey:	push	hl
+	call	0156h
+	pop	hl
+	jp	09fh
+
+
+keyhn2:	call	getkey
+keyhan:	ld	c,a
+keylus:	ld	a,(ix+0)
+	or	a
+	ret	z
+	ld	l,(ix+1)
+	ld	h,(ix+2)
+	cp	c
+	jr	z,keyexe
+	inc	ix
+	inc	ix
+	inc	ix
+	jr	keylus
+keyexe:	jp	(hl)
+
+;************************************************************************
+
+chmion:	ld	a,(keybdt)
+	cp	2
+	ret
+
+nxtint:	call	chmion
+	ret	nz
+	call	midiof
+	ld	a,(midint)
+	inc	a
+	cp	3
+	jr	nz,zetmid
+	xor	a
+zetmid:	ld	(midint),a
+
+midiin:	ld	a,1
+	ld	(mdon),a
+	ld	a,(am2)
+	or	a
+	ret	nz
+	ld	hl,matrix
+	ld	a,0ffh
+	ld	b,9
+vulemp:	ld	(hl),a
+	inc	hl
+	djnz	vulemp	;reset matrix
+	ld	bc,49
+	call	srchig
+	call	setwrt
+	xor	a
+	ld	(mdon),a
+	ld	a,(midint)
+	or	a
+	jp	z,chkmmd
+	dec	a
+	jp	z,chktmd
+	jp	chkvak
+
+
+chkmmd:	in	a,(0c0h)
+	cp	0ffh
+	ld	hl,modtx
+	jp	z,setno
+	call	noprt
+	jr	nz,chkmm2
+	call	decrc
+chkmm2:	di
+	ld	a,3
+	out	(0),a
+	ld	a,010010101b
+	out	(0),a
+	call	resbuf
+	call	savein
+	ld	hl,hmmjmp
+	ld	de,0fd9ah
+	call	copy5
+	ei
+	ret
+
+chktmd:	call	chkmid
+	ld	hl,turtx
+	jp	c,setno
+	call	noprt
+	jr	nz,chktm2
+	call	decrc
+chktm2:	call	resbuf
+	di
+	xor	a
+	out	(0e2h),a
+	call	savein
+	ld	hl,hturbo	;set address to new hook data
+	ld	de,0fd9ah	;get hook address
+	call	copy5	;set new hook
+	xor	a
+	out	(0e2h),a	;set midi cartridge i/o
+
+stmid:	ld	a,00010110b
+	out	(0efh),a
+	ld	a,8
+	out	(0ech),a
+	ld	a,10110100b
+	out	(0efh),a
+	ld	hl,20000
+	ld	a,l
+	out	(0eeh),a
+	ld	a,h
+	out	(0eeh),a
+	xor	a
+	out	(0e9h),a
+	call	waits
+	out	(0e9h),a
+	call	waits
+	out	(0e9h),a
+	call	waits
+	ld	a,40h
+	out	(0e9h),a
+	call	waits
+	ld	a,01001110b
+	out	(0e9h),a
+	call	waits
+	ld	a,00100111b
+	out	(0e9h),a
+	in	a,(0e8h)
+	xor	a
+	out	(0eah),a
+	ei
+	ret
+
+waits:	push	af
+	push	bc
+	ld	c,1
+	out	(0e6h),a
+waitlp:	in	a,(0e7h)
+	cp	c
+	jr	c,waitlp
+	pop	bc
+	pop	af
+	ret
+
+chkvak:	in	a,(2)
+	cp	0ffh
+	ld	hl,vactx
+	jp	z,setno
+	call	noprt
+	jr	nz,chkva2
+	call	decrc
+chkva2:	di
+	xor	a
+	out	(003h),a
+	out	(003h),a
+	out	(003h),a
+	ld	a,040h
+	out	(003h),a
+	ld	a,04eh
+	out	(003h),a
+	ld	a,015h
+	out	(003h),a
+	call	resbuf
+	call	savein
+	ld	hl,hfac
+	ld	de,0fd9ah
+	call	copy5
+	ei
+	ret
+
+savein:	ld	hl,0fd9ah
+	ld	de,inter1
+	call	copy5
+	ret
+
+midiof:	ld	bc,49
+	call	srchig
+	call	setwrt
+	ld	hl,emptx2
+	call	decrc
+	ld	a,(mdon)
+	or	a
+	ret	nz	;midi poort was niet gezet
+	ld	a,(midint)
+	or	a
+	jr	z,mmdoff
+	dec	a
+	jr	z,tmdoff
+	jr	vukoff
+
+mmdoff:	di
+	ld	a,3
+	out	(0),a
+	call	midoff
+	ei
+	ret
+
+tmdoff:	di
+	ld	a,1
+	out	(0e9h),a
+	call	midoff
+	ei
+	ret
+
+vukoff:	ld	a,001h
+	out	(003h),a
+	in	a,(002h)
+	call	midoff
+	ei
+	ret
+
+midoff:	ld	hl,inter1
+	ld	de,0fd9ah
+	call	copy5
+	ret
+
+setno:	ld	a,1
+	ld	(mdon),a
+	call	noprt
+	ret	nz
+	push	hl
+	ld	hl,notx
+	call	decrc
+	pop	hl
+	jp	decrc
+
+noprt:	ld	a,(ownn2)
+	or	a
+	ret
+
+copy5:	ld	bc,5
+	ldir
+	ret
+
+resbuf:	xor	a
+	ld	(bufbot),a
+	ld	(buftop),a
+	ld	(overfl),a
+	ret
+
+hmmjmp:	jp	inmmid
+	ret
+	ret
+
+hfac:	jp	facmid
+	ret
+	ret
+
+hturbo:	jp	turin
+	ret
+	ret
+
+
+
+;	check midi interface
+;	return : [cf]=1	        no midi interface
+;	       : [cf]=0 , [zf]=1        found midi cartridge
+;	       : [cf]=0 , [zf]=0        midi interface is built in
+;
+chkmid:	ld	a,(02dh)      ;(exptbl)
+	cp	3
+	ret	c             ;msx1,msx2,msx2+
+	ld	a,(02eh)      ;read midi interface id
+	and	1
+	ret	nz            ;midi interface is built in
+	ld	b,4
+chkro1:	push	bc            ;save counter
+	ld	a,4
+	sub	b             ;primary slot number
+	ld	c,a           ;save
+	ld	hl,0fcc1h     ;exptbl
+	ld	a,c
+	add	a,l           ;set exptbl
+	ld	l,a
+	ld	a,(hl)
+	and	10000000b     ;expanded ?
+	jr	z,chkro3      ;no
+	ld	b,4           ;number of expanded slots
+chkro2:	push	bc            ;search expanded slot
+	ld	a,00100100b
+	sub	b             ;001000nnb
+	rlc	a
+	rlc	a             ;1000nn00b
+	or	c             ;1000nnmmb = slot address
+	call	chkid         ;check midi id
+	pop	bc
+	jr	z,chkroy      ;found midi id
+	djnz	chkro2        ;next expanded slot
+	pop	bc
+	jr	chkro4        ;next slot
+chkro3:	ld	a,c           ;set slot address
+	call	chkid         ;check midi id
+	pop	bc
+	jr	z,chkroz      ;found midi id
+chkro4:	djnz	chkro1        ;search next slot
+	scf	              ;no midi id
+	ret
+
+chkroy: pop	bc
+chkroz: xor	a             ;set z flag, reset cy flag
+	ret
+
+;
+;	check midi id
+;
+;	entry :[a]=slot address
+;	return:z flag is set if midi id is found
+;
+idstr:	db	"MIDI"
+idadd:	equ	401ch         ;midi id address
+
+chkid:	push	bc
+	ld	de,idstr
+	ld	hl,idadd
+	ld	b,4           ;length of id_string
+chkid1:	push	af
+	push	bc
+	push	de
+	call	00ch          ;read data
+	pop	de
+	pop	bc
+	ld	c,a           ;save data
+	ld	a,(de)        ;get char
+	cp	c             ;same ?
+	jr	nz,chkid2     ;no
+	pop	af            ;restore slot address
+	inc	de            ;next char
+	inc	hl
+	djnz	chkid1        ;check next char
+	pop	bc            ;restore environment
+	xor	a             ;i found id
+	ret
+
+chkid2:	pop	af            ;restore slot address
+	pop	bc            ;restore environment
+	xor	a
+	inc	a             ;wrong id
+	ret
+
+
+
+;*** decrunch en print in beeld ***
+
+decrc:
+drclus:	ld	a,(hl)	;lees data op hl
+	cp	0ffh
+	call	z,linfed
+	cp	0fdh
+	call	z,linfd2
+	cp	0feh
+	jr	z,drc2
+	or	a
+	ret	z
+	out	(c),a
+	inc	hl
+	jr	drclus
+
+drc2:	inc	hl
+	ld	a,(hl)	;aantal *
+	ld	b,a
+	inc	hl
+	ld	a,(hl)
+drc3:	out	(c),a
+	djnz	drc3
+	inc	hl
+	jr	drclus
+
+linfed:	ld	a," "
+	out	(c),a
+	call	linfd2
+	ex	af,af'
+	ld	a," "
+	out	(c),a
+	ex	af,af'
+	ret
+
+linfd2:	inc	hl
+	ld	a,(hl)
+	or	a
+	ret	z
+	push	hl
+	ld	hl,(stvrm)
+	ld	de,80
+	add	hl,de
+	ld	(stvrm),hl
+	call	setwrt
+	pop	hl
+	ld	a,(hl)
+	ret
+
+;*** bewaar scherm ***
+
+savsc3:	ld	de,09200h
+	jr	savscc
+savsc2:	ld	de,08900h
+	jr	savscc
+savscr:	ld	de,08000h
+savscc:	ld	a,em2pag
+	out	(0feh),a
+	ld	hl,0
+	ld	bc,0900h
+	call	059h
+	ld	a,sngpag
+	out	(0feh),a
+	ret
+
+
+;*** restore scherm ***
+
+ressc3:	ld	hl,09200h
+	jr	resscc
+ressc2:	ld	hl,08900h
+	jr	resscc
+resscr:	ld	hl,08000h
+resscc:	ld	a,em2pag
+	out	(0feh),a
+	ld	de,0
+	ld	bc,0900h
+	call	05ch
+	ld	a,sngpag
+	out	(0feh),a
+	ret
+
+
+edtcdt:	dw	mullef,ksrlef,viblef,amplef,totlef,ksllef,0,egtlef,attlef,declef			   ;10
+	dw	suslef,rellef,0,feelef,conlef,audil2
+edtcd2:	dw	mulri,ksrlef,viblef,amplef,totri,kslri,0,egtlef,attri,decri
+	dw	susri,relri,0,feeri,conlef,audil2
+
+blkdat:	dw	0800h+8*10+3
+	dw	0800h+9*10+3
+	dw	0800h+10*10+3
+	dw	0800h+10*10+3
+
+blkdt2:	db	1
+blkdt3:	db	255,255,011000000b
+blkdt4:	db	255,011111110b
+blkdt5:	db	01111111b,255,011111000b
+blkdt6:	db	0111111b,255,011100000b
+	db	01111b,255,011111000b
+	db	011b,255,011111110b
+blkdt7:	db	0111111b,255
+blkdt8:	db	01111111b,255,254
+blkdt9:	db	0111b,255,255,010000000b
+blkdta:	dw	0800h+7*10+3
+	dw	0800h+8*10+3
+	dw	0800h+9*10+3
+	dw	0800h+10*10+3
+	dw	0800h+11*10+3
+	dw	0800h+15*10+3
+	dw	0800h+16*10+3
+	dw	0800h+17*10+3
+
+blkdtb:	db	011111111b,011111110b
+
+
+mx6txt:	db	"Only six software voices are allowed for the MSX-MUSIC...",0
+tetxt:	db	"AM-Voices cannot be played on the MSX-MUSIC...",0
+caltxt:	db	"Select the software voice you want to alter...",0
+emptxt:	db	"                                                               ",0
+ammodt:	db	"AM-mode"
+fmmodt:	db	"FM-mode"
+mmautx:	db	"MSX-AUDIO"
+paautx:	db	"MSX-MUSIC"
+
+subbld:	db	0
+
+c1dat:	db	"C 1","C 2","C 3","C 4"
+msxktx:	db	"MSX     ",0
+nmsktx:	db	"NMS 1160",0
+miditx:	db	"MIDI    ",0
+modtx:	db	"NMS 1205 MIDI",0
+turtx:	db	"MSX MIDI",0
+vactx:	db	"FAC MIDI INTERFACE",0
+notx:	db	"NO ",0
+emptx2:	db	"                              ",0
+
+mdon:	db	0              ;interface gezet of niet
+pacdrg:	db	016h,026h,017h,027h,018h,028h,036h,037h,038h
+xco:	db	0
+yco:	db	0
+edtyco:	db	0
+edtxco:	db	0
+mmchn:	db	0
+vocbnk:	db	0
+vocdat:	dw	vdat1,vdat2,vdat3,vdat4
+vocdt2:	dw	vdat1,vdatp2,vdatp3,vdatp4,vdatp5,vdatp6
+vocpnt:	dw	0
+voccnt:	db	0
+totsof:	db	0
+ownbuf:	ds	9
+prtfd2:	dw	0
+prtfdt:	dw	5*80+54,6*80+54,10*80+54,7*80+54,8*80+54
+	dw	5*80+70,6*80+70,10*80+70,7*80+70,8*80+70
+	dw	9*80+54,10*80+54,9*80+70,10*80+70
+	dw	14*80+54,13*80+54,14*80+70,13*80+70
+	dw	16*80+54,15*80+54,16*80+70,15*80+70
+	dw	18*80+54
+
+
+
+decdat:	db	"00","01","02","03","04","05","06","07","08","09"
+	db	"10","11","12","13","14","15","16","17","18","19"
+	db	"20","21","22","23","24","25","26","27","28","29"
+	db	"30","31","32","33","34","35","36","37","38","39"
+	db	"40","41","42","43","44","45","46","47","48","49"
+	db	"50","51","52","53","54","55","56","57","58","59"
+	db	"60","61","62","63","64"
+
+
+;		r(1) r(2) r(3) r(4) r(5) r(6) r(7) r(8) r(9) r(10)r(11)
+
+mmrgad:	db	020h,023h,040h,043h,060h,063h,080h,083h,0a0h,0b0h,0c0h		   ;k1
+	db	021h,024h,041h,044h,061h,064h,081h,084h,0a1h,0b1h,0c1h	   ;k2
+	db	022h,025h,042h,045h,062h,065h,082h,085h,0a2h,0b2h,0c2h	   ;k3
+	db	028h,02bh,048h,04bh,068h,06bh,088h,08bh,0a3h,0b3h,0c3h	   ;k4
+	db	029h,02ch,049h,04ch,069h,06ch,089h,08ch,0a4h,0b4h,0c4h	   ;k5
+	db	02ah,02dh,04ah,04dh,06ah,06dh,08ah,08dh,0a5h,0b5h,0c5h	   ;k6
+	db	030h,033h,050h,053h,070h,073h,090h,093h,0a6h,0b6h,0c6h	   ;k7
+	db	031h,034h,051h,054h,071h,074h,091h,094h,0a7h,0b7h,0c7h	   ;k8
+	db	032h,035h,052h,055h,072h,075h,092h,095h,0a8h,0b8h,0c8h	   ;k9
+
+mmrga2:	db	0a0h,0b0h,0a1h,0b1h,0a2h,0b2h,0a3h,0b3h,0a4h,0b4h
+	db	0a5h,0b5h,0a6h,0b6h,0a7h,0b7h,0a8h,0b8h
+
+
+	;	     c 1       c#1       d 1        d#1       e 1	     f 1       f#1
+	;	     g 1       g#1       a 1        a#1       b 1
+
+mmfreq:	db	059h,001h,06dh,001h,083h,001h,09ah,001h,0b2h,001h,0cch,001h,0e8h,001h
+	db	005h,002h,023h,002h,044h,002h,067h,002h,08bh,002h
+	db	059h,005h,06dh,005h,083h,005h,09ah,005h,0b2h,005h,0cch,005h,0e8h,005h
+	db	005h,006h,023h,006h,044h,006h,067h,006h,08bh,006h
+	db	059h,009h,06dh,009h,083h,009h,09ah,009h,0b2h,009h,0cch,009h,0e8h,009h
+	db	005h,00ah,023h,00ah,044h,00ah,067h,00ah,08bh,00ah
+	db	059h,00dh,06dh,00dh,083h,00dh,09ah,00dh,0b2h,00dh,0cch,00dh,0e8h,00dh
+	db	005h,00eh,023h,00eh,044h,00eh,067h,00eh,08bh,00eh
+	db	059h,011h,06dh,011h,083h,011h,09ah,011h,0b2h,011h,0cch,011h,0e8h,011h
+	db	005h,012h,023h,012h,044h,012h,067h,012h,08bh,012h
+	db	059h,015h,06dh,015h,083h,015h,09ah,015h,0b2h,015h,0cch,015h,0e8h,015h
+	db	005h,016h,023h,016h,044h,016h,067h,016h,08bh,016h
+	db	059h,019h,06dh,019h,083h,019h,09ah,019h,0b2h,019h,0cch,019h,0e8h,019h
+	db	005h,01ah,023h,01ah,044h,01ah,067h,01ah,08bh,01ah
+	db	059h,01dh,06dh,01dh,083h,01dh,09ah,01dh,0b2h,01dh,0cch,01dh,0e8h,01dh
+	db	005h,01eh,023h,01eh,044h,01eh,067h,01eh,08bh,01eh
+
+pargad:	db	010h,020h,011h,021h,012h,022h,013h,023h,014h,024h,015h,025h
+parga2:	db	016h,026h,017h,027h,018h,028h
+
+
+	;	   c 1       c#1	     d 1        d#1       e 1	   f 1	     f#1
+	;	   g 1       g#1	     a 1        a#1       b 1
+
+pafreq:	db	0adh,000h,0b7h,000h,0c2h,000h,0cdh,000h,0d9h,000h,0e6h,000h,0f4h,000h
+	db	003h,001h,012h,001h,022h,001h,034h,001h,046h,001h
+	db	0adh,002h,0b7h,002h,0c2h,002h,0cdh,002h,0d9h,002h,0e6h,002h,0f4h,002h
+	db	003h,003h,012h,003h,022h,003h,034h,003h,046h,003h
+	db	0adh,004h,0b7h,004h,0c2h,004h,0cdh,004h,0d9h,004h,0e6h,004h,0f4h,004h
+	db	003h,005h,012h,005h,022h,005h,034h,005h,046h,005h
+	db	0adh,006h,0b7h,006h,0c2h,006h,0cdh,006h,0d9h,006h,0e6h,006h,0f4h,006h
+	db	003h,007h,012h,007h,022h,007h,034h,007h,046h,007h
+	db	0adh,008h,0b7h,008h,0c2h,008h,0cdh,008h,0d9h,008h,0e6h,008h,0f4h,008h
+	db	003h,009h,012h,009h,022h,009h,034h,009h,046h,009h
+	db	0adh,00ah,0b7h,00ah,0c2h,00ah,0cdh,00ah,0d9h,00ah,0e6h,00ah,0f4h,00ah
+	db	003h,00bh,012h,00bh,022h,00bh,034h,00bh,046h,00bh
+	db	0adh,00ch,0b7h,00ch,0c2h,00ch,0cdh,00ch,0d9h,00ch,0e6h,00ch,0f4h,00ch
+	db	003h,00dh,012h,00dh,022h,00dh,034h,00dh,046h,00dh
+	db	0adh,00eh,0b7h,00eh,0c2h,00eh,0cdh,00eh,0d9h,00eh,0e6h,00eh,0f4h,00eh
+	db	003h,00fh,012h,00fh,022h,00fh,034h,00fh,046h,00fh
+
+
+
+savint:	ds	5
+orgpdr:	db	020h,005h,050h,005h,0c0h,001h,03h,033h,033h
+ownnr:	db	0
+ownn2:	db	0
+audit:	db	0
+audi2:	db	0
+
+amvoic:	db	0
+am2:	db	0
+jstonc:	dw	0
+
+blddt1:	db	32,24,0feh,18,23,25,0ffh
+	db	22,"    VOICE MENU    ",20,23,25,0ffh
+	db	20,0feh,18,23,19,32,22,0ffh
+	db	22," Select Voices    ",22,32,22,0ffh
+	db	22," Set Start Voices ",22,32,22,0ffh
+	db	22," Create Own Voice ",22,32,22,0ffh
+	db	20,0feh,18,23,19,32,22,0ffh
+	db	22," Back to Editor   ",22,32,22,0ffh
+	db	26,23,18,0feh,16,23,27,32,22,0ffh
+	db	32,32,26,0feh,18,23,27,0
+
+blddt2:	db	32,24,0feh,15,23,25,0ffh
+	db	22," SELECT VOICES ",20,23,25,0ffh
+	db	20,0feh,15,23,19,32,22,0ffh
+	db	22,"   MSX-AUDIO   ",22,32,22,0ffh
+	db	22,"   MSX-MUSIC   ",22,32,22,0ffh
+	db	26,23,18,0feh,13,23,27,32,22,0ffh
+	db	32,32,26,0feh,15,23,27,0
+
+blddt3:	db	24,0feh,20,23,18,23,23,23,18,0feh,53,23,25
+	db	22,"   SELECTED VOICES  ",22,"VLM",22,"                     VOICE LIST                      ",22
+	db	20,0feh,20,23,21,23,23,23,21,0feh,17,23,18,0feh,17,23,18,0feh,17,23,19
+	db	22," 01 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 02 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 03 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 04 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 05 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 06 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 07 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 08 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 09 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 10 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 11 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 12 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 13 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 14 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 15 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 16 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	20,0feh,20,23,17,23,23,23,17,0feh,17,23,17,0feh,17,23,17,0feh,17,23,19
+	db	22," First keyboard note:    ",0feh,5,32,"Keyboard:",0feh,39,32,22
+	db	20,0feh,78,23,19
+	db	0
+
+
+blddt4:	db	24,0feh,20,23,18,23,23,23,18,0feh,17,23,18,0feh,35,23,25
+	db	22,"   SELECTED VOICES  ",22,"VLM",22," HARDWARE VOICES ",22,"          SOFTWARE VOICES          ",22
+	db	20,0feh,20,23,21,23,23,23,21,0feh,17,23,21,0feh,17,23,18,0feh,17,23,19
+	db	22," 01 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 02 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 03 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 04 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 05 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 06 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 07 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 08 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 09 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 10 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 11 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 12 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 13 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 14 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 15 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	22," 16 ",0feh,16,32,22,"   ",22,0feh,17,32,22,0feh,17,32,22,0feh,17,32,22
+	db	20,0feh,20,23,17,23,23,23,17,0feh,17,23,17,0feh,17,23,17,0feh,17,23,19
+	db	22," First keyboard note:    ",0feh,5,32,"Keyboard:",0feh,39,32,22
+	db	20,0feh,78,23,19
+	db	0
+
+blddt5:	db	24,0feh,38,23,18,18,0feh,38,23,25
+	db	22,0feh,14,32,"MSX AUDIO",0feh,15,32,22,22,0feh,14,32,"MSX MUSIC",0feh,15,32,22
+	db	20,0feh,15,23,18,0feh,22,23,19,20,0feh,15,23,18,0feh,22,23,19
+	db	22," START VOICES  ",22,"   SELECTED VOICES    ",22,22," START VOICES  ",22,"   SELECTED VOICES    ",22
+	db	20,0feh,15,23,21,0feh,22,23,19,20,0feh,15,23,21,0feh,22,23,19
+	db	22," CH1: NR",0feh,7,32,22," 01:",0feh,18,32,22,22," CH1: NR",0feh,7,32,22," 01:",0feh,18,32,22
+	db	22," CH2: NR",0feh,7,32,22," 02:",0feh,18,32,22,22," CH2: NR",0feh,7,32,22," 02:",0feh,18,32,22
+	db	22," CH3: NR",0feh,7,32,22," 03:",0feh,18,32,22,22," CH3: NR",0feh,7,32,22," 03:",0feh,18,32,22
+	db	22," CH4: NR",0feh,7,32,22," 04:",0feh,18,32,22,22," CH4: NR",0feh,7,32,22," 04:",0feh,18,32,22
+	db	22," CH5: NR",0feh,7,32,22," 05:",0feh,18,32,22,22," CH5: NR",0feh,7,32,22," 05:",0feh,18,32,22
+	db	22," CH6: NR",0feh,7,32,22," 06:",0feh,18,32,22,22," CH6: NR",0feh,7,32,22," 06:",0feh,18,32,22
+	db	22," CH7: NR",0feh,7,32,22," 07:",0feh,18,32,22,22," CH7: NR",0feh,7,32,22," 07:",0feh,18,32,22
+	db	22," CH8: NR",0feh,7,32,22," 08:",0feh,18,32,22,22," CH8: NR",0feh,7,32,22," 08:",0feh,18,32,22
+	db	22," CH9: NR",0feh,7,32,22," 09:",0feh,18,32,22,22," CH9: NR",0feh,7,32,22," 09:",0feh,18,32,22
+	db	22,0feh,15,32,22," 10:",0feh,18,32,22,22,0feh,15,32,22," 10:",0feh,18,32,22
+	db	22,0feh,15,32,22," 11:",0feh,18,32,22,22,0feh,15,32,22," 11:",0feh,18,32,22
+	db	22,0feh,15,32,22," 12:",0feh,18,32,22,22,0feh,15,32,22," 12:",0feh,18,32,22
+	db	22,0feh,15,32,22," 13:",0feh,18,32,22,22,0feh,15,32,22," 13:",0feh,18,32,22
+	db	22,0feh,15,32,22," 14:",0feh,18,32,22,22,0feh,15,32,22," 14:",0feh,18,32,22
+	db	22,0feh,15,32,22," 15:",0feh,18,32,22,22,0feh,15,32,22," 15:",0feh,18,32,22
+	db	22,0feh,15,32,22," 16:",0feh,18,32,22,22,0feh,15,32,22," 16:",0feh,18,32,22
+	db	20,0feh,15,23,17,0feh,22,23,17,17,0feh,15,23,17,0feh,22,23,19
+	db	0
+
+blddt7:	db	24,0feh,78,23,25
+	db	22,0feh,33,32,"VOICE EDITOR",0feh,33,32,22
+	db	20,0feh,20,23,18,18,0feh,24,23,18,0feh,15,23,18,0feh,15,23,19
+	db	22,0feh,5,32,"OWN VOICES",0feh,5,32,22,22,0feh,7,32,"FUNCTIONS",0feh,8,32,22,"  GENERATOR A  ",22,"  GENERATOR B  ",22
+	db	20,0feh,20,23,21,21,0feh,24,23,21,0feh,15,23,21,0feh,15,23,19
+	db	22,0feh,20,32,22,22," Multi Sample Wave",0feh,6,32,22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22," Key Scale Rate",0feh,9,32,22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22," Vibrato",0feh,16,32,22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22," Amplitude Modulation   ",22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22," Total Level",0feh,12,32,22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22," Key Scale Level",0feh,8,32,22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22,0feh,24,32,22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22," Percussion",0feh,13,32,22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22," Attack Rate",0feh,12,32,22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22," Decay Rate",0feh,13,32,22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22," Sustain Level",0feh,10,32,22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22," Release Rate",0feh,11,32,22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22,0feh,24,32,20,0feh,15,23,21,0feh,15,23,19
+	db	22,0feh,20,32,22,22," Feedback",0feh,15,32,22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22," Connect",0feh,16,32,22,0feh,15,32,22,0feh,15,32,22
+	db	22,0feh,20,32,22,22," Audition",0feh,15,32,22,0feh,15,32,22,0feh,15,32,22
+	db	20,0feh,20,23,17,17,0feh,24,23,17,0feh,15,23,17,0feh,15,23,19
+blddt8:	db	22," First keyboard note:    ",0feh,5,32,"Keyboard:",0feh,39,32,22
+	db	0
+stvrm:	dw	0
+jmpdat:	dw	voice
+
+einde:	end
+
+                                                                                    

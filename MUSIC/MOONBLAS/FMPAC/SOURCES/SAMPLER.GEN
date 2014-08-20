@@ -1,0 +1,3882 @@
+*u+,q-
+	db	0feh
+	dw	start+04000h
+	dw	einde+04000h
+	dw	start+04000h
+	org	04000h
+
+
+prive	equ	1=0
+dosprog	equ	1=0
+grpprog	equ	1=1
+
+	include mybios
+
+xpos	equ 08000h	;->in song maar 200 lang!
+xleng	equ xpos+200	;->last position
+xuser1	equ xleng+1	;->usercode #1
+xmmvoc	equ xuser1+2	;->module instrumenten
+xmmsti	equ xmmvoc+16*9	;->instrumenten module
+xpasti	equ xmmsti+16	;->instrumenten/volumes pac
+xstpr	equ xpasti+32	;->stereo-instellingen
+xtempo	equ xstpr+10	;->begintempo
+xsust	equ xtempo+1	;->modulation depth
+xnaam	equ xsust+1	;->songnaam
+xchip	equ xnaam+40	;->voorkeurchip
+xbegvm	equ xchip+1	;->begininstrumenten module
+xbegvp	equ xbegvm+9	;->begininstrumenten pac
+xorgp1	equ xbegvp+9	;->data van softwarevoices pac
+xorgnr	equ xorgp1+6*8	;->nummers van software voices
+xsmpkt	equ xorgnr+6	;->samplekitnaam
+xdrblk	equ xsmpkt+8	;->drumblokken pac
+xdrvol	equ xdrblk+15	;->volumes drum pac
+xdrfrq	equ xdrvol+3	;->frequenties drum pac
+xuser2	equ xdrfrq+3*6	;->usercode#2 (=1 op met andere codering)
+xrever	equ xuser2+2	;->reverb instellingen
+xloop	equ xrever+9	;->loop position
+
+xbegmd	equ 08240h
+smpnr	equ 0f975h
+loaded	equ 0f976h
+notvcm	equ 0f977h
+notvcp	equ 0f977h+9
+smpadr	equ notvcp+9
+smknam	equ smpadr+56
+vcenr	equ smknam+8
+fkndat	equ vcenr+1
+keybdt	equ fkndat+1
+midint	equ keybdt+1	;0=musmod   1=turbo-r   2=vak
+
+
+sngpag	equ	1
+edtpag	equ	2
+dskpag	equ	3
+em1pag	equ	4
+em2pag	equ	5
+vocpag	equ	6
+smppag	equ	7
+
+vdat1:	equ	0c400h
+vdat2:	equ	0c400h+48*25
+vdat3:	equ	0c400h+96*25
+vdat4:	equ	0c400h+144*25
+vdatp2:	equ	0c400h+32*25
+vdatp3:	equ	0c400h+64*25
+vdatp4:	equ	0c400h+96*25
+vdatp5:	equ	0c400h+128*25
+vdatp6:	equ	0c400h+160*25
+ownvdt:	equ	0c400h+176*25
+hwvdat:	equ	0c400h+192*25
+decdat:	equ	0c000h
+subs	equ	0d900h
+subs2	equ	0d914h
+subs3	equ	0d928h
+
+
+
+start:	push	hl
+	ld	hl,(0f3dch)
+	push	hl
+	add	a,a
+	ld	e,a
+	ld	d,0
+	ld	hl,jmpdat-2
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	call	exec
+	pop	hl
+	ld	(0f3dch),hl
+	pop	hl
+	ret
+exec:	jp	(hl)
+
+info:	ld	a,25
+	ld	(0f3dch),a
+	ld	hl,2*80
+	ld	(stvrm),hl
+	call	setwrt
+	ld	hl,infscr
+	call	decrc
+	ld	hl,3*80+24	;print samplekit
+	call	setwrt
+	ld	hl,xsmpkt
+	ld	b,8
+	otir
+	ld	hl,5*80+24
+	call	setwrt
+	ld	a,(xsust)
+	and	011000000b
+	rlca
+	rlca
+	add	a,"0"
+	out	(c),a
+
+	call	prtstm
+	call	prtstp
+	call	prtsvp
+	call	prtrvi
+	jp	getkey
+
+
+prtrvi:	ld	hl,9*80+57
+	ld	b,9
+prtril:	push	hl
+
+	call	setwrt
+	ld	hl,xrever-1
+	ld	e,b
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	bit	7,a
+	jr	nz,prtri2
+	jr	prtri3
+prtri4:	add	a,030h
+	out	(c),a
+
+	pop	hl
+	ld	de,80
+	add	hl,de
+	djnz	prtril
+	ret
+
+prtri2:	push	af
+	ld	a,"-"
+	ld	a,"-"
+	out	(c),a
+	ld	a," "
+	ld	a," "
+	out	(c),a
+	pop	af
+	neg
+	jr	prtri4
+
+prtri3:	push	af
+	ld	a,"+"
+	ld	a,"+"
+	out	(c),a
+	ld	a," "
+	ld	a," "
+	out	(c),a
+	pop	af
+	jr	prtri4
+
+prtstm:	ld	b,9
+	ld	de,xbegvm
+	ld	hl,9*80+13
+prstm3:	push	bc
+	call	setwrt
+	push	de
+	push	hl
+
+	ld	a,(de)
+	ld	hl,xmmsti-1
+	ld	e,a
+	ld	d,0
+	push	de
+	add	hl,de
+	ld	a,(hl)
+	ld	b,a
+	ld	de,25
+	ld	hl,vdat1-25
+prstm2:	add	hl,de
+	djnz	prstm2
+	ld	b,16
+	otir
+	ld	a," "
+	out	(c),a
+	nop
+	ld	a," "
+	out	(c),a
+
+	pop	de
+	ld	b,e
+	ld	de,9
+	ld	hl,xmmvoc-9+3
+prstm4:	add	hl,de
+	djnz	prstm4
+	ld	a,(hl)
+	and	0111111b
+	ld	b,a
+	ld	a,63
+	sub	b
+	ld	b,a
+	add	a,a
+	add	a,b
+	ld	e,a
+	ld	hl,decdat
+	add	hl,de
+	inc	hl
+	ld	b,2
+	otir
+
+	pop	hl
+	ld	de,80
+	add	hl,de
+	pop	de
+	inc	de
+	pop	bc
+	djnz	prstm3
+	ret
+
+
+prtsvp:	ld	b,9
+	ld	de,xbegvp
+	ld	hl,9*80+53
+prsvp3:	push	bc
+	call	setwrt
+	push	de
+	push	hl
+
+	ld	a,(de)
+	ld	hl,xpasti-1
+	add	a,a
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	ld	b,a
+	ld	a,15
+	sub	b
+	ld	b,a
+	add	a,a
+	add	a,b
+	ld	e,a
+	ld	hl,decdat
+	add	hl,de
+	inc	hl
+	ld	b,2
+	otir
+
+	pop	hl
+	ld	de,80
+	add	hl,de
+	pop	de
+	inc	de
+	pop	bc
+	djnz	prsvp3
+	ret
+
+prtstp:	ld	b,9
+	ld	de,xbegvp
+	ld	hl,9*80+35
+prstp3:	push	bc
+	call	setwrt
+	push	de
+	push	hl
+
+	ld	a,(de)
+	ld	hl,xpasti-2
+	add	a,a
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	cp	16
+	jp	nc,prstp7
+	ld	b,a
+	ld	hl,hwvdat-18
+	ld	de,18
+prstp5:	add	hl,de
+	djnz	prstp5
+	ld	b,16
+	otir
+prstp6:	pop	hl
+	ld	de,80
+	add	hl,de
+	pop	de
+	inc	de
+	pop	bc
+	djnz	prstp3
+	ret
+prstp7:	ld	hl,xorgnr
+	sub	16
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	ld	b,a
+	ld	hl,vdat1-25
+	ld	de,25
+prstp8:	add	hl,de
+	djnz	prstp8
+	ld	b,16
+	otir
+	jr	prstp6
+
+
+
+
+;---- fm-drumset menu ----
+
+drmset:	call	trbout	;zet evt. turbo-r outs
+	ld	a,25
+	ld	(0f3dch),a
+	call	savscr
+	ld	hl,5*80+22
+	ld	(stvrm),hl
+	call	setwrt
+	ld	hl,drsscr
+	call	decrc
+	call	drsbar
+
+drslus:	ld	ix,drsjp2
+	call	keyhan
+	jr	drslus
+
+drsup:	ld	a,(drsyco)
+	dec	a
+	ret	z
+	ld	(drsyco),a
+	jp	drsbar
+drsdow:	ld	a,(drsyco)
+	inc	a
+	cp	5
+	ret	z
+	ld	(drsyco),a
+	jp	drsbar
+drsesc:	pop	af
+	call	wiscol
+	jp	resscr
+
+
+drsclk:	ld	ix,drsjmp
+	ld	a,(drsyco)
+	jp	keyhn2
+
+drsbar:	call	wiscol
+	ld	hl,drsdat-2
+	ld	a,(drsyco)
+	add	a,a
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	call	setwrt
+	ld	hl,drsblk
+	ld	b,3
+	otir
+	ret
+
+
+drmvol:	call	savsc2
+	ld	hl,8*80+30
+	ld	(stvrm),hl
+	call	setwrt
+	ld	hl,drvscr
+	call	decrc
+	call	movvl1
+	call	prtvol
+	call	drvbar
+
+drvlus:	ld	ix,drvjmp
+	call	keyhan
+	jr	drvlus
+
+drvup:	ld	a,(drvyco)
+	dec	a
+	ret	z
+	ld	(drvyco),a
+	jp	drvbar
+drvri:	ld	de,(drvyco)
+	ld	d,0
+	ld	hl,volbuf-1
+	add	hl,de
+	ld	a,(hl)
+	or	a
+	ret	z
+	dec	a
+	ld	(hl),a
+	jp	prtvol
+drvlef:	ld	de,(drvyco)
+	ld	d,0
+	ld	hl,volbuf-1
+	add	hl,de
+	ld	a,(hl)
+	inc	a
+	cp	15
+	ret	z
+	ld	(hl),a
+	jp	prtvol
+
+
+drvdow:	ld	a,(drvyco)
+	inc	a
+	cp	6
+	ret	z
+	ld	(drvyco),a
+	jp	drvbar
+drvesc:	pop	af
+	call	movvl2
+	call	ressc2
+	jp	drsbar
+
+drvbar:	call	wiscol
+	ld	a,(drvyco)
+	ld	b,a
+	ld	hl,0800h+10*10+4
+	ld	de,10
+drvbr2:	add	hl,de
+	djnz	drvbr2
+	call	setwrt
+	ld	hl,drvblk
+	ld	b,2
+	otir
+	ret
+
+prtvol:	ld	b,5
+	ld	ix,volbuf
+	ld	hl,11*80+44
+prtvl2:	push	hl
+	push	bc
+	call	setwrt
+	ld	b,(ix+0)
+	ld	a,16
+	sub	b
+	add	a,a
+	ld	e,a
+	ld	d,0
+	ld	hl,decdt2-4
+	add	hl,de
+	ld	b,2
+	otir
+	pop	bc
+	pop	hl
+	inc	ix
+	ld	de,80
+	add	hl,de
+	djnz	prtvl2
+	ret
+
+movvl1:	ld	hl,xdrvol
+	ld	ix,volbuf
+	ld	a,(hl)
+	ld	(ix+0),a
+	inc	hl
+	ld	a,(hl)
+	and	01111b
+	ld	(ix+1),a
+	ld	a,(hl)
+	srl	a
+	srl	a
+	srl	a
+	srl	a
+	ld	(ix+4),a
+	inc	hl
+	ld	a,(hl)
+	and	01111b
+	ld	(ix+3),a
+	ld	a,(hl)
+	srl	a
+	srl	a
+	srl	a
+	srl	a
+	ld	(ix+2),a
+	ret
+
+movvl2:	ld	ix,volbuf
+	ld	de,xdrvol
+	ld	a,(ix+0)
+	ld	(de),a
+	inc	de
+	ld	a,(ix+1)
+	ld	b,a
+	ld	a,(ix+4)
+	sla	a
+	sla	a
+	sla	a
+	sla	a
+	or	b
+	ld	(de),a
+	inc	de
+	ld	a,(ix+3)
+	ld	b,a
+	ld	a,(ix+2)
+	sla	a
+	sla	a
+	sla	a
+	sla	a
+	or	b
+	ld	(de),a
+	ret
+
+
+drmchs:	call	savsc2
+	ld	hl,8*80+34
+	ld	(stvrm),hl
+	call	setwrt
+	ld	hl,drcscr
+	call	decrc
+drhls2:	call	drcbar
+drhlus:	call	getkey
+	cp	01fh
+	jr	z,drcdow
+	cp	01eh
+	jr	z,drcup
+	cp	" "
+	jr	z,drmfrq
+	cp	27
+	jr	nz,drhlus
+	call	ressc2
+	jp	drsbar
+
+drcup:	ld	a,(drcyco)
+	dec	a
+	jr	z,drhlus
+drcup2:	ld	(drcyco),a
+	call	drcbar
+	jr	drhlus
+drcdow:	ld	a,(drcyco)
+	inc	a
+	cp	4
+	jr	z,drhlus
+	jr	drcup2
+
+
+drcbar:	call	wiscol
+	ld	a,(drcyco)
+	ld	b,a
+	ld	hl,0800h+10*10+4
+	ld	de,10
+drcbr2:	add	hl,de
+	djnz	drcbr2
+	call	setwrt
+	ld	hl,drcblk
+	ld	b,2
+	otir
+	ret
+
+drmfrq:	ld	hl,0100h
+	ld	(drfxco),hl
+	ld	a,(drcyco)
+	ld	b,a
+	ld	de,6
+	ld	hl,xdrfrq-6
+drmfr2:	add	hl,de
+	djnz	drmfr2
+	ld	(frbfad),hl
+	call	movfr1
+
+	call	savsc3
+	ld	hl,11*80+38
+	ld	(stvrm),hl
+	call	setwrt
+	ld	hl,drfscr
+	call	decrc
+	call	drfbar
+	call	prtdfq
+
+drflus:	ld	ix,drfjmp
+	call	keyhan
+	jr	drflus
+drmhom:	ld	hl,drmhmd
+	call	movfr1
+	jp	prtdfq
+
+drfup:	call	ctrl
+	jp	z,drfupx
+	ld	a,(drfyco)
+	dec	a
+	ret	z
+drfup2:	ld	(drfyco),a
+	jr	drfbar
+drfdow:	call	ctrl
+	jp	z,drfdox
+	ld	a,(drfyco)
+	inc	a
+	cp	4
+	ret	z
+	jr	drfup2
+drflef:	call	ctrl
+	jp	z,drflex
+	ld	a,(drfxco)
+	or	a
+	ret	z
+	xor	a
+drfle2:	ld	(drfxco),a
+	jr	drfbar
+drfri:	call	ctrl
+	jp	z,drfrix
+	ld	a,(drfxco)
+	or	a
+	ret	nz
+	inc	a
+	jr	drfle2
+
+drfesc:	pop	af
+	call	ressc3
+	ld	hl,(frbfad)
+	call	movfr3
+	jp	drhls2
+
+drfbar:	call	wiscol
+	ld	hl,0800h+15*10+5
+	ld	de,10
+	ld	a,(drfyco)
+	ld	b,a
+drfbrl:	add	hl,de
+	djnz	drfbrl
+	call	setwrt
+	ld	hl,drfblk+2
+	ld	a,(drfxco)
+	or	a
+	jr	nz,drfbr2
+	ld	hl,drfblk
+drfbr2:	ld	b,2
+	otir
+	ret
+
+
+drflex:	ld	a,(drfxco)
+	or	a
+	jr	nz,drfleo
+	call	drfadr
+	dec	hl
+	jr	drfad2
+drfrix:	ld	a,(drfxco)
+	or	a
+	jr	nz,drfrio
+	call	drfadr
+	inc	hl
+	jr	drfad2
+drfupx:	ld	a,(drfxco)
+	or	a
+	ret	nz
+	call	drfadr
+	ld	bc,10
+	add	hl,bc
+	jr	drfad2
+drfdox:	ld	a,(drfxco)
+	or	a
+	ret	nz
+	call	drfadr
+	ld	bc,-10
+	add	hl,bc
+drfad2:	ld	a,h
+	and	1
+	ex	de,hl
+	ld	(hl),a
+	dec	hl
+	ld	(hl),e
+	jp	prtdfq
+
+drfadr:	ld	hl,drfdat-2
+	ld	a,(drfyco)
+	add	a,a
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	ret
+
+drfleo:	ld	hl,drodat-1
+	ld	a,(drfyco)
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	dec	a
+drfrio2:
+	and	7
+	ld	(hl),a
+	jp	prtdfq
+drfrio:	ld	hl,drodat-1
+	ld	a,(drfyco)
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	inc	a
+	jr	drfrio2
+movfr1:	ld	b,3
+	ld	ix,drfdat	;verplaats freq naar buffer
+	ld	iy,drodat
+movfr2:	ld	e,(hl)
+	inc	hl
+	ld	a,(hl)
+	push	af
+	and	1
+	ld	d,a
+	ld	(ix+0),e
+	ld	(ix+1),d
+	pop	af
+	and	01110b
+	srl	a
+	ld	(iy+0),a
+	inc	hl
+	inc	iy
+	inc	ix
+	inc	ix
+	djnz	movfr2
+	ret
+
+movfr3:	ld	b,3
+	ld	ix,drfdat	;haal freq uit buffer
+	ld	iy,drodat
+movfr4:	ld	e,(ix+0)
+	ld	d,(ix+1)
+	push	de
+	ld	a,(iy+0)
+	sla	a
+	ld	c,a
+	pop	de
+	ld	a,d
+	or	c
+	ld	(hl),e
+	inc	hl
+	ld	(hl),a
+	inc	hl
+	inc	iy
+	inc	ix
+	inc	ix
+	djnz	movfr4
+	ret
+
+movfr5:	ld	hl,drmreg
+	ld	de,xdrvol
+	ld	b,3
+movfr7:	ld	a,(de)
+	ld	c,(hl)
+	call	pacout
+	inc	hl
+	djnz	movfr7
+
+	ld	b,3
+	ld	ix,drfdat	;haal freq uit buffer
+	ld	iy,drodat
+movfr6:	ld	e,(ix+0)
+	ld	d,(ix+1)
+	push	de
+	ld	a,(iy+0)
+	sla	a
+	ld	c,a
+	pop	de
+	ld	a,d
+	or	c
+	ld	d,a
+	ld	c,(hl)
+	ld	a,e
+	call	pacout
+	inc	hl
+	ld	a,d
+	ld	c,(hl)
+	call	pacout
+	inc	hl
+	inc	iy
+	inc	ix
+	inc	ix
+	djnz	movfr6
+	ret
+
+
+prtdfq:	ld	b,3
+	ld	iy,drfdat
+	ld	hl,16*80+47
+prtfr2:	push	bc
+	push	hl
+	call	setwrt
+	ld	e,(iy+0)
+	ld	d,(iy+1)
+	call	hexdec
+	call	prtdec
+	pop	hl
+	ld	de,80
+	add	hl,de
+	inc	iy
+	inc	iy
+	pop	bc
+	djnz	prtfr2
+prtdoc:	ld	b,3
+	ld	de,drodat
+	ld	hl,16*80+54
+prtoc2:	push	bc
+	push	hl
+	call	setwrt
+	ld	a,(de)
+	add	a,"1"
+	out	(c),a
+	pop	hl
+	ld	bc,80
+	add	hl,bc
+	inc	de
+	pop	bc
+	djnz	prtoc2
+	ret
+
+drmkey:	call	movfr5	 ;drum audition
+	ld	a,0100000b
+	ld	c,0eh
+	call	pacout
+	ld	a,6
+	call	0141h
+	cpl
+	and	011100000b
+	rlca
+	rlca
+	rlca
+	ld	b,a
+	ld	a,7
+	call	0141h
+	cpl
+	and	011b
+	rlca
+	rlca
+	rlca
+	add	a,b
+	set	5,a
+	ld	c,0eh
+	jp	pacout
+
+
+trbout:	ld	a,(02dh)
+	cp	3
+	ret	c
+	ld	hl,parout
+	ld	(pacout+1),hl
+	ld	hl,mmrout
+	ld	(mmout+1),hl
+	ret
+
+
+
+drmblk:	call	savsc2
+	ld	hl,4*80+8
+	ld	(stvrm),hl
+	call	setwrt
+	ld	hl,blkscr
+	call	decrc
+	call	blkbar
+	call	prtblk
+
+blklus:	ld	ix,blkjmp
+	call	keyhan
+	jr	blklus
+
+blkri:	ld	a,(drbxco)
+	inc	a
+	cp	16
+	jr	nz,blkri2
+	ld	a,1
+blkri2:	ld	(drbxco),a
+	jr	blkbar
+blklef:	ld	a,(drbxco)
+	dec	a
+	or	a
+	jr	nz,blkle2
+	ld	a,15
+blkle2:	ld	(drbxco),a
+	jr	blkbar
+blkup:	ld	a,(drbyco)
+	dec	a
+	or	a
+	jr	nz,blkup2
+	ld	a,12
+blkup2:	ld	(drbyco),a
+	jr	blkbar
+blkdow:	ld	a,(drbyco)
+	inc	a
+	cp	13
+	jr	nz,blkdo2
+	ld	a,1
+blkdo2:	ld	(drbyco),a
+	jr	blkbar
+
+blkesc:	pop	af
+	call	ressc2
+	jp	drsbar
+
+blksel:	ld	a,(drbxco)
+	ld	e,a
+	ld	d,0
+	ld	hl,xdrblk-1
+	add	hl,de
+	ld	e,(hl)
+	ld	a,(drbyco)
+	cp	6
+	jr	nc,blksl2
+	ld	c,a
+	ld	b,0
+	push	hl
+	ld	hl,littab-1
+	add	hl,bc
+	ld	d,(hl)
+	ld	a,e
+	xor	d
+	pop	hl
+	ld	(hl),a
+	jp	prtblk
+
+littab:	db	16,8,4,2,1
+
+blksl2:	sub	5	;psg-selectie
+	ld	d,a
+	ld	a,e
+	and	011100000b
+	rlca
+	rlca
+	rlca
+	cp	d
+	jr	z,blksl3	;zelfde waarde, dan uit
+	ld	a,e
+	and	011111b
+	rrc	d
+	rrc	d
+	rrc	d
+	or	d
+blksl4:	ld	(hl),a
+	jp	prtblk
+blksl3:	ld	a,e
+	and	011111b
+	jr	blksl4
+
+
+blkbar:	call	wiscol
+	ld	hl,0800h+6*10+3
+	ld	a,(drbyco)
+	ld	b,a
+	ld	de,10
+blkbr1:	add	hl,de
+	djnz	blkbr1
+	call	setwrt
+	ld	hl,drbdat-6
+	ld	de,6
+	ld	a,(drbxco)
+	ld	b,a
+blkbr2:	add	hl,de
+	djnz	blkbr2
+	ld	b,6
+	otir
+	ret
+
+
+
+prtblk:	ld	hl,7*80+25
+	ld	(stvrm),hl
+	call	setwrt
+
+	ld	d,16	 ;print fm-drums
+	ld	b,5
+prtbl2:	push	bc
+	ld	b,15
+	ld	ix,xdrblk
+prtbl1:	push	bc
+	ld	a,(ix+0)
+	and	d
+	call	blonof
+	inc	ix
+	pop	bc
+	djnz	prtbl1
+	ld	hl,(stvrm)
+	ld	bc,80
+	add	hl,bc
+	ld	(stvrm),hl
+	call	setwrt
+	srl	d
+	pop	bc
+	djnz	prtbl2
+
+	ld	d,1	;print psg-drums
+	ld	b,7
+prtbl4:	push	bc
+	ld	b,15
+	ld	ix,xdrblk
+prtbl3:	push	bc
+	ld	a,(ix+0)
+	rlca
+	rlca
+	rlca
+	and	0111b
+	cp	d
+	call	blono3
+	inc	ix
+	pop	bc
+	djnz	prtbl3
+	ld	hl,(stvrm)
+	ld	bc,80
+	add	hl,bc
+	ld	(stvrm),hl
+	call	setwrt
+	inc	d
+	pop	bc
+	djnz	prtbl4
+	ret
+
+
+blonof:	ld	a,b
+	ld	hl,of2txt
+	jr	z,blono2
+	ld	hl,ontxt
+blono2:	ld	b,2
+	otir
+	dec	a
+	ret	z
+	ld	a," "
+	out	(c),a
+	ret
+blono3:	ld	a,b
+	ld	hl,ontxt
+	jr	z,blono2
+	ld	hl,of2txt
+	jr	blono2
+
+
+
+;*****************
+;**** sampler ****
+;*****************
+
+smpler:	call	z80
+	ld	hl,pcout2
+	ld	(pacout+1),hl
+	ld	hl,mmout2
+	ld	(mmout+1),hl
+	ld	hl,01000h+(128*8)
+	call	setwrt
+	ld	hl,vrmdat
+	ld	b,40
+	otir
+
+	ld	hl,0
+	call	setwrt
+	ld	hl,blddt1
+	call	decrc	;bouw beeld op
+	ld	a,25
+	ld	(0f3dch),a
+
+
+	call	setin3
+	call	prtsbl	;zet sample adressen neer
+	call	prtcon	;zet sample control neer
+	call	prtatt	;zet attack rate neer
+	call	prtsmb	;zet sample block neer
+	call	prtfrq	;zet sample frequentie neer
+	call	resmat
+	call	prtkey
+	call	setblk	;zet menubalk neer
+mainl:	ld	ix,mainld
+	call	keyhan
+	jr	mainl
+
+endsam:	pop	af	;ret adres weg
+	call	setblk
+	call	wiscol
+	call	getint
+	ld	a,8
+	out	(0c0h),a
+	xor	a
+	out	(0c1h),a	;adpcm
+	jp	r800d
+
+curdow:	ld	a,(menuch)
+	cp	8
+	ret	z
+	inc	a
+	ld	(menuch),a
+	jp	setblk
+
+curup:	ld	a,(menuch)
+	cp	1
+	ret	z
+	dec	a
+	ld	(menuch),a
+	jp	setblk
+
+
+;--- reset sample addresses ---
+
+reset_smpadr:	ld	hl,resadrtxt
+	call	print
+	call	getkey
+	res	5,a
+	cp	"Y"
+	jp	nz,clrlin
+	call	clrlin
+	ld	hl,smpadd
+	ld	de,smpadr
+	ld	bc,14*4
+	ldir
+	jp	prtsbl
+
+
+
+;*** hoofdmenu keuzes ***
+
+selmen:	ld	a,(menuch)
+	ld	ix,selmnd
+	jp	keyhn2
+
+selmnd:	db	1
+	dw	adjinp
+	db	2
+	dw	strsam
+	db	3
+	dw	setsmb
+	db	4
+	dw	entblk
+	db	5
+	dw	entfrq
+	db	6
+	dw	entatt
+	db	7
+	dw	swman
+	db	8
+	dw	endsam
+	db	0
+
+
+;**** adjust input signal ****
+
+adjinp:	call	adjin3
+	call	prtmb
+	ret
+
+
+adjin3:	call	setfrq
+	call	getint	;herstel interrupt
+	call	setin2
+	ld	a,3
+	ld	(adjcnt),a
+	call	prtinp
+
+adjinw:	call	chkspace
+	ld	a,26
+	out	(0c0h),a
+adjinl:	in	a,(0c1h)	;lees sample signaal
+	sbc	a,080h
+	out	(00ah),a	;stuur naar d/a converter
+	ld	a,057h
+	out	(0aah),a
+	in	a,(0a9h)
+	bit	2,a
+	jr	z,adjin5
+	ld	a,058h	;wacht op spatie
+	out	(0aah),a
+	in	a,(0a9h)
+	bit	0,a
+	jr	nz,adjinl
+adjin6:	ld	c,25
+	xor	a
+	call	mmout
+	ld	c,7
+	ld	a,1
+	call	mmout	;reset adpcm
+	call	reset
+	call	getin2
+	call	setint
+	call	setblk
+	xor	a
+	ret
+adjin5:	call	adjin6
+	scf
+	ret
+
+
+setfrq:	ld	a,(sfreq)
+	add	a,a
+	ld	hl,smpfrq-4
+	ld	d,0
+	ld	e,a
+	add	hl,de
+	ld	a,(hl)
+	ld	c,13
+	call	mmout
+	inc	hl
+	inc	c
+	ld	a,(hl)
+	jp	mmout	;stel frequentie in
+
+reset:	ld	c,8
+	xor	a
+	call	mmout
+
+	ld	c,24
+	ld	a,8
+	call	mmout
+	ld	c,25
+	ld	a,8
+	call	mmout
+	ret
+
+eqlint:	di
+	ld	a,(adjcnt)
+	dec	a
+	jp	nz,eqlend
+
+	ld	hl,0800h+16*10+5	;setwrt
+	ld	c,099h
+	ld	a,h
+	and	0c0h
+	rlca
+	rlca
+	out	(c),a
+	ld	a,08eh
+	out	(c),a
+	ld	a,h
+	out	(c),l
+	and	03fh
+	or	040h
+	out	(c),a
+	dec	c
+
+	ld	a,26
+	out	(0c0h),a
+	in	a,(0c1h)	;lees sample signaal
+	bit	7,a
+	jr	z,eql3
+	cpl
+eql3:	call	eqlx
+
+
+	ld	a,2
+eqlend:
+	ld	(adjcnt),a
+	in	a,(099h)
+	pop	af
+	pop	ix
+	pop	iy
+	pop	af
+	pop	bc
+	pop	de
+	pop	hl
+	ex	af,af'
+	exx
+	pop	af
+	pop	bc
+	pop	de
+	pop	hl
+	ei
+	ret
+
+
+eqlx:	rrca
+	rrca
+	and	31
+	ld	(eqlout),a
+	add	a,a
+	add	a,a
+	ld	e,a
+	ld	d,0
+	ld	hl,eqlblk
+	add	hl,de
+	ld	b,4
+	otir		;zet equalizer neer
+	ret
+
+;**** start sampling ****
+
+
+strsam:
+	ld	a,(manual)
+	or	a
+	jp	nz,stsmmn
+
+	call	getint	;herstel interrupt
+	call	setin2
+	ld	a,3
+	ld	(adjcnt),a
+	call	prtinp
+
+	ld	a,(atrate)
+	ld	e,a
+	ld	d,0
+	ld	hl,trhdat
+	add	hl,de
+	ld	a,(hl)
+	ld	(trhdt2),a
+	xor	a
+	ld	(eqlout),a
+	call	chkspace
+
+	ld	a,26
+	out	(0c0h),a
+strsal:	in	a,(0c1h)	;lees sample signaal
+	ld	b,a
+	sbc	a,080h
+	out	(00ah),a	;stuur naar d/a converter
+	ld	a,b
+	bit	7,a
+	jr	z,strsax
+	cpl
+strsax:	ld	b,a
+	ld	a,(trhdt2)	;treshold waarde
+	cp	b
+	jp	c,stsmau
+
+	ld	a,057h
+	out	(0aah),a
+	in	a,(0a9h)
+	and	0100b
+	jp	z,strsc4
+	jp	strsal
+
+stsmau:	di
+	ld	hl,0800h+16*10+5	;setwrt
+	call	setwrt
+	ld	a,b
+	call	eqlx
+	ld	a,1
+	ld	c,7
+	call	mmout	;reset adpcm
+	inc	c
+	xor	a
+	call	mmout
+
+	ld	a,(smpnr)
+	add	a,a
+	add	a,a
+	ld	hl,smpadr-4
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	b,4
+	ld	c,9
+strsl2:	ld	a,(hl)
+	call	mmout
+	inc	hl
+	inc	c
+	djnz	strsl2	;stel adressen in
+
+	call	setfrq
+
+	ld	a,255
+	ld	c,18
+	call	mmout
+
+	ld	a,8
+	ld	c,24
+	call	mmout
+	xor	a
+	ld	c,25
+	call	mmout	;weergave uit
+
+	ld	hl,busatx
+	call	print
+	ld	c,7
+	ld	a,0e0h
+	call	mmout	;start opname
+
+strsac:	di
+	ld	a,4
+	out	(0c0h),a
+	ld	a,060h
+	out	(0c1h),a
+strsc2:	in	a,(0c0h)
+	bit	7,a
+	jr	z,strsc2	;opname klaar?
+	ld	a,078h
+	ld	c,4
+	call	mmout
+	ld	a,080h
+	call	mmout
+	ei
+
+	call	clrlin
+strsc3:	ld	c,25
+	xor	a
+	call	mmout
+	ld	c,7
+	ld	a,1
+	call	mmout	;reset adpcm
+	xor	a
+	out	(00ah),a
+
+	call	reset
+	call	getin2
+	call	setint
+	call	setblk
+	jp	prtmb
+strsc4:	jr	strsc3
+
+
+;*** manual sampling ***
+
+stsmmn:	call	adjin3
+	ret	c
+	call	getint	;herstel interrupt
+	call	setin2
+	jp	stsmau
+
+
+
+chkspace:	ld	a,058h	;wacht tot spatie los
+	out	(0aah),a
+	in	a,(0a9h)
+	bit	0,a
+	jr	z,chkspace
+	ei
+	ld	a,8
+	out	(0c0h),a
+	out	(0c1h),a	;start a/d conversie
+
+	ld	a,24
+	out	(0c0h),a
+	ld	a,0ffh
+	out	(0c1h),a
+	ld	a,25
+	out	(0c0h),a	;zet uitgangssignaal uit
+	ld	a,001h
+	out	(0c1h),a
+	ret
+
+;*** voer current sample block in ***
+
+entblk:	call	getint
+	ld	h,62	;current sample block
+	ld	l,8
+	call	inpnum
+	jr	c,entbl2
+	or	a
+	jr	z,entblk
+	cp	15
+	jr	nc,entblk
+	ld	(smpnr),a
+entbl2:	call	setint
+	jp	prtsmb
+
+
+;*** voer sample frequentie in ***
+
+entfrq:	call	getint
+	ld	h,60	;sample frequency
+	ld	l,10
+	call	inpnum
+	jr	c,entfr2
+	cp	2
+	jr	c,entfrq
+	cp	17
+	jr	nc,entfrq
+	ld	(sfreq),a
+
+
+entfr2:	call	setint
+	jp	prtfrq
+
+swkey:	call	getint
+	ld	a,(keybdt)	;keyboard switch
+	inc	a
+	cp	3
+	jr	nz,swkey2
+	xor	a
+swkey2:	ld	(keybdt),a
+	call	prtkey
+	call	setin3
+	ret
+
+smsel:	call	inpsad	;voer sample adressen in
+	ld	a,25
+	ld	(0f3dch),a
+	jp	prtsbl
+
+
+entatt:	call	getint
+	ld	hl,atttxt	;attack rate
+	call	print
+	ld	hl,(0f3dch)
+	push	hl
+	ld	l,11
+	ld	h,56
+	ld	(0f3dch),hl
+	ld	a," "
+	call	0a2h
+	ld	a,8
+	call	0a2h
+entat3:	call	getkey
+	cp	27
+	jr	z,entat2
+	cp	"0"
+	jr	c,entat3
+	cp	"5"
+	jr	nc,entat3
+	sub	"0"
+	ld	(atrate),a
+entat2:	pop	hl
+	ld	(0f3dch),hl
+	call	clrlin
+	call	setint
+	jp	prtatt
+
+swman:	ld	a,(manual)	;manual on/off
+	xor	1
+	ld	(manual),a
+	jp	prtcon
+
+
+
+;*** sample blocks doorlopen ***
+
+
+setsmb:	call	smbblk
+smblus:	ld	ix,smbd
+	call	keyhan
+	jr	smblus
+
+endsmb:	pop	af	;ret adres weg
+	call	wiscol
+	jp	setblk	;naar hoofdmenu
+
+smbdow:	ld	a,(smbyco)
+	cp	14
+	ret	z
+	inc	a
+	ld	(smbyco),a
+	jp	smbblk
+
+smbup:	ld	a,(smbyco)
+	cp	1
+	ret	z
+	dec	a
+	ld	(smbyco),a
+	jp	smbblk
+
+smblef:	ld	a,(smbxco)
+	cp	1
+	ret	z
+	dec	a
+	ld	(smbxco),a
+	jp	smbblk
+
+smbri:	ld	a,(smbxco)
+	cp	2
+	ret	z
+	inc	a
+	ld	(smbxco),a
+	jp	smbblk
+
+
+clrlin:	ld	hl,emptxt
+print:	push	hl
+	ld	hl,22*80+2
+	call	setwrt
+	pop	hl
+	jp	decrc
+
+
+getkey:	push	hl
+	call	0156h
+	pop	hl
+	jp	09fh
+
+
+;*** zet menubalk neer ***
+
+setblk:	call	wiscol
+	ld	a,(menuch)
+	add	a,a
+	ld	e,a
+	ld	d,0
+	ld	hl,blkadr-2
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	call	setwrt
+	ld	hl,blkdt1
+	ld	b,8
+	otir
+	ld	a,18
+	out	(0c0h),a
+	xor	a
+	out	(0c1h),a
+	ret
+
+;*** zet sample block-balk neer ***
+
+smbblk:	call	wiscol
+	ld	hl,0800h+4*10-1
+	ld	de,10
+	ld	a,(smbyco)
+	ld	b,a
+smbbll:	add	hl,de
+	djnz	smbbll
+	ld	a,(smbxco)
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	call	setwrt
+	ld	hl,smbbdt
+	ld	b,2
+	otir
+	ret
+
+
+;****	voer hex adressen in   ****
+
+inpsad:
+	call	getint
+	ld	b,5
+	ld	a,(smbyco)
+	add	a,b
+	ld	l,a
+
+	xor	a
+	ld	a,(smbxco)
+	rlca
+	rlca
+	rlca
+	inc	a
+	ld	h,a
+	ld	(0f3dch),hl
+
+	ld	a," "             ;wis bestaande adres
+	ld	b,4
+inpsal:	call	0a2h
+	djnz	inpsal
+	ld	a,8
+	ld	b,4
+inpsa2:	call	0a2h
+	djnz	inpsa2
+
+	ld	hl,hexbuf
+	ld	b,4	;lees 4 'cijfers' in
+inphxl:	push	bc
+	call	inphex
+	cp	esc
+	jp	z,inpsae	;escape ingedrukt
+	ld	(hl),a
+	inc	hl
+	pop	bc
+	djnz	inphxl
+
+	ld	de,hexbuf	;zet om in 16-bits getal
+	call	inpsa3
+	push	af
+	call	inpsa3
+
+	ld	e,a
+	pop	af
+	ld	d,a
+
+	ld	hl,02000h	;niet te groot?
+	ex	de,hl
+	rst	020h
+	jp	nc,inpsad
+	push	hl
+
+	ld	iy,smpadr-6	;bepaal sample block adres
+	ld	a,(smbxco)
+	add	a,a
+	ld	e,a
+	ld	d,0
+	add	iy,de
+	ld	de,4
+	ld	a,(smbyco)
+	ld	b,a
+inpsa4:	add	iy,de
+	djnz	inpsa4
+
+	pop	hl
+	ld	a,(smbxco)
+	cp	1
+	jp	z,chkend
+
+	ld	e,(iy-2)	;kijk of einde niet lager dan start
+	ld	d,(iy-1)
+	inc	de
+	rst	020h
+	jr	nc,putadr
+	ld	hl,endtxt	;foutmelding
+inperr:	call	print
+	call	getkey
+	call	clrlin
+	jp	inpsad
+
+
+chkend:	ld	e,(iy+2)	 ;kijk of begin niet hoger dan einde
+	ld	d,(iy+3)
+	rst	020h
+	jr	c,putadr
+	ld	hl,begtxt
+	jr	inperr
+
+putadr:
+	ld	(iy+0),l
+	ld	(iy+1),h
+	call	setint
+	ret
+
+inpsae:	call	setint
+	pop	bc
+	ret
+
+inpsa3:	xor	a
+	ld	a,(de)
+	rlca
+	rlca
+	rlca
+	rlca
+	ld	h,a
+	inc	de
+	ld	a,(de)
+	or	h
+	inc	de
+	ret
+
+inphex:	call	getkey
+	cp	esc
+	ret	z
+	cp	"0"
+	jr	c,inphex
+	cp	":"
+	jr	nc,inphx2	;letters
+	call	0a2h
+	sub	"0"
+	ret
+inphx2:	res	5,a
+	cp	"A"
+	jr	c,inphex
+	cp	"G"
+	jr	nc,inphex
+	call	0a2h
+	sub	"A"-10
+	ret
+
+
+
+;*** naar diskmenu ***
+
+godisk:	call	getint
+	call	savsc2
+	ld	a,2
+	call	subs3
+	call	ressc2
+	call	setin3
+	jp	prtsbl
+
+
+;**** voer nummer van 2 cijfers in ***
+
+inpnum:	ld	(0f3dch),hl
+	ld	a," "
+	call	0a2h
+	call	0a2h
+	ld	a,8
+	call	0a2h
+	call	0a2h
+inpnm2:	call	getkey
+	cp	27
+	jr	z,inpnme	;escape
+	cp	"0"
+	jr	c,inpnm2
+	cp	"9"+1
+	jr	nc,inpnm2
+	call	0a2h
+	ld	(numbuf),a
+
+inpnm3:	call	getkey
+	cp	13	;return
+	jp	z,inpnmr
+	cp	27
+	jr	z,inpnme	;escape
+	cp	"0"
+	jr	c,inpnm3
+	cp	"9"+1
+	jr	nc,inpnm3
+	ld	(numbuf+1),a
+
+inpnm5:	ld	a,(numbuf)
+	sub	"0"-1
+	ld	b,a
+	ld	c,10
+	ld	a,-10
+inpnm4:	add	a,c
+	djnz	inpnm4
+	ld	b,a
+	ld	a,(numbuf+1)
+	sub	"0"
+	add	a,b
+	ex	af,af'
+	xor	a
+	ld	a,25
+	ld	(0f3dch),a
+	ex	af,af'
+	ret
+
+
+inpnme:	ld	a,25
+	ld	(0f3dch),a
+	scf
+	ret
+
+inpnmr:	ld	hl,numbuf
+	ld	a,(hl)
+	ld	(hl),"0"
+	inc	hl
+	ld	(hl),a
+	jr	inpnm5
+
+
+mmin:	ld	a,c
+	out	(0c0h),a
+	jr	mmin2
+mmin2:	in	a,(0c1h)
+	ret
+
+keyint:	di
+	ld	a,0c9h
+	ld	(0fd9fh),a
+	ei
+	ld	a,(keybdt)
+	dec	a
+	jp	z,keyin3
+	dec	a
+	jp	z,keyi2
+chknms:	ld	b,008h
+	ld	hl,nmsdat
+	ld	de,notbuf
+chknm2:	ld	a,(hl)
+	inc	hl
+	ld	c,006h
+	call	mmout
+	ld	c,005h
+	call	mmin
+	ld	(de),a
+	inc	de
+	djnz	chknm2
+
+keyin2:	ld	hl,notbuf
+	ld	d,1
+	ld	b,8
+chkbt2:	ld	c,b
+	ld	b,8
+	ld	a,(hl)
+chkbt1:	rrca
+	jp	nc,mmdrum
+	inc	d
+	djnz	chkbt1
+	inc	hl
+	ld	b,c
+	djnz	chkbt2
+	xor	a
+	ld	(notbf2),a
+	ld	c,18
+	call	mmout
+	di
+	ld	a,0c3h
+	ld	(0fd9fh),a
+	ei
+	ret
+keyin3:	call	chkmsx
+	jr	keyin2
+keyi2:	call	redmid
+	jr	keyin2
+
+chkmsx:
+
+	ld	hl,byt1
+	ld	de,byt2
+	ld	bc,5
+	ld	(hl),0ffh
+	ldir
+rij1:	ld	a,(0fbe5h)
+	cp	0ffh
+	jr	z,rij2
+	ld	hl,byt1
+	rra
+	rra
+	call	nc,set1
+	rra
+	call	nc,set3
+	rra
+	rra
+	call	nc,set6
+	inc	hl
+	rra
+	call	nc,set0
+	rra
+	call	nc,set2
+
+rij2:	ld	hl,byt2
+	ld	a,(0fbe6h)
+	cp	0ffh
+	jr	z,rij3
+	rra
+	call	nc,set5
+	rra
+	call	nc,set7
+	inc	hl
+	rra
+	call	nc,set2
+	rra
+	call	nc,set4
+	rra
+	call	nc,set6
+	rra
+	call	nc,set3
+	rra
+	call	nc,set5
+
+rij3:	ld	a,(0fbe7h)
+	cp	0ffh
+	jr	z,rij4
+	ld	hl,byt4
+	bit	6,a
+	call	z,set1
+	inc	hl
+	bit	2,a
+	call	z,set6
+	bit	7,a
+	call	z,set1
+	inc	hl
+	rra
+	call	nc,set2
+	rra
+	call	nc,set4
+	rra
+	rra
+	call	nc,set0
+	rra
+	call	nc,set1
+	rra
+	call	nc,set3
+
+rij4:	ld	a,(0fbe8h)
+	cp	0ffh
+	jr	z,rij5
+	ld	hl,byt1
+	bit	2,a
+	call	z,set5
+	inc	hl
+	bit	6,a
+	call	z,set6
+	inc	hl
+	inc	hl
+	rra
+	call	nc,set5
+	rra
+	rra
+	rra
+	call	nc,set6
+	inc	hl
+	rra
+	call	nc,set0
+	rra
+	call	nc,set2
+
+rij5:	ld	a,(0fbe9h)
+	cp	0ffh
+	jr	z,rij6
+	ld	hl,byt5
+	rra
+	call	nc,set5
+	rra
+	call	nc,set7
+	rra
+	call	nc,set4
+	rra
+	call	nc,set3
+	dec	hl
+	dec	hl
+	rra
+	call	nc,set0
+	rra
+	call	nc,set1
+	dec	hl
+	dec	hl
+	rra
+	call	nc,set2
+	rra
+	call	nc,set7
+
+rij6:	ld	a,(0fbeah)
+	cp	0ffh
+	jr	z,rij7
+	ld	hl,byt1
+	bit	4,a
+	call	z,set4
+	inc	hl
+	bit	1,a
+	call	z,set1
+	bit	2,a
+	call	z,set4
+	bit	6,a
+	call	z,set3
+	inc	hl
+	inc	hl
+	bit	0,a
+	call	z,set3
+	bit	3,a
+	call	z,set7
+	bit	5,a
+	call	z,set4
+	bit	7,a
+	call	z,set2
+
+rij7:	ld	a,(0fbebh)
+	ld	hl,byt4
+	rra
+	call	nc,set0
+
+rij8:	ld	a,(0fbech)
+	ld	hl,byt1
+	bit	3,a
+	call	z,set0
+	inc	hl
+	inc	hl
+	rla
+	call	nc,set7
+stop:	ret
+
+
+set0:	res	0,(hl)
+	ret
+set1:	res	1,(hl)
+	ret
+set2:	res	2,(hl)
+	ret
+set3:	res	3,(hl)
+	ret
+set4:	res	4,(hl)
+	ret
+set5:	res	5,(hl)
+	ret
+set6:	res	6,(hl)
+	ret
+set7:	res	7,(hl)
+	ret
+
+
+
+;*** speel sample af ***
+
+mmdrum:	ld	a,(keybdt)
+	or	a
+	jr	z,mmdrm2
+	cp	2
+	jr	z,mmdrm2
+	ld	a,12
+	add	a,d
+	ld	d,a
+
+mmdrm2:	ld	a,(notbf2)
+	cp	d
+	jr	z,mmdrm3
+	ld	a,d
+	ld	(notbf2),a
+	call	mdrfrq
+	ld	a,255
+	ld	c,18
+	call	mmout
+	ld	a,(smpnr)
+	call	mdrblk
+	ld	a,1
+	ld	c,7
+	call	mmout
+	ld	a,0a0h		  ;start weergave
+	call	mmout
+mmdrm3:	di
+	ld	a,0c3h
+	ld	(0fd9fh),a
+	ei
+	ret
+
+
+mdrfrq:	ld	hl,mmpdt1	      ;bepaal samplefreq.
+	dec	a
+	add	a,a
+	ld	c,a
+	ld	b,0
+	rl	b
+	add	hl,bc
+	ld	a,(hl)
+	ld	c,011h
+	call	mmout
+	inc	hl
+	ld	a,(hl)
+	dec	c
+	jp	mmout
+
+mdrblk:	dec	a
+	add	a,a
+	add	a,a
+	ld	hl,smpadr
+	ld	c,a
+	ld	b,0
+	add	hl,bc
+	ld	a,(hl)
+	ld	c,9
+	call	mmout
+	inc	hl
+	ld	a,(hl)
+	inc	c
+	call	mmout
+	inc	hl
+	ld	a,(hl)
+	inc	c
+	call	mmout
+	inc	hl
+	ld	a,(hl)
+	inc	c
+	jp	mmout
+
+
+
+;*** wis kleuren ***
+
+wiscol:	ld	de,24*10
+	ld	hl,0800h
+	call	setwrt
+	ld	b,0
+wiscl2:	out	(c),b
+	dec	de
+	ld	a,d
+	or	e
+	jr	nz,wiscl2
+	ret
+
+;*** print moonblaster ***
+
+prtmb:	ld	a,1
+	ld	c,18
+	call	mmout
+	inc	c
+	call	mmout
+	ld	hl,15*80+23
+	call	setwrt
+	ld	hl,emptx2
+	call	decrc
+	ld	hl,16*80+23
+	call	setwrt
+	ld	hl,mbtx1
+	call	decrc
+	ld	hl,17*80+23
+	call	setwrt
+	ld	hl,mbtx2
+	jp	decrc
+
+
+;*** print input level ***
+
+prtinp:	ld	hl,16*80+27
+	call	setwrt
+	ld	hl,inlvtx
+	call	decrc
+	ld	hl,15*80+38
+	call	setwrt
+	ld	hl,mbtx3
+	call	decrc
+	ld	hl,16*80+38
+	call	setwrt
+	ld	hl,mbtx4
+	call	decrc
+	ld	hl,17*80+38
+	call	setwrt
+	ld	hl,mbtx5
+	call	decrc
+
+	ld	hl,17*80+39
+	ld	a,(atrate)
+	add	a,a
+	add	a,a
+	add	a,a
+	or	a
+	call	z,prtin2
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	call	setwrt
+	ld	a,128
+	out	(c),a
+	ret
+prtin2:	inc	a
+	ret
+
+
+;*** print sample control ***
+
+prtcon:	ld	hl,11*80+55
+	call	setwrt
+	ld	a,(manual)
+	or	a
+	jr	z,prtcn2
+	ld	hl,mantxt
+	jp	decrc
+prtcn2:	ld	hl,auttxt
+	jp	decrc
+
+
+;*** print keyboard ***
+
+prtkey:	ld	hl,20*80+47
+	call	setwrt
+	ld	a,(keybdt)
+	or	a
+	jr	z,prtke2
+	cp	2
+	jr	z,prtke4
+	ld	hl,msxtxt
+prtke3:	ld	b,8
+	otir
+	ret
+prtke2:	ld	hl,nmstxt
+	jr	prtke3
+prtke4:	ld	hl,miditx
+	jp	prtke3
+
+
+;*** print attack rate ***
+
+prtatt:	ld	hl,10*80+55
+	call	setwrt
+	ld	a,(atrate)
+	add	a,"0"
+	out	(c),a
+	ret
+
+
+;*** print sample block ***
+
+prtsmb:	ld	hl,7*80+61
+	call	setwrt
+	ld	a,(smpnr)
+	ld	hl,decdt2-2
+	add	a,a
+	ld	d,0
+	ld	e,a
+	add	hl,de
+	ld	b,2
+	otir
+	ret
+
+
+
+;*** print sample frequency ***
+
+prtfrq:	ld	hl,9*80+59
+	call	setwrt
+	ld	a,(sfreq)
+	ld	hl,decdt2-2
+	add	a,a
+	ld	d,0
+	ld	e,a
+	add	hl,de
+	ld	b,2
+	otir
+	ret
+
+
+
+;*** print sample adressen ***
+
+prtsbl:	ld	hl,5*80+8
+	call	setwrt
+	ld	ix,smpadr
+	ld	b,14	 ;aantal blocks
+
+prtsa2:	push	bc
+	push	hl
+	call	prtsad	 ;print start adres
+	pop	hl
+	ld	de,8
+	add	hl,de
+	call	setwrt
+	push	hl
+	call	prtsad	 ;print eind adres
+	pop	hl
+	ld	de,80-8
+	add	hl,de
+	call	setwrt
+	pop	bc
+	djnz	prtsa2
+	ret
+
+prtsad:	ld	a,(ix+1)
+	call	prthbt
+	ld	a,(ix+0)
+	call	prthbt
+	inc	ix
+	inc	ix
+	ret
+
+prthbt:	push	af	;print byte in hex
+	rrca
+	rrca
+	rrca
+	rrca
+	and	01111b
+	call	prthex
+	pop	af
+	and	01111b
+
+prthex:	cp	10
+	jr	nc,prthx2
+	add	a,"0"
+	out	(c),a
+	ret
+prthx2:	add	a,"A"-10
+	out	(c),a
+	ret
+
+
+
+;*** key handler ***
+
+keyhan:	call	getkey
+keyhn2:	ld	c,a
+keyhnl:	ld	a,(ix+0)
+	or	a
+	ret	z
+	ld	l,(ix+1)
+	ld	h,(ix+2)
+	cp	c
+	jr	z,keyhne
+	inc	ix
+	inc	ix
+	inc	ix
+	jr	keyhnl
+keyhne:	jp	(hl)
+
+
+;*** decrunch en print in beeld ***
+
+decrc:
+drclus:	ld	a,(hl)	;lees data op hl
+	cp	0ffh
+	call	z,linfed
+	cp	0fdh
+	call	z,linfd2
+	cp	0feh
+	jr	z,drc2
+	or	a
+	ret	z
+	out	(c),a
+	inc	hl
+	jr	drclus
+
+drc2:	inc	hl
+	ld	a,(hl)	;aantal *
+	ld	b,a
+	inc	hl
+	ld	a,(hl)
+drc3:	out	(c),a
+	djnz	drc3
+	inc	hl
+	jr	drclus
+
+linfed:	ld	a," "
+	out	(c),a
+	call	linfd2
+	ex	af,af'
+	ld	a," "
+	out	(c),a
+	ex	af,af'
+	ret
+
+linfd2:	inc	hl
+	ld	a,(hl)
+	or	a
+	ret	z
+	push	hl
+	ld	hl,(stvrm)
+	ld	de,80
+	add	hl,de
+	ld	(stvrm),hl
+	call	setwrt
+	pop	hl
+	ld	a,(hl)
+	ret
+
+
+setrd:	ld	a,(7)
+	di
+	inc	a
+	ld	c,a
+	ld	a,h
+	and	0c0h
+	rlca
+	rlca
+	out	(c),a
+	ld	a,08eh
+	out	(c),a
+	ld	a,h
+	out	(c),l
+	and	03fh
+	out	(c),a
+	dec	c
+	ret
+
+
+setwrt:	push	af
+	ld	a,(7)
+	di
+	inc	a
+	ld	c,a
+	ld	a,h
+	and	0c0h
+	rlca
+	rlca
+	out	(c),a
+	ld	a,08eh
+	out	(c),a
+	ld	a,h
+	out	(c),l
+	and	03fh
+	or	040h
+	out	(c),a
+	dec	c
+	pop	af
+	ret
+
+
+
+pacout:	jp	pcout2
+mmout:	jp	mmout2
+
+pcout2:	push	af
+	ld	a,c
+	out	(07ch),a
+	pop	af
+	out	(07dh),a
+	ex	(sp),hl
+	ex	(sp),hl
+	ex	(sp),hl
+	ex	(sp),hl
+	ret
+
+mmout2:	push	af
+	ld	a,c
+	out	(0c0h),a
+	pop	af
+	out	(0c1h),a
+	ex	(sp),hl
+	ex	(sp),hl
+	ret
+
+;--- music module out turbo-r ---
+
+mmrout:	ex	af,af'
+	call	trbwt	;wachttijd voor turbo-r
+	ld	a,c
+	out	(0c0h),a
+	in	a,(0e6h)	;teller opslaan
+	ld	(rtel),a
+	ex	af,af'
+	out	(0c1h),a
+	ret
+
+;--- fm-pac out turbo-r ---
+
+parout:	ex	af,af'
+	call	trbwt	;wachttijd voor turbo-r
+	ld	a,c
+	out	(7ch),a
+	in	a,(0e6h)	;teller opslaan
+	ld	(rtel),a
+	ex	af,af'
+	out	(7dh),a
+	ret
+trbwt:	push	bc
+	ld	a,(rtel)	;wachttijd voor turbo-r
+	ld	b,a
+trbwl:	in	a,(0e6h)
+	sub	b
+	cp	7
+	jr	c,trbwl
+	pop	bc
+	ret
+
+
+
+
+setint:	ld	b,9
+setinl:	ld	a,b
+	dec	a
+	call	0141h
+	inc	a
+	jr	nz,setint
+	djnz	setinl
+	ld	hl,0fbe5h
+	ld	de,0fbe6h
+	ld	bc,7
+	ld	(hl),0ffh
+	ldir
+
+setin3:	ld	hl,0fd9fh
+	ld	de,savint
+	ld	bc,5
+	ldir
+	ld	hl,keyint
+	ld	a,0c3h
+	di
+	ld	(0fda0h),hl
+	ld	(0fd9fh),a
+	call	midiin
+	ei
+	ret
+
+getint:	di
+	ld	hl,savint
+	ld	de,0fd9fh
+	ld	bc,5
+	ldir
+	call	midiof
+	ei
+	ret
+
+
+setin2:	di
+	ld	hl,0fd9ah
+	ld	de,savint
+	ld	bc,5
+	ldir
+	ld	hl,eqlint
+	ld	a,0c3h
+	ld	(0fd9bh),hl
+	ld	(0fd9ah),a
+	ei
+	ret
+
+getin2:	di
+	ld	hl,savint
+	ld	de,0fd9ah
+	ld	bc,5
+	ldir
+	ei
+	ret
+
+resmat:	ld	hl,notbuf
+	ld	a,0ffh
+	ld	b,9
+vulem2:	ld	(hl),a
+	inc	hl
+	djnz	vulem2	;reset matrix
+	ret
+
+z80:	ld	a,(02dh)
+	cp	3
+	ret	c
+	ld	a,0h	;lampke niet uit!
+	jp	0180h
+
+
+r800d:	ld	a,(02dh)
+	cp	3
+	ret	c
+	ld	a,082h
+	call	0180h
+	push	bc
+	ld	bc,02000h
+r800l:	dec	bc
+	ld	a,b
+	or	c
+	jr	nz,r800l
+	pop	bc
+	ret
+
+;*** bewaar scherm ***
+
+savsc3:	ld	de,09200h
+	jr	savscc
+savsc2:	ld	de,08900h
+	jr	savscc
+savscr:	ld	de,08000h
+savscc:	di
+	ld	a,em2pag
+	out	(0feh),a
+	ld	hl,0
+	ld	bc,0900h
+	call	059h
+	ld	a,sngpag
+	out	(0feh),a
+	ei
+	ret
+
+
+;*** restore scherm ***
+
+ressc3:	ld	hl,09200h
+	jr	resscc
+ressc2:	ld	hl,08900h
+	jr	resscc
+resscr:	ld	hl,08000h
+resscc:	di
+	ld	a,em2pag
+	out	(0feh),a
+	ld	de,0
+	ld	bc,0900h
+	call	05ch
+	ld	a,sngpag
+	out	(0feh),a
+	ei
+	ret
+
+
+
+ctrl:	ld	a,6
+	call	0141h
+	bit	1,a
+	ret
+
+
+;hexadecimaal naar decimaal
+
+hexdec:	push	bc
+	ld	b,3	;aantal cijfers
+	ld	ix,dectab
+hexdc2:	push	bc
+	xor	a
+	ld	b,16
+decls1:	rl	e
+	rl	d
+	adc	a,a
+	daa
+	djnz	decls1
+	pop	bc
+	rl	e
+	rl	d
+	ld	c,a
+	and	01111b
+	ld	(ix+0),a
+	dec	b
+	jr	z,endhxd
+	ld	a,c
+	and	011110000b
+	srl	a
+	srl	a
+	srl	a
+	srl	a
+	ld	(ix+1),a
+	inc	ix
+	inc	ix
+	djnz	hexdc2
+endhxd:	pop	bc
+	ret
+
+prtdec:	ld	hl,dectab+2
+	ld	b,3
+prtdcl:	ld	a,(hl)
+	add	a,"0"
+	out	(c),a
+	dec	hl
+	djnz	prtdcl
+	ret
+
+
+
+;**** modulation depth ****
+
+mod_depth:	push	hl
+	ld	hl,(0f3dch)
+	push	hl
+
+	ld	hl,mod_depthtx		;zet tekst onderin
+	call	print
+	LOCVDP 22,28		;oude sustain
+	ld	a,(xsust)
+	and	011000000b
+	rlca
+	rlca
+	add	a,"0"
+	out	(c),a
+	ld	l,23
+	ld	h,55
+	ld	(0f3dch),hl
+	ld	a,SPACE
+	bios	chput
+	ld	a,55
+	ld	(0f3ddh),a
+mod_dp_edit:	call	getkey
+	cp	ESC
+	jr	z,mod_dp2_edit
+	cp	RETURN
+	jr	z,mod_dp2_edit
+	cp	"0"
+	jr	c,mod_dp_edit
+	cp	"4"
+	jr	nc,mod_dp_edit
+	sub	"0"
+	rrca
+	rrca
+	ld	b,a
+	ld	a,(xsust)
+	and	0100000b
+	or	b
+	ld	(xsust),a
+mod_dp2_edit:	call	clrlin
+	pop	hl
+	ld	(0f3dch),hl
+	pop	hl
+                ret
+
+
+;--- usertest en stackpointertest ---
+
+	IF	PRIVE
+usertest:	push	hl
+	ld	hl,80+55
+	call	setwrt
+	ld	a,(xuser1)
+	xor	156
+	call	prtdc2
+	call	getkey
+	pop	hl
+	ret
+
+
+prtdc2:	call	bepdc2
+	ld	b,3
+	otir
+	ret
+
+bepdc2:	ld	hl,decdat
+	or	a
+	ret	z
+	ld	l,a
+	ld	h,0
+	add	hl,hl
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	de,decdat
+	add	hl,de
+                ret
+
+
+sptest:	push	hl
+	ld	hl,80+55
+	call	setwrt
+	ld	(spbuf),sp
+	ld	hl,(spbuf)
+	ld	a,h
+	call	prthbt
+	ld	a,l
+	call	prthbt
+	call	getkey
+	pop	hl
+	ret
+
+	ELSE
+
+usertest:	ret
+sptest:	ret
+
+	ENDIF
+
+
+
+; **** verander hertz mode ****
+
+
+chghertz:	push	hl
+	ld	hl,0ffe8h
+	ld	a,(hl)
+	xor	2
+	ld	(hl),a
+	ld	b,a
+	ld	c,9
+	call	047h
+	pop	hl
+                ret
+
+
+
+
+;***** reverberation settings *****
+
+
+setrev:	push	hl
+	ld	hl,(0f3dch)
+	push	hl
+	call	wiscol
+	xor	a
+	ld	(0f3dch),a
+	call	savscr
+
+	ld	hl,5*80+26
+	ld	(stvrm),hl
+	call	setwrt
+	ld	hl,bevdat
+	call	decrc
+
+	ld	a,1
+	ld	(revyco),a
+
+bevls3:	call	prtbvi
+bevls2:	call	bevblk
+bevlus:	call	getkey
+	cp	28
+	jp	z,bevri
+	cp	29
+	jp	z,bevlef
+	cp	30
+	jp	z,bevup
+	cp	31
+	jp	z,bevdow
+	cp	11
+	jp	z,bevres
+	cp	27
+	jr	nz,bevlus
+	call	wiscol
+
+	call	resscr
+	pop	hl
+	ld	(0f3dch),hl
+	pop	hl
+	ret
+
+bevres:	ld	hl,xrever
+	ld	de,xrever+1
+	ld	bc,8
+	ld	(hl),0
+	ldir
+	jp	bevls3
+
+bevlef:	ld	hl,xrever
+	ld	a,(revyco)
+	ld	e,a
+	ld	a,9
+	sub	e
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	cp	-3
+	jp	z,bevlus
+	dec	a
+	ld	(hl),a
+	jp	bevls3
+
+bevri:	ld	hl,xrever
+	ld	a,(revyco)
+	ld	e,a
+	ld	a,9
+	sub	e
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	cp	3
+	jp	z,bevlus
+	inc	a
+	ld	(hl),a
+	jp	bevls3
+
+bevup:	ld	a,(revyco)
+	cp	1
+	jp	z,bevlus
+	dec	a
+	ld	(revyco),a
+	jp	bevls2
+
+bevdow:	ld	a,(revyco)
+	cp	9
+	jp	z,bevlus
+	inc	a
+	ld	(revyco),a
+	jp	bevls2
+
+bevblk:	call	wiscol
+	ld	hl,0800h+7*10+3
+	ld	a,(revyco)
+	ld	b,a
+	ld	de,10
+bevbll:	add	hl,de
+	djnz	bevbll
+	call	setwrt
+	ld	hl,bevbld
+	ld	b,3
+	otir
+	ret
+
+prtbvi:	ld	hl,8*80+40
+	ld	b,9
+prtbil:	push	hl
+	call	setwrt
+	ld	hl,xrever-1
+	ld	e,b
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	bit	7,a
+	jr	nz,prtbi2
+	jr	prtbi3
+prtbi4:	add	a,030h
+	out	(c),a
+	pop	hl
+	ld	de,80
+	add	hl,de
+	djnz	prtbil
+	ret
+
+prtbi2:	push	af
+	ld	a,"-"
+	ld	a,"-"
+	out	(c),a
+	ld	a," "
+	ld	a," "
+	out	(c),a
+	pop	af
+	neg
+	jr	prtbi4
+
+prtbi3:	push	af
+	ld	a,"+"
+	ld	a,"+"
+	out	(c),a
+	ld	a," "
+	ld	a," "
+	out	(c),a
+	pop	af
+	jr	prtbi4
+
+
+
+
+
+
+
+
+inter1:	ret
+	ret
+	ret
+	ret
+	ret
+
+
+turin:	ld	bc,0e8e9h
+	in	a,(c)         ;midi in ?
+	and	00000010b
+	jr	z,mdint1      ;no
+	jp	lees          ;yes
+
+mdint1:	in	a,(c)         ;8253 timer ?
+	and	10000000b
+	jp	z,inter1      ;no
+	xor	a
+	out	(0eah),a
+	jp	inter1
+
+facmid:	ld	bc,00203h
+	in	a,(c)
+	bit	1,a              ;and  002h
+	jp	z,lees           ;interupt van fmi
+	jp	inter1
+
+inmmid:	ld	bc,00504h
+inmid2:	in	a,(c)
+	bit	7,a
+	jp	nz,lees	;interupt van musmod
+	jp	inter1
+
+lees:	ld	c,b
+	in	a,(c)	;lees midi code
+
+inbuf:	ld	(midcod),a
+	ld	d,0fah
+	ld	a,(buftop)
+	ld	e,a
+	ld	a,(bufbot)
+	inc	a
+	cp	e
+	jr	z,overst	;gelijk dan buffer overflow
+	cp	0f5h
+	jp	nz,setbuf
+	xor	a
+setbuf:	ld	(bufbot),a
+	ld	e,a
+	ld	a,(midcod)
+	ld	(de),a
+	jp	inter1
+
+overst:	ld	a,1
+	ld	(overfl),a
+	jp	inter1
+
+
+redmid:	ld	a,(bufbot)
+	ld	e,a
+	ld	a,(buftop)
+	cp	e
+	ret	z	;buffer is leeg
+	inc	a
+	cp	0f5h
+	jp	nz,setbu2
+	xor	a
+setbu2:	ld	(buftop),a
+	ld	d,0fah
+	ld	e,a
+	ld	a,(de)
+	ld	(midco2),a
+
+setmid:	and	0f0h
+	cp	0f0h
+	jr	z,system
+	ld	a,(syscod)
+	or	a
+	jr	nz,redmid	;van system common alles overslaan
+	ld	a,(midco2)
+	cp	080h
+	jp	nc,stuurc	 ;stuurcode
+	ld	a,(aantal)
+	or	a
+	jp	nz,decant
+	ld	a,(midco3)
+	and	0f0h
+	cp	080h
+	jp	z,seta2
+	cp	090h
+	jp	z,seta2
+	jp	redmid
+
+seta2:	ld	a,2
+
+decant:	dec	a
+	ld	(aantal),a
+	jp	sttset
+
+system:	ld	a,(midco2)
+	cp	0f7h
+	jr	z,rstsys
+	cp	0f0h
+	jr	z,setsys
+	jp	redmid
+
+setsys:	ld	a,1
+	ld	(syscod),a
+	jp	redmid
+
+rstsys:	xor	a
+	ld	(syscod),a
+	jp	redmid
+
+stuurc:	xor	a
+	ld	(aantal),a
+	ld	a,(midco2)
+	ld	(midco3),a
+	and	0f0h
+	cp	090h
+	jp	nz,redmid
+	cp	080h
+	jp	nz,redmid
+	ld	a,2
+	ld	(aantal),a
+
+sttset:	ld	a,(aantal)
+	or	a
+	jr	z,setvol
+	dec	a
+	jr	z,settoe
+	jp	redmid
+
+settoe:	ld	a,(midco2)
+	ld	(toets),a
+	jp	redmid
+
+setvol:	ld	a,(midco2)
+	ld	(vol),a
+
+setmat:	ld	de,(vol)	;'e' = volume  'd' = toets nummer
+	ld	hl,(lowtts)
+	inc	h
+	ld	a,d
+	cp	l
+	jp	c,redmid	;toetsnummer te laag
+	cp	h
+	jp	nc,redmid	;toets nummer te hoog
+	sub	l
+	ld	hl,notbuf	;rij nummer
+chkrij:	cp	8
+	jr	c,jstrij	;juiste matrixrij gevonden
+	sub	8
+	inc	hl
+	jp	chkrij
+
+jstrij:	ld	b,a
+	inc	b
+	ld	a,e	;(volume)
+	or	a
+	jr	nz,volon
+	ld	a,010000000b
+rot1:	rlca
+	djnz	rot1
+	or	(hl)
+	ld	(hl),a
+	jp	redmid
+
+volon:	ld	a,001111111b
+rot2:	rlca
+	djnz	rot2
+	and	(hl)
+	ld	(hl),a
+	jp	redmid
+
+
+chmion:	ld	a,(keybdt)
+	cp	2
+	ret
+
+nxtint:	call	chmion
+	ret	nz
+	call	midiof
+	ld	a,(midint)
+	inc	a
+	cp	3
+	jr	nz,zetmid
+	xor	a
+zetmid:	ld	(midint),a
+
+midiin:	ld	a,1
+	ld	(mdon),a
+	call	chmion
+	ret	nz
+	ld	hl,notbuf
+	ld	a,0ffh
+	ld	b,9
+vulemp:	ld	(hl),a
+	inc	hl
+	djnz	vulemp	;reset matrix
+	ld	hl,20*80+55
+	call	setwrt
+	xor	a
+	ld	(mdon),a
+	ld	a,(midint)
+	or	a
+	jp	z,chkmmd
+	dec	a
+	jp	z,chktmd
+	jp	chkvak
+
+
+chkmmd:	in	a,(0c0h)
+	cp	0ffh
+	ld	hl,modtx
+	jp	z,setno
+	call	print2
+chkmm2:	di
+	ld	a,3
+	out	(0),a
+	ld	a,010010101b
+	out	(0),a
+	call	resbuf
+	call	savein
+	ld	hl,hmmjmp
+	ld	de,0fd9ah
+	call	copy5
+	ei
+	ret
+
+chktmd:	call	chkmid
+	ld	hl,turtx
+	jp	c,setno
+	call	print2
+chktm2:	call	resbuf
+	di
+	xor	a
+	out	(0e2h),a
+	call	savein
+	ld	hl,hturbo	;set address to new hook data
+	ld	de,0fd9ah	;get hook address
+	call	copy5	;set new hook
+	xor	a
+	out	(0e2h),a	;set midi cartridge i/o
+
+stmid:	ld	a,00010110b
+	out	(0efh),a
+	ld	a,8
+	out	(0ech),a
+	ld	a,10110100b
+	out	(0efh),a
+	ld	hl,20000
+	ld	a,l
+	out	(0eeh),a
+	ld	a,h
+	out	(0eeh),a
+	xor	a
+	out	(0e9h),a
+	call	waits
+	out	(0e9h),a
+	call	waits
+	out	(0e9h),a
+	call	waits
+	ld	a,40h
+	out	(0e9h),a
+	call	waits
+	ld	a,01001110b
+	out	(0e9h),a
+	call	waits
+	ld	a,00100111b
+	out	(0e9h),a
+	in	a,(0e8h)
+	xor	a
+	out	(0eah),a
+	ei
+	ret
+
+waits:	push	af
+	push	bc
+	ld	c,1
+	out	(0e6h),a
+waitlp:	in	a,(0e7h)
+	cp	c
+	jr	c,waitlp
+	pop	bc
+	pop	af
+	ret
+
+chkvak:	in	a,(2)
+	cp	0ffh
+	ld	hl,vactx
+	jp	z,setno
+	call	print2
+chkva2:	di
+	xor	a
+	out	(003h),a
+	out	(003h),a
+	out	(003h),a
+	ld	a,040h
+	out	(003h),a
+	ld	a,04eh
+	out	(003h),a
+	ld	a,015h
+	out	(003h),a
+	call	resbuf
+	call	savein
+	ld	hl,hfac
+	ld	de,0fd9ah
+	call	copy5
+	ei
+	ret
+
+savein:	ld	hl,0fd9ah
+	ld	de,inter1
+	call	copy5
+	ret
+
+midiof:	ld	hl,20*80+55
+	call	setwrt
+	ld	hl,empmid
+	call	decrc
+	ld	a,(mdon)
+	or	a
+	ret	nz	;midi poort was niet gezet
+	ld	a,(midint)
+	or	a
+	jr	z,mmdoff
+	dec	a
+	jr	z,tmdoff
+	jr	vukoff
+
+mmdoff:	di
+	ld	a,3
+	out	(0),a
+	call	midoff
+	ei
+	ret
+
+tmdoff:	di
+	ld	a,1
+	out	(0e9h),a
+	call	midoff
+	ei
+	ret
+
+vukoff:	ld	a,001h
+	out	(003h),a
+	in	a,(002h)
+	call	midoff
+	ei
+	ret
+
+midoff:	ld	hl,inter1
+	ld	de,0fd9ah
+	call	copy5
+	ret
+
+setno:	ld	a,1
+	ld	(mdon),a
+	push	hl
+	ld	hl,notxt
+	ld	b,3
+	otir
+	pop	hl
+	jp	print2
+
+
+copy5:	ld	bc,5
+	ldir
+	ret
+
+resbuf:	xor	a
+	ld	(bufbot),a
+	ld	(buftop),a
+	ld	(overfl),a
+	ret
+
+hmmjmp:	jp	inmmid
+	ret
+	ret
+
+hfac:	jp	facmid
+	ret
+	ret
+
+hturbo:	jp	turin
+	ret
+	ret
+
+
+
+;	check midi interface
+;	return : [cf]=1	        no midi interface
+;		 : [cf]=0 , [zf]=1        found midi cartridge
+;		 : [cf]=0 , [zf]=0        midi interface is built in
+;
+chkmid:	ld	a,(02dh)      ;(exptbl)
+	cp	3
+	ret	c             ;msx1,msx2,msx2+
+	ld	a,(02eh)      ;read midi interface id
+	and	1
+	ret	nz            ;midi interface is built in
+	ld	b,4
+chkro1:	push	bc            ;save counter
+	ld	a,4
+	sub	b             ;primary slot number
+	ld	c,a           ;save
+	ld	hl,0fcc1h     ;exptbl
+	ld	a,c
+	add	a,l           ;set exptbl
+	ld	l,a
+	ld	a,(hl)
+	and	10000000b     ;expanded ?
+	jr	z,chkro3      ;no
+	ld	b,4           ;number of expanded slots
+chkro2:	push	bc            ;search expanded slot
+	ld	a,00100100b
+	sub	b             ;001000nnb
+	rlc	a
+	rlc	a             ;1000nn00b
+	or	c             ;1000nnmmb = slot address
+	call	chkid         ;check midi id
+	pop	bc
+	jr	z,chkroy      ;found midi id
+	djnz	chkro2        ;next expanded slot
+	pop	bc
+	jr	chkro4        ;next slot
+chkro3:	ld	a,c           ;set slot address
+	call	chkid         ;check midi id
+	pop	bc
+	jr	z,chkroz      ;found midi id
+chkro4:	djnz	chkro1        ;search next slot
+	scf	              ;no midi id
+	ret
+
+chkroy:	pop	bc
+chkroz:	xor	a             ;set z flag, reset cy flag
+	ret
+
+;
+;	check midi id
+;
+;	entry :[a]=slot address
+;	return:z flag is set if midi id is found
+;
+idstr:	db	"MIDI"
+idadd:	equ	401ch         ;midi id address
+
+chkid:	push	bc
+	ld	de,idstr
+	ld	hl,idadd
+	ld	b,4           ;length of id_string
+chkid1:	push	af
+	push	bc
+	push	de
+	call	00ch          ;read data
+	pop	de
+	pop	bc
+	ld	c,a           ;save data
+	ld	a,(de)        ;get char
+	cp	c             ;same ?
+	jr	nz,chkid2     ;no
+	pop	af            ;restore slot address
+	inc	de            ;next char
+	inc	hl
+	djnz	chkid1        ;check next char
+	pop	bc            ;restore environment
+	xor	a             ;i found id
+	ret
+
+chkid2:	pop	af            ;restore slot address
+	pop	bc            ;restore environment
+	xor	a
+	inc	a             ;wrong id
+	ret
+
+print2:	ld	b,18
+	otir
+	ret
+
+
+
+lowtts:	db   36
+hitts:	db   96
+vol:	db   0
+toets:	db   0
+midcod:	db   0	;ingelezen midi code
+midco2:	db   0	;midi code die verwerkt wordt
+overfl:	db   0	;overflow error
+aantal:	db   0
+midco3:	db   0
+syscod:	db   0	;system command code is bezig
+buftop:	db   000h
+bufbot:	db   000h
+mdon:	db   1
+
+
+
+bevdat:	db	32,24,0feh,17,23,25,0ffh
+	db	22," DETUNE SETTINGS ",20,23,25,0ffh
+	db	20,0feh,17,23,19,32,22,0ffh
+	db	22," Channel 1:",0feh,6,32,22,32,22,0ffh
+	db	22," Channel 2:",0feh,6,32,22,32,22,0ffh
+	db	22," Channel 3:",0feh,6,32,22,32,22,0ffh
+	db	22," Channel 4:",0feh,6,32,22,32,22,0ffh
+	db	22," Channel 5:",0feh,6,32,22,32,22,0ffh
+	db	22," Channel 6:",0feh,6,32,22,32,22,0ffh
+	db	22," Channel 7:",0feh,6,32,22,32,22,0ffh
+	db	22," Channel 8:",0feh,6,32,22,32,22,0ffh
+	db	22," Channel 9:",0feh,6,32,22,32,22,0ffh
+	db	26,23,18,0feh,15,23,27,32,22,0ffh
+	db	32,32,26,0feh,17,23,27,32,0
+bevbld:	db	01111b,255,011111000b
+revyco:	db	0
+
+
+
+
+
+dectab:	ds	3,0
+
+;hoofdmenu
+
+mainld:
+	db	" "
+	dw	selmen	;menukeuze
+	db	31
+	dw	curdow	;omhoog
+	db	30
+	dw	curup	;omlaag
+	db	esc
+	dw	endsam	;back
+	db	f2
+	dw	reset_smpadr	;reset sample block addresses
+	db	f3
+	dw	swkey	;keyboard switch
+	db	f4
+	dw	setsmb	;sample block addresses
+	db	f5
+	dw	godisk	;naar diskmenu voor samples
+	db	"M"
+	dw	nxtint	;volgende midi interface
+	db	"m"
+	dw	nxtint	;  ''          ''
+	db	0
+
+
+;sample blocks
+
+smbd:	db	F2
+	dw	reset_smpadr	;reset sample_addresses
+	db	28
+	dw	smbri	;rechts
+	db	29
+	dw	smblef	;links
+	db	31
+	dw	smbdow	;omhoog
+	db	30
+	dw	smbup	;omlaag
+	db	" "
+	dw	smsel	;voer adressen in
+	db	esc
+	dw	endsmb	;back
+	db	0
+
+
+
+
+;frequenties voor samples
+
+mmpdt1:	db	005h,022h,005h,06ah,005h,0bah,006h,012h,006h,073h,006h,0d3h,007h,03bh,007h,0abh
+	db	008h,01bh,008h,09ch,009h,024h,009h,0ach,00ah,03dh,00ah,0d5h,00bh,07dh,00ch,02dh
+	db	00ch,0e6h,00dh,0a6h,00eh,07fh,00fh,057h,010h,03fh,011h,038h,012h,040h,013h,051h
+	db	014h,07ah,015h,0aah,016h,0fbh,018h,05bh,019h,0c4h,01bh,04dh,01ch,0feh,01eh,0b6h
+	db	020h,077h,022h,070h,024h,081h,026h,0aah,028h,0fch,02bh,05dh,02dh,0f6h,030h,0afh
+	db	033h,089h,036h,0a2h,039h,0f4h,03dh,066h,040h,0f7h,044h,0e1h,049h,00bh,04dh,04dh
+	db	051h,0f0h,056h,0b2h,05bh,0ech,061h,05fh,067h,01ah,06dh,045h,073h,0e8h,07ah,0cbh
+	db	081h,0f0h,089h,0c4h,092h,018h,09ah,0a4h
+
+
+blkadr:	dw	0800h+3*10+2
+	dw	0800h+4*10+2
+	dw	0800h+5*10+2
+	dw	0800h+7*10+2
+	dw	0800h+9*10+2
+	dw	0800h+10*10+2
+	dw	0800h+11*10+2
+	dw	0800h+13*10+2
+blkdt1:	db	1,255,255,255,255,255,255,254
+smbbdt:	db	011b,011111000b
+
+
+eqlblk:	db	010000000b,0,0,0
+	db	011000000b,0,0,0
+	db	011100000b,0,0,0
+	db	011110000b,0,0,0
+	db	011111000b,0,0,0
+	db	011111100b,0,0,0
+	db	011111110b,0,0,0
+	db	011111111b,0,0,0
+	db	255,010000000b,0,0
+	db	255,011000000b,0,0
+	db	255,011100000b,0,0
+	db	255,011110000b,0,0
+	db	255,011111000b,0,0
+	db	255,011111100b,0,0
+	db	255,011111110b,0,0
+	db	255,011111111b,0,0
+	db	255,255,010000000b,0
+	db	255,255,011000000b,0
+	db	255,255,011100000b,0
+	db	255,255,011110000b,0
+	db	255,255,011111000b,0
+	db	255,255,011111100b,0
+	db	255,255,011111110b,0
+	db	255,255,011111111b,0
+	db	255,255,255,010000000b
+	db	255,255,255,011000000b
+	db	255,255,255,011100000b
+	db	255,255,255,011110000b
+	db	255,255,255,011111000b
+	db	255,255,255,011111100b
+	db	255,255,255,011111110b
+	db	255,255,255,011111111b
+
+
+vrmdat:	db	255,0,000110000b,001111000b,011111100b,000110000b
+	db	000110000b,000110000b
+	db	0,0,0,0,0,0,0,255
+	db	255,0,0,0,0,0,0,0
+	db	4,4,4,4,4,4,4,4
+	db	128,128,128,128,128,128,128,128
+
+savint:	ds	5
+menuch:	db	1
+smbxco:	db	1
+smbyco:	db	1
+manual:	db	0
+atrate:	db	4
+sfreq:	db	16
+emptxt:	db	0feh,70," ",0
+emptx2:	db	0feh,50," ",0
+offtxt:	db	"OFF"
+ontxt:	db	"ON "
+of2txt:	db	"--"
+emtxt:	db	"  "
+atttxt:	db	"Enter new treshold (0-4)",0
+msxtxt:	db	"MSX     "
+nmstxt:	db	"NMS 1160"
+begtxt:	db	"Start address must be lower than end address!",0
+endtxt:	db	"End address must be higher than start address!",0
+resadrtxt:	db	"Reset all sample addresses. Are you sure (y/n)?",0
+mod_depthtx:	db	"Current modulation depth:  . Enter new depth (0-3):",0
+busatx:	db	"Busy sampling...",0
+inlvtx:	db	"INPUT LEVEL:",0
+mbtx1:	db	0feh,20," ","MoonBlaster v1.4",0feh,20," ",0
+mbtx2:	db	0feh,12," ","(c) Stichting Sunrise 1992/1993",0feh,13," ",0
+mbtx3:	db	"  ",0feh,32,129," ",0
+mbtx4:	db	" ",131,0feh,32," ",132,0
+mbtx5:	db	"  ",0feh,32,130," ",0
+miditx:	db	"MIDI    "
+notxt:	db	"NO "
+modtx:	db	"NMS 1205 MIDI     "
+turtx:	db	"MSX MIDI          "
+vactx:	db	"FAC MIDI INTERFACE"
+empmid:	db	"                     ",0
+spbuf:	dw	0
+
+
+blddt1:	db	24,0feh,20,23,18,18,0feh,56,23,25
+	db	22,0feh,3,32,"SAMPLE BLOCKS",0feh,4,32,22,22,0feh,22," "
+	db	"SAMPLE MENU",0feh,23," ",22
+	db	20,0feh,4,23,18,0feh,7,23,18,0feh,7,23,21,21,0feh,56,23,19
+	db	22," NR ",22,"  START",22,"  END  ",22,22
+	db	0feh,18," ","Adjust input signal",0feh,19," ",22
+	db	20,0feh,4,23,21,0feh,7,23,21,0feh,7,23,19,22
+	db	0feh,21," ","Start sampling",0feh,21," ",22
+	db	22," 01 ",22,0feh,7," ",22,0feh,7," ",22,22
+	db	0feh,18," ","Set sample addresses",0feh,18," ",22
+	db	22," 02 ",22,0feh,7," ",22,0feh,7," ",22,20,0feh,56,23,19
+	db	22," 03 ",22,0feh,7," ",22,0feh,7," ",22,22
+	db	0feh,16," ","Current sample block:",0feh,19," ",22
+	db	22," 04 ",22,0feh,7," ",22,0feh,7," ",22,20,0feh,56,23,19
+	db	22," 05 ",22,0feh,7," ",22,0feh,7," ",22,22
+	db	0feh,17,"  ","Sample frequency:",0feh,21," ",22
+	db	22," 06 ",22,0feh,7," ",22,0feh,7," ",22,22
+	db	0feh,22," ","Treshold:",0feh,25," ",22
+	db	22," 07 ",22,0feh,7," ",22,0feh,7," ",22,22
+	db	0feh,16," ","Sample control:",0feh,25," ",22
+	db	22," 08 ",22,0feh,7," ",22,0feh,7," ",22,20,0feh,56,23,19
+	db	22," 09 ",22,0feh,7," ",22,0feh,7," ",22,22
+	db	0feh,21," ","Back to Editor",0feh,21," ",22
+	db	22," 10 ",22,0feh,7," ",22,0feh,7," ",22,20,0feh,56,23,19
+	db	22," 11 ",22,0feh,7," ",22,0feh,7," ",22,22,0feh,56," ",22
+	db	22," 12 ",22,0feh,7," ",22,0feh,7," ",22,22
+	db	0feh,20," ","MoonBlaster v1.4",0feh,20," ",22
+	db	22," 13 ",22,0feh,7," ",22,0feh,7," ",22,22
+	db	0feh,12," ","(c) Stichting Sunrise 1992/1993",0feh,13," ",22
+	db	22," 14 ",22,0feh,7," ",22,0feh,7," ",22,22,0feh,56," ",22
+	db	20,0feh,4,23,17,0feh,7,23,17,0feh,7,23,19,20
+	db	0feh,56,23,19
+	db	22,0feh,20," ",22,22
+	db	0feh,14," ","Keyboard:",0feh,33," ",22
+	db	20,0feh,20,23,17,17,0feh,56,23,19
+	db	22,0feh,78," ",22
+	db	26,0feh,78,23,27
+	db	0
+mantxt:	db	"Manual   ",0
+auttxt:	db	"Automatic",0
+
+smpfrq:	db	0feh,6,0a9h,4,07fh,3,0cch,2,054h,2,0ffh,1,0bfh,1,08dh,1
+	db	066h,1,045h,1,02ah,1,013h,1,0ffh,0,0eeh,0,0dfh,0
+
+;dec. data
+
+decdt2:	db	"01","02","03","04","05","06","07","08","09","10","11","12","13"
+	db	"14","15","16"
+
+infscr:	db 20,0feh,60,23,19,0fdh
+	db 22,"  Samplekit name",0feh,5,32,":",0feh,38,32,22,0fdh
+	db 20,0feh,60,23,21,0fdh
+	db 22,"  Modulation depth   :",0feh,38,32,22,0fdh
+	db 20,0feh,60,23,19,0fdh
+	db 22," CHANNELS   VOICES MSX-AUDIO VLM  VOICES MSX-MUSIC VLM  DTN ",22,0fdh
+	db 20,0feh,60,23,21,0fdh
+	db 22," CHANNEL 1:",0feh,49,32,22,0fdh
+	db 22," CHANNEL 2:",0feh,49,32,22,0fdh
+	db 22," CHANNEL 3:",0feh,49,32,22,0fdh
+	db 22," CHANNEL 4:",0feh,49,32,22,0fdh
+	db 22," CHANNEL 5:",0feh,49,32,22,0fdh
+	db 22," CHANNEL 6:",0feh,49,32,22,0fdh
+	db 22," CHANNEL 7:",0feh,49,32,22,0fdh
+	db 22," CHANNEL 8:",0feh,49,32,22,0fdh
+	db 22," CHANNEL 9:",0feh,49,32,22,0fdh
+	db 20,0feh,60,23,19,0fdh
+	db 22,"  MoonBlaster version: 1.41",0feh,33,32,20,0fdh
+	db 22,"  Copyright by       : Stichting Sunrise",0feh,20,32,22,0fdh
+	db 20,0feh,60,23,17,0fdh
+	db 0
+
+drsscr:	db 32,24,0feh,20,23,25,0ffh
+	db 22,"  FM-DRUMSET MENU   ",20,23,25,0ffh
+	db 20,0feh,20,23,19,32,22,0ffh
+	db 22," Set drumblocks",0feh,5,32,22,32,22,0ffh
+	db 22," Edit drumvolumes   ",22,32,22,0ffh
+	db 22," Edit drumfrequency ",22,32,22,0ffh
+	db 20,0feh,20,23,19,32,22,0ffh
+	db 22," Back to editor",0feh,5,32,22,32,22,0ffh
+	db 26,23,18,0feh,18,23,27,32,22,0ffh
+	db 32,32,26,0feh,20,23,27,32,0
+
+drvscr:	db 32,24,0feh,15,23,25,0ffh
+	db 22,"  DRUMVOLUMES  ",20,23,25,0ffh
+	db 20,0feh,15,23,19,32,22,0ffh
+	db 22,32,"Bassdrum :",0feh,4,32,22,32,22,0ffh
+	db 22,32,"Snaredrum:",0feh,4,32,22,32,22,0ffh
+	db 22,32,"Tom",0feh,6,32,":",0feh,4,32,22,32,22,0ffh
+	db 22,32,"Cymbal   :",0feh,4,32,22,32,22,0ffh
+	db 22,32,"Hi-Hat   :",0feh,4,32,22,32,22,0ffh
+	db 26,23,18,0feh,13,23,27,32,22,0ffh
+	db 32,32,26,0feh,15,23,27,0
+
+drcscr:	db	32,24,0feh,11,23,25,0ffh
+	db	22," DRUMSETS  ",20,23,25,0ffh
+	db	20,0feh,11,23,19,32,22,0ffh
+	db	22," DRUMSET 1 ",22,32,22,0ffh
+	db	22," DRUMSET 2 ",22,32,22,0ffh
+	db	22," DRUMSET 3 ",22,32,22,0ffh
+	db	26,23,18,0feh,9,23,27,32,22,0ffh
+	db	32,32,26,0feh,11,23,27,0
+
+drfscr:	db	32,24,0feh,17,23,25,0ffh
+	db	22," DRUMFREQUENCIES ",20,23,25,0ffh
+	db	20,0feh,17,23,19,32,22,0ffh
+	db	22," CHN   FRQ   OCT ",22,32,22,0ffh
+	db	20,0feh,17,23,19,32,22,0ffh
+	db	22,"  7",0feh,14,32,22,32,22,0ffh
+	db	22,"  8",0feh,14,32,22,32,22,0ffh
+	db	22,"  9",0feh,14,32,22,32,22,0ffh
+	db	26,23,18,0feh,15,23,27,32,22,0ffh
+	db	32,32,26,0feh,17,23,27,0
+
+blkscr:	db	32,24,0feh,59,23,25,0ffh
+	db	22,"   BLOCKS    ",22," 01 02 03 04 05 06 07 08 09 10 11 12"
+	db	" 13 14 15",20,23,25,0ffh
+	db	20,0feh,13,23,21,0feh,45,23,19,32,22,0ffh
+	db	22," Bass Drum   ",22,0feh,45,32,22,32,22,0ffh
+	db	22," Snare Drum  ",22,0feh,45,32,22,32,22,0ffh
+	db	22," Tom         ",22,0feh,45,32,22,32,22,0ffh
+	db	22," Cymbal      ",22,0feh,45,32,22,32,22,0ffh
+	db	22," Hi-Hat      ",22,0feh,45,32,22,32,22,0ffh
+	db	22," PSG Bass    ",22,0feh,45,32,22,32,22,0ffh
+	db	22," PSG Snare 1 ",22,0feh,45,32,22,32,22,0ffh
+	db	22," PSG Snare 2 ",22,0feh,45,32,22,32,22,0ffh
+	db	22," PSG Beep 1  ",22,0feh,45,32,22,32,22,0ffh
+	db	22," PSG Beep 2  ",22,0feh,45,32,22,32,22,0ffh
+	db	22," PSG Hi-Hat 1",22,0feh,45,32,22,32,22,0ffh
+	db	22," PSG Hi-Hat 2",22,0feh,45,32,22,32,22,0ffh
+	db	26,23,18,0feh,11,23,17,0feh,45,23,27,32,22,0ffh
+	db	32,32,26,0feh,59,23,27,0
+
+
+
+
+notbuf:	db	000h,000h,000h,000h,000h,000h,000h,000h,000h
+notbf2:	db	0
+nmsdat:	db	001h,002h,004h,008h,010h,020h,040h,080h
+numbuf:	db	0,0
+hexbuf:	db	0,0,0,0
+byt1:	equ	notbuf
+byt2:	equ	byt1+1
+byt3:	equ	byt2+1
+byt4:	equ	byt3+1
+byt5:	equ	byt4+1
+byt6:	equ	byt5+1
+adjcnt:	db	0
+trhdat:	db	7,30,62,94,126
+trhdt2:	db	0
+eqlout:	db	0
+jmpdat:	dw	smpler,info,drmset,setrev,usertest,sptest,mod_depth,chghertz
+stvrm:	dw	0
+rtel:	db	0
+drmreg:	db	036h,037h,038h,016h,026h,017h,027h,018h,028h
+
+drsblk:	db	255,255,011110000b
+drvblk:	db	255,011111110b
+drcblk:	db	01111b,011111110b
+drfblk:	db	1,011000000b
+	db	0,0111b
+drsdat:	dw	0800h+8*10+3,0800h+9*10+3,0800h+10*10+3,0800h+12*10+3
+drsyco:	db	1
+drvyco:	db	1
+drcyco:	db	1
+drfxco:	db	0
+drfyco:	db	1
+drbxco:	db	1
+drbyco:	db	1
+drfdat:	dw	0,0,0
+drodat:	db	0,0,0
+volbuf:	ds	5,0
+frbfad:	dw	0
+drsjmp:	db	1
+	dw	drmblk
+	db	2
+	dw	drmvol
+	db	3
+	dw	drmchs
+	db	4
+	dw	drsesc
+	db	0
+drsjp2:	db	" "
+	dw	drsclk
+	db	01eh
+	dw	drsup
+	db	01fh
+	dw	drsdow
+	db	27
+	dw	drsesc
+	db	0
+drvjmp:	db	01eh
+	dw	drvup
+	db	01fh
+	dw	drvdow
+	db	01dh
+	dw	drvlef
+	db	01ch
+	dw	drvri
+	db	27
+	dw	drvesc
+	db	0
+drfjmp:	db	01eh
+	dw	drfup
+	db	01fh
+	dw	drfdow
+	db	01dh
+	dw	drflef
+	db	01ch
+	dw	drfri
+	db	27
+	dw	drfesc
+	db	0c0h
+	dw	drmkey
+	db	0c1h
+	dw	drmkey
+	db	0c2h
+	dw	drmkey
+	db	0c3h
+	dw	drmkey
+	db	0c4h
+	dw	drmkey
+	db	11
+	dw	drmhom
+	db	0
+blkjmp:	db	01eh
+	dw	blkup
+	db	01fh
+	dw	blkdow
+	db	01dh
+	dw	blklef
+	db	01ch
+	dw	blkri
+	db	32
+	dw	blksel
+	db	27
+	dw	blkesc
+	db	0
+drbdat:	db	01100000b,00000000b,00000000b,00000000b,00000000b,00000000b
+	db	00001100b,00000000b,00000000b,00000000b,00000000b,00000000b
+	db	00000001b,10000000b,00000000b,00000000b,00000000b,00000000b
+	db	00000000b,00110000b,00000000b,00000000b,00000000b,00000000b
+	db	00000000b,00000110b,00000000b,00000000b,00000000b,00000000b
+	db	00000000b,00000000b,11000000b,00000000b,00000000b,00000000b
+	db	00000000b,00000000b,00011000b,00000000b,00000000b,00000000b
+	db	00000000b,00000000b,00000011b,00000000b,00000000b,00000000b
+	db	00000000b,00000000b,00000000b,01100000b,00000000b,00000000b
+	db	00000000b,00000000b,00000000b,00001100b,00000000b,00000000b
+	db	00000000b,00000000b,00000000b,00000001b,10000000b,00000000b
+	db	00000000b,00000000b,00000000b,00000000b,00110000b,00000000b
+	db	00000000b,00000000b,00000000b,00000000b,00000110b,00000000b
+	db	00000000b,00000000b,00000000b,00000000b,00000000b,11000000b
+	db	00000000b,00000000b,00000000b,00000000b,00000000b,00011000b
+drmhmd:	db	020h,005h,050h,005h,0c0h,001h
+
+;	samples adressen
+
+smpadd:	dw	00000h,003ffh	;1
+	dw	00400h,007ffh	;2
+	dw	00800h,00bffh	;3
+	dw	00c00h,00fffh	;4
+	dw	01000h,013ffh	;5
+	dw	01400h,017ffh	;6
+	dw	01800h,01bffh	;7
+	dw	01c00h,01fffh	;8
+	dw	00000h,007ffh	;9
+	dw	00800h,00fffh	;10
+	dw	01000h,017ffh	;11
+	dw	01800h,01fffh	;12
+	dw	00000h,00fffh	;13
+                dw    01000h,01fffh     ;14
+
+
+
+einde:	end
+
+
+          

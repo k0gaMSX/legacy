@@ -1,0 +1,83 @@
+CDPATH                                                       [Nieuw]
+------
+
+Formaat:     CDPATH [[+|-] [d:]pad [[d:]pad [[d:]pad...]]]
+
+Doel:        Toont of verandert het directory zoekpad.
+
+Gebruik:     Als er  niets achter  CDPATH wordt opgegeven, dan wordt 
+        het  huidige zoekpad  getoond, elk  pad gescheiden  door een 
+        punt-komma (';').
+
+             Als  er  geen +  of -  wordt opgegeven,  dan wordt  het 
+        zoekpad ingesteld op de opgegeven lijst met padnamen. Een al 
+        bestaand zoekpad wordt daardoor gewist.
+
+             Als er  een -  wordt opgegeven  voor de  lijst met pad- 
+        namen,  dan wordt elke padnaam uit deze lijst verwijderd uit 
+        het huidige  zoekpad. Als  ‚‚n van deze padnamen niet in het 
+        zoekpad voorkomt, dan wordt een foutmelding gegeven.
+
+             Als  er  een   +  wordt  opgegeven  voor  de lijst  met 
+        padnamen,  dan  wordt  elke  padnaam  uit deze  lijst eerst 
+        verwijderd  uit het  huidige zoekpad,  als deze  bestaat, en 
+        wordt  dan  aan het  einde van  het zoekpad  toegevoegd. Dit 
+        maakt het  mogelijk om  de volgorde  van de  padnamen in het 
+        zoekpad  te veranderen en om nieuwe padnamen aan het huidige 
+        zoekpad toe te voegen.
+
+             De  + optie kan ook gebruikt worden om het zoekpad lan- 
+        ger te  maken dan  met ‚‚n  opdracht kan  worden opgeven. De 
+        maximale  lengte van  het zoekpad is 255 tekens, terwijl een 
+        commando maar uit 127 tekens mag bestaan.
+
+             Wanneer er van directory wordt gewisseld, dan wordt het 
+        pad van  links naar  rechts onderzocht.  De padnamen  in het 
+        zoekpad  dienen volledig  opgegeven te  worden, te  beginnen 
+        vanuit de  root directory.  Ook de drive moet opgegeven wor- 
+        den. Als dit niet het geval is, dan kan de betekenis van het 
+        zoekpad  veranderen wanneer  er van drive of directory wordt 
+        gewisseld.
+
+             Het  zoekpad wordt  bewaard als  environment item  (zie 
+        HELP ENV  voor Environment  Items), en  kan daarom ook inge- 
+        steld worden met de SET opdracht.
+
+
+Voorbeelden:
+
+        CDPATH E:\UTILS\ E:\TED\TEXT\MISC\
+
+             Als  er nu  een directory wordt opgegeven (bijvoorbeeld 
+        met de  CD, CDD  of CHDIR opdracht), zal eerst op de huidige 
+        drive  in de  huidige directory  gezocht worden daarna in de 
+        UTILS directory  in de root directory van drive E: en dan in 
+        de directory TED\TEXT\MISC vanaf de root directory van drive 
+        E:, in die volgorde.
+
+        CDPATH
+        ; E:\UTILS\; E:\TED\TEXT\MISC\
+
+             Er  waren geen  parameters gegeven, dus alleen het hui- 
+        dige zoekpad wordt getoond.
+
+        CDPATH +A:\COM; A:\BAT
+
+             De directory's A:\COM en A:\BAT worden aan het eind van 
+        het zoekpad toegevoegd.
+
+        CDPATH
+        ; E:\UTILS\; E:\TED\TEXT\MISC\; A:\COM; A:\BAT
+
+             Het nieuwe zoekpad wordt getoond.
+
+        CDPATH - E:\UTILS\, E:\TED\TEXT\MISC\
+
+             De directory's E:\UTILS\ en E:\TED\TEXT\MISC\ worden nu 
+        uit het zoekpad verwijderd.
+
+        CDPATH
+        ; A:\COM; A:\BAT
+
+             Het nieuwe zoekpad wordt getoond.
+

@@ -1,0 +1,50 @@
+END                                                          [Nieuw]
+---
+
+Formaat:     END
+
+Doel:        Be‰indigt een batch bestand.
+
+Gebruik:     Als  het einde  van een batch bestand is bereikt, wordt 
+        er teruggekeerd  naar MSX-DOS.  De END  opdracht kan  echter 
+        overal  in het  batch bestand worden opgenomen om voortijdig 
+        naar MSX-DOS terug te keren.
+
+             De foutmelding '*** Unrecognized command' wordt gegeven 
+        wanneer END is opgegeven in een opdrachtregel of in een .BAT 
+        bestand.
+
+             Zie ook HELP GOSUB en HELP RETURN.
+
+
+Voorbeelden:
+
+             Het  volgende voorbeeld  werkt alleen  in als  .BTM be- 
+        stand.
+
+        ECHO Dit is de eerste regel
+        GOSUB ~label1
+        ECHO Dit is de derde regel
+        END
+        ~label2
+        ECHO Dit is de tweede regel
+        RETURN
+        ~label1
+        GOSUB ~label2
+        RETURN
+
+        Dit is de eerste regel
+        Dit is de tweede regel
+        Dit is de derde regel
+
+             Eerst werd  de tekst  "Dit is de eerste regel" getoond. 
+        Daarna  gaat  het  batch  bestand  verder met  de subroutine 
+        "~label1",  die weer de subroutine "~label2" aanroept, zodat 
+        de tekst  "Dit is de tweede regel" werd getoond. Daarna werd 
+        een RETURN gevonden die er voor zorgde dat de opdracht na de 
+        opdracht,  GOSUB "~label2",  verder ging. Daar werd ook weer 
+        een RETURN  als opdracht  gevonden, waardoor hij terugkeerde 
+        na  de opdracht, GOSUB "~label1". Hier werd "Dit is de derde 
+        regel" op het scherm getoond. Daarna wordt het batch bestand 
+        be‰indigd en wordt er teruggekeerd naar MSX-DOS.
+

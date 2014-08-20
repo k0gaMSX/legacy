@@ -1,0 +1,84 @@
+set filespec = %1
+if %@len[%filespec% ]% == 1 set filespec = *.*
+if %@right[%filespec%,1]% == \ set filespec = %filespec%*.*
+iff %@mid[%@parse[%filespec%]%,2,2]% == 00
+  then if not %@instr[%@fileattr[%filespec%]%Q,D]% == 0 set filespec = %filespec%\*.*
+endiff
+set drive = %@drive[%filespec% ]%
+echos  Volume in drive %drive%
+iff %@len[%@label[%drive%]% ]% == 1
+  then echo  has no name
+  else echo  is %@label[%drive%]%
+endiff
+set direc = %@path[%@full[%filespec%]%]%
+if not %@right[%direc%,2]% == :\ set direc = %@left[%direc%,-1]%
+echo  Directory of %direc%
+echo
+set direc =
+set file = %@ffirst[%filespec%]%
+~NewFile
+set ffile = %@path[%filespec%]%%file%
+if %@len[%file% ]% == 1 goto ~NoMoreFiles
+echos %@name[%file%]% %@ext[%file%]%
+echos "  "
+set attr = %@fileattr[%ffile%]%
+iff %@len[%attr% ]% == 1
+  then echos ----
+       set attr = Q
+endiff
+if %attr% == Q goto ~PrintLength
+set attrib = A
+gosub ~PrintAttribute
+set attrib = S
+gosub ~PrintAttribute
+set attrib = H
+gosub ~PrintAttribute
+set attrib = R
+gosub ~PrintAttribute
+set attrib =
+~PrintLength
+echos "  "
+iff %@instr[%attr%,D]% == 0
+  then echos %@right[         %@filesize[%ffile%,b]%,9]%
+  else echos "  <dir>  "
+endiff
+set attr =
+echos "  "
+echo %@filedate[%ffile%]%  %@filetime[%ffile%]%
+set file = %_fnext%
+if not %@len[%file% ]% == 1 goto ~NewFile
+~NoMoreFile
+set file =
+set ffile =
+set filespec =
+set size = %@filetotal[b]%
+set unit = B
+iff %@len[%size%]% gt 4
+  then set size = %@filetotal[k]%
+       set unit = K
+endiff
+iff %@hex[%size%]% gt 03FF
+  then set size = %@filetotal[k]%
+       set unit = K
+endiff
+echos %@right[        %size%,8]%
+iff %unit% == B
+  then echos " bytes" in %_filecount%
+  else echos K in %_filecount%
+endiff
+iff %_filecount% == 1
+  then echos " file     "
+  else echos " files    "
+endiff
+echo %@diskfree[%drive%,k]%K free
+set drive =
+set size =
+set unit =
+end
+~PrintAttribute
+iff %@instr[%attr%,%attrib%]% == 0
+  then echos -
+  else echos %@lower[%attrib%]%
+endiff
+return
+

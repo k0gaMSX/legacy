@@ -1,0 +1,201 @@
+BATCH BESTANDEN                                         [Uitgebreid]
+---------------
+
+             Wanneer  een opdracht  is gegeven aan MSX-DOS en het is 
+        niet ‚‚n van de de interne opdrachten, dan wordt een bestand 
+        gezocht met  die naam en met de extensie COM, BAT of BTM, of 
+        met elke andere opgegeven uit te voeren extensie. Indien het 
+        niet  wordt gevonden  in de  huidige directory dan wordt het 
+        huidige zoekpad  afgezocht (zie  HELP PATH). Als een COM be- 
+        stand  wordt gevonden, dan wordt dit geladen en gestart. Als 
+        een BAT  of BTM  bestand wordt  gevonden, dan zal MSX-DOS de 
+        uitvoering beginnen van een batch bestand. Als een programma 
+        met een uit te voeren extensie is gevonden, dan zal de over- 
+        eenkomstige opdracht worden uitgevoerd.
+
+             Een batch  bestand is  een tekst bestand met als inhoud 
+        een  lijst van  opdrachten, en  deze opdrachten worden regel 
+        voor regel  gelezen uit  het bestand  en uitgevoerd alsof ze 
+        waren  getypt op  het toetsenbord.  Verscheidene MSX-DOS op- 
+        drachten zijn eigenlijk alleen bedoeld om gebruikt te worden 
+        in batch bestanden, zoals ECHO en PAUSE.
+
+             Er zijn  twee soorten  batch bestanden: met een BAT ex- 
+        tensie  en met  een BTM  extensie. Het enige verschil is dat 
+        een BTM  batch bestand  totaal in het geheugen wordt geladen 
+        voordat het  wordt uitgevoerd.  De maximale  grootte van een 
+        BTM  bestand is  16K. Er  wordt een  '*** Not enough memory' 
+        foutmelding gegeven  wanneer er  niet genoeg  geheugen is om 
+        het  batch bestand te laden, of als het batch bestand langer 
+        is dan 16K. Er zijn vier opdrachten die alleen werken in een 
+        .BTM bestand: GOTO, GOSUB, RETURN en END.
+
+             De GOTO  en GOSUB opdrachten hebben een label als para- 
+        meter.  De RETURN  opdracht kan  ook een label als parameter 
+        hebben. Een  label is  een string  van willekeurige  tekens. 
+        Omdat  er geen  bewerking plaats vindt op een label, blijven 
+        hoofden kleine letters bewaard. Een label moet altijd begin- 
+        nen met het '~' teken om het te kunnen onderscheiden van een 
+        normale opdracht.  Een CR/LF  wordt beschouwd  als het einde 
+        van  een label.  Een label mag overal staan in een batch be- 
+        stand, maar  het moet alleen op een regel staan. Er kan geen 
+        opdracht  achterstaan; de  opdracht wordt dan gezien als een 
+        deel  van  dat label  omdat een  label bijvoorbeeld  ook een 
+        spatie mag bevatten.
+
+             De  GOTO  en  GOSUB opdrachten  zoeken naar  het eerste 
+        label dat gelijk is aan het opgegeven label. Dus als er twee 
+        met  dezelfde naam  zijn, dan  wordt alleen het eerste label 
+        gevonden.
+
+             Na  het lezen  wordt een opdracht normaal gesproken di- 
+        rect  uitgevoerd.  Een  environment  item ECHO  kan aangezet 
+        worden (met  de opdracht  SET ECHO ON) om elke opdrachtregel 
+        op  het scherm  te tonen,  voordat die wordt uitgevoerd (zie 
+        HELP ENV  voor meer  informatie over  Environment Items). De 
+        opdrachtregel  wordt afgedrukt  nadat de % parameter vervan- 
+        ging (zie  verderop) heeft  plaats gevonden. De opdracht SET 
+        ECHO OFF zet dit weer af.
+
+             In  de opdrachtregel die een batch bestand start, mogen 
+        parameters achter de naam van het batch bestand gezet worden 
+        net als  bij elke  andere opdracht of extern programma. Deze 
+        parameters mogen overal in een batch bestand gebruikt worden 
+        door  %0 tot %255 op te geven. %1 is de eerste parameter, %2 
+        is de tweede, enz. %0 is de naam van het batch bestand zelf. 
+        De %  nummer wordt vervangen door de parameter uit de origi- 
+        nele  opdrachtregel, en  mag overal  in de opdrachtregel van 
+        een batch bestand staan. Ook kan %1& gebruikt worden om alle 
+        parameters door  te geven,  te beginnen  bij de  eerste. %2& 
+        wordt  vervangen door  alle parameters,  te beginnen  bij de 
+        tweede, enzovoort.  %& is  hetzelfde als  %1&. Om het eigen- 
+        lijke  % teken  te gebruiken  in een opdrachtregel, moet het 
+        teken twee  keer gebruikt  worden ('%%')  wat dan  vervangen 
+        wordt door ‚‚n enkel teken, of het % teken moet tussen enke- 
+        le ('%') of dubbele aanhalingstekens ("%") staan.
+
+             Als de uitvoering van een opdracht in een batch bestand 
+        wordt  onderbroken,  door  wat voor  reden dan  ook (meestal 
+        omdat de control-STOP of control-C toets werd ingedrukt) dan 
+        wordt de volgende tekst getoond:
+
+                  Terminate batch file (Y/N)?
+
+        Als  er een  'Y' als  antwoord wordt  gegeven, dan  wordt de 
+        uitvoering van  de rest  van het  batch bestand gestopt. Als 
+        dit  een 'N'  is, dan  wordt doorgegaan  met de volgende op- 
+        dracht in het batch bestand.
+
+             Als MSX-DOS  een opdracht heeft uitgevoerd in een batch 
+        bestand,  moet een  volgende opdracht  in het  batch bestand 
+        misschien van  disk gelezen  worden. Als de juiste disk niet 
+        in  de drive zit als dit gebeurt, dan wordt er een waarschu- 
+        wing getoond.  De volgende  waarschuwing verschijnt bijvoor- 
+        beeld als het batch bestand was gestart vanaf drive A:
+
+                  Insert batch file disk in drive A:
+                  Press any key to continue
+
+        Wanneer  nu de  juiste disk  in de drive wordt gedaan en een 
+        toets wordt ingedrukt, dan zal het batch bestand gewoon weer 
+        verder gaan.
+
+             Hieronder een  zeer simpel batch bestand, wat alleen de 
+        eerste paar parameters afdrukt.
+
+                  ECHO Parameter 0 = %0
+                  ECHO Parameter 1 = %1
+                  ECHO Parameter 2 = %2
+                  ECHO Parameter 3 = %3
+                  ECHO Alle parameters = %&
+
+             Als  dit MYBAT.BAT  wordt genoemd  dan zal  de opdracht 
+        MYBAT a b c het volgende resultaat geven.
+
+                  Parameter 0 = MYBAT
+                  Parameter 1 = a
+                  Parameter 2 = b
+                  Parameter 3 = c
+                  Alle parameters = a b c
+
+             Wanneer  MSX-DOS  voor  de eerste  keer gestart  wordt, 
+        wordt  er gezocht  naar een  speciaal batch  bestand genaamd 
+        AUTOEXEC.BAT en  zal dit starten als het wordt gevonden. Dit 
+        batch  bestand mag  alle MSX-DOS  opdrachten bevatten,  maar 
+        bevat normaal  gesproken alleen  configuratie opdrachten die 
+        maar  ‚‚n keer  hoeven worden uitgevoerd, zoals bijvoorbeeld 
+        het RAMDISK commando om een RAM disk aan te maken.
+
+             E‚n %  parameter wordt  doorgeven aan  AUTOEXEC.BAT als 
+        %1.  Dit is  de drive  waarvan MSX-DOS  gestart is en dat is 
+        alleen een drive letter gevolgd door een dubbele punt.
+
+             Een  ander speciaal  batch bestand  is REBOOT.BAT.  Dit 
+        wordt uitgevoerd  als MSX-DOS  opnieuw wordt  gestart na ge- 
+        bruik  van  een  andere  toepassing  (zoals  het  ingebouwde 
+        MSX-BASIC). Net als bij AUTOEXEC.BAT bestanden, wordt alleen 
+        de  %1 parameter  doorgegeven die  aangeeft van  welke drive 
+        MSX-DOS opnieuw werd gestart.
+
+             Meestal moet  een aantal  opdrachten uitgevoerd  worden 
+        elke  keer als MSX-DOS is gestart, en deze opdrachten worden 
+        in  een  REBOOT batch  bestand gezet.  Deze kan  dan gestart 
+        worden  vanuit  het AUTOEXEC  batch bestand  door dit  af te 
+        sluiten met  de opdracht  REBOOT %1.  Een voorbeeld  van een 
+        opdracht dat in een REBOOT batch bestand zou kunnen staan is 
+        de  PATH opdracht  om het zoekpad in te stellen. Wanneer het 
+        zoekpad ingesteld  wordt met  deze opdracht,  dan kan %1 ge- 
+        bruikt worden om aan te geven vanaf welke drive gestart is.
+
+             Wanneer een  opdracht in  een batch  bestand de naam is 
+        van  een ander  batch bestand,  dan wordt dat volgende batch 
+        bestand gestart  op de  normale manier. Wanneer het eindigt, 
+        dan  wordt teruggekeert naar MSX-DOS en niet naar het vorige 
+        batch bestand.  Batch bestanden  kunnen dus 'gekoppeld' wor- 
+        den.
+
+             Als het nodig is om batch bestanden te 'nesten', m.a.w. 
+        om  naar het eerste batch bestand terug te gaan, dan kan dit 
+        gedaan worden  met de COMMAND2 opdracht (see HELP COMMAND2), 
+        door  de naam van het tweede batch bestand als parameter mee 
+        te geven.  Wanneer het tweede batch bestand eindigt, zal het 
+        eerste  batch bestand  doorgaan op  de regel  na de COMMAND2 
+        opdracht.
+
+             Een typisch AUTOEXEC batch bestand is het volgende:
+
+                  ECHO AUTOEXEC wordt uitgevoerd
+                  RAMDISK 100
+                  RAMDISK
+                  COPY COMMAND2.COM H:\
+                  REBOOT %1
+
+             Een typisch REBOOT batch bestand is het volgende:
+
+                  ECHO REBOOT wordt uitgevoerd
+                  PATH H:\, %1\UTILS, %1\BATCH
+                  SET SHELL=H:\COMMAND2.COM
+                  SET TEMP=H:\
+                  H:
+
+             Wanneer het  AUTOEXEC batch bestand start, dan wordt de 
+        boodschap 'AUTOEXEC wordt uitgevoerd' afgedrukt, en er wordt 
+        een  RAM disk  aangemaakt van maximaal 100K. Een andere RAM- 
+        DISK opdracht  wordt dan gegeven die toont wat de werkelijke 
+        grootte  van de RAM disk is geworden. De COPY opdracht kopi- 
+        eert COMMAND2.COM  naar de  RAM disk  zodat snel  gestart of 
+        herstart kan worden. Tot slot wordt het REBOOT batch bestand 
+        gestart,  en de %1 parameter (de boot drive) wordt doorgege- 
+        ven.
+
+             Het  REBOOT  batch bestand  drukt een  boodschap af  en 
+        stelt een  zoekpad in.  Het eerste  item in het pad verwijst 
+        naar  de RAM disk die was aangemaakt door het AUTOEXEC batch 
+        bestand, en de andere items verwijzen naar directory's op de 
+        disk waar  MSX-DOS van  was gestart  (m.a.w. %1).  Het SHELL 
+        environment item wordt ingesteld zodat COMMAND2.COM snel kan 
+        starten  op de  RAM disk, en het TEMP environment item wordt 
+        ingesteld  zodat  tijdelijke  'doorsluis'  bestanden gemaakt 
+        kunnen worden op de RAM disk. Tot slot wordt de RAM disk als 
+        standaard drive ingesteld.
+

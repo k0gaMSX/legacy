@@ -1,0 +1,320 @@
+TO                                                           [Nieuw]
+--
+
+Formaat:     TO gedeeltelijke_subdir_naam [/N] [/X|F|P|L]  (Ga naar)
+                  of
+             TO [d:] /S [/H]                           (Maak TO.LST)
+                  of
+             TO [d:]...                        (Ga terug op het pad)
+                  of
+             TO [d:]-n                         (Ga terug op het pad)
+                  of
+             TO [d:]\                        (Ga terug naar de root)
+                  of
+             TO [d:]directory_naam /M|C [/H]          (Maak een dir)
+                  of
+             TO [d:]directory_naam /D            (Verwijder een dir)
+                  of
+             TO [d:]oudenaam nieuwenaam /R         (Hernoem een dir)
+                  of
+             TO [d:]bron doel /V                 (Verplaats een dir)
+
+Doel:        Verandert  de  huidige  directory,  maakt,  verwijdert, 
+        hernoemt of verplaatst een directory.
+
+Gebruik:     TO is een uitgebreide Change Directory opdracht (verge- 
+        lijkbaar met  de CD of CHDIR opdracht) die de huidige direc- 
+        tory  veranderd naar  iedere willekeurige  andere directory, 
+        door maar een gedeeltelijke subdirectory naam op te geven.
+
+             De gedeeltelijke_subdir_naam  bestaat uit  ‚‚n of  meer 
+        tekens.  De huidige  directory wordt  de directory  die deze 
+        gedeeltelijke_subdir_naam bevat.
+
+             Als geen /N optie was opgegeven en meer dan ‚‚n gelijke 
+        naam  is gevonden,  dan wordt er een lijst getoond, met alle 
+        directory's die  de gedeeltelijke_subdir_naam bevatten. Kies 
+        ‚‚n  van deze directories door de juiste toets in te drukken 
+        of  laat  de huidige  directory ongewijzigd  door op  ESC te 
+        drukken. Wanneer meer dan vijftien directory's worden gevon- 
+        den, dan  zal de  zestiende keus 'more' zijn. Kies dit om de 
+        rest van de directory's te laten zien.
+
+             Als de  /X optie was opgegeven dan worden alleen direc- 
+        tory's  gevonden  die  exact overeenkomen  met de  opgegeven 
+        gedeeltelijke_subdir_naam.
+
+             De  /F optie kan gebruikt worden om directory's te vin- 
+        den die beginnen met de opgegeven gedeeltelijke_subdir_naam.
+
+             De /L  optie kan gebruikt worden om directory's te vin- 
+        den die eindigen met de opgegeven gedeeltelijke_subdir_naam.
+
+             De /N  optie kan  gebruikt worden om naar de eerste di- 
+        rectory  te gaan  die overeenkomt  met de gedeeltelijke_sub- 
+        dir_naam.
+
+             De /P  optie kan gebruikt worden om directory's te vin- 
+        den die de gedeeltelijke_subdir_naam bevatten.
+
+             De /S optie verzamelt op de huidige drive of de opgege- 
+        ven  drive alle sub-directory's en maakt een bestand genaamd 
+        TO.LST waar  al deze  sub-directory's in  staan. Wanneer  TO 
+        voor  de eerste  keer gebruikt  wordt, zal met deze opdracht 
+        begonnen  moeten  worden om  dit bestand  aan te  maken. Het 
+        programma  gebruikt  dit bestand  om naar  een directory  te 
+        gaan.
+
+             De /H  optie kan  worden opgegeven om te zorgen dat bij 
+        de /S optie ook naar verborgen directory's wordt gezocht.
+
+             Een environment  item genaamd TO_PATH wordt gebruikt om 
+        aan  te geven  in welke  directory of  drive TO  het bestand 
+        TO.LST moet  maken en  zoeken (zie HELP ENV). Dit kan desge- 
+        wenst  met met  de SET opdracht worden gewijzigd om naar een 
+        andere drive en/of directory te verwijzen.
+
+             Merk op  dat dit  een externe opdracht is, die van disk 
+        gelezen moet worden.
+
+
+Voorbeelden:
+
+        SET TO_PATH = A:\SETUP
+
+             Nu  zal TO.LST  gemaakt/gezocht/bijgewerkt worden in de 
+        directory SETUP in de root directory van drive A:.
+
+             Wanneer het  environment item  niet wordt  gevonden dan 
+        zal  het bestand  TO.LST gemaakt/gezocht  worden in  de root 
+        directory van de huidige drive of de opgegeven drive.
+
+             Een environment  item genaamd  TO_DRIVES wordt gebruikt 
+        om  aan te  geven op welke drives TO moet werken. Wanneer nu 
+        een  scan  wordt uitgevoerd  en dit  environment item  wordt 
+        gevonden, dan  zal de  opgegeven drive  worden genegeerd  en 
+        alle drives, opgegeven in het environment item, worden door- 
+        zocht.
+
+Voorbeeld:
+ 
+        SET TO_DRIVES = ABCD
+
+             Nu  zal bij  elke opdracht  aan TO  deze drives bekeken 
+        worden, tenzij er iets anders bij de TO opdracht wordt opge- 
+        geven.
+
+             Het  wordt  aanbevolen om  TO_DRIVES in  combinatie met 
+        TO_PATH te gebruiken.
+
+             Een  environment item  genaamd TO_INIT, met een maximum 
+        van tien tekens, kan gebruikt worden om sommige funkties van 
+        TO in  te stellen.  In deze  versie werkt  alleen het eerste 
+        teken,  alle andere  worden genegeerd.  Het eerste teken kan 
+        een X, F, L of P zijn en geeft aan welke optie als standaard 
+        moet worden  gebruikt. Zie voor de opties hierboven. Als het 
+        environment item TO_INIT niet wordt gevonden , dan zal de /P 
+        optie als standaard worden genomen.
+
+             Merk  op dat  wanneer een  /X, /F, /L of /P optie wordt 
+        opgegeven, deze  opgegeven optie wordt genomen in plaats van 
+        de optie opgegeven bij TO_INIT.
+
+Voorbeeld:
+ 
+        SET TO_INIT = X
+
+             Nu  zal bij de TO opdracht TO MEM alleen gezocht worden 
+        naar directory's  met exact  deze naam, dus alleen de direc- 
+        tory MEM komt in aanmerking.
+
+             Als  de expressie  ... is  opgegeven, inplaats  van een 
+        gedeeltelijke_subdir_naam, dan gaat de huidige directory een 
+        aantal directory's terug. Over het algemeen geeft het aantal 
+        punten minus ‚‚n het aantal directory's aan dat wordt terug- 
+        gegaan.
+
+             -n kan  ook gebruikt  worden om  een aantal directory's 
+        terug te gaan. n geeft aan hoeveel directory's er terug moet 
+        worden gegaan, en moet tussen 1 en 9 liggen.
+
+             \  kan gebruikt  worden om  naar root  directory van de 
+        huidige of opgegeven drive te gaan.
+
+             De /M optie kan gebruikt worden om een nieuwe directory 
+        opgegeven by  directory_naam te maken. De gemaakte directory 
+        wordt onmiddellijk toegevoegd aan het bestand TO.LST.
+
+             /C  is gelijk  aan /M.  Alleen wordt gelijk de gemaakte 
+        directory ook de huidige directory.
+
+             /H kan  opgegeven worden  om bij  de /M  optie of de /C 
+        optie een verborgen directory te maken.
+
+             De  /D optie kan gebruikt worden om een directory opge- 
+        geven bij  directory_naam te  verwijderen. De  directory zal 
+        ook onmiddellijk verwijderd worden uit het bestand TO.LST.
+
+             De /R optie kan gebruikt worden om een directory, opge- 
+        geven  bij oudenaam  te hernoemen naar nieuwenaam. De direc- 
+        tory zal onmiddellijk hernoemd worden in het bestand TO.LST.
+
+             De /V  optie kan gebruikt worden om een directory opge- 
+        geven  bij bron  te verplaatsen  naar doel. De directory zal 
+        ook onmiddellijk worden verplaatst in het bestand TO.LST.
+
+             Globale bestandsnaam  tekens (?  * )  zijn niet  toege- 
+        staan,  alleen bij  nieuwenaam, bij gebruik van de /R optie. 
+        Wanneer ze  gebruikt worden  zal de oudenaam gebruikt worden 
+        voor het opvullen van de open tekens van de nieuwe bestands- 
+        naam.
+
+             WAARSCHUWING:  Wanneer  andere  programma's  worden ge- 
+        bruikt  voor  het  verwijderen  van subdirectory's,  zal het 
+        bestand TO.LST  niet meer  juist zijn. Gebruik TO /S voordat 
+        TO  gebruikt wordt  om van  directory te  wisselen, het  zou 
+        kunnen  gebeuren  dat de  computer blijft  hangen! (Dit  kan 
+        alleen gebeuren als met een ander programma een subdirectory 
+        verwijderd wordt  en daarna  TO gebruikt  wordt om  een sub- 
+        directory te verwijderen.)
+
+             Merk op  dat TO  een externe opdracht is, en daarom ge- 
+        start moet worden van disk.
+
+Voorbeelden:
+
+        TO /S
+        Scanning...
+
+             Een zoektocht naar alle directory's wordt gestart op de 
+        drives  opgegeven  door  het environment  item TO_DRIVES  en 
+        daarna  gezet in  een bestand  TO.LST in  de drive/directory 
+        opgegeven door  het environment  item TO_PATH, of in de root 
+        directory van de huidige drive.
+
+        TO B: /S/H
+        Scanning...
+
+             Een  zoektocht naar  alle directory's  wordt gestart op 
+        drive B:  waarbij ook  hidden directory's  worden gezocht en 
+        daarna  gezet in  een bestand  TO.LST in  de drive/directory 
+        opgegeven door  het environment  item TO_PATH, of in de root 
+        directory van drive B:.
+
+        TO LP
+
+             De huidige  directory wordt  veranderd in de eerste di- 
+        rectory die gevonden wordt, die de tekens LP bevat, bijvoor- 
+        beeld  de HELP  directory. Wanneer  de HELP directory op een 
+        ander drive  dan de  huidige drive staat, dan zal de huidige 
+        drive  ook worden veranderd naar de drive die HELP directory 
+        bevat.
+
+        TO B:TS
+
+             De huidige drive wordt nu drive B: en de huidige direc- 
+        tory  wordt veranderd  in de  eerste directory op die drive, 
+        die de  tekens TS  bevat, bijvoorbeeld de \MEMMAN\TSR direc- 
+        tory.
+
+        TO 123
+
+             Er  werd geen directory gevonden met de tekens 123, dus 
+        er werd niets veranderd.
+
+        TO 123
+        *** File for TO not found
+
+             Het  bestand TO.LST  werd niet gevonden in de directory 
+        opgegeven bij het environment item TO_PATH, het was ook niet 
+        te vinden in de root directory van de huidige drive.
+
+        TO E
+        Choose one of these directories:
+
+        A  -  A:\HELP
+        B  -  A:\MEMMAN
+        C  -  A:\TED
+        D  -  A:\TED\TEXT
+        E  -  B:\MODEM
+
+             Meer dan  ‚‚n directory werd gevonden, dus er wordt een 
+        lijst  getoond met  alle directory's  die de tekens bevatten 
+        die opgegeven  zijn bij  de gedeeltelijke_subdir_naam.  Kies 
+        ‚‚n  van deze directory's door op de juiste toets te drukken 
+        of druk op ESC om in de huidige directory te blijven.
+
+        TO E /N
+
+             Meer dan  ‚‚n directory werd gevonden, maar de /N optie 
+        was  opgegeven, dus  de huidige directory werd HELP, dat was 
+        de eerste directory met een 'E'.
+
+        TO ....
+
+             De  huidige  directory  zal drie  sub-directory's terug 
+        gaan.  Merk op dat TO . and TO .. gelijk is aan CD . respec- 
+        tievelijk CD ..
+
+        TO -3
+
+             Deze opdracht  is gelijk  aan de voorgaande TO .... op- 
+        dracht,  de huidige directory zal drie sub-directory's terug 
+        gaan.
+
+        TO \NEWDIR /M
+        TO - directory created; database updated
+
+             Een nieuwe directory genaamd NEWDIR wordt gemaakt in de 
+        root directory  van de  huidige drive.  Daarna wordt de naam 
+        NEWDIR  geplaatst  in  de  directory-lijst  in  het  bestand 
+        TO.LST.
+
+        TO B:NEWDIR /C/H
+        TO - directory created; database updated
+
+             Een  nieuwe  verborgen  directory genaamd  NEWDIR wordt 
+        gemaakt  in de  huidige directory van drive B:. Daarna wordt 
+        naam NEWDIR  geplaatst in  de directory-list  in het bestand 
+        TO.LST, de huidige drive wordt veranderd in B: en de huidige 
+        directory wordt veranderd in \NEWDIR.
+
+        TO E:NEWDIR /C
+        TO - directory created
+
+             Een nieuwe directory genaamd NEWDIR wordt gemaakt in de 
+        huidige directory  van drive  B:. De  naam NEWDIR  werd niet 
+        toegevoegd  aan de  directory-lijst in  het bestand  TO.LST, 
+        omdat drive  E: niet  was opgegeven bij het environment item 
+        TO_DRIVES.
+
+        TO \NEWDIR /D
+        TO - directory deleted; database updated
+
+             De  directory genaamd  NEWDIR wordt  verwijderd uit  de 
+        root directory  van de  huidige drive.  Daarna wordt de naam 
+        NEWDIR verwijderd uit directory-lijst in het bestand TO.LST.
+
+        TO A:\TESTDIR /D
+        *** Directory not found in list
+
+             De  directory TESTDIR in de root directory van drive A: 
+        wordt verwijderd, maar de directory TESTDIR werd niet gevon- 
+        den  in  het bestand  TO.LST, dus  het bestand  TO.LST bleef 
+        onveranderd.
+
+        TO A:\MEMMAN\PROGS TSR /R
+        TO - directory renamed; database updated
+
+             De directory  PROGS in de directory \MEMMAN op drive A: 
+        wordt  veranderd in TSR. Het bestand TO.LST wordt bijgewerkt 
+        met de nieuwe naam van die directory.
+
+        TO \TED\TEXT\MANUALS \TED /V
+        TO - directory moved; database updated
+
+             De directory  MANUALS in  de directory  \TED\TEXT op de 
+        huidige  drive wordt  verplaatst naar de directory \TED. Het 
+        bestand TO.LST  wordt bijgewerkt  met de  nieuwe locatie van 
+        die directory.
+

@@ -1,0 +1,68 @@
+INKEY                                                        [Nieuw]
+-----
+
+Formaat:     INKEY [string] %%envnaam
+
+Doel:        Leest een enkele toetsdruk en plaatst deze in een envi- 
+        ronment variabele.
+
+Gebruik:     Als  een string  is opgegeven  dan zal  deze worden ge- 
+        toond. Daarna  wordt er  gewacht op  een toetsindruk en deze 
+        wordt  opgeslagen in  het environment  item, waarvan de naam 
+        werd opgegeven door envnaam.
+
+             Merk op dat de environment item naam moet worden vooraf 
+        gegaan door  twee procent  tekens en  NIET tussen de procent 
+        tekens moet staan.
+
+
+Voorbeelden:
+
+        INKEY %%KEY
+
+             Een  toetsdruk wordt  gelezen en geplaatst in een envi- 
+        ronment item KEY.
+
+        INKEY Toets keus: %%KEY
+
+             De tekst  'Toets keus'  werd getoond  en de  ingedrukte 
+        toets wordt geplaatst in het environment item KEY.
+
+        Onderstaand een batch programma met de naam KEUZE.BAT.
+
+        MODE 80
+        SET TEKST = MAAK KEUZE 1,2,3,4
+        ECHO
+        ECHO                          KEUZE BAT PROGRAMMA
+        ECHO                          -------------------
+        ECHO                             1 MULTI MENTE
+        ECHO                             2 HD MENU
+        ECHO                             3 DOS 2.4
+        ECHO                             4 BASIC
+        ECHO                          -------------------
+        ECHO
+        ECHOS                          ^INKEY %TEKST% %%KEY
+        SET TEKST =
+        ECHO
+        IF %KEY% == 1 THEN MM
+        IF %KEY% == 2 THEN HD-MENU
+        IF %KEY% == 3 THEN EXIT
+        IF %KEY% == 4 THEN BASIC
+        ECHO Alleen 1 tot 4 kiezen!
+        ECHO
+        PAUSE
+        KEUZE.BAT
+
+             Eerst  wordt het  scherm op  de juiste breedte gezet en 
+        daardoor wordt  automatisch ook  een CLS  uitgevoerd. Daarna 
+        wordt  er een  environment item  TEKST gemaakt met de inhoud 
+        'MAAK  KEUZE  1,2,3,4'.  Met  ECHO worden  de keuzes  op het 
+        scherm gezet  en met  ECHOS wordt  de INKEY  opdracht met de 
+        variabele  'TEKST' op zijn plaats gezet omdat de string ach- 
+        ter  INKEY  geen spaties  vooraf op  het scherm  zet. Daarna 
+        worden de  IF regels doorlopen en afhankelijk welke toets is 
+        ingedrukt  zal er  een actie  worden ondernomen.  Is er  een 
+        verkeerde toets  ingedrukt volgt een melding en wordt gepau- 
+        zeerd, waarna het batch bestand opniew gestart wordt.
+
+

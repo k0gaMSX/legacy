@@ -1,0 +1,94 @@
+COMMAND2                                               [Ongewijzigd]
+--------
+
+Formaat:     COMMAND2 [opdracht]
+
+Doel:        Start de commando-interpreter.
+
+Gebruik:     Opdracht  is  iedere  opdracht  die normaal  kan worden 
+        getypt na  de prompt  (zoals de  opdrachten in deze handlei- 
+        ding).
+
+             COMMAND2  is  de  naam  van de  commando-interpreter op 
+        disk, en  kan worden  uitgevoerd als een normale externe op- 
+        dracht van disk. Normaalgesproken wordt hij ‚‚n keer geladen 
+        door MSXDOS2.SYS, en dit geeft de mogelijkheid alle opdrach- 
+        ten uit deze handleiding te gebruiken.
+
+             Gevorderde  gebruikers  echter,  kunnen een  andere op- 
+        dracht interpreter willen laden om verschillende redenen. De 
+        tweede  COMMAND2.COM  kan  bijvoorbeeld een  nieuwere versie 
+        zijn  met  meer  mogelijkheden. Als  externe programma's  de 
+        mogelijkheid  hebben programma's  te laden en uit te voeren, 
+        en sommige  uitgebreide programma's hebben die mogelijkheid, 
+        dan  kan dat  programma COMMAND2.COM laden en vervolgens kan 
+        elke MSX-DOS  opdracht worden  uitgevoerd. Als  COMMAND2.COM 
+        wordt  be‰indigd met EXIT dan zal er weer naar het originele 
+        programma worden teruggekeerd.
+
+             Als  er een  opdracht als  parameter is gegeven, zal de 
+        tweede  COMMAND2.COM   de  normale   prompt  geven   (zonder 
+        AUTOEXEC.BAT  en REBOOT.BAT  uit te voeren) en wachten op de 
+        volgende opdracht.  Het kan  be‰indigd worden en terug keren 
+        naar  de originele commando-interpreter als de EXIT opdracht 
+        is  gegeven  (zie HELP  EXIT). Als  er een  foutmelding door 
+        gegeven wordt  aan de  EXIT opdracht,  zal de  originele op- 
+        dracht   interpreter  die   ontvangen  en,   in  geval   van 
+        MSXDOS2.SYS en  COMMAND2.COM, een  foutmelding op het scherm 
+        geven (zie HELP ERRORS over fouten).
+
+             Als  er wel  een opdracht  gegeven wordt als parameter, 
+        dan zal die worden uitgevoerd alsof het normaal ingetypt was 
+        op de  opdrachtregel. De opdracht kan een interne of externe 
+        opdracht  zijn, een  alias, batch bestand of een uitvoerbare 
+        extensie. Na de uitvoering van de opdracht, zal COMMAND2.COM 
+        onmiddellijk terug  gaan naar  de originele  opdracht inter- 
+        preter.
+
+             Op  deze   manier  kan   het  gebruik  van  een  tweede 
+        COMMAND2.COM  opdracht met een batch file naam als opdracht, 
+        gebruikt worden  om batch  bestanden te nesten in plaats van 
+        te 'koppelen' (zie HELP BATCH).
+
+             Als  COMMAND2.COM  wordt  uitgevoerd,  dan  worden alle 
+        environment  items bewaard  en weer  hersteld als  het wordt 
+        be‰indigd. Het definieert alleen de standaard items, als die 
+        niet al  gedefineerd zijn. Dus de tweede COMMAND2.COM krijgt 
+        de  instellingen van  de eerste. Alle wijzigingen die worden 
+        gemaakt  terwijl  de tweede  COMMAND2.COM uitgevoerd  wordt, 
+        gelden alleen  voor die COMMAND2.COM en gaan verloren als er 
+        wordt  teruggekeerd naar  de eerste  COMMAND2.COM. De tweede 
+        COMMAND2.COM krijgt  ook de  aliaslijst van  de eerste  mee. 
+        Wijzigingen  die hierin worden aangebracht terwijl de tweede 
+        COMMAND2.COM aktief is, worden ook meegegeven aan de eerste.
+
+             Elke extra  versie van  COMMAND2.COM gebruikt geheugen- 
+        ruimte,  die weer  vrijgemaakt wordt  als COMMAND2.COM klaar 
+        is. Dit  hangt gedeeltelijk  af van  het aantal  environment 
+        items, maar is normaal gesproken zo'n 1,5k.
+
+             Als COMMAND2.COM een extern programma uitvoert, kan het 
+        zijn  dat het  zichzelf moet  herladen van  disk, omdat  het 
+        programma geheugenruimte  gebruikt die ook door COMMAND2.COM 
+        gebruikt  wordt. In  dat geval  wordt het  SHELL environment 
+        item gebruikt om te bepalen waar het bestand staat dat nodig 
+        is om  zichzelf te  herladen (zie  HELP ENV).  Indien het de 
+        eerste keer geladen is van het COMMAND2.COM bestand op disk, 
+        is SHELL gezet op dat bestand.
+
+
+Voorbeelden:
+
+     COMMAND2
+     A:\>
+
+             Een andere  kopie van  COMMAND2 wordt  geladen en  laat 
+        zijn  gewone prompt zien. EXIT keert terug naar de originele 
+        prompt.
+
+     COMMAND2 FILE.BAT
+
+             Normaal in  een batch  file. Het bestand FILE.BAT wordt 
+        uitgevoerd,  en als het afgelopen is, wordt de huidige batch 
+        file weer hervat met de volgende opdracht.
+
