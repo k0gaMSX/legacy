@@ -1,0 +1,1179 @@
+
+De BIOS ondersteund nu ook Moonblaster Moonsound Music, hiervoor is er wel 16kB 
+geheugen meer nodig, totaal is dan 128kB.
+De MWK-sample load routine is af, maar de BIOS-functie Get_File ondersteund nog 
+maar files tot 64kB. Oplossing tool geschreven die MWK-file in stukken van 48kB 
+kapt, deze kunnen wel worden ingelezen.
+De sound-fx-routines zijn af, behalve die voor de Moonsound (af maar nog niet 
+getest).
+De Moonsound files moeten niet meer per se de extensie .MWM/.MWK/.MFM hebben 
+omdat deze files standaard al een soort van identificatie-header hebben. (.MBM 
+en .MBK files hebben zo geen header)
+
+!!! .MBK en .MWK moeten (mogen) niet meer zelf ingelezen worden omdat de 
+replayer routines zelf uitzoeken welke drumkit bij welk muziekstuk hoort, en 
+deze automatisch inlezen. (Dit staat standaard in de muziek-file vermeld, als 
+er geen drumkit nodig is staat er "NONE"). Misschien moet er soms toch nog wel 
+zelf een drumkit ingelezen worden ivm de sound-fx.
+
+!!! Bij BIOS-versies die zowel .MBM als .M(W/F)M files ondersteunen moet er 
+altijd de Moonsound file opgegeven worden om in te lezen. Als er geen Moonsound 
+aanwezig is (of als deze uitgeschakeld is) zal de BIOS zelf de overeenkomstige 
+.MBM file nemen (de extensie wordt veranderd).
+
+Bij het opstarten van de BIOS kunnen bepaalde toetsen ingedrukt worden om 
+bepaalde onderdelen van de BIOS uit te schakelen. (vergemakkelijkt debuggen)
+  F1  -> MSX-AUDIO wordt niet gebruikt
+  F2  -> MSX-MUSIC wordt niet gebruikt
+  F3  -> MoonSound wordt niet gebruikt om MSX-AUDIO te emuleren
+  F4  -> De oude replayer (.MBM) wordt gebruikt ipv de MoonSound (.MWM .MFM
+	 versie)
+  F5  -> Er wordt helemaal geen replayer geladen (dus ook geen sound-fx)
+ STOP -> Het cache-systeem is uitgeschakeld
+ 'NO' -> Turbo-R lijkt voor BIOS gewone MSX2
+Zolang er een toets ingedrukt is, zal de BIOS niet overschakelen naar 
+grafische-mode maar wachten totdat alle knoppen terug los zijn, zodat je de 
+kans krijgt om alle teksten te lezen.
+
+Er moet nog een beter systeem komen voor het file-cache'n, maar liever niet met 
+prioriteiten gekoppeld aan de extensie, omdat de extensie .MB(M/K) vast is.
+
+
+
+
+
+;-----------------------------------------------------------------------------;
+;									      ;
+;		  C T N G  -  B I O S		 V # 1 . 4		      ;
+;									      ;
+;-----------------------------------------------------------------------------;
+
+
+Deze BIOS was eerst alleen bedoelt voor CALCULUS. Achteraf bleek deze ook 
+handig te zijn voor allerlei andere programma's. De BIOS is dan ook al een 
+aantal keren aangepast. Het gevolg hiervan is dat er hier en daar enkele 'rare' 
+of overbodige funkties in zitten. Het is niet de bedoeling dat 2 opeenvolgende 
+versies van de BIOS volledig upwards-compatibel blijven. Er komen natuurlijk 
+nieuwe functies bij maar er kunnen ook functies wegvallen of een iets andere 
+werking krijgen! Waarschijnlijk zullen in een van de volgende versies de 
+'intere variablen' (vb. ivm cash) uit de 'public-list' verdwijnen.
+
+
+De belangrijkste voordelen van de BIOS zijn o.a.
+  - memory routines:
+     ondersteund   MemMan / DOS2 mapper support / eigen routines
+  - (veel) snellere interupt afhandeling
+     ROM-BIOS wordt weggeschakeld en vervangen door eigen interupt-routines
+      - palet-fade-routine
+      - music-replayer
+      - keyboard-afhandeling met controle op 'speciale' toetsen
+	  F1-F5        : voor music
+	  SELECT       : 50/60Hz
+	  yes/no       : R800/Z80  (Turbo-R)
+	  SHIFT+CURSOR : set adjust
+      - aparte interupt-hooks voor V_BLANK en alle andere interupts
+      - VDP status register S#0 moet NIET 0 zijn (mag natuurlijk) tijdens 
+	interupt. Het wordt wel tijdelijk geselecteerd en achteraf wordt het 
+	status register vanuit (#FFEE) terug geselecteerd.
+      - mogelijkheid voor een 'auto-key-besturing'  (vb. CALCULUS)
+      - eenvoudigere disk-routines: er is enkel een pointer naar de filename 
+	(11 bytes) en een CALL nodig In de header van de file zelf staat wat er 
+	met de file moet gebeuren (VRAM / RAM / decomprimeren). Behalve bij 
+	muziek-files (.MBM / .MBK) om compatibel te kunnen blijven met de 
+	normale MoonBlaster-files hebben deze geen speciale header, er wordt 
+	onderscheid gemaakt dmv de extensie. (Formaat van de headers volgt 
+	later)
+      - Automatisch cashen van ingelezen files.
+	 soort van prioriteiten bij cashen (experimenteel, voor PUZ-BOB) dus 
+	 belangrijkere files hebben een grotere kans dat ze in het 
+	 cash-geheugen blijven zitten.
+      - Automatisch afhandelen van disk-errors
+      - Kan werken met LIB-files (library). Alle kleine files worden 
+	'samengedrukt' in een grote file. Voordelen: snellere laadtijd en 
+	minder diskverspilling aan cluster-openingen. Deze LIB-files kunnen 
+	eventueel gemixed worden met gewone files (vb. music-files bij DV)
+      - Routines zijn erop voorzien (maar kunnen het nu nog niet) om tot 16 
+	disks te gaan.
+      - De LIB-file wordt gezocht in dezelfde sub-dir als waaruit de BIOS is 
+	opgestart (is niet altijd de huidige dir, DOS2 dmv SET PATH ..)
+  - Systeem instellingen van net voor het opstarten (screen-mode, kleuren...) 
+    worden zoveel mogelijk terug hersteld na het verlaten van de BIOS (wel 
+    onmogelijk om een veranderd palet terug te herstellen)
+  - Er is getracht de music-CALLs zoveel mogelijk chip-onafhankelijk te maken 
+    dus zelfde CALLs voor MUSIC/AUDIO/OPL4.
+  - Door de nieuwe BIOS-calls zouden de meeste van de oude ROM-BIOS-calls 
+    overbodig moeten zijn (dit was toch de bedoeling). Ik denk dat ik CALCULUS 
+    en ook in DV geen enkele ROM-BIOS-calls meer gebruikt zijn.
+  - Mogelijkheid om op te starten vanuit boot-sector, vanuit DOS vanaf disk of 
+    vanuit DOS vanop hard-disk.
+
+
+
+'SPELREGELS' bij de BIOS
+
+ -geheugen gebruik:
+
+   - na de BIOS-instalatie staat deze in page-0 vanaf #0100 normaal gezien is 
+     heel page-0 voorzien voor de BIOS (zie verder)
+   - het is de bedoeling dat de prgramma's worden uitgevoert in page-1
+   - page-2 kan vrij gebruikt worden door de programma's (data-gebied)
+   - het gebruik van page-3 moet zoveel mogelijk vermeden worden, omdat afh van 
+     het aantal 'uitbreidingen' de 'grootte' van page-3 nogal kan varieren. 
+     Momenteel wordt page-3 gebruikt om het oorsprongkelijke tekst-scherm en de 
+     directory van de LIB-files in te bewaren. De BIOS kan eventueel wel 
+     aangepast worden zodat er toch een (klein) gedeelte in page-3 vrij is.
+
+   - normaal gezien heeft een programma maar 32kB voor zichzelf plus data soms 
+     is er echter meer nodig. Er kunnen dan nog 2 extra geheugen segmenten 
+     ingeschakeld worden in page-2 (of 1). Deze 2 segmenten worden gebruikt 
+     door de disk-routines, dus telkens de disk-routines worden gebruikt, gaat 
+     de inhoud van deze segmenten verloren !!! De nummers van deze 
+     segment-codes staan in Load_Segment (#0188) en in Decrunch_Seg (#0196)
+   - Als een programma toch echt 64kB data-gebied nodig heeft (vb PLASMA in 
+     CALCULUS), kan het zichzelf verplaatsen naar het bovenste gedeelte van 
+     page-0. Let wel op dat de BIOS niet overschreven wordt!!! Momenteel komt 
+     de BIOS niet boven #2000, maar in volgende versies kan dit nog (licht) 
+     stijgen. (dus steeds controleren)
+   - Indien een programma toch nog meer dan 64kB nodig heeft, kan dit wel 
+     aangepast worden in de BIOS. (maar liever niet omdat het prog dan niet 
+     meer werkt op 128kB computers)
+
+   - vereenvoudigd geheugen overzicht:
+       16kB  Page-0    :  BIOS
+       16kB  Page-1    :  Programma-code
+       16kB  Page-2    :  Programma-data
+       16kB  Page-3    :  Systeem-gebied
+       32kB  Disk-rout :  Gebruikt door disk-routines (eventueel ook data !)
+       16kB  Replayer  :  Muziek-replayer. Momenteel zit de replayer-code en de 
+			  echte muziek-data in 1 segment! Dus echt lange 
+			  muziekstukken (+/- 12kB, maar heel zeldzaam) passen 
+			  er niet in. Ook wanneer we een OPL4-replayer gaan 
+			  gebruiken zullen deze 2 niet meer in 1 segment 
+			  passen. Er zal dan 32kB moeten gebruikt worden.
+      -----------------
+      112kB  Totaal    :  Er is momenteel minimum 112kB (vrij) geheugen nodig 
+			  (met grotere replayer 128kB). Met maar 96kB wordt de 
+			  BIOS ook opgestart na een waarschuwing dat er geen 
+			  replayer kan ingeladen worden.
+      overige geheugen :  Al het overige geheugen (nu max. 1MB) wordt gebruikt 
+			  voor file-cashing
+
+ - Voor het schakelen van geheugen ben je VERPLICHT om ALTIJD de BIOS calls te 
+   gebruiken !!!
+
+ - Probeer zoveel mogelijk de copies van de VDP-register in het RAM 
+   (#F3DF-#F3E6 / #FFE7-#FFF6 / #FFFA-#FFFC) up-to-date te houden. Deze kunnen 
+   door de BIOS gebruikt worden om het scherm te herstellen na een disk error. 
+   Deze instellingen zijn alleen echt noodzakelijk wanneer er eventueel een 
+   BIOS-error-foutmelding kan optreden. Alleen #FFEE (R#15) MOET juist zijn 
+   omdat deze waarde gebruikt wordt in de interupt-routine om terug het juiste 
+   status-register te selecteren.
+
+
+ - De gebruikte fileformaten
+
+   - files met een extensie .MBM of .MBK (later ook .MWW .MWK .MFM) worden 
+     altijd beschouwd als muziek/sample data en worden automatisch verwerkt
+   - alle andere files moeten voorzien zijn van een ID-byte, deze byte geeft 
+     dan aan wat voor soort file het is, en hoe deze verwerkt moet worden.
+   - Dikwijls heeft een file een header van 7 bytes (ook al zijn er eigenlijk 
+     maar 5 of 6 nodig), dit is omdat de files dan gemakkelijker zijn aan te 
+     passen met een disk-monitor (vanuit een BSAVE file).
+
+     - ID-bytes
+	 #FE : gewone BSAVE  (zowel data als code)
+	     dw  Start	  :  Bestemmings adres in RAM
+	     dw  Stop	  :  Einde adres in RAM
+	     dw  0	  :  * niet gebruikt
+	    Maximale lengte (Stop-Start) is #4000
+
+	 #80 : niet meer gebruikt  (code is nu geREMd)
+	       (was eerst gecomprimeerde BIN met Davy's methode)
+
+	 #70 : BPE-gecomprimeerde BIN-file (code of data)
+	     dw  Destin   :  Bestemmings adres in RAM
+	     dw  Len_Org  :  Lengte van de ongecomprimeerde file  (max #4000)
+	     dw  Len_Crn  :  Lengte van de gecomprimeerde file	-7 -512 (!!)
+	    BPE staat voor Byte Pair Encoding. Het principe van deze codering 
+	    en hoe deze file aan te maken zal ik later uitleggen.
+	    - De lengte die moet ingevuld worden bij gecomprimeerde lengte is 
+	      gelijke aan de lengte van de file zonder deze header (-7) min nog 
+	      eens 512 (zie later)
+	    - BPE is niet echt geschikt voor programma-code te comprimeren, 
+	      hierbij zullen dus waarschijknlijk ook geen fantastische 
+	      resultaten gehaalt worden (wel geschikt voor de meeste 
+	      data-blokken)
+
+	 #FD : GE5-tekening  (iets aangepast)
+	     dw+db  Destin : 3 bytes bestemmings-adres in VRAM
+	     dw+db  0	   : * 3 bytes niet gebruikt
+	    Hierna volgt de rest van een normale GE5-tekening, dus ook een 
+	    palet en eventuele animatie-data (en daartussen overbodige bytes)
+	    - Het palet wordt naar de BIOS-variable  Fade_Palet (#0245) 
+	      gecopieerd zodat er direct naar het juiste palet gefade wordt
+	    - Dit formaat is eigenlijk alleen bedoelt om gebruikt te worden 
+	      tijdens de test-perioden. Omdat alleen de eerste 4 bytes 
+	      verschillend zijn van een gewone GE5-tekening, kunnen deze snel 
+	      met een diskmonitor aangepast worden.
+
+	 #40 : ongecomprimeerde VRAM-data met palet-info
+	     dw+db  Destin : 3 bytes bestemmings-adres in VRAM
+	     dw+db  Length : 3 bytes lengte
+	     ds 32  Palet  : 32 bytes palet-info
+	    Hierna komt de eigenlijke VRAM-data ("Lenght" aantal bytes)
+	    - Het palet wordt naar de BIOS-variable  Fade_Palet (#0245) 
+	      gecopieerd zodat er direct naar het juiste palet gefade wordt
+
+	 #41 : ongecomprimeerde VRAM-data
+	     dw+db  Destin : 3 bytes bestemmings-adres in VRAM
+	     dw+db  Length : 3 bytes lengte
+	    Hierna komt de eigenlijke VRAM-data ("Lenght" aantal bytes)
+	    - Identiek aan de vorige, alleen geen palet-info
+
+	 #80 : niet meer gebruikt  (code is geREMd)
+	       (was eerst gecomprimeerde VRAM met Davy's methode)
+
+	 #60 : BPE-gecomprimeerde VRAM-data met palet-info
+	     dw+db  Destin  : 3 bytes bestemmings-adres in VRAM
+	      dw    Len_Crn : Lengte gecomprimeerde file -7 -32 -512
+	      db    0	    : niet gebruikt
+	     ds 32  Palet  : 32 bytes palet-info
+	    BPE staat voor Byte Pair Encoding. Het principe van deze codering 
+	    en hoe deze file aan te maken zal ik later uitleggen.
+	    - De lengte die moet ingevuld worden bij gecomprimeerde lengte is 
+	      gelijke aan de lengte van de file zonder deze header (-7 -32) min 
+	      nog eens 512 (zie later)
+
+	 #61 : BPE-gecomprimeerde VRAM-data
+	     dw+db  Destin  : 3 bytes bestemmings-adres in VRAM
+	      dw    Len_Crn : Lengte gecomprimeerde file -7 -512
+	      db    0	    : niet gebruikt
+	    - Identiek aan de vorige, alleen geen palet-info
+
+
+     -Uitleg bij gebruikte compressie methoden
+
+       - De methode van Davy (nu niet meer gebruikt) was een zelf ontworpen 
+	 LZ77 variant. De reden waarom deze niet meer gebruikt wordt zijn:
+	  - Het comprimeren duurt enorm lang (enkel UREN !!!)
+	  - Ook het decomprimeren was niet echt snel (bijna een seconde voor 
+	    54kB)
+	 Deze methode is wel gebruikt in CALCULUS (voor snelheid zie DRAGON)
+
+       - De BPE-methode gaat er vanuit dat niet alle 256 bytes voorkomen in de 
+	 te comprimeren file (bij tekeningen is dit bijna nooit). Men gaat nu 
+	 steeds het meest frequente byte-paar opzoeken en dit vervangen door 
+	 een nog niet gebruikte byte. Dit herhaalt men totdat alle bytes 
+	 gebruikt zijn. Om terug te decomprimeren moet men wel weten welke 
+	 bytes een paar voorstellen en indien dit zo is dan ook welk paar. Deze 
+	 informatie staat in de eerste 512 bytes van de file.
+       - Om een file met deze BPE-manier te comprimeren, heb ik een 
+	 hulpprogramma gemaakt "COMP-BPE.COM". De werking is:
+	      COMP-BPE [Path/Filename]
+	 Hierbij verwijst path/filename naar het bestand dat gecomprimeerd moet 
+	 worden. Er worden ook twee temporary files gebruikt. Deze worden 
+	 geplaatst in de directory aangegeven door TEMP laat dit dus best eerst 
+	 verwijzen naar de RAMDISK (SET TEMP H:\). Zoals je waarschijnlijk al 
+	 gemerkt hebt, is dit een DOS2-only tool. De gecomprimeerde file komt 
+	 in dezelfde directory als de input-file maar heeft de extensie .BPE. 
+	 Let wel op deze BPE-file heeft nog geen 7 bytes header die nodig is 
+	 voor de BIOS.
+       - De input-file voor COMP-BPE.COM wordt steeds helemaal gecomprimeerd, 
+	 hiermee bedoel ik dat ook aanwezige headers worden gecomprimeerd. Als 
+	 je dus een BSAVE-tekening wil comprimeren, zal je eerst de 
+	 7-bytes-header moeten verwijderen.
+       - Omdat dit verwijderen van een header nogal lastig is, heb ik hiervoor 
+	 ook een tool gemaakt: HEADER.COM (weer DOS2-only)
+	      HEADER [Input-file [Output-file [[+|-][#]Getal] ] ]
+	 Hiermee kunnen de eerste zoveel bytes (meestal dus 7) verwijdert 
+	 worden vam een file. Ook kunnen er terug een aantal bytes voor de file 
+	 geplakt worden, dit zijn dan allemaal 0-bytes.
+       - Vervolgens moet de BPE-file nog voorzien worden van een BIOS-header 
+	 (terug met HEADER.COM) en moet deze juist (!) ingevult worden.
+	 
+       - Een file op deze BPE-methode comprimeren is dus redelijk ingewikkeld, 
+	 daarom een voorbeeld.
+	   - De tekening  "TEKENING.GE5" moet gecomprimeerd worden
+	   - Eerst header verwijderen
+		 HEADER TEKENING.GE5 TEKENING.TMP -7
+	   - Dan comprimeren (duurt toch ook nog enkele minuten)
+		 COMP-BPE TEKENING.TMP
+	   - Van de BPE-file de lengte opschrijven
+	   - Nieuwe header ervoor zetten
+		 HEADER TEKENING.BPE TEKENING.VRM +7  (eventueel +39 als er ook 
+		 palet-info bij moet)
+	   - Header invullen (vb met DISKVIEW)
+	   - De waarde voor gecomprimeerde lengte is de lengte van de BPE-file 
+	     min 512 (als dit getal niet exact is, kan het decomprimeren 
+	     hangen)
+
+
+  - LIB-files:
+   - De BIOS kan kleinere files samen zetten in een grote LIB-file. Zo wordt de 
+     laadtijd verkort en wordt er minder disk-ruimte verspilt door halfvolle 
+     clusters. De opbouw van zo'n LIB-file is als volgt:
+      - 64 bytes dummy-header:
+	Hierin kan je een ASCII-tekst zetten met uitleg over het produkt. Dit 
+	is bedoelt voor als men in DOS een TYPE xxx.LIB doet. (Probeer TYPE 
+	CALCULUS.LIB of TYPE DV.LIB). De tekst moet dus ook steeds afgesloten 
+	worden met ^Z.
+      - Directory-gebied:
+	Bevat naam, lengte en plaats in LIB (later ook welke disk). De exacte 
+	opbouw is hier niet echt van belang.
+      - Data-gebied
+   - Voor het aanmaken van deze LIB-files, heb ik ook een paar tools geschreven.
+      - MAKE_LIB.COM [Path/filename]
+	Hierbij is de input-file een ASCII-tekst met alle files die in de LIB 
+	moeten komen. Om deze lijst gemakelijk te maken kan je het best gebruik 
+	maken van de DOS2-piping-functies, dus: DIR *.VRM+*.BIN+*.MBM > LIST
+	   MAKE_LIB LIST
+	Deze tool komt nog van de CALCULUS-tijd, dus de output-file noemt 
+	altijd CALCULUS.LIB (RENAME) en de dummy-header is gevult met CALCULUS 
+	informatie (DISKVIEW).
+      - VIEW_LIB.COM [Path/filename]
+	Met deze tool kan je de directory van een LIB-file bekijken (ook de 
+	dummy header). Deze tool is dus niet noodzakelijk maar omdat het 
+	misschien toch handig kan zijn (?) (eigenlijk omdat het zo gemakelijk 
+	te programeren was) heb ik hem toch maar gemaakt.
+
+ - Nog een extra tool  MAKEBOOT.COM [Drive:]
+   Hiermee wordt de bootsector van de disk aangepast zodat er mee op te starten 
+   valt. Let wel, steeds de teksten in de source-code aanpassen!! Tot nu toe is 
+   de geassembleerde (.COM) versie van deze tool mee met al onze produkten 
+   verspreid (dan moet er geen sector-copie genomen worden). Bij PUZZLE BOBBLE 
+   zullen we deze waarschijnlijk niet meer meegeven (of juist wel?).
+
+
+ - De BIOS-source
+    De assembler-source van de BIOS bevat een aantal 'switches' waarmee enkele 
+    van de BIOS-opties kunnen op of af gezet worden.
+     - SW_Big_File  equ  0, 1 of 2
+       Hiermee kan ingesteld worden of de BIOS enkel losse files (=0), enkel 
+       een LIB-file (=1) of beide (=2) ondersteund. Als er een LIB-file 
+       gebruikt wordt, dan moet ook de naam van deze file opgegeven worden dmv 
+       de macro Lib_Name. Als er in de toekomst meerdere disk ondersteund 
+       worden, zal waarschijnlijk het laatste teken van de LIB-filename het 
+       nummer van de disk aangeven (misschien beter laatste teken extensie). 
+       dit vergemakkelijkt de installatie op hard-disk (gewoon files copieren).
+     - SW_FiLe_Cash  equ  0 of 1
+       Hiermee kan het file-cash-systeem in of uitgeschakeld worden.
+     - SW_Cash_Block  equ  0 of 1
+       Geeft aan of er sommige (belangrijke) files in de cash 'geblokeerd' 
+       kunnen worden. Dwz indien er in de cash geen plaats meer is voor een 
+       nieuwe file wordt normaal gezien de minst gebruikte file uit de cash 
+       verwijdert. Indien de file nu geblokeerd staat wordt deze nooit meer 
+       eruit verwijdert. Indien deze optie aan gezet wordt, moet ook de tabel 
+       Block_Cash_Tabel ingevult worden. (experimenteel voor PUZZLE BOBBLE)
+     - SW_Cash_Ext  equ 0 of 1
+       Met deze optie aan worden files met een extensie die begint met een 
+       cijfer op een speciale manier behandelt bij het cashen. Indien er te 
+       weinig plaats is in het cash-gebied voor een nieuwe file, worden er geen 
+       files verwijdert met dezelfde extensie. Dit heeft voordelen bij een 
+       kleine cash. Reden .... (geen goesting om dat nu uit te leggen) .... 
+       (experimenteel voor PUZZLE BOBBLE)
+     - SW_Z80_R800  equ 0 of 1
+       Als dit op staat kan er op een Turbo-R met de yes/no toetsen gewisseld 
+       worden tussen R800/Z80.
+     - SW_Replayer  equ 0 of 1
+       Op dan wordt een replayer geladen en geINIT, anders niet. Tijdens test- 
+       fase misschien beter af zetten, anders als de replayer-file 
+       (MBREPLAY.BIN) niet kan gevonden worden, wil BIOS niet opstarten. 
+       (eigenlijk logisch)
+     - SW_Auto_Key  equ 0 of 1
+       Hiermee wordt auto-key op/af gezet. Dwz 'as gij ni op de knoppe duwt, 
+       dan doe de comjoeter da wel'. Tabel invullen! (formaat staat later 
+       uitgelegt, denk ik). (zie CALCULUS)
+     - SW_Key_Rate  equ 25-30-50-60
+       Geeft aan hoeveel keer per seconde het keyboard gechecked wordt. Dit is 
+       eigenlijk alleen van belang als auto-key gebruikt wordt. De waarden 25 
+       en 50 betekenen dat 60Hz vertraagt wordt neer 50Hz (om de 6, 1 
+       overslagen) zo loopt de auto-key op 60 Hz even snel als op 50Hz. Bij de 
+       waarden 25 en 30 wordt er slecht elke 2 interupts op de knoppen 
+       gecontroleert (zoals bij de ROM-BIOS). (Deze optie is ingebouwd omdat 
+       Davy zijn auto-key tabellen voor CALCULUS op deze manier had berekend, 
+       want dit minder op toetsen controleren geeft praktisch geen 
+       snelheidswinst). Normaal staat deze optie op 30.
+     - SW_Comm	equ 0 of 1
+       Als dit op staat worden de 'communicatie-routines' mee geassembleerd. 
+       Hiermee kunnen er tussen (nu 2) computers gegevens uitgewisseld worden. 
+       Let wel op, deze routines zijn nog niet getest!!! (Deze routines waren 
+       eerst bedoelt voor PUZZLE BOBBLE, maar ze zullen hier waarschijnlijk 
+       niet in gebruikt worden).
+
+
+  De source BIOS.ASM geeft een BIOS.COM die eigenlijk altijd bedoelt is voor 
+  een test-fase. Want BIOS.COM [Filename] verwacht als argument de naam van een 
+  .BIN-file, deze file wordt dan ingelezen en er wordt een CALL #4000 
+  uitgevoerd. Een 'goede' versie vande BIOS, dus een die mee verspreid wordt 
+  wordt natuurlijk een vaste file opgestart. Dus altijd pogramma's assembleren 
+  naar .BIN-file (zelfde header) en op adres #4000, dan testen met "BIOS 
+  filename" .
+
+
+
+  Hier volgt nu een lijst vam alle BIOS-calls en BIOS-variablen met een 
+  beschrijving van hun functie. Eerst staat er nog een lijst met de verkorte 
+  namen maar deze namen gebruik je volgens mij beter niet (?).
+
+;------------------------------------------------------------------------------
+
+
+
+PUTSG0	equ	#0100	; Inschakelen van geheugen segmenten
+PUTSG1	equ	#0103
+PUTSG2	equ	#0106
+PUTSG3	equ	#0109	; RET
+
+GETSG0	equ	#010C	; Opvragen van geheugen segmenten
+GETSG1	equ	#010F
+GETSG2	equ	#0112
+GETSG3	equ	#0115	; RET
+
+ALLOC	equ	#0118	; Aanvragen geheugen
+FREE	equ	#011B	; Vrijgeven geheugen
+
+GETFIL	equ	#011E	; Lezen van disk
+
+SETSRN	equ	#0121	; Instellen screen-mode
+
+SETFAD	equ	#0124	; Instellen fade
+FADINT	equ	#0127	; Fade interupt
+
+PRTMES	equ	#012A	; Print message
+
+PLAYMU	equ	#012D	; Play music
+STOPMU	equ	#0130	; Stop music
+FADEMU	equ	#0133	; Fade music
+MUSINT	equ	#0136	; Music interupt
+PAUSMU	equ	#0139	; Pause music
+CHGCHP	equ	#013C	; Change music chip
+
+QUIT	equ	#013F	; Quit program
+
+DRVSTP	equ	#0142	; Drive stop
+
+SCNKYB	equ	#0145	; Scan keyboard
+CHGFRQ	equ	#0148	; Change frequency
+
+GETALL	equ	#014B	; Get all sticks
+GETPL1	equ	#014E	; Get player 1
+GETPL2	equ	#0151	; Get player 2
+
+SNDCOM	equ	#0154	; Zend een byte naar het netwerk
+RCVCOM	equ	#0157	; Lees een byte van het netwerk
+
+PLYSND	equ	#015A	; Speelt geluidseffect af
+
+
+MSXTYP	equ	#0180	; MSX-Type
+VDPTYP	equ	#0181	; VDP-Type
+BOOTSE	equ	#0182	; Vanuit bootsector opgestart
+DOS2	equ	#0183	; Dos 2 aanwezig
+TPASIZ	equ	#0184	; TPA-size
+BIOSFR	equ	#0186	; BIOS free memory
+
+______	equ	#0188		 ; not used
+STSEG0	equ	#018A	; Standaard segment 0
+STSEG1	equ	#018C	; Standaard segment 1
+STSEG2	equ	#018E	; Standaard segment 2
+STSEG3	equ	#0190	; Standaard segment 3
+MBRSEG	equ	#0192	; MB-replayer segment
+LOADSG	equ	#0194	; Load segment
+CRNSEG	equ	#0196	; Decrunch segment
+
+CSHSEG	equ	#0198	; Cash segmenten tabel
+CSHNUM	equ	#021A	; Aantal cash segmenten
+CSHDAT	equ	#021B	; Cash DATA offset
+CSHFAT	equ	#021D	; Cash FAT offset
+CSHFRF	equ	#021F	; Cash free FAT's
+CSHNMF	equ	#0221	; Cash number of FAT'S
+CSHFRE	equ	#0223	; Cash free entry's
+CSHNME	equ	#0224	; Cash number of entry's
+
+CURPAL	equ	#0225	; Current palet
+FADPAL	equ	#0245	; Fade palet
+FADSPD	equ	#0265	; Fade speed
+FADSTA	equ	#0266	; Fade status
+
+PAUSST	equ	#0267	; Pause status
+
+H_INT1	equ	#0268	; Interupt hook 1
+H_INT2	equ	#026D	; Interupt hook 2
+
+CSHCLU	equ	#0272	; Cash cluster
+CSHSTA	equ	#0274	; Cash status
+CSHRDC	equ	#0275	; Cash read copy
+
+STAPAL	equ	#0277	; Standaard palet
+
+ATKTIM	equ	#0297	; Auto key timer
+ATKPOS	equ	#0299	; Auto key positie
+ATKSRT	equ	#029B	; Auto key start
+ATKUSE	equ	#029D	; Auto key use
+ATKTAB	equ	#029E	; Auto key tabel
+
+LODCPU	equ	#02AA	; Load CPU save
+INTCNT	equ	#02AB	; Interupt count
+SKPKEY	equ	#02AC	; Skip key
+
+_BUSPL	equ	#02AD	; Second busy play
+CHPPRS	equ	#02AE	; Music chip present
+CHPSEL	equ	#02AF	; Music chip select
+BUSYPL	equ	#02B0	; Busy play
+POS	equ	#02B1	; Position
+STEP	equ	#02B2	; Step
+STATBT	equ	#02B3	; Statusbytes
+STPBUF	equ	#02B6	; Stepbuffer
+MFADSP	equ	#02C3	; Music fade speed
+MFADST	equ	#02C4	; Music fade status
+SMPRAM	equ	#02C5	; Sample RAM present
+
+CTRL1D	equ	#02C6	; Control player 1 data
+CTRL2D	equ	#02C7	; Control player 2 data
+
+
+RG0SAV	equ	#F3DF	; VDP register R#0
+RG1SAV	equ	#F3E0	; VDP register R#1
+RG2SAV	equ	#F3E1	; VDP register R#2
+RG3SAV	equ	#F3E2	; VDP register R#3
+RG4SAV	equ	#F3E3	; VDP register R#4
+RG5SAV	equ	#F3E4	; VDP register R#5
+RG6SAV	equ	#F3E5	; VDP register R#6
+RG7SAV	equ	#F3E6	; VDP register R#7
+
+NEWKEY	equ	#FBE5	; Huidige toetsenbord-matrix
+
+ACPAGE	equ	#FAF6	; Actieve pagina (0-3)
+
+LEDSTA	equ	#FCB1	; Alleen op Turbo-R !!!
+			; RxxxxxxP   stand van R800/PAUSE led	(1=ON)
+
+EXTVDP	equ	#FFE7	; VDP register R#8
+;		#FFE8	; VDP register R#9
+;		#FFE9	; VDP register R#10
+;		#FFEA	; VDP register R#11
+;		#FFEB	; VDP register R#12
+;		#FFEC	; VDP register R#13
+;		#FFED	; VDP register R#14
+;		#FFEE	; VDP register R#15
+;		#FFEF	; VDP register R#16
+;		#FFF0	; VDP register R#17
+;		#FFF1	; VDP register R#18
+;		#FFF2	; VDP register R#19
+;		#FFF3	; VDP register R#20
+;		#FFF4	; VDP register R#21
+;		#FFF5	; VDP register R#22
+;		#FFF6	; VDP register R#23
+
+;		#FFFA	; VDP register R#25
+;		#FFFB	; VDP register R#26
+;		#FFFC	; VDP register R#27
+
+
+	end
+
+
+;----  BIOS  JUMP's  ----------------------------------------------------------;
+
+
+#0100	Put_Seg_0
+#0103	Put_Seg_1
+#0106	Put_Seg_2
+#0109	Put_Seg_3		 ( RET ) Dummy entry
+
+  Funktie: Inschakelen van segmenten
+  In:	   [HL] = Segment-code voor pagina (0-2)
+  Uit:	   Niets
+  Wijzigd: AF,BC,DE,HL
+
+
+#010C	Get_Seg_0
+#010F	Get_Seg_1
+#0112	Get_Seg_2
+#0115	Get_Seg_3		 ( RET ) Dummy entry
+
+  Funktie: Opvragen van huidige segment-codes
+  In:	   Niets
+  Uit:	   [HL] = Segment-code van pagina (0-2)
+  Wijzigd: AF,BC,DE,HL
+
+
+#0118	Alloc_Seg
+
+  Funktie:   Aanvragen van (vrije) geheugen-segmenten
+  In:	     Niets
+  Uit:	     [HL]   = Nieuwe segment-code
+	      C    -> Geen vrije segmenten
+  Wijzigd:   AF,BC,DE,HL
+  Opmerking: Deze funktie zal normaal alleen door de BIOS gebruikt worden
+
+
+#011B	Free_Seg
+
+  Funktie:   Terug vrij geven van aangevraagde geheugen-segmenten
+  In:	     [HL] = Segment-code
+  Uit:	     Niets
+  Wijzigd:   AF,BC,DE,HL
+  Opmerking: Deze funktie zal normaal alleen door de BIOS gebruikt worden
+
+
+
+
+#011E	Get_File
+
+  Funktie:   Inlezen en verwerken van files
+  In:	     [HL] = Pointer naar filename (11 bytes)
+  Uit:	     C	  = Error (2de keer)
+  Wijzigd:   Alles
+  Opmerking: -Alle informatie over de file staat in de file zelf vermeld
+	     -Als deze funktie aangeroepen wordt, moeten de systeem variablen 
+	      juist zijn ingesteld   (nodig voor disk-errors)
+	     -Status register S#0 wordt geselcteerd (nodig voor ROM-BIOS) maar 
+	      wordt niet terug hersteld
+	     -De VDP-interupts V_BLANK en LINE-interupts worden uitgeschakeld, 
+	      tijdens BDOS aanroep, alleen de V_BLANK interupt wordt terug 
+	      ingeschakeld (ook als deze al uit stond)
+	     -De maximale lengte van de files is (nu nog) 64kB
+     
+
+
+
+#0121	Set_Screen
+
+  Funktie:   Instellen van de screen-mode
+  In:	     [A] = I PP S MMMM
+		   |  | |   +----> Screen mode	(0-12)
+		   |  | +--------> Screen ON/OFF   (0=OFF)
+		   |  +----------> Zichtbare pagina (0-3)
+		   +-------------> Interlaced	(1=ON)
+	      C   Reset -> Wis zichtbare pagina
+		   Set	-> Verander NIETS aan VRAM
+  Uit:	     Niets
+  Wijzigd:   AF,BC,DE,HL,IX,IY
+  Opmerking: -Sprites worden altijd uit gezet
+	     -Bij interlaced wordt het pagina-nummer altijd afgerond naar het 
+	      oneven grotere pagina-nummer(gewoon OR 1)
+	     -Screen 11 en 12 kunnen ook worden ingesteld
+	     -VDP(24)=0
+	     -Kleur 0 wordt als transparant gezet (moest van Davy, maar ik weet 
+	      niet meer waarom)
+	     -Screen-mode 0 -> screen 0 width 80
+			  9 -> screen 0 width 40
+			(10 -> screen 1 en 2 mixmode)	 (nog niet af)
+	     -Border kleur wordt op 0 gezet
+	     -S#0 wordt geselecteerd !!
+	     -ALLE andere VDP-instellingen blijven ongewijzigd
+	     -De enige systeem variablen die geupdate worden zijn
+	       - ScrMod (#FCAF)
+	       - AcPage (#FAF6)
+	       - alle VDP-register adressen
+	     -Bij screen 5,6,7,8,11 en 12 worden 212 lijnen ingesteld, bij alle 
+	      andere 192
+
+
+
+#0124	Set_Fade
+
+  Funktie:   Laat de kleuren van het huidige naar het nieuwe palet fade'en
+  In:	     [HL] = Pointer naar nieuw palet (32 bytes)
+	     [A]  =    0    -> Niet fade'en
+		    (1-255) -> Fade-snelheid
+  Uit:	     Niets
+  Wijzigd:   BC,DE
+  Opmerking: -Het nieuwe palet wordt naar de systeem-variablen gecopieerd
+	     -De fade-routine zelf hangt aan de interupt, deze funktie stelt 
+	      alleen de parameters in
+
+
+#0127	Fade_Interupt
+
+  Funktie:   Roept de fade-interupt aan
+  In:	     Niets
+  Uit:	     Niets
+  Wijzigd:   AF,BC,DE,HL,IXL
+  Opmerking: Als om een of andere reden de interupts uit moeten staan, zal het 
+	     fade'en niet automatisch gebeuren, maar kan dit door zelf deze 
+	     routine aan te roepen
+
+
+
+
+#012A	Print_Message
+
+  Funktie:   Print tekst op grafish scherm, er wordt op een toets gewacht
+	     en nadien wordt het VRAM terug hersteld
+  In:	     [HL] = Pointer naar tekst-blok
+		(HL+00) 	= X-Coordinaat
+		(HL+01) 	= Y-Coordinaat
+		(HL+02) 	= Aantal characters in X-richting
+		(HL+03) 	= Aantal characters in Y-richting
+		(HL+04).(HL+nn) = Tekst-data
+  Uit:	     Niets
+  Wijzigd:   Alles
+  Opmerking: -De voorgrond-kleur is de meest witte kleur
+	     -De achtergrond-kleur is de meest blauwe kleur
+	     -Er wordt rekening gehouden met
+		  - Screen 5/7/8
+		- Screen ON/OFF
+		- VDP (24)
+	     -Als de meest witte en de meest blauwe kleur dezelfe zijn (vb. een 
+	      helemaal zwart palet) dan worden kleur 4 en 15 in blauw/wit 
+	      veranderd en nadien terug hersteld
+     - !!! Deze routine is verandert (weet juiste specificaties niet van 
+       buiten) dus beter deze routine niet gebruiken !!!
+     - Misschien kan in de toekomst hier de scroll van Jon komen
+
+
+
+
+#012D	Start_Music
+
+  Funktie:   Start MB-music
+  In:	     Niets
+  Uit:	     Niets
+  Wijzigd:   Alles
+  Opmerking: -Als de muziek d.m.v. Pause_Music is uitgezet zal die door deze 
+	      funktie niet terug aangezet worden (deze funktie geeft aan 
+	      wanneer de muziek 'normaal' zou moeten spelen)
+
+
+#0130	Stop_Music
+
+  Funktie: Stop MB-music
+  In:	   Niets
+  Uit:	   Niets
+  Wijzigd: Alles
+
+
+#0133	Fade_Music
+
+  Funktie: Uit fade'en van MB-music
+  In:	   [A] = Fade-snelheid
+  Uit:	   Niets
+  Wijzigd: AF
+
+
+#0136	Music_Interupt
+
+  Funktie:   Roept de music-replayer aan
+  In:	     Niets
+  Uit:	     Niets
+  Wijzigd:   AF,BC,DE,HL,IX,IY
+  Opmerking: -Als om een of andere reden de interupts uit moeten staan, kan de 
+	      replayer met deze funktie toch nog aangeroepen worden
+
+
+#0139	Pause_Music
+
+  Funktie: Pauzeert of continueerd de muziek
+  In:	   Carry reset -> Continue
+		  set  -> Halt
+  Uit:	     Niets
+  Wijzigd:   Alles
+  Opmerking: Wordt al gebruikt door F4/F5	     
+
+#013C	Change_Mus_Chip
+
+  Funktie:   Verandert de huidige muziek chip
+  In:	     [A] = 0 -> MSX-AUDIO
+		   1 -> MSX-MUSIC
+		   2 ->    STEREO
+  Uit:	     Niets
+  Wijzigd:   Alles
+  Opmerking: -Als er een muziek chip gekozen wordt die niet anwezig is, wordt 
+	      er niets veranderd
+
+
+#013F	Quit_Program
+
+  Funktie: Verlaat het programma
+  In:	   Niets
+  Uit:	   Keert niet terug
+
+
+
+#0142	Drive_Stop
+
+  Funktie:   Laat de drive stoppen (alleen bij Philips computers) zodat deze 
+	     als de interupts uit worden gezet niet blijft doordraaien
+  In:	     Niets
+  Uit:	     Niets
+  Wijzigd:   Alles
+  Opmerking: -Gebruikte methode: roept 256 keer de hoek #FD9F aan
+	     -Wordt automatisch gedaan door BIOS-disk-routines (dus call 
+	      eigenlijk overbodig)
+
+
+#0145	Scan_Keyboard
+
+  Funktie:   Update de variable NEWKEY en houdt ook rekening met Auto_Key
+  In:	     Niets
+  Uit:	     NEWKEY
+  Wijzigd:   AF,BC,DE,HL
+  Opmerking: -Er wordt automatisch gecontroleerd op toesten zoals SELECT/F1..
+	     -Als interupts uit moeten staan misschien?
+
+
+
+#0148	Change_Freq
+
+  Funktie:   Veranderd de beeld-frequentie (50/60Hz)
+  In:	     Niets
+  Uit:	     Niets
+  Wijzigd:   AF,BC,DE,HL
+  Opmerking: -Door deze CALL is het mogelijk om ook de GFX9000 van freq. te 
+	      veranderen. (gelijktijdig met V9958 (V9938))
+	     -Wordt al gebruikt door SELECT   
+
+
+
+#014B	Get_All_Sticks
+#014E	Get_Player_1
+#0151	Get_Player_2
+
+  Funktie:   Uitlezen van de cursors en vuurtoetsen
+  In:	     Niets
+  Uit:	     [A] = 1 1 B A R L D U
+		       | | | | | +-> Up
+		       | | | | +---> Down
+		       | | | +-----> Left
+		       | | +-------> Right
+		       | +---------> Trig A
+		       +-----------> Trig B
+  Wijzigd:   [C]
+  Opmerking: -Indien keyboard en joysticks gelijktijdig 'ingedrukt' worden, 
+	      heeft het keyboard voorrang op joystick1 en joystick1 voorrang op 
+	      joystick2.
+	     -!!! Deze routine zet de interupts UIT, voor het uitlezen van 
+	      keyboard moeten de interupts echter OP staan. Dus altijd int's 
+	      zelf terug op zetten. !!!
+
+
+#0154	Send_Comm
+
+  Funktie:   Stuurt een byte door via het netwerk
+  In:	     [A] = Te versturen byte
+  Uit:	     Carry -> Error
+  Wijzigd:   [HL],[AF],[AF']
+  Opmerking: -Momenteel worden alleen MSX-MIDI en MUSIC-MODULE ondersteund, 
+	      indien beide aanwezig zijn, wordt MSX-MIDI gebruikt
+	     - !! nog NIET getest !!
+
+
+#0154	Recv_Comm
+
+  Funktie:   Leest een byte van het netwerk
+  In:	     Niets
+  Uit:	     [A] = Ontvangen byte
+	     Carry -> Error
+  Wijzigd:   [HL],[AF],[AF']
+  Opmerking: -Momenteel worden alleen MSX-MIDI en MUSIC-MODULE ondersteund, 
+	      indien  beide aanwezig zijn, wordt MSX-MIDI gebruikt
+	     - !! nog NIET getest !!
+
+
+
+#015A	Play_Sound
+
+  Funktie:   Speelt geluidseffecten af
+  In:	     [A] =   0	 -> Stop geluidseffect
+		   1-255 -> Nummer van het geluidseffect
+  Uit:	     Niets  ???
+  Wijzigd:   *
+  Opmerking: -Indien aanwezig wordt het geluid d.m.v. samples via Moonsound 
+	      of MSX-AUDIO afgespeeld, ander langs de PSG.
+	     -Geluids-effecten worden ingelezen d.m.v. een .FX-file, omdat ik 
+	      hieraan nog hard aan het sleutelen ben, zal ik het formaat 
+	      hiervan nu nog niet uitleggen (het zal waarschijlijk toch nog 
+	      veranderen). 
+
+
+;----  BIOS  variablen	-------------------------------------------------------;
+
+
+
+#0180	(1) MSX_Type
+
+   0 = MSX1	      (wordt niet ondersteund)
+   1 = MSX2
+   2 = MSX2+
+   3 = Turbo-R
+
+
+#0181	(1) VDP_Type
+
+   GxVVVVVx
+   |	+----> 00000 = V9938
+   |	       00010 = V9958 (2+)
+   +--------->	   1 = V9990 (GFX9000)
+
+
+#0182	(1) Boot_Sector      (intern gebruikt)
+
+   #00 -> Opgestart vanuit MSX-DOS
+   #FF -> Opgestart vanuit bootsector
+
+
+
+#0183	(1) DOS_2_Present    (intern gebruikt)
+
+   #00 -> MSX-DOS v#1.x
+   #FF -> MSX-DOS v#2.x
+
+
+
+#0184	(2) TPA_Size	     (intern gebruikt)
+
+   Hoogste adres dat door de BIOS gebruikt mag worden
+
+
+
+#0186	(2) BIOS_Free_Mem
+
+   Begin-adres van vrije plaats in pagina 0. De demo stukjes kunnen hier 
+   eventueel gebruik van maken. (CALCULUS PLASMA)
+   Opmerking: In deze buffer slaat de funktie Print_Message het onderliggende 
+     VRAM op. Bij gebruik van de funktie Get_File kan de inhoud van deze buffer 
+     dus gewijzigd worden.
+
+
+#0192	(2) Not_Used
+
+   Niet meer gebruikt
+
+
+#018A	(2) Standard_Seg_0
+#018C	(2) Standard_Seg_1
+#018E	(2) Standard_Seg_2
+#0190	(2) Standard_Seg_3   (niet gebruikt, dus ongedefinieerd)
+
+   Nummers van de segmenten die onder 'normale' omstandigheden ingeschakeld 
+   zijn
+      page  0 : BIOS
+      page  1 : Demo (programma)
+      page  2 : Demo (data)  (is niet noodzakelijk TPA-segment)
+      page  3 : Systeemgebied (mag NIET veranderd worden !!)
+
+
+#0192	(2) MB_Replayer_Seg
+
+   Segment-nummer van de Moonblaster-Replayer routines.
+
+
+#0194	(2) Load_Segment
+
+   Nummer van het geheugen-segment waarlangs ALLE disk bewerkingen moeten 
+   gebeuren. Dit is gegarandeerd een segment uit de primaire mapper, (het 
+   oorsprongkelijke DOS-segment van pagina 1). De demo-stukjes kunnen hier 
+   eventueel gebruik van maken. (CALCULUS PLASMA)
+
+
+#0196	(2) Decrunch_Seg
+
+   Segment-nummer van het decrunch-segment. De demo-stukjes kunnen hier 
+   eventueel gebruik van maken. (CALCULUS PLASMA)
+
+
+#0198	(130) Cash_Seg_Tab   (intern)
+
+   Segment-nummers van de segmenten die voor disk-cash gebruikt worden. De 
+   tabel wordt afgesloten met #0000.
+
+
+#021A	(1) Num_Cash_Segs    (intern)
+
+   Aantal segmenten in gebruik voor disk-cash
+
+
+#021B	(2) Cash_Data_Offset
+#021D	(2) Cash_FAT_Offset
+#021F	(2) Cash_Free_FAT
+#0221	(2) Cash_Num_FAT
+#0223	(1) Cash_Free_Entrys
+#0224	(1) Cash_Num_Entrys
+
+   Intern gebruikt door cash-routines
+
+
+
+#0225	(32) Current_Palet
+
+   De door de BIOS veronderstelde palet-instellingen. Onder andere gebruikt 
+   door de fade-routines.
+
+
+#0245	(32) Fade_Palet
+
+   Het palet waar naar toe gefade wordt. (wordt ingevult door functie Set_Fade)
+
+
+#0265	(1) Fade_Speed
+
+   Het maximum aantal interupts tussen 2 opeenvolgende fade-standen (wordt 
+   ingevult door functie Set_Fade)
+
+
+#0266	(1) Fade_Status
+
+    #00   -> Er wordt niet gefade
+   anders -> Aantal interupts voor de volgende fade-stand
+       (wordt ingevult door functie Set_Fade)
+
+
+
+#0267	(1) Pause_Stat
+
+    Turbo-R	 -> #00 = Pause niet ingedrukt
+		    #01 = Pause ingedrukt
+    Niet-Turbo-R -> #FF
+
+
+
+#0268	(5) Interupt_Hook_1
+
+   -Hook die aangeroepen wordt na een VBLANK (50/60 per seconde)
+   -De registers AF,BC,DE,HL,IX en IY zijn al gePUSHed (in deze volgorde)
+   -Statusregister S#0 is niet noodzakelijk geselecteerd
+   -De systeem variabel NEWKEY is nog niet aangepast
+
+
+#026D	(5) Interupt_Hook_2
+
+   -Hook die bij ALLE ANDERE interupts aangeroepen wordt (line-interupt)
+   -De registers AF,BC,DE,HL,IX en IY zijn al gePUSHed (in deze volgorde)
+   -Statusregister S#0 is niet noodzakelijk geselecteerd
+   -De systeem variabel NEWKEY is nog niet aangepast
+   -Wordt soms gebruikt door replayer routines (samples-MSX-AUDIO)
+
+
+
+#0272	(2) Cash_Cluster
+#0274	(1) Cash_Status
+#0275	(2) Cash_Read_Copy
+
+   Intern gebruikt door cash-routines
+
+
+#0277	(32) Standaard_Palet
+
+   De standaard palet-instellingen (gebruikt door Quit-routine)
+
+
+
+#0297	(2) Auto_Key_Timer
+
+   -Het aantal interupts dat de huidige auto-key-toetsen-combinatie nog actief 
+   blijft
+   -Bij 60Hz wordt er om de 6 interupts telkens 1 overgeslagen, dus de snelheid 
+   is bij 50 en 60Hz gelijk (=instelbaar)
+
+
+#0299	(2) Auto_Key_Pos
+
+   Pointer naar de huidige auto-key-toetsen-combinatie in tabel +2
+
+
+#029B	(2) Auto_Key_Start
+
+   Pointer naar het begin van de auto-key-tabel
+
+
+#029D	(1)	Auto_Key_Use
+
+   Mag de auto-key gebruikt worden
+      #00   -> wel
+     anders -> niet
+
+
+#029E	(12)	Auto_Key_Tab
+
+   Standaard auto-key-tabel
+       - eerst wordt er 3000 interupts (+/- 60s) op geen toets gedrukt
+       - daarna 40 interupts (+/- 4/5s) op [ESC] en [SPACE]
+	 Tabel-opbouw:
+	  - dw Aanhoudtijd (#0000 voor einde tabel)
+	  - db #AB			(naar deze byte moet Auto_Key_Pos wijzen)
+	  - db %AAAAAAAA --> NewKey + A
+	  - db %BBBBBBBB --> NewKey + B
+
+
+
+#02AA	(1) Load_CPU
+#02AB	(1) Int_Count
+#02AC	(1) Skip_Key
+
+   Variablen worden intern gebruikt
+
+
+
+#02AD	(1) Second_Busy_Play	  (betekenis vd bitsis veranderd, denk ik)
+
+    SxxxxxIP: Variable die de toestand van de muziek em de muziekdata
+    |	  ||  aangeeft
+    |	  |+--> Als de muziek niet gepauseerd is, speelt deze dan
+    |	  +---> Is de muziek data al geINIT
+    +---------> Is de muziek gepauseerd
+
+
+#02AE	(1) Mus_Chip_Pres
+
+   xxxxxxMA: Welke musicchips zijn aanwezig
+	 |+-->	 MSX-AUDIO
+	 +--->	 MSX-MUSIC
+
+
+#02AF	(1) Chip_Select
+
+   Welke musicchips worden momenteel gebruikt
+      0 -> MSX-AUDIO
+      1 -> MSX-MUSIC
+      2 -> STEREO
+
+
+#02B0	(1) Busy_Play
+
+   Deze byte geeft aan of de muziek aan het spelen is of niet (0 = niet, anders 
+   wel)
+
+
+#02B1	(1) Position
+#02B2	(1) Step
+
+   Geven positie in muziekstuk aan
+
+
+#02B3	(3) Status_Bytes
+
+   Deze bytes (telkens 1 van de 3) worden door de replayer op de waarde #FF 
+   gezet bij bepaalde commando's in de muziek data. Door deze bytes regelmatig 
+   te testen (eventueel in combinatie met Position en Step) kan men het 
+   programma synchroon laten lopen met de muziek. Het reseten van deze bytes 
+   dient door het programma zelf gedaan te worden.
+
+
+#02B6	(13) Step_Buffer
+
+   De muziek data die de volgende interupt afgespeeld wordt
+
+
+#02C3	(1) Mus_Fade_Speed
+#02C4	(1) Mus_Fade_Status
+
+   Gebruikt voor het fade'en van de muziek (Mus_Fade_Status = 0 -> Er wordt 
+   niet gefade)
+
+
+#02C5	(1) Sample_RAM_Pres
+
+   Geeft aan of er sample-RAM aanwezig is (Als de OPL4 gebrukt wordt om de 
+   MSX-AUDIO te emuleren, is er geen 'normaal' sample-RAM)
+
+
+
+#02C6	(1) Control_1_Data
+#02C7	(1) Control_2_Data
+
+   Geeft aan welk input-device er voor speler 1/2 moet gebruikt worden
+      0 = Keyboard
+      1 = Joystick 1
+      2 = Joystick 2

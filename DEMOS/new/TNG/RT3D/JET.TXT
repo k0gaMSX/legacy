@@ -1,0 +1,138 @@
+# Hier is de data voor de fighter plain
+#
+# Eerst enkele data's die kunnen dan later gebruikt worden
+# deze lijne moeten beginnen met een % en zijn voor de rest perl programma
+% sub col{$c1++;$c1%=7;return 3+4*$c1+32*$c1;}
+%$cockp_fr_x=5
+%$cockp_fr_y=35
+%$cockp_fr_z=-5
+%$cockp_md_y=30
+%$cockp_md_z=0
+%$cockp_bc_x=5
+%$cockp_bc_y=20
+%$cockp_bc_z=0
+
+%$strt_x=3
+%$strt_y=-23
+%$strt_z=-3
+#de afterburner
+%$afterb_x=13
+%$afterb_y=-20
+# airvents
+%$airv1_x=5
+%$airv1_y=15
+%$airv1_z=-10
+%$airv2_x=15
+%$airv2_y=15
+%$airv2_z=-5
+# wings
+%$wing1_x=25
+%$wing1_y=-5
+%$wing1_z=-7
+%$wing2_x=35
+%$wing2_y=-20
+%$wing2_z=-8
+
+%$ic=0;$c1=199;$c2=255
+@# afsluitende niet %-teken
+
+38 # nr of polygonen
+
+#detail,kleur,indexed kleur, texturemap en punten per polygoon
+# de staart moet als een van de eerste getekend worden zelfs sorted !
+2,".&col.",$ic,0, 7,9,8
+2,".&col.",$ic,0, 7,8,10
+2,".&col.",$ic,0, 8,9,10 
+#alles vanaf neuspunt
+2,".&col.",$ic,0, 1,2,3
+2,".&col.",$ic,0, 1,3,15
+2,".&col.",$ic,0, 1,15,14
+2,".&col.",$ic,0, 1,14,2
+# de cockpit
+2,".&col.",$ic,0, 2,4,3
+2,".&col.",$ic,0, 2,5,4
+2,".&col.",$ic,0, 3,4,6
+2,".&col.",$ic,0, 4,5,6
+# de vijf rug vlakken
+2,".&col.",$ic,0, 5,7,6
+2,".&col.",$ic,0, 5,12,9
+2,".&col.",$ic,0, 5,9,7
+2,".&col.",$ic,0, 6,7,10
+2,".&col.",$ic,0, 6,10,11
+#de airvents
+2,".&col.",$ic,0, 15,3,6
+2,".&col.",$ic,0, 15,6,17
+2,".&col.",$ic,0, 17,6,11
+2,".&col.",$ic,0, 15,17,13
+
+2,".&col.",$ic,0, 5,2,14
+2,".&col.",$ic,0, 14,16,5
+2,".&col.",$ic,0, 16,12,5
+2,".&col.",$ic,0, 16,14,13
+#de wings
+2,".&col.",$ic,0, 17,11,18
+2,".&col.",$ic,0, 17,18,11
+2,".&col.",$ic,0, 18,11,19
+2,".&col.",$ic,0, 18,19,11
+
+2,".&col.",$ic,0, 16,20,12
+2,".&col.",$ic,0, 16,12,20
+2,".&col.",$ic,0, 21,12,20
+2,".&col.",$ic,0, 21,20,12
+#de afterburner
+2,".&col.",$ic,0, 12,10,9
+2,".&col.",$ic,0, 12,11,10
+2,".&col.",$ic,0, 13,11,12
+#de buik
+2,".&col.",$ic,0, 13,14,15 
+2,".&col.",$ic,0, 13,12,16
+2,".&col.",$ic,0, 13,17,11
+
+#
+# echte punten
+21
+
+# X-Y-Z-coordinaten
+0,50,-10 # de neus
+# de cockpit
+-$cockp_fr_x,$cockp_fr_y,$cockp_fr_z
+$cockp_fr_x,$cockp_fr_y,$cockp_fr_z
+0,$cockp_md_y,$cockp_md_z
+-$cockp_bc_x,$cockp_bc_y,$cockp_bc_z
+$cockp_bc_x,$cockp_bc_y,$cockp_bc_z
+#de staart
+0,0,0
+0,$strt_y-3,11
+-$strt_x,$strt_y,$strt_z
+$strt_x,$strt_y,$strt_z
+#de afterburner
+$afterb_x,$wing2_y,-4
+-$afterb_x,$wing2_y,-4
+0,$afterb_y,-10
+# airvents
+-$airv1_x,$airv1_y,$airv1_z
+$airv1_x,$airv1_y,$airv1_z
+-$airv2_x,$airv2_y,$airv2_z
+$airv2_x,$airv2_y,$airv2_z
+# wings
+$wing1_x,$wing1_y,$wing1_z
+$wing2_x,$wing2_y,$wing2_z
+-$wing1_x,$wing1_y,$wing1_z
+-$wing2_x,$wing2_y,$wing2_z
+
+; info voor textures indien aanwezig
+	db	1	; aantal texures
+	db	3	; aantal hoekpunten voor de textures
+
+	db	0,1,2	; connectie per texure
+
+	;  eerst voor niet geindexeerde de uv van de hoekpunten
+	db	64,6
+	db	12,60
+	db	96,60
+	; in zelfde volgorde voor de overeenkomstige
+	; geindexeerde texures
+	db	64,6+65
+	db	12,60+65
+	db	96,60+65
+

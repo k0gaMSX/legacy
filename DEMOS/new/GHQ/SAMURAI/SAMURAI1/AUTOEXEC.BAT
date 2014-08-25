@@ -1,0 +1,3 @@
+MODE 40
+BASIC TITLE
+

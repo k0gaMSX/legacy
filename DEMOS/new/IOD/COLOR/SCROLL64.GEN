@@ -1,0 +1,939 @@
+; DEMO BY MAGGOO OF IOD
+; First designd to be part of Metal Limit
+; but never included due to
+; very bad design !!!
+; COMPILES WITH GEN80.COM
+
+STRMUS  EQU #AF17
+STPMUS  EQU #B843
+
+
+        DEFB #FE
+        DEFW START 
+        DEFW FINISH
+        DEFW AUTO_START
+
+
+        ORG #C000
+
+AUTO_START:
+
+START:
+        DI			; before anything, disable interupt
+        LD A,7          	; Load music in page 7 of the mapper
+        OUT (#FE),A
+        LD HL,NOM7
+
+        CALL SETFCB
+        CALL MKLOAD
+        LD HL,NOM6
+        LD DE,#AF00
+        CALL DISKLOAD
+
+        LD HL,NOM8
+        CALL SETFCB
+        LD DE,#8000
+        CALL MBLOAD
+        LD HL,SMPADR
+        LD DE,#B9A5
+        LD BC,56
+        LDIR
+
+        LD A,2
+        OUT (#FE),A
+        LD HL,NOM1
+        LD DE,#8500-7
+        CALL DISKLOAD
+
+        LD A,3
+        OUT (#FE),A
+        LD HL,NOM2
+        LD DE,#8500-7
+        CALL DISKLOAD
+
+        LD A,4
+        OUT (#FE),A
+        LD HL,NOM3
+        LD DE,#8500-7
+        CALL DISKLOAD
+
+        LD A,5
+        OUT (#FE),A
+        LD HL,NOM4
+        LD DE,#8500-7
+
+        CALL DISKLOAD
+        LD A,7
+        OUT (#FE),A
+        CALL STRMUS
+
+        LD A,1
+        OUT (#FE),A
+        LD HL,#8500
+        LD (PTRRAST),HL
+        LD A,2
+        LD (PAGERAST),A
+        XOR A
+        LD (CPTRAST),A
+        LD (CPTRAST2),A
+        LD HL,RASTER
+        LD (PTRRAST2),HL
+        
+HSCROLL:
+        LD IY,TEXTE
+SCROLL_STEP:
+        DI
+        LD A,(IY)
+        CP "*"
+        JP Z,HSCROLL
+
+COORD:
+        SUB 32
+        LD C,A
+        LD B,0
+        LD HL,SCY
+        ADD HL,BC
+        LD A,(HL)
+        LD (SY),A
+        LD HL,SCX
+        LD B,0
+        ADD HL,BC
+        LD A,(HL)
+        LD (SX),A
+        LD B,0
+        LD HL,PGC
+        ADD HL,BC
+        LD A,(HL)
+        LD (PGCOP),A
+LOOP:
+        PUSH IY
+        LD B,2
+BOUCLE_X:
+        PUSH BC
+        LD B,4
+        LD A,80
+        LD (COORDY),A
+        LD (DECALCO1+2),A               
+        LD (DECALCO1+6),A
+        LD (SCROLLCO1+6),A
+        LD IY,VDPTABLE
+        LD A,240
+        LD (SPRTABLE+1),A
+        LD (SPRTABLE+5),A
+        XOR A
+        LD (SPRTABLE+9),A
+        LD (SPRTABLE+13),A
+BOUCLE_Y:
+        PUSH BC
+        XOR A                           
+        LD (DECALCO1+3),A
+        LD A,1
+        LD (DECALCO1+7),A               
+        LD (SCROLLCO1+7),A
+        CALL MULTI2                    
+        LD A,#1F
+        OUT (#99),A
+        LD A,128+2
+        OUT (#99),A
+        LD HL,DECALCO1
+        CALL XMMMB
+        CALL VPOKE
+        LD A,(IY)
+        OUT (#99),A
+        LD A,128+18
+        OUT (#99),A
+        CALL PLASMA
+        CALL MULTI                      
+        INC IY
+        INC IY
+        INC IY
+        INC IY
+        CALL PLASMAB
+        LD A,(SPRTABLE+1)
+        ADD A,4
+        LD (SPRTABLE+1),A
+        LD (SPRTABLE+5),A
+        SUB 240
+        LD (SPRTABLE+9),A
+        LD (SPRTABLE+13),A
+        CALL RESTLOGO
+        LD A,(SX)               
+        LD (SCROLLCO1),A                
+        LD A,(SY)
+        LD (SCROLLCO1+2),A              
+        LD A,(PGCOP)
+        LD (SCROLLCO1+3),A
+
+        IN A,(#FE)
+        PUSH AF
+        LD A,7
+        OUT (#FE),A
+        PUSH IY
+        CALL #FD9F
+        POP IY
+        POP AF
+        OUT (#FE),A
+
+        LD HL,SCROLLCO1
+        CALL XMMM
+        LD A,(SY)                       
+        ADD A,16
+        LD (SY),A
+        LD A,(COORDY)
+        ADD A,16
+        LD (COORDY),A
+        LD (DECALCO1+2),A               
+        LD (DECALCO1+6),A
+        LD (SCROLLCO1+6),A
+        POP BC
+        DEC B
+        JP NZ,BOUCLE_Y
+        LD A,(SX)
+        ADD A,16
+        LD (SX),A
+        LD A,80
+        LD (COORDY),A
+        LD (DECALCO1+2),A               
+        LD (DECALCO1+6),A
+        LD (SCROLLCO1+6),A
+        LD A,(SY)
+        SUB 64
+        LD (SY),A
+        LD A,240
+        LD (SPRTABLE+1),A
+        LD (SPRTABLE+5),A
+        XOR A
+        LD (SPRTABLE+9),A
+        LD (SPRTABLE+13),A
+        LD B,4
+BOUCLE_Y2:
+        PUSH BC
+        LD A,1
+        LD (DECALCO1+3),A
+        LD A,0
+        LD (DECALCO1+7),A
+        LD (SCROLLCO1+7),A
+        CALL MULTI2
+        LD A,#3F
+        OUT (#99),A
+        LD A,128+2
+        OUT (#99),A
+                
+        LD HL,DECALCO1
+        CALL XMMMB
+        CALL VPOKE
+        LD A,(IY)
+        OUT (#99),A
+        LD A,128+18
+        OUT (#99),A
+        CALL PLASMA
+        CALL MULTI
+        INC IY
+        INC IY
+        INC IY
+        INC IY
+        CALL PLASMAB
+        LD A,(SPRTABLE+1)
+        ADD A,4
+        LD (SPRTABLE+1),A
+        LD (SPRTABLE+5),A
+        SUB 240
+        LD (SPRTABLE+9),A
+        LD (SPRTABLE+13),A
+
+        CALL RESTLOGO
+        LD A,(SX)               
+        LD (SCROLLCO1),A
+        LD A,(SY)
+        LD (SCROLLCO1+2),A
+        LD A,(PGCOP)
+        LD (SCROLLCO1+3),A
+
+        IN A,(#FE)
+        PUSH AF
+        LD A,7
+        OUT (#FE),A
+        PUSH IY
+        CALL #FD9F
+        POP IY
+        POP AF
+        OUT (#FE),A
+        
+        LD HL,SCROLLCO1
+        CALL XMMM
+        LD A,(SY)
+        ADD A,16
+        LD (SY),A
+        LD A,(COORDY)
+        ADD A,16
+        LD (COORDY),A
+        LD (DECALCO1+2),A               
+        LD (DECALCO1+6),A
+        LD (SCROLLCO1+6),A
+        POP BC
+        DEC B
+        JP NZ,BOUCLE_Y2
+        LD A,(SY)
+        SUB 64
+        LD (SY),A
+        LD A,(SX)
+        ADD A,16
+        LD (SX),A
+        POP BC
+        DEC B
+        JP NZ,BOUCLE_X
+        POP IY
+        CALL TESTSPACE
+        CP 0
+        JP Z,THEEND
+        
+        INC IY
+        JP SCROLL_STEP
+
+
+COORDY: DEFB 0
+VDPTABLE:
+        DEFB 8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7
+
+SPRTABLE:
+        DEFB 79,0,0,0
+        DEFB 79+32,0,0,0
+        DEFB 79,0,0,%10000000
+        DEFB 79+32,0,0,%10000000
+        
+DECALCO1:   DEFB 16,0,10,0,0,0,10,1,238,0,16,0,0,0,#D0
+SCROLLCO1:  DEFB 0,0,0,2,238,0,10,1,16,0,16,0,0,0,#D0
+
+DISKLOAD:
+        PUSH DE
+        CALL SETFCB
+        CALL OPENF
+        LD HL,(BLENG)
+        POP DE
+        CALL LOADF
+        CALL CLOSEF
+        RET
+
+SETFCB:
+        PUSH HL
+        LD HL,FCB+0
+        LD DE,FCB+1
+        LD BC,36
+        LD (HL),B
+        LDIR
+        POP HL
+        LD DE,FCB
+        LD BC,12
+        LDIR
+        RET
+; files to load
+NOM1:
+        DEFB 0
+        DEFB "RASTER  BI1"
+
+NOM2:
+        DEFB 0
+        DEFB "RASTER  BI2"
+
+NOM3:
+        DEFB 0
+        DEFB "RASTER  BI3"
+
+NOM4:
+        DEFB 0
+        DEFB "RASTER  BI4"
+NOM6:
+        DEFB 0
+        DEFB "MBPLAY  COM"
+NOM7:
+        DEFB 0
+        DEFB "SCROL32BMBK"
+NOM8:
+        DEFB 0
+        DEFB "SCROL32BMBM"
+
+THEEND:
+        LD A,7
+        OUT (#FE),A
+        CALL STPMUS
+        XOR A
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        LD A,1
+        OUT (#FE),A
+        RET
+
+VDP18:
+        OUT (#99),A
+        LD A,128+18
+        OUT (#99),A
+        RET
+        
+
+MULTI:
+        PUSH BC
+        LD HL,RASTER
+        LD A,77
+        CALL INTERUPT
+        LD A,2
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+
+        LD B,4
+        DJNZ $
+        LD C,0
+        LD B,64
+ML1:    IN A,(#99)
+        AND %00100000
+        JP NZ,ML1
+        DEC C
+        LD A,C
+        PUSH BC
+        LD B,5
+        DJNZ $
+        POP BC
+        NOP
+        NOP
+        OUT (#99),A
+        LD A,128+23
+        OUT (#99),A
+
+ML2:    IN A,(#99)
+        AND %00100000
+        JP Z,ML2
+ML3:    IN A,(#99)
+        AND %00100000
+        JP NZ,ML3
+        LD A,15
+        OUT (#99),A
+        LD A,128+16
+        OUT (#99),A
+        LD A,(HL)
+        OUT (#9A),A
+        INC HL
+        LD A,(HL)
+        PUSH BC
+        LD B,2
+        DJNZ $
+        POP BC
+        NOP
+        NOP
+        OUT (#9A),A
+        INC HL
+ML4:    IN A,(#99)
+        AND %00100000
+        JP Z,ML4
+
+        DJNZ ML1
+
+        LD B,10
+        DJNZ $        
+        XOR A
+        OUT (#99),A
+        LD A,128+23
+        OUT (#99),A
+        
+        POP BC
+        RET
+
+
+RESTLOGO:
+        PUSH BC
+        LD HL,PALLOGO
+        XOR A
+        OUT (#99),A
+        LD A,128+16
+        OUT (#99),A
+        LD B,32
+        LD C,#9A
+        OTIR
+        POP BC
+        RET
+PALLOGO:
+        DEFB #00,0
+        DEFB #00,0
+        DEFB #00,0
+        DEFB #00,0
+        DEFB #00,0
+        DEFB #46,4
+        DEFB #00,0
+        DEFB #67,6
+        DEFB #00,0
+        DEFB #35,3
+        DEFB #00,0
+        DEFB #56,5
+        DEFB #00,0
+        DEFB #77,7
+        DEFB #24,2
+        DEFB #12,1
+
+
+                
+
+SETPAG:
+        OUT (#99),A
+        LD A,128+2
+        OUT (#99),A
+        RET
+        
+VPOKE:
+        PUSH BC
+        LD DE,#7600
+        LD A,D
+        AND %11000000
+        RLCA
+        RLCA
+        OUT (#99),A
+        LD A,128+14
+        OUT (#99),A
+
+        LD A,E
+        OUT (#99),A
+        LD A,D
+        AND %00111111 
+        OR %01000000
+        OUT (#99),A
+        LD HL,SPRTABLE
+        LD C,#98
+        LD B,16
+        OTIR
+                
+        POP BC
+
+        RET
+
+TESTSPACE:                   ; TEST ISSPACE KEY IS PRESSED
+        IN A,(#AA)
+        AND %11110000
+        ADD A,8
+        OUT (#AA),A
+        IN A,(#A9)
+        AND 1
+        RET
+
+
+INTERUPT:             ; WAIT FOR A VDP INTERRUPT AT A CERTAIN LINE
+        PUSH AF
+        LD A,1
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        POP AF
+
+        OUT (#99),A
+        LD A,#93
+        OUT (#99),A      
+WAITINT:
+        IN A,(#99)
+        AND 1
+        JR Z,WAITINT
+        RET
+;
+;       HMMM-LMMM
+;       ---------
+;
+XMMM:   
+TST:    LD D,2
+        CALL STATREG
+        RRCA
+        JR C,TST
+        RLCA
+        PUSH BC                         ;                   LD HL,ADR                                           
+        LD B,15                         ;                   CALL HMMM
+        LD A,32        
+        OUT (#99),A
+        LD A,#91
+        OUT (#99),A
+        LD C,#9B         
+        OTIR
+      
+        POP BC
+        RET
+XMMMB:   
+TSTB:   LD D,2
+        CALL STATREG
+        RRCA
+        JR C,TSTB
+        RLCA
+        PUSH BC                         ;                   LD HL,ADR                                           
+        LD B,15                         ;                   CALL HMMM
+        LD A,32        
+        OUT (#99),A
+        LD A,#91
+        OUT (#99),A
+        LD C,#9B         
+        OTIR
+        POP BC
+        RET
+
+;
+;       READ VDP STATUS REGISTER
+;       ------------------------
+;
+STATREG:  
+     
+        LD A,D
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        
+        IN A,(#99)
+            
+        RET
+
+COMPT19:DEFB 0
+COMPT1: DEFB 0
+CPTHL : DEFW 0
+COMPTHL :   DEFB 0
+ADR1  : DEFW 0
+ADR0  : DEFW 0
+ADR2  : DEFW 0
+COMPT0: DEFB 0
+ZCOMPT   :  DEFB 0
+
+
+SX:         DEFB 0
+SY:         DEFB 0
+PGCOP:
+        DEFB 0
+
+TEXTE:
+        DEFB "   HI THERE!!! THIS IS A LITTLE EXAMPLE OF ZOOMED FONTS,"
+        DEFB " AND COLOR CYCLING ON THE TOP PART..."
+        DEFB "                         "
+        DEFB "*"
+MULTI2:
+        PUSH BC
+        IN A,(#FE)
+        PUSH AF
+        LD A,(PAGERAST)
+        OUT (#FE),A
+        LD HL,(PTRRAST)
+        LD A,128+16
+        OUT (#99),A
+        LD A,128+17
+        OUT (#99),A
+        LD C,#9A
+        XOR A
+        OUT (#9B),A
+        LD E,%00100000
+        LD A,0
+        CALL INTERUPT
+        LD A,0
+        OUT (#99),A
+        LD A,128+18
+        OUT (#99),A
+        LD A,2
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        LD D,63
+ML1B:   IN A,(#99)
+        AND E
+        JP NZ,ML1B
+        OUT (#9B),A
+        OUTI
+        OUTI
+        OUTI
+        OUTI
+        
+        OUTI
+        OUTI
+        inc hl  ; can replace by OUTI with an MSX 2 to have one more raster 
+        inc hl  ; can replace by OUTI with am MSX 2 to have one more raster
+                ; VDP access on TURBO R is too slow to handle this one.
+        
+ML2B:   IN A,(#99)
+        AND E
+        JP Z,ML2B
+        DEC D
+        JP NZ,ML1B
+        LD HL,(PTRRAST)
+        LD DE,66*8
+        ADD HL,DE
+        LD (PTRRAST),HL
+        LD A,(CPTRAST)
+        INC A
+        CP 25
+        CALL Z,NEWRAST
+        LD (CPTRAST),A
+        POP AF
+        OUT (#FE),A
+
+        POP BC
+        RET
+PTRRAST:        
+        DEFW 0
+CPTRAST:
+        DEFB 0
+CPTT:
+        DEFB 0
+PLASMA:
+        LD HL,(PTRRAST2)
+        PUSH BC
+        LD A,1
+        OUT (#99),A
+        LD A,128+16
+        OUT (#99),A
+        LD B,30
+        LD C,#9A
+        OTIR
+        POP BC
+        RET
+PLASMAB:                
+        LD A,(CPTT)
+        INC A
+        LD (CPTT),A
+        AND %00000011
+        CP 0
+        RET NZ
+
+        LD HL,(PTRRAST2)
+        INC HL
+        INC HL
+        LD (PTRRAST2),HL
+        LD A,(CPTRAST2)
+        INC A
+        CP 0
+        CALL Z,NEWRAST2
+        LD (CPTRAST2),A
+        
+        RET
+PTRRAST2:
+        DEFW 0
+CPTRAST2:
+        DEFB 0
+NEWRAST:
+        LD HL,#8500
+        LD (PTRRAST),HL
+        LD A,(PAGERAST)
+        INC A
+        CP 6
+        CALL Z,NEWPAGE
+        LD (PAGERAST),A
+        XOR A
+        RET
+NEWRAST2:
+        LD HL,RASTER
+        LD (PTRRAST2),HL
+        RET
+NEWPAGE:
+        LD A,2
+        RET
+SCX:
+        DEFB 192                ;CAR 32 ESPACE
+        DEFB 64                 ;CAR 33 !
+        DEFB 0                  ;CAR 34 "
+        DEFB 0                  ;CAR 35 
+        DEFB 0                  ;CAR 36
+        DEFB 0                  ;CAR 37
+        DEFB 0                  ;CAR 38 & --> MODIF DIREC
+        DEFB 192                ;CAR 39 '
+        DEFB 0                  ;CAR 40 (
+        DEFB 32                 ;CAR 41 )
+        DEFB 0                  ;CAR 42 * --> FIN DU TXT
+        DEFB 224                ;CAR 43 + --> MONSTRE GRIS
+        DEFB 192                ;CAR 44 ,
+        DEFB 192                ;CAR 45 -
+        DEFB 128                ;CAR 46 .
+        DEFB 0                  ;CAR 47 / --> DROITE
+        DEFB 128                ;CAR 48 0
+        DEFB 160                ;CAR 49 1
+        DEFB 192                ;CAR 50 2
+        DEFB 0                  ;CAR 51 3
+        DEFB 32                 ;CAR 52 4
+        DEFB 64                 ;CAR 53 5
+        DEFB 96                 ;CAR 54 6
+        DEFB 128                ;CAR 55 7
+        DEFB 160                ;CAR 56 8
+        DEFB 192                ;CAR 57 9
+        DEFB 128                ;CAR 58 :
+        DEFB 32                 ;CAR 59 ;
+        DEFB 0                  ;CAR 60 <  --> 8 POUR MODICOP
+        DEFB 0                  ;CAR 61 =  --> 9 POUR MODICOP
+        DEFB 0                  ;CAR 62 >  --> 7 POUR MODICOP
+        DEFB 0                  ;CAR 63 ? 
+        DEFB 0                  ;CAR 64 @  --> 0 POUR MODICP
+        DEFB 0                  ;CAR 65 A
+        DEFB 64                 ;CAR 66 B
+        DEFB 128                ;CAR 67 C
+        DEFB 192                ;CAR 68 D
+        DEFB 0                  ;CAR 69 E
+        DEFB 64                 ;CAR 70 F
+        DEFB 128                ;CAR 71 G
+        DEFB 192                ;CAR 72 H
+        DEFB 0                  ;CAR 73 I
+        DEFB 64                 ;CAR 74 J
+        DEFB 128                ;CAR 75 K
+        DEFB 192                ;CAR 76 L
+        DEFB 0                  ;CAR 77 M
+        DEFB 64                 ;CAR 78 N
+        DEFB 128                ;CAR 79 O
+        DEFB 192                ;CAR 80 P
+        DEFB 0                  ;CAR 81 Q
+        DEFB 64                 ;CAR 82 R
+        DEFB 128                ;CAR 83 S
+        DEFB 192                ;CAR 84 T
+        DEFB 0                  ;CAR 85 U
+        DEFB 64                 ;CAR 86 V
+        DEFB 128                ;CAR 87 W
+        DEFB 192                ;CAR 88 X
+        DEFB 0                  ;CAR 89 Y
+        DEFB 64                 ;CAR 90 Z
+
+        DEFB 224                ;CAR 91 [ --> ADAMS
+        DEFB 224                ;CAR 92 \ --> PAC FACE
+        DEFB 224                ;CAR 93 ] --> BOUGIE
+        DEFB 224                ;CAR 94 ^ --> GREEN PEACE
+        DEFB 224                ;CAR 95 _ --> NOTES
+        DEFB 224                ;CAR 96 ` --> FROMAGE
+        DEFB 0                  ;CAR 97 a --> FANTOMES PART 1
+        DEFB 32                 ;CAR 98 b --> FANTOMES PART 2
+        DEFB 64                 ;CAR 99 c --> PAC MAN FACHE
+        DEFB 96                 ;CAR 100 d --> FRITES
+        DEFB 128                ;CAR 101 e --> MODULE
+        DEFB 160                ;CAR 102 f --> ENVELOPPE DER
+        DEFB 192                ;CAR 103 g -->           AV
+        DEFB 192                ;CAR 104 h --> VIN
+        
+SCY:
+        DEFB 192                ;CAR 32 ESPACE
+        DEFB 192                ;CAR 33 !
+        DEFB 0                  ;CAR 34 "
+        DEFB 0                  ;CAR 35
+        DEFB 0                  ;CAR 36
+        DEFB 0                  ;CAR 37
+        DEFB 0                  ;CAR 38
+        DEFB 192                ;CAR 39 '
+        DEFB 0                  ;CAR 40 (
+        DEFB 0                  ;CAR 41 )
+        DEFB 0                  ;CAR 42
+        DEFB 0                  ;CAR 43 + MONSTRE GRIS
+        DEFB 128                ;CAR 44 ,
+        DEFB 52                 ;CAR 45
+        DEFB 128                ;CAR 46 .
+        DEFB 0                  ;CAR 47
+        DEFB 0                  ;CAR 48 0
+        DEFB 0                  ;CAR 49 1
+        DEFB 0                  ;CAR 50 2
+        DEFB 26                 ;CAR 51 3
+        DEFB 26                 ;CAR 52 4
+        DEFB 26                 ;CAR 53 5
+        DEFB 26                 ;CAR 54 6
+        DEFB 26                 ;CAR 55 7
+        DEFB 26                 ;CAR 56 8
+        DEFB 26                 ;CAR 57 9
+        DEFB 192                ;CAR 58 :
+        DEFB 52                 ;CAR 59 ;
+        DEFB 0                  ;CAR 60
+        DEFB 0                  ;CAR 61
+        DEFB 0                  ;CAR 62
+        DEFB 192                ;CAR 63 ?
+        DEFB 0                  ;CAR 64
+        DEFB 0                  ;CAR 65 A
+        DEFB 0                  ;CAR 66 B
+        DEFB 0                  ;CAR 67 C
+        DEFB 0                  ;CAR 68 D
+        DEFB 64                 ;CAR 69 E
+        DEFB 64                 ;CAR 70 F
+        DEFB 64                 ;CAR 71 G
+        DEFB 64                 ;CAR 72 H
+        DEFB 128                ;CAR 73 I
+        DEFB 128                ;CAR 74 J
+        DEFB 128                ;CAR 75 K
+        DEFB 128                ;CAR 76 L
+        DEFB 192                ;CAR 77 M
+        DEFB 192                ;CAR 78 N
+        DEFB 192                ;CAR 79 O
+        DEFB 192                ;CAR 80 P
+        DEFB 0                  ;CAR 81 Q
+        DEFB 0                  ;CAR 82 R
+        DEFB 0                  ;CAR 83 S
+        DEFB 0                  ;CAR 84 T
+        DEFB 64                 ;CAR 85 U
+        DEFB 64                 ;CAR 86 V
+        DEFB 64                 ;CAR 87 W
+        DEFB 64                 ;CAR 88 X
+        DEFB 128                ;CAR 89 Y
+        DEFB 128                ;CAR 90 Z
+        DEFB 128                ;CAR 91 [ 
+        DEFB 52                 ;CAR 92 \ 
+        DEFB 78                 ;CAR 93 ] 
+        DEFB 104                ;CAR 94 ^ 
+        DEFB 130                ;CAR 95 _ 
+
+
+        
+PGC:
+        DEFB 3                  ;CAR 32 ESPACE
+        DEFB 3                  ;CAR 33 !
+        DEFB 0                  ;CAR 34 "
+        DEFB 0                  ;CAR 35
+        DEFB 0                  ;CAR 36
+        DEFB 0                  ;CAR 37
+        DEFB 0                  ;CAR 38
+        DEFB 3                  ;CAR 39 '
+        DEFB 0                  ;CAR 40 (
+        DEFB 0                  ;CAR 41 )
+        DEFB 0                  ;CAR 42
+        DEFB 0                  ;CAR 43 + 
+        DEFB 3                  ;CAR 44 ,
+        DEFB 52                 ;CAR 45
+        DEFB 3                  ;CAR 46 .
+        DEFB 0                  ;CAR 47
+        DEFB 0                  ;CAR 48 0
+        DEFB 0                  ;CAR 49 1
+        DEFB 0                  ;CAR 50 2
+        DEFB 26                 ;CAR 51 3
+        DEFB 26                 ;CAR 52 4
+        DEFB 26                 ;CAR 53 5
+        DEFB 26                 ;CAR 54 6
+        DEFB 26                 ;CAR 55 7
+        DEFB 26                 ;CAR 56 8
+        DEFB 26                 ;CAR 57 9
+        DEFB 3                  ;CAR 58 :
+        DEFB 52                 ;CAR 59 ;
+        DEFB 0                  ;CAR 60
+        DEFB 0                  ;CAR 61
+        DEFB 0                  ;CAR 62
+        DEFB 3                  ;CAR 63 ?
+        DEFB 0                  ;CAR 64
+        DEFB 2                  ;CAR 65 A
+        DEFB 2                  ;CAR 66 B
+        DEFB 2                  ;CAR 67 C
+        DEFB 2                  ;CAR 68 D
+        DEFB 2                  ;CAR 69 E
+        DEFB 2                  ;CAR 70 F
+        DEFB 2                  ;CAR 71 G
+        DEFB 2                  ;CAR 72 H
+        DEFB 2                  ;CAR 73 I
+        DEFB 2                  ;CAR 74 J
+        DEFB 2                  ;CAR 75 K
+        DEFB 2                  ;CAR 76 L
+        DEFB 2                  ;CAR 77 M
+        DEFB 2                  ;CAR 78 N
+        DEFB 2                  ;CAR 79 O
+        DEFB 2                  ;CAR 80 P
+        DEFB 3                  ;CAR 81 Q
+        DEFB 3                  ;CAR 82 R
+        DEFB 3                  ;CAR 83 S
+        DEFB 3                  ;CAR 84 T
+        DEFB 3                  ;CAR 85 U
+        DEFB 3                  ;CAR 86 V
+        DEFB 3                  ;CAR 87 W
+        DEFB 3                  ;CAR 88 X
+        DEFB 3                  ;CAR 89 Y
+        DEFB 3                  ;CAR 90 Z
+PAGERAST:
+        DEFB 0
+CHIPS:
+        DEFB 0		; 0= MSX AUDIO / 1=MSX MUSIC / 2=both
+SMPADR:
+        DEFS 56
+*I RASTER.ASC           
+*I MBLOAD.GEN          
+FINISH:
+
+
