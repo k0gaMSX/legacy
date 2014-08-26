@@ -1,0 +1,53 @@
+	DB #FE
+	DW START
+	DW FINISH
+	DW START
+	ORG #9000
+
+START:
+	DI
+	CALL TESTSPACE
+	CP 0
+	RET Z			; exit if space key is down
+	LD A,192		
+	CALL INTERUPT		; wait for scan line 192
+	LD A,2
+	OUT (#99),A
+	LD A,128+9
+	OUT (#99),A		; set 192 lines mode
+	LD A,212
+	CALL INTERUPT		; wait for scan line 212
+	LD A,2+128
+	OUT (#99),A
+	LD A,128+9
+	OUT (#99),A		; set 212 lines mode
+	JP START		; loop
+TESTSPACE:
+        IN A,(#AA)
+        AND %11110000
+        ADD A,8
+        OUT (#AA),A
+        IN A,(#A9)
+        AND 1
+        RET
+
+INTERUPT:
+        OUT (#99),A
+        LD A,#93
+        OUT (#99),A
+        LD A,1
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        
+WAITINT:
+        IN A,(#99)
+        AND 1
+        JR Z,WAITINT
+        SUB A
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        RET
+FINISH:
+

@@ -1,0 +1,229 @@
+;   **********************************************************
+;   ****       SCROLL-TEXT of 16x16 FONTS                  ***
+;   ****       BY MAGGOO OF IOD 1994                       ***
+;   **********************************************************
+
+
+        DEFB #FE
+        DEFW START
+        DEFW FINISH
+        DEFW START
+        ORG #A000
+START:  JP DEBUT
+
+
+
+;*************************************************************************
+;   TEXT YOU WANT TO SCROLL:
+;        ALWAYS PUT IT WITH     DEFB " XYZ..."
+;        THE LAST CHARACTER MUST BE *.
+;*************************************************************************
+
+TEXTE:  DEFB "      THIS IS A LITTLE SCROLL-TEXT EXAMPLE"
+        DEFB "                                    "
+        DEFB "*"
+
+;     ----------------------------------------------------
+;              LIST OF PARAMETER YOU CAN MODIFY
+;     ----------------------------------------------------
+
+SPEED:          DEFB 4          ;SPEED OF THE SCROLL TEXT
+                                ;2 IS NORMAL SPEED.
+                                ;PUT 4 FOR A FASTER SCROLL.
+                
+Y_POSITION:     DEFB 180        ;VERTICAL POSITION OF THE SCROLL-TEXT
+                                ; IN THE SCREEN.
+                                ;(CHOOSE FROM 0 TO 180).
+
+
+;************************************************************
+;   !!!  DO NOT MODIFY ANYTHING AFTER THIS LINE  !!!
+;************************************************************
+
+DEBUT:
+        LD A,(SPEED)
+        CP 2
+        CALL Z,SPEED2
+        CALL MODPOS
+  
+HSCROLL:
+        DI
+        LD IY,TEXTE
+SCROLL_STEP:
+        LD IX,SCROLLCOP
+        LD A,(IY+0)
+        CP "*"
+        JP Z,HSCROLL
+LIGNE4:
+        CP "Q"
+        JR C,LIGNE3
+        LD (IX+2),48
+        LD C,81
+        JP CALCUL
+LIGNE3:
+        CP "A"
+        JR C,LIGNE2
+        LD (IX+2),32
+        LD C,65
+        JP CALCUL
+LIGNE2:
+        CP "0"
+        JR C,LIGNE1
+        LD (IX+2),16
+        LD C,48
+        JP CALCUL
+LIGNE1:
+        LD C,32
+        LD (IX+2),0
+CALCUL:
+        SUB C
+        CALL MULT
+        LD A,L
+ADDA:
+        LD IX,SCROLLCOP
+        LD (IX),A
+        ADD A,16
+        LD E,A
+        LD A,(IX)
+SCROLLB:
+        CP E
+        JP Z,SUITE
+        LD HL,SCROLLCOP
+        CALL XMMM
+        LD HL,DECALCOP
+        CALL XMMM
+
+        CALL TESTSPACE
+        CP 0
+        RET Z
+        PUSH DE
+        PUSH IY
+        CALL #FD9F
+        POP IY
+        POP DE
+        LD A,(Y_POSITION)
+        CP 6
+        JP C,SUIT
+        SUB 5
+SUIT:
+        CALL INTERUPT
+        
+        LD IX,SCROLLCOP
+        LD A,(SPEED)
+        LD B,A
+        LD A,(IX)
+        ADD A,B
+        LD (IX),A
+        JP SCROLLB
+
+SUITE:
+        INC IY
+        JP SCROLL_STEP
+MULT:
+        LD H,A
+        LD L,0
+        LD E,16
+        LD D,0
+        LD B,8
+MULTBO:
+        ADD HL,HL
+        JR NC,SUITEM
+        ADD HL,DE
+SUITEM:
+        DJNZ MULTBO
+        RET
+
+INTERUPT:
+        OUT (#99),A
+        LD A,#93
+        OUT (#99),A
+
+        LD A,1
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        
+WAITINT:
+        IN A,(#99)
+        AND 1
+        JR Z,WAITINT
+        SUB A
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        PUSH BC
+        LD B,4
+WAIT4C:
+        DJNZ WAIT4C
+        POP BC
+        RET
+
+XMMM:
+TST:
+        LD D,2
+        CALL BITCE
+        RRCA
+        JR C,TST
+        RLCA
+
+        LD B,15
+        LD A,32
+        OUT (#99),A
+        LD A,#91
+        OUT (#99),A
+        LD C,#9B
+
+        OTIR
+
+        RET
+
+BITCE:
+        LD A,D
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        IN A,(#99)
+        PUSH AF
+        XOR A
+        OUT (#99),A
+        LD A,#8F
+        OUT (#99),A
+        POP AF
+        RET
+TESTSPACE:
+        IN A,(#AA)
+        AND %11110000
+        ADD A,8
+        OUT (#AA),A
+        IN A,(#A9)
+        AND 1
+        RET
+
+
+SPEED2:
+        LD IX,DECALCOP
+        LD A,2
+        LD (IX+4),A
+        LD IX,SCROLLCOP
+        LD (IX+8),A
+        RET
+MODPOS:
+        LD A,(Y_POSITION)
+        LD IX,DECALCOP
+        LD (IX+2),A
+        LD (IX+6),A
+        LD IX,SCROLLCOP
+        LD (IX+6),A
+        RET
+DECALCOP:   DEFB 4,0,100,0,0,0,100,0,252,0,16,0,0,0,#D0
+SCROLLCOP:  DEFB 8,0,0,1,252,0,100,0,4,0,16,0,0,0,#D0
+
+COMPT0: DEFB 0
+COMPT1: DEFB 0
+COMPT2: DEFB 0
+ADR0  : DEFW 0
+ADR1  : DEFW 0
+ADR2  : DEFW 0
+
+FINISH:
+

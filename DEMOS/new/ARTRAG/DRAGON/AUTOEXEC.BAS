@@ -1,0 +1,3 @@
+10 COLOR 15,0,0: SCREEN 2
+50 BLOAD"TILESETS.SC2",S
+60 bload"video.bin",r
