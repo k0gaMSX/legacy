@@ -1,0 +1,323 @@
+File Name: MSXIOMap.Doc (MSX I/O Map Document).
+Source   : MSX Datapack Vol. 2, Japan ASCII Co.
+Status   : Should  be  distributed  within  the  "Gremlin -  MSX Z80/R800
+           Disassembler" package, but  customized versions can  be freely
+           used since no commercial purposes are implied.
+Author   : "Cyberknight" Masao Kawata.
+Release  : Unicorn Dreams Artwork Programs, 1999-November-28 (Sunday).
+
+
+    This file is  a free translation and  compilation  of texts from Japan
+ASCII's MSX Datapack (Vol. 2).
+
+    The following  is a map of MSX I/O ports, standard  defined along  the
+time by hardware makers all around the Earth. New  hardware must take care
+to  not use already occupied ports (I have seen  people saying "oh, nobody
+uses this anymore!"). Based on  my knowledge  on Murphy's  Laws, surely at
+least  one user that purchases your product will have  AND USE  the device
+with conflicting ports. It will not only have very powerful links with the
+consumer's protection organizations but, far worst, with  an  unknow, even
+to M.I.B., and  particularly  sadistic branch  of Cthulhu's followers). Be
+careful...
+
+
+
+Port Range    Device and Optional Description
+
+00H~3FH       User Definition.
+
+40H~4FH       Expansion I/O Ports ***.
+
+50H~6FH       Reserved for the system *.
+
+70H~73H       MIDI Saurus (BIT2).
+
+74H~7BH       Reserved for the system *.
+
+7CH~7DH       MSX-Music.
+
+7EH~7FH       Reserved for the system *.
+
+80H~87H       RS-232C.
+        80H   8251 Data.
+        81H   8251 Status - Command.
+        82H   Status Lead - Interrupt Mask.
+        83H   Unused.
+        84H   8253.
+        85H   8253.
+        86H   8253.
+        87H   8253.
+
+88H~8BH       For the MSX2 VDP (V9938) Adapter I/O ports **.
+
+8CH~8DH       MSX Modem.
+
+8EH~8FH       Reserved for the system *.
+
+90H~91H       Printer ports.
+        90H   Bit 0 on writing: /STROBE, 0=sending datum.
+              Bit 1 on reading: 0=Ready, 1=Busy.
+        91H   Data port.
+
+92H~97H       Reserved for the system *.
+
+98H~9BH       VDP (V9938) of MSX2.
+        98H   VRAM access.
+        99H   Command register access.
+        9AH   Palette register access (write only).
+        9BH   Register indirect assignment (write only).
+
+9CH~9FH       Reserved for the system *.
+
+A0H~A3H       PSG (AY-3-8910) access ports.
+        A0H   Address latch.
+        A1H   Data Write.
+        A2H   Data Read.
+
+A4H~A7H       Reserved for the system *.
+
+A8H~ABH       Parallel port (PPI, 8255).
+        A8H   Port A.
+        A9H   Port B.
+        AAH   Port C.
+        ABH   Mode Set.
+
+ACH~AFH       MSX Engine (One-Chip-MSX I/O Ports).
+
+B0H~B3H       Memory Expansion (Sony method, using 8255).
+        B0H   Port A, address (A0~A7).
+        B1H   Port B, address (A8~A10, A13~A15), control, Read/Write.
+        B2H   Port C, address (A11~A12), datum (D0~D7).
+        B3H   Mode Set.
+
+B4H~B5H       Clock-IC (RP-5C01).
+        B4H   Address latch.
+        B5H   Datum.
+
+B6H~B7H       Reserved for the system *.
+
+B8H~BBH       Light-pen control (Sanyo method).
+        B8H   Read/Write.
+        B9H   Read/Write.
+        BAH   Read/Write.
+        BBH   Write only.
+
+BCH~BFH       VHD control (JVC, 8255).
+        BCH   Port A.
+        BDH   Port B.
+        BEH   Port C.
+        BFH   Mode Set.
+
+C0H~C1H       MSX-Audio.
+
+C2H~C7H       Reserved for the system *.
+
+C8H~CFH       MSX Interface (Asynchronous Serial Communication Interface).
+
+D0H~D7H       Floppy Disk Controller (FDC). According to the Datapack, the
+                use of  these  ports to access disks will limit its access
+                time. Translator  notes: because  the I/O ports have a fix
+                transfer rate to keep compatibility, newer and faster data
+                storage devices won't be able to  work properly using this
+                access. Standard FDC use memory registers, which  can also
+                be  accessed  faster than  by I/O ports. The  use of these
+                ports also brings some access conflict problems. Only some
+                brazilian interfaces are known to use them.
+
+D8H~D9H       Kanji ROM (Toshiba method) Dai Itchi Suijyun (Level 1).
+        D8H   b5~b0 lower address (Write Only).
+        D9H   b5~b0 upper address (Write).
+              b7~b0 datum (Read).
+
+DAH~DBH       Kanji ROM Dai Ni Suijyun (Level 2).
+
+DCH~F2H       Reserved for the system *.
+
+F3H           VDP Display Mode (MSX2+).
+        b0    M3
+        b1    M4
+        b2    M5
+        b3    M2
+        b4    M1
+        b5    TP
+        b6    YUV
+        b7    YAE
+
+F4H     MSB   Hardware Reset (MSX2+).
+
+F5H           System Control (Write Only). Bit=1 means device available.
+        b0    Kanji ROM Dai Itchi Suijyun.
+        b1    Kanji ROM Dai Ni Suijyun.
+        b2    MSX-Audio.
+        b3    Superimposer.
+        b4    MSX Interface.
+        b5    RS-232C.
+        b6    Light-pen.
+        b7    Clock-IC (only in MSX2, MSX2+).
+
+F6H           Colour Bus I/O.
+
+F7H           A/V Control.
+        b0    Audio R                         Mixing On    (Write)
+        b1    Audio L                         Mixing Off   (Write)
+        b2    Video Input Selection           21 Pin RGB   (Write)
+        b3    Video Input Detection           No Input     (Read)
+        b4    AV Control                      TV           (Write)
+        b5    Ym Control                      TV           (Write)
+        b6    VDP Register 9, Bit 4 Shift                  (Write)
+        b7    VDP Register 9, Bit 5 Shift                  (Write)
+
+F8H~FBH       Reserved for the system *.
+
+FCH~FFH       Memory Mapper (Write Only). Translator note:
+        FCH   Page 3 Segment Select Register.
+        FDH   Page 2 Segment Select Register.
+        FEH   Page 1 Segment Select Register.
+        FFH   Page 0 Segment Select Register.
+
+
+
+    Notes:
+
+    * Reserved for the system: this  basically means that the maker should
+      consult Japan ASCII for permission to use some port. Of course, most
+      hardware makers  today simply  ignores  the simple existance  of any
+      standard definer and  goes on filling up  the  not much  left unused
+      ports with not very much reliable devices. Anyway, it is a good idea
+      to check twice the possibilities of  memory access registers instead
+      of I/O ports.
+
+
+   ** When MSX2 had just been  released, the number of MSX was large, so a
+      special cartridge had been released with the MSX2 VDP IC inside, the
+      V9938. That cartridge could be simply inserted in an MSX slot and it
+      would become an MSX2. The video access ports, of course, couldn't be
+      shared by both internal MSX and external MSX2 VDP, so new ports were
+      defined  to the  second. The  addresses 0006H and 0007H  of the Main
+      BIOS  contain the  read and write port numbers of the VDP. But don't
+      matter  how much each and every  documentation, official or not, ask
+      users and programmers to use such addresses, they still insist using
+      the VDP ports of their own machines directly, without consulting the
+      currently running  system  ROM. The inevitable result  is  that most
+      programs, lazily coded, still crash around, for example, in MSX with
+      expansion cards (believe  me, they still exist, I have  already seen
+      one working perfectly). So, if you are a good programmer  and didn't
+      knew about such problem, here is a list of VDP access ports:
+
+      + port #0 reading: (0006H)
+      + port #0 writing: (0007H)
+      + port #1 reading: (0006H)+1
+      + port #1 writing: (0007H)+1
+      + port #2 writing: (0007H)+2
+      + port #3 writing: (0007H)+3
+
+      What each  port does is  a matter for  another documentation and not
+      the purpose  of this one. If you cannot  find information  about the
+      subject, send me an E-Mail.
+
+
+  *** And if  you must, for  some reason, use I/O ports  for your project,
+      use the Expansion I/O Ports (from  40H to 4FH):
+
+
+      CPU                                                         Device
+  --------+                                                     +--------
+          |                                                     |
+   A0~A15 |=====+==============================================>| A0~A15
+          |     |                                               |
+          |     |                                               |
+          |     |                           +--------+          |
+          |     |                           | Data   |          |
+    D0~D7 |<====|===========+==============>| Bus    |<========>| D0~D7
+          |     |           |               | Buffer |    ^     |
+          |     V           |               +--------+    |     +--------
+          |  +------+       V                  ^  ^       |
+          |  |xx40H?|     +---+                |  |       |
+          |  +------+     |ID?|  Enable F/F    |  |       |
+          |     |         +---+                |  |e    +--------+
+          |     |   +---+   |      +---+       |  |n    |        |
+          |     |   |   |   |      |   |       |  |a    | Buffer |.....
+          |     +-->|   |   ++---->|D Q|-------+  |b    |        |    .
+          |     |   |   |          |   | enable   |l    +--------+    .
+     IORQ |O--+-|--O|AND|--------->|T  |          |e       ^          .
+          |   | |   |   |  write   | R |          |        |          .
+       WR |O--|-|--O|   |          +---+          |        |    complement
+          |   | |   |   |            O            |        |      of ID
+          |   | |   +---+            |       +---------+   |
+          |   | |                    |       | Access  |   |
+          |   | |   +---+            |       | Control |   |
+          |   | |   |   |            |       +---------+   |
+          |   | +-->|   |            |                     |
+          |   |     |   |  read      |                     |
+          |   +----O|AND|----------------------------------+
+          |         |   |            |
+       RD |O-------O|   |            |
+          |         |   |            |
+          |         +---+            |
+          |                          |
+    RESET |O-------------------------+
+          |
+  --------+
+
+
+      This circuitry has the following effects:
+
+      * It keeps the device and the MSX Bus disconnected until it receives
+        a valid ID code  through port 40H, so a program that wants  to use
+        the device must enable it first, writing the proper ID byte to the
+        I/O port 40H. The ID byte may range from 128 to 254 for a specific
+        type  of  device or  from  1 to 127 to define a  specific hardware
+        maker. The  0 and  255  values are reserved  because  most systems
+        returns  one of  those two  when an  empty or disconnected port is
+        accessed.
+
+      * If an ID byte different from  the expected is received, connection
+        between bus and device is instantly broken. Any and all access are
+        ignored until another matching ID value is received from port 40H.
+
+      * If port 40H  is read, the  accessing  program will  receive the ID
+        byte of the currently active device.
+
+
+      MSX standard has not defined any  device that uses the expansion I/O
+      ports, so no table of devices exist, but each hardware maker has its
+      ID byte (most names are written in EUC [Enhanced Unix Code] Japanese
+      characters, but don't worry if you cannot view them or simply cannot
+      understand them, the reading and translation follows):
+
+        1 = アスキー           (Japan ASCII)
+        2 = キャノン           (Canon)
+        3 = カシオ 計算機      (Casio Keisanki = Calculators)
+        4 = 富士通             (Fujitsu)
+        5 = 富士通             (Fujitsu General)
+        6 = 日立 製作所        (Hitachi Seisakushyo = Industrial Plant)
+        7 = 京セラ             (Kyosera)
+        8 = 松下電器産業       (Matsushita Denkisangyou = Electric
+                                Industrial [this includes all Matsushita
+                                enterprises like Panasonic, National and
+                                Quasar])
+        9 = 三菱電機           (Mitsubishi Denki = Electrical Machines)
+       10 = 日本電気           (Nihon Denki = Japan Electric)
+       11 = ヤマハ             (Yamaha)
+       12 = 日本 ビクター      (Nihon Victor = Japan Victor Company [JVC])
+       13 = フィリップス       (Philips)
+       14 = パイオニア         (Pioneer)
+       15 = 三洋電機           (Sanyo Denki = Electric Machines)
+       16 = シャープ           (Sharp)
+       17 = ソニー             (Sony)
+       18 = スペクトラビデオ   (Spectravideo)
+       19 = 東芝               (Toshiba)
+       20 = ミツミ 電機        (Mitsumi Denki = Electrical Machines)
+       21 = テレマティカ       (Telematica)
+       22 = グラディエンテ     (Gradiente)
+       23 = シャープドブラジル (Sharp do Brasil = Brazilian Sharp)
+       24 = Goldstar
+       25 = Daewoo
+       26 = Samsung
+       27 \
+      ...  | Reserved
+      127 /
+
+
+                                                        ... Cyberknight...
+<End-of-Document>

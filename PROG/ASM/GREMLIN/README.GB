@@ -1,0 +1,182 @@
+File Name : ReadMe.GB (Read Me! Gremlin Version Bianca).
+Program   : Gremlin - MSX Z80/R800 Disassembler.
+Version   : Bianca-3-0 (2nd Ver., 4th Build, No Rev.)
+Status    : Public Domain, Freeware.
+Author    : Cyberknight Massao Kawata.
+Production: (C) 1998-2004 Unicorn Dreams Artwork Programs
+Release   : 2004-December-23 (Thursday).
+E-Mail    : cyberknight@myrealbox.com
+            cyberknight@gawab.com
+            unicorndreams@gmail.com
+Home Page : http://welcome.to/unicorndreams
+            http://unicorndreams.cjb.net
+
+
+    This is a brief description of the contents of the "Gremlin" package.
+The files may be packed by any known method, but nothing may be purchased
+for the  use of one  or another packing  program. If  this statement goes
+against the will  and/or purpose of  the program you intend to  use, then
+move to another packing utility (there are a  lot of freeware and  public
+domain around, why  using  a commercial  one?) or let them  unpacked, but
+gathered in the same medium. Thank you for your cooperation.
+
+    The files that should be sent together with the package are:
+
+    * "readme.gb": this "read me" file.
+
+    * "gremlin.c": the disassembler file.
+
+    * "gremlin.doc": the documentation file.
+
+    * "gremlin.exe": executable for M$-DOS/Windows OS, compiled
+      using DJGPP.
+
+    * "allcodes.dat": this  is  a test  file containing all Z80
+      and R800 valid and invalid op-codes.
+
+    * "msxbios.mll": this is a list of all MSX, MSX2, MSX2+ and
+      turbo R Main-ROM BIOS' labels and entry-points. It can be
+      directly used with Gremlin.
+
+    * "msxsbios.mll": this is  a list of all  MSX2 Sub-ROM BIOS
+      entries (MSX has none and MSX2+ and  turbo R has the same
+      as MSX2). It can be directly used with  Gremlin, but take
+      care using it, because many routines have the same labels
+      of MSX BIOS with different entry addresses. The  contrary
+      is also  true, that  is, some  entry addresses match with
+      some  of the  Main-ROM BIOS. It's better  to  use it with
+      Gremlin's  parameter "O" active, so  you can check  later
+      if  the matching was done well. Another alternative is to
+      modify the  labels in a  way you  can  know they are from
+      this  file and  not  from the "msxbios.mll" (for example,
+      add "_sub" to all labels: SETGRP_sub, WRTVRM_sub etc.).
+
+    * "msxbasic.mll": this is a  list of the  BASIC interpreter
+      entry-points. They  are standard for MSX, MSX2, MSX2+ and
+      turbo R. Some of them have  entry-points in  the BIOS and
+      use the same labels, so  the kind  of problems that occur
+      with the Sub-ROM label list may occur with this, too. The
+      same solutions are valid, of course. The file  is divided
+      in BASIC program manipulation and Math-Pack routines.
+
+    * "msxwrkar.mll": this is a list of all MSX, MSX2 and MSX2+
+      Work Area  addresses (I think turbo R  has the  same Work
+      Area  configuration as  MSX2+, but I cannot  be sure  for
+      I  found no  official documentation about  it). It can be
+      directly used with Gremlin.
+
+    * "msxdisk.mll": this  is  a  list of  some MSX-Disk access
+      Work  Area  addresses  and  routines. I couldn't  find  a
+      complete official list of entries, so I only included the
+      ones I have documented.
+
+    * "msxmusic.mll": this  is  a list of  all MSX-Music access
+      routines.
+
+    * "msxaudio.mll": this  is  a list of  all MSX-Audio access
+      routines and Work Area addresses of its own memory.
+
+    * "msxiomap.doc": this is  a list  of all  MSX, MSX2, MSX2+
+      and turbo R I/O access ports according to ASCII standards
+      (all  MSX should  follow it). This file is  a descriptive
+      document, so it cannot be directly used with Gremlin, but
+      used to help the disassembling  process or even to create
+      customized lists.
+
+    * "msxabios.mll": BIOS  is basically  a  set  of "jumps" to
+      routines in  the BIOS ROM. While the BIOS entry addresses
+      are  fix, their corresponding  routines  may and, indeed,
+      change from version  to version. Some users, for whatever
+      reason in the  Universe they  could find, if any, instead
+      of  using  the standard  BIOS entries, call  directly the
+      corresponding branch addresses of THEIR  machine ROM, and
+      some even use internal entries in the middle of BIOS just
+      to avoid a little more coding. The obvious result of such
+      a messy  and nasty  programming  is  a  program that most
+      likely won't  work with  many, or  at  least  some, other
+      computers  around. So, this  file tries to clear  some of
+      all  those  garbage  left  in  such  programs, presenting
+      the alternate  entries for  MSX (MSX2, MSX2+ and  turbo R
+      programs  are generally  better coded and  don't need any
+      repair). It does  not  include the internal  entries, for
+      they have no corresponding standard entry-points in BIOS.
+
+
+    Not all replaced values, of course, will  match the meaning. Just for
+example, the BIOS  entry  0000H is called CHKRAM and is basically the MSX
+"bootstrap" (initialization) routine, but the value 0000H is largely used
+simply to set a null  value to a pair of registers. Indeed, very  few are
+the  routines that actually call or  branch to CHKRAM. Thus, you can edit
+"msxbios.mll" and remove  CHKRAM label, so the 0000H  values of  programs
+will be  more properly  disassembled. I really only kept CHKRAM and a few
+other labels for "academic purposes", so to  say (maybe someone, someday,
+somewhere, would stop  and ask "By the way, what was  the  MSX  bootstrap
+routine called?"...)
+
+    The files that can be directly used  with Gremlin (all except the I/O
+map document) have their entries and corresponding addresses separated by
+the following symbols:
+
+    = MSX and successors;
+
+    % MSX2 and successors;
+
+    # MSX2+ and successors;
+
+    $ turbo R;
+
+    * disk-driver access;
+
+    ^ disk-driver access (in MSX-DOS mode);
+
+    ** Disk-ROM address;
+
+    & MSX 2, disk-driver, MSX-Music, MSX-Audio and other systems;
+
+    ! MSX and  successors, except turbo R, because the  devices
+      they controlled and accessed probably became optional and
+      cannot be found in any commercial machine:
+
+      * Tape Data-Corder;
+      * Paddle;
+      * Light-Pen.
+
+    ? unofficial label. Some entries have no official label, so
+      I created one upon their names:
+
+      * Character Set Base Address            = "ChrSet"
+      * VDP Base Read Port                    = "VDPRd"
+      * VDP Base Write Port                   = "VDPWr"
+      * MSX ROM Version Identification Bytes  = "MSXVId"
+      * Secondary Slot Select Register        = "ScSltR"
+      * Disk Data Transfer Area (DTA) Pointer = "DTAPtr"
+      * File Control Block (FCB) Pointer      = "FCBPtr"
+
+    ?? alternative entry: use the official BIOS entry instead.
+
+
+    Those symbols, as most others, are ignored by Gremlin, so they may be
+changed if wanted (read the Gremlin source/documentation file).
+
+    A note about the official labels: most of them are up to 6 characters
+long, but there are a few that are  not in the "msxdisk.mll" and  most in
+"msxaudio.mll".
+
+    And finally, if you couldn't compile the program, if it presented any
+problem, if you want  some  option not available or simply if you want to
+write, do so:
+
+      cyberknight@myrealbox.com
+      cyberknight@gawab.com
+      unicorndreams@gmail.com
+
+    This E-Address is set in a free E-Mail server. If for some reason you
+cannot  find me there, try  to find my  Page in  a search-engine (use the
+keywords "+msx +cyberknight +unicorn"). Currently, it is set at:
+
+      http://unicorndreams.cjb.net
+      http://welcome.to/unicorndreams
+
+
+                                                       ... Cyberknight...
+<End-of-Document>

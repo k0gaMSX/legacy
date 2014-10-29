@@ -1,0 +1,180 @@
+;//////////////////////////////////////
+;MGSEL コンフィグレーションファイル
+;//////////////////////////////////////
+;
+;==========================================================================
+;★ 注意
+;
+;　コマンド(設定事項)は1行に1つだけ書けます。小文字、大文字は問いません。
+;　スペース、タブは無視されます。
+;　コマンドとパラメータの区切りには、"="か":"(いずれも半角)を入れます。
+;　行の先頭が";"の場合はコメントと見なされます。
+;  yesとon,noとoffはそれぞれ同じ意味を持ちます。
+;===========================================================================
+;★ auto_play_mode = <off|normal|random|repeat|intro_normal|intro_random>
+;
+;　自動演奏のモード
+;  off		自動演奏しない
+;  normal	上から順番に
+;  random	乱数で曲を選択(ランダム演奏)
+;　repeat	直前の曲を繰り返す
+;  intro_normal	intro_timeを経過したら次の曲へ
+;  intro_random	intro_timeを経過したら乱数で曲を選択
+
+;★ fade_out_speed = <0～63>
+;
+;　フェードアウトの速さ。
+
+;★ color = <n,r,g,b>
+;
+;　nはパレットコード(0～3)。r,g,bはそれぞれの輝度(0～7)。
+
+;★ select_bar_type  = <box|box_fill|line>
+;
+;　曲を選択した時などに表示されるバーの種類です。
+;box ........ 上下に線を引きます。
+;box_fill ... 白(パレットコード2)で塗り潰す。
+;line ....... 下線を引く。
+
+;★ interlace_mode = <0～3>
+;
+;　インターレースモード。BASICのSCREEN命令のそれと同じ。
+
+;★ date_style = <y/m/d>
+;
+;　画面の右上に表示される日付の表示形式を指定。
+;　yが年、mが月、dが日に対応。
+;
+;　DOS2の場合は、環境変数DATE>CNFの順に参照。"date_style"が指定されていな
+;  いと環境変数DATEで示される形式になる。
+
+;★ loop_count = <1～255>
+;
+;　フェードアウト開始までのループ数。
+
+;★ intro_time = <1～60>
+;
+;  演奏モードがintroの時、フェードアウト開始までのP.count(秒)数。
+
+;★ date_display = <on|off>
+;
+;　"off"なら日付を表示しない。
+
+;★ restore_drive = <yes|no>
+;
+;　終了時にドライブとディレクトリを起動時の状態に戻すかどうかを設定します。
+;　DOS1ではトライブのみが戻ります。
+
+;★ key_repeat_time = <1～255>
+;
+;キーが押されてからリピートを開始するまでの時間。単位は1/60秒。
+
+;★ key_scan_interval = <1～255>
+;
+;リピートが開始されてからキーがリピートする間隔。単位は1/60秒。
+
+;★ message_type = <ank|kanji|漢字>
+;
+;表示されるメッセージの選択。"kanji"と"漢字"は同じ。
+
+;★ font_file = <ファイル名>
+;
+;外部フォントのファイル名を指定します。
+;";"か","で区切ると複数の検索パスを指定できます。
+
+;★ song_display = <on|off>
+;
+;起動時から(起動後も変更はできます)歌詞を表示するようにするかを
+;指定します。onだと表示し、offは表示しません。
+;
+
+;★ auto_shutdown = <on|off>
+;
+;ディスクアクセス終了後、ドライブのモーターを止めるかを指定します。
+;アクセスが終了してもモーターが回ったままになってしまうドライブでは
+;onに設定してみて下さい。
+;
+
+;★ machine_id <0～7>
+;
+;機種コードを設定します。音量調整の際に参照されます。
+;現在、以下のコードが予約されています。
+;
+; 1:SONY製マシン
+; 2:PANASONIC製マシン
+; 3:SANYO製マシン
+; 0:その他のマシン
+
+;★ adj_volume = <no,v0dat,v2dat....v7dat>
+;
+;異機種間での音量調整を行なう再に使用される補正データを定義します。
+;noはデータ自体が持っているID(0-7)、v1dat～v7datは演奏される機種のIDで、
+;交差したところが補正時に用いられます。v?datは左からPSG,SCC,FMとなっていて、
+;0が最小、fが最大です。例えば、データのIDが6で演奏されるマシン(machine_id
+;で設定)のIDが5で、adj_volume 6,fff,fff,fff,dff,ccc,eeeと設定されているなら
+;eeeが補正時に用いられるという訳です。no = 0、およびv0datはIDが設定されてい
+;ないデータで用いられます(通常fffに固定しておきます)。
+
+;★ sector0_read = <on|off>
+;
+;ONにするとTABキーなどでディスクバッファをフラッシュする時にセクター0を読み
+;込みます。ボリュームIDでディスクの入れ換えを判断しているディスクキャッシュ
+;などに有効です。
+
+;★ view_font = <yes|no>
+;
+;yesにするとFS-A1GT(又はST+View)で非漢字と第一水準漢字を漢字ROMから取らず、
+;MSX-VIEWのROMから直接読み込みます。
+;
+;※ 環境によってはフォントが化けてしまう事があります(バグ)
+;
+
+;★ dir_mask_file = <ファイル名[,ファイル名...]>
+;
+;ディレクトリファイルとして認識させたくないファイル名を指定します。例えば、
+;"dir_mask_file = filmtn.dir"とすると"filmtn.dir"はMGSEL上で扱うディレクト
+;リファイルとして認識しなくなります。","や";"などで区切って複数指定できます。
+
+;★ dir_tree_file = <ファイル名>
+;
+;ディレクトリツリーを表示させる際に参照するツリー構造が記録されたファイル名
+;を指定します。ここで指定されたファイルは内部でdir_mask_fileへ追加します。
+
+;例:(省略時とは異なります)
+
+auto_play_mode    = normal
+intro_time	  = 10
+fade_out_speed    = 20
+color		  = 0,0,0,0
+color		  = 1,5,5,5
+color		  = 2,7,7,7
+color		  = 3,0,7,0
+select_bar_type	  = box
+interlace_mode	  = 0
+date_style	  = mdy
+loop_count	  = 1
+intro_time	  = 15
+date_display	  = on
+restore_drive	  = yes
+message_type	  = ank
+key_repeat_time   = 20
+key_scan_interval = 1
+font_file	  = h:\view12.fnt;a:\view12.fnt
+song_display	  = on
+auto_shutdown     = on
+machine_id	  = 1
+sector0_read      = off
+view_font	  = no
+dir_mask_file     = filmtn.dir
+dir_tree_file     = mmtree.dir
+
+;		      non son pna san --- --- -- ----
+adj_volume	  = 0,fff,fff,fff,fff,fff,fff,fff,fff	;定義されていないID
+adj_volume	  = 1,fff,fff,fdf,ddf,fff,fff,fff,fff	;sonyで作られたデータ
+adj_volume	  = 2,fff,dfd,fff,dff,fff,fff,fff,fff	;panaで作られたデータ
+adj_volume	  = 3,fff,dff,dff,fff,fff,fff,fff,fff	;sanyoで作られたデータ
+adj_volume	  = 4,fff,fff,fff,fff,fff,fff,fff,fff	;未使用
+adj_volume	  = 5,fff,fff,fff,fff,fff,fff,fff,fff	;未使用
+adj_volume	  = 6,fff,fff,fff,fff,fff,fff,fff,fff	;未使用
+adj_volume	  = 7,fff,fff,fff,fff,fff,fff,fff,fff	;未使用
+

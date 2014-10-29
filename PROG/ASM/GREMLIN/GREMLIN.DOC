@@ -1,0 +1,1420 @@
+File Name : Gremlin.Doc (Gremlin Documentation).
+Program   : Gremlin - MSX Z80/R800 Disassembler.
+Version   : Bianca-3-0 (2nd Ver., 4th Build, No Rev.)
+Status    : Public Domain, Freeware.
+Author    : Cyberknight Massao Kawata.
+Production: (C) 1998-2004 Unicorn Dreams Artwork Programs
+Release   : 2004-December-23 (Thursday).
+E-Mail    : cyberknight@myrealbox.com
+            cyberknight@gawab.com
+            unicorndreams@gmail.com
+Home Page : http://welcome.to/unicorndreams
+            http://unicorndreams.cjb.net
+
+
+
+                          Index
+
+
+  1. About The Program
+  2. Program Usage
+  3. More Usage Examples
+  4. Program Exit Status Numbers
+  5. Release History
+
+----------------------------------------------------------
+
+                    About The Program
+
+
+  "Gremlin" was  created  by  necessity: I  needed an  MSX
+disassembler  that could read large  files. Then  I found,
+amongst the  MSX simulator 'fMSX' files, a  program  named
+"dasm.c". I tried it and... and  nothing! Though  it could
+disassemble files, it had several fatal bugs that made the
+result  unreliable or even  unusable. I decided to analyze
+the  file  and  try to  fix it. Its structure  and working
+method  were  very simple: it  didn't  try to process  the
+data, just took  them raw and used their values as indexes
+of  a matrix  in which every element was a  macro-mnemonic
+that was then expanded, that is, it picked every byte as a
+hashing seed, with the op-codes on the hashing tables.
+
+  I started  to write the  program using the  same idea of
+macro-mnemonics, but  considering  future  expansions  and
+customized additions. The  Z80  instruction  set was taken
+from  the  Rossini  &  Figueredo's  book, while  the  R800
+instruction  set was taken  from the Japanese MSX Magazine
+(issue  of 1990-November). If you want, you  can make your
+own  customized  version of the  program (just  follow the
+comments along the program).
+
+  Z80 has seven operational modes, defined by four "header
+bytes": &HCB, &HDD, &HED and &HFD. When  they are found in
+a  machine language program, the CPU's operational mode is
+changed, what means new mnemonic matrices are  needed. Not
+all header byte combinations are valid and  some result in
+very similar mnemonics, what reduces the required matrices
+to  five.  But  there  is the  turbo R, which  uses  a CPU
+named  R800  with  a somehow similar instruction  set, but
+represented by different mnemonics. So, five more matrices
+have to be incorporated.
+
+  When testing the  program, I felt the necessity for some
+options, like  starting and ending  positions. Later, when
+using  it in a  practical  application (analyzing a Konami
+MegaROM), I added more options, like base address, leading
+zero  before numbers and so on. More complex  options were
+added  lately for  the first  public release. More options
+were added  to  the second version, making  it  easier  to
+create directly compilable codes.  If you want some useful
+option added, just write me and I'll try to implement it.
+
+  The  current package contains  a  binary  executable for
+M$-DOS/Windows, generated  using DJGPP  compiler. For more
+information about  the  contents of  the package, read the
+"readme.gb" file.
+
+  Now,  a note about  copyright. This  program  is "public
+domain", i.e., anyone may modify it, as  needed or wanted,
+and  distribute without express permission  of its author.
+It is, consequently, a "freeware", which means nothing can
+be charged for  it. If a modified version  of it  is  sold
+commercially, the source file  MUST be included within the
+package  and the customers  thoroughly notified  about its
+existence  and  nature. Thank  you  all  for  reading  and
+agreeing with this. If you use any part of the  program or
+the appended files, you automatically agree with my terms!
+
+  A note about the program's name: "gremlins" are mythical
+creatures  that hate  technology, when they come close  to
+any gadget, they start disassembling it...
+
+  I hope you find this program  to be useful. Any  problem
+or comment, send me an E-Mail. Thank you all.
+
+----------------------------------------------------------
+
+                      Program Usage
+
+
+  The program has the following syntax:
+
+  <Program Name> <File Name> [Options]
+
+  The Program Name is "gremlin" (or "gremlin.exe", in some
+systems), but can be changed to anything else.
+
+  The File Name may be given in the specific format of the
+system in which the program has been compiled.
+
+  The options (quick list):
+
+  0       zero led numbers.
+  a[8]    shows Addresses (with 4 or "8" digits format).
+  b#      sets Base address.
+  c[@][#] shows Characters ("@" prints control characters;
+          adds # offset).
+  d       Discard defined labels.
+  e#      sets End address (excludes "L" option).
+  f#      sets First byte of file to read.
+  gHeader Generate  labels  automatically  in  the  format
+          "Header####" ("####" being the address).
+  i       removes   mnemonic  ambiguities  by   converting
+          unused op-codes to Inline defined bytes (DB).
+  j       shows  relative Jump  offsets, instead of branch
+          addresses.
+  k       compact mode.
+  l#      sets Last byte to read (excludes "E" option).
+  n       No line breaks after inconditional branches.
+  o       shows Op-codes.
+  r       uses R800 instruction sets.
+  s#      sets Start address (default start=base address).
+  t[@]    shows execution Times ("@" adds wait-states).
+  u[@]    shows  Uppercase characters on listing ("@" also
+          capitalizes labels).
+  w       shows Whole list of labels defined to a value or
+          address, instead of just the first defined.
+  xFile   loads label lists.
+
+
+  The Options may appear in any order, separated by spaces
+or any other valid  separator  of the system. Some of them
+may or must be followed  by other parameters, which cannot
+be separated from  their option characters. Options may be
+given  both in  upper and  lower case  characters. Numeric
+values can  be given  in any  valid  C format (hexadecimal
+numbers start with "0x"; octal  numbers start with a zero;
+all other numbers are treated as decimals). * Note: on the
+second release, two options  were changed, "U" was changed
+to "J" and "T" was changed to "W".
+
+  More details about the program's behaviour:
+
+ - If  the file ends  in the middle of  an  op-code, the
+   program will assume zeros for the missing bytes.
+ - The  program  was optimized to save  memory, not  for
+   speed, so it will read the input  files byte by byte,
+   instead of  reading them  all  into  memory and  then
+   parsing  them; the  "G" option will  make  a two-pass
+   processing, reading the file twice, thus it will take
+   twice  the time  to disassemble the file, so test the
+   options  with shorter  ranges before going for a full
+   disassembling procedure.
+ - Options  are case insensitive, but, depending  on the
+   operating system, the file names are case sensitive.
+ - The program outputs directly to the "stdout", to save
+   it to a file, redirect the output using the operating
+   system's pipeline controls, like this Unix example:
+
+    gremlin game.rom gProg 0 d k > game.asm
+
+ - The program does not make  any verification about the
+   file name validity or accessibility, so, if you don't
+   have permission  to read  it  or it  contain  invalid
+   characters or  is in  an invalid format (for example,
+   using  names longer than eight characters in DOS) you
+   will get an error message.
+
+
+    Normal program output sample:
+
+    .Z80
+    aseg
+
+    org     00100H
+    .Phase  00000H
+
+    ld   b,c
+    ld   b,d
+    jp   0779H
+
+    di
+    ld   a,r
+    xor  (ix-4BH)
+    ld   bc,CAFEH
+    daa
+    ld   h,a
+    jr   nz,002BH
+    ld   l,58H
+    db   EDH,C3H ; invalid op-code
+    bit  3,(iy+00H)
+    jr   z,0023H
+    db   EDH,70H ; in   (c)
+    call po,1210H
+    dec  de
+    ret
+
+    ld   (A456H),hl
+    ld   hl,(A456H)
+    ex   de,hl
+    ld   b,A6H
+    ld   c,a
+    ld   l,(ix+21H)
+    dec  ix
+    out  (c),d
+    neg
+    adc  a,e
+    in   h,(c)
+    rst  28H
+    djnz 002DH
+    ex   af,af'
+    rlc  (hl)
+    reti
+
+    jp   nc,0000H
+
+    end
+
+
+    The program options explained:
+
+
+0 = Parameter syntax: 0
+
+    If this  option is used, the program will lead numeric
+    values with  a "0". This helps  the creation of  files
+    that can  be reassembled. If  option "T" is  not used,
+    all numeric parameters  receives the leading "0", else
+    only values in hexadecimal that start with a letter.
+
+    Example: gremlin game.rom 0
+
+    Output:
+
+    ld   b,c
+    ld   b,d
+>>  jp   00779H
+
+    di
+    ld   a,r
+>>  xor  (ix-04BH)
+>>  ld   bc,0CAFEH
+    daa
+    ld   h,a
+>>  jr   nz,0002BH
+>>  ld   l,058H
+>>  db   0EDH,0C3H ; invalid op-code
+>>  bit  3,(iy+000H)
+>>  jr   z,00023H
+>>  db   0EDH,070H ; in   (c)
+>>  call po,01210H
+    dec  de
+    ret
+    ...
+
+
+A = Parameter syntax: a[8]
+
+    Shows the  instructions'  addresses (by  default, only
+    the Assembly instructions are shown). Also by default,
+    addresses  are  presented  in  a  64 KByte range (from
+    0000H to FFFFH). If  the "8"  parameter is  used, long
+    range  addresses  are  printed  (from  00000000H  till
+    FFFFFFFFH).
+
+    Example: gremlin game.rom a
+
+    Output:
+
+    0000H:  ld   b,c
+    0001H:  ld   b,d
+    0002H:  jp   0779H
+
+    0005H:  di
+    0006H:  ld   a,r
+    0008H:  xor  (ix-4BH)
+    000BH:  ld   bc,CAFEH
+    000EH:  daa
+    000FH:  ld   h,a
+    0010H:  jr   nz,002BH
+    0012H:  ld   l,58H
+    ...
+
+    Example: gremlin game.rom a8
+
+    Output:
+
+    00000000H:  ld   b,c
+    00000001H:  ld   b,d
+    00000002H:  jp   0779H
+
+    00000005H:  di
+    00000006H:  ld   a,r
+    00000008H:  xor  (ix-4BH)
+    0000000BH:  ld   bc,CAFEH
+    0000000EH:  daa
+    0000000FH:  ld   h,a
+    00000010H:  jr   nz,002BH
+    00000012H:  ld   l,58H
+    ...
+
+
+B = Parameter syntax: b<Address>
+
+    Set the Base Address. By default, the  first byte read
+    is treated as at  address zero (the default Base value
+    is zero). With this option, you can change the address
+    the first byte read is treated as.
+
+    Example: gremlin game.rom a b0x4000
+
+    Output:
+
+>>          .Phase  04000H
+
+    4000H:  ld   b,c
+    4001H:  ld   b,d
+    4002H:  jp   0779H
+
+    4005H:  di
+    4006H:  ld   a,r
+    4008H:  xor  (ix-4BH)
+    400BH:  ld   bc,CAFEH
+    400EH:  daa
+    400FH:  ld   h,a
+>>  4010H:  jr   nz,402BH
+    4012H:  ld   l,58H
+    4014H:  db   EDH,C3H ; invalid op-code
+    4016H:  bit  3,(iy+00H)
+>>  401AH:  jr   z,4023H
+    401CH:  db   EDH,70H ; in   (c)
+    401EH:  call po,1210H
+    4021H:  dec  de
+    4022H:  ret
+    ...
+
+
+C = Parameter syntax: C[@][Offset]
+
+    Prints  the op-codes as  ASCII  characters. It may  be
+    followed by two parameters. The first is an "@", which
+    makes the program show control characters (by default,
+    Gremlin prints spaces when it finds those characters).
+    If  the  control  characters  are  allowed,  they  are
+    printed as hexadecimal  numbers, except  the following
+    ones, which have special representations:
+
+      00 = Null (Nl)           0C = Form Feed/CLS (FF)
+      03 = Stop/Break (Br)     0D = Carriage Return (CR)
+      07 = Bell (Be)           12 = Insert (In)
+      08 = Backspace (BS)      1A = End-of-File (EF)
+      09 = Tabulation (Tb)     1B = Escape (Es)
+      0A = Line Feed (LF)      20 = Space (Sp)
+      0B = Home (Hm)           7F = Delete (De)
+
+    The  second  optional parameter is  a  signed  offset,
+    which  is added to  the data  before printing. The "@"
+    parameter must appear  before the  offset, if both are
+    used. Note that the offset only affects the characters
+    printed, the op-codes are not affected (see option "O"
+    for details about op-codes printing).
+
+    Example: gremlin game.rom a o c
+
+    Output:
+
+    0000H:  41           A     ld   b,c
+    0001H:  42           B     ld   b,d
+    0002H:  C3 79 07     Ãy.   jp   0779H
+
+    0005H:  F3           ó     di
+    0006H:  ED 5F        í_    ld   a,r
+    0008H:  DD AE B5     Ý®µ   xor  (ix-4BH)
+    000BH:  01 FE CA     .þÊ   ld   bc,CAFEH
+    000EH:  27           '     daa
+    000FH:  67           g     ld   h,a
+    0010H:  20 19         .    jr   nz,002BH
+    0012H:  2E 58        .X    ld   l,58H
+    ...
+
+    Example: gremlin another.rom a o c@
+
+    Output:
+
+    0000H:  41           A             ld   b,c
+    0001H:  42           B             ld   b,d
+>>  0002H:  C3 79 07     Ã  y  Be      jp   0779H
+
+    0005H:  F3           ó             di
+    0006H:  ED 5F        í  _          ld   a,r
+    0008H:  DD AE B5     Ý  ®  µ       xor  (ix-4BH)
+>>  000BH:  01 FE CA     01 þ  Ê       ld   bc,CAFEH
+    000EH:  27           '             daa
+    000FH:  67           g             ld   h,a
+>>  0010H:  20 19        Sp 19         jr   nz,002BH
+    0012H:  2E 58        .  X          ld   l,58H
+    ...
+
+    Example: gremlin konami.rom a o c0x20
+
+    Output:
+
+    0000H:  41           a     ld   b,c
+    0001H:  42           b     ld   b,d
+    0002H:  C3 79 07     ã™'   jp   0779H
+
+    0005H:  F3           .     di
+    0006H:  ED 5F        ..    ld   a,r
+    0008H:  DD AE B5     ýÎÕ   xor  (ix-4BH)
+    000BH:  01 FE CA     !.ê   ld   bc,CAFEH
+    000EH:  27           G     daa
+    000FH:  67           ‡     ld   h,a
+    0010H:  20 19        @9    jr   nz,002BH
+    0012H:  2E 58        Nx    ld   l,58H
+    ...
+
+    Example: gremlin unknown.rom a o c@-10
+
+    Output:
+
+    0000H:  41           7             ld   b,c
+    0001H:  42           8             ld   b,d
+    0002H:  C3 79 07     ¹  o  ý       jp   0779H
+
+    0005H:  F3           é             di
+    0006H:  ED 5F        ã  U          ld   a,r
+    0008H:  DD AE B5     Ó  ¤  «       xor  (ix-4BH)
+    000BH:  01 FE CA     ÷  ô  À       ld   bc,CAFEH
+    000EH:  27           1D            daa
+    000FH:  67           ]             ld   h,a
+    0010H:  20 19        16 0F         jr   nz,002BH
+    0012H:  2E 58        $  N          ld   l,58H
+    ...
+
+
+D = Parameter syntax: d
+
+    When the program finds labels matching in the listing,
+    it generates  a list of all  those labels at  the end,
+    not   only  referred  labels,  but  also  those  which
+    addresses were defined by actual  addresses. With this
+    option  active, the  program  will discard the  labels
+    that are defined in the program, so they  won't appear
+    in the listing. This allows  the  resulting listing to
+    be compiler compliant (that is, directly  recompilable
+    in any assembler).
+
+    Example: gremlin game.rom a o xLabel.Lst d
+
+    "Label.Lst" file is defined as follows (see details on
+    creating label file on option "X"):
+
+    MainRoutine 0x58
+    ' '=@32
+    LineFeed @0xA
+    BackSpace>@010
+    '/'=@47
+    'X'...@0x58
+    Negative=@-1
+
+        RDVRM  0x004A | SETRD  0x0050 | WRTPSG 0x0093
+        WRTVRM 0x004D | SETWRT 0x0053 | FILVRM 0x0056
+
+        HKEYI 0xFD9A
+
+          Begin 0x0002! BackDoor: 0xCAFE???
+          MainBuf = 0xE000 MainBuf+1>0xE001
+          Entry=0xC000 Entry+1=0x779
+          StartUpEntry=0x779
+          Procedure1 0x001c
+    OneMore 2  SomeChar @88
+
+
+    Output:
+
+    0000H:         41           ld   b,c
+    0001H:         42           ld   b,d
+>>  Begin:         C3 79 07     jp   Entry+1
+
+    0005H:         F3           di
+    0006H:         ED 5F        ld   a,r
+    0008H:         DD AE B5     xor  (ix-4BH)
+    000BH:         01 FE CA     ld   bc,BackDoor
+    000EH:         27           daa
+    000FH:         67           ld   h,a
+    0010H:         20 19        jr   nz,002BH
+    0012H:         2E 58        ld   l,'X'
+    0014H:         ED C3        db   EDH,C3H ; invalid op-code
+    0016H:         FD CB 00 5E  bit  3,(iy+00H)
+    001AH:         28 07        jr   z,0023H
+>>  Procedure1:    ED 70        db   EDH,70H ; in   (c)
+    001EH:         E4 10 12     call po,1210H
+    0021H:         1B           dec  de
+    0022H:         C9           ret
+    ...
+
+    'X'            equ    58H ;  +88 "X"
+    Entry+1        equ  0779H
+    BackDoor       equ  CAFEH
+
+
+
+E = Parameter syntax: e<Address>
+
+    Sets the  end  address. By default, the  file is  read
+    until the address of the last byte. This value depends
+    on  the "Base Address" (option "B").  It automatically
+    excludes the "L" option (the last given option  is the
+    one  actually used). If the ending  address  is in the
+    middle of  an instruction, the  needed remaining bytes
+    are read for more accurate disassembling.
+
+    Example: gremlin game.rom a e0x10
+
+    Output:
+
+    0000H:  ld   b,c
+    0001H:  ld   b,d
+    0002H:  jp   0779H
+
+    0005H:  di
+    0006H:  ld   a,r
+    0008H:  xor  (ix-4BH)
+    000BH:  ld   bc,CAFEH
+    000EH:  daa
+    000FH:  ld   h,a
+>>  0010H:  jr   nz,002BH
+
+    Example: gremlin game.rom a b0x4000 e0x4010
+
+    Output:
+
+    4000H:  ld   b,c
+    4001H:  ld   b,d
+    4002H:  jp   0779H
+
+    4005H:  di
+    4006H:  ld   a,r
+    4008H:  xor  (ix-4BH)
+    400BH:  ld   bc,CAFEH
+    400EH:  daa
+    400FH:  ld   h,a
+>>  4010H:  jr   nz,402BH
+
+
+F = Parameter syntax: f<Address>
+
+    Sets  the file reading first position. By default, the
+    program  reads the file  starting from the first byte.
+    With this  option, such behaviour can be  changed. The
+    Base Address  is always relative to this position, or,
+    in other words, the "F" option makes Gremlin  leap and
+    "ignore" the  data before  the given address. For that
+    reason, its effect is cumulative with "S" option.
+
+    Example: gremlin game.rom a o f7
+
+    Output:
+
+>>  0000H:  5F           ld   e,a
+    0001H:  DD AE B5     xor  (ix-4BH)
+    0004H:  01 FE CA     ld   bc,CAFEH
+    0007H:  27           daa
+    0008H:  67           ld   h,a
+    0009H:  20 19        jr   nz,0024H
+    000BH:  2E 58        ld   l,58H
+    ...
+
+    Example: gremlin game.bin a o f7 b0x4000
+
+    Output:
+
+>>  4000H:  5F           ld   e,a
+    4001H:  DD AE B5     xor  (ix-4BH)
+    4004H:  01 FE CA     ld   bc,CAFEH
+    4007H:  27           daa
+    4008H:  67           ld   h,a
+    4009H:  20 19        jr   nz,4024H
+    400BH:  2E 58        ld   l,58H
+    ...
+
+
+G = Parameter syntax: g<Label Header>
+
+    This option will generate labels automatically, formed
+    by the header given, immediately followed by the value
+    of the address referred  in hexadecimal. If a label is
+    already defined to a certain address  in a list, a new
+    one won't be created for it.
+
+    Example: gremlin game.rom 0 xLabel.lst gLabel d i
+
+    Output:
+
+>>  Label0000:     ld   b,c
+                   ld   b,d
+    Begin:         jp   Entry+1
+
+                   di
+                   ld   a,r
+                   xor  (ix-04BH)
+                   ld   bc,BackDoor
+                   daa
+                   ld   h,a
+>>                 jr   nz,Label002B
+                   ld   l,'X'
+                   db   0EDH,0C3H ; invalid op-code
+                   bit  3,(iy+000H)
+>>                 jr   z,Label0023
+    Procedure1:    db   0EDH,070H ; in   (c)
+>>                 call po,Label1210
+                   dec  de
+                   ret
+
+>>  Label0023:     ld   (LabelA456),hl
+>>                 db   0EDH,06BH,056H,0A4H ; ld   hl,(LabelA456)
+                   ex   de,hl
+>>  Label002B:     ld   b,0A6H
+>>  Label002D:     ld   c,a
+                   ld   l,(ix+021H)
+                   dec  ix
+                   out  (c),d
+                   neg
+                   adc  a,e
+                   in   h,(c)
+                   rst  028H
+>>                 djnz Label002D
+                   ex   af,af'
+                   rlc  (hl)
+                   reti
+
+>>                 jp   nc,Label0000
+    ...
+
+    'X'            equ    058H ;  +88 "X"
+    Entry+1        equ  00779H
+>>  Label1210      equ  01210H
+>>  LabelA456      equ  0A456H
+    BackDoor       equ  0CAFEH
+
+    Because  the program  cannot foreknow  which addresses
+    are referred by the program, it has to make a two-pass
+    parsing, the first to gather all references and, then,
+    the second to disassemble the file.
+
+
+I = Parameter syntax: i
+
+    Most  processors have "superfluous" op-codes, that is,
+    different  instructions  that do the same things. Some
+    of those op-codes are assigned to the  same mnemonics,
+    for  example,  "22 nn"  and  "ED 63 nn"  op-codes  are
+    represented  by "LD (nn),HL". When an  assembler finds
+    such mnemonics in  a  program, it  chooses  one of the
+    op-codes, usually the most efficient one (in the given
+    example,  "22  nn").  When  disassembling  a  program,
+    Gremlin usually  prints  the  same  mnemonic to  those
+    ambiguous instructions. Using option "I" makes Gremlin
+    convert the  less efficient  ambiguous op-codes, which
+    would  lead  assemblers  to  recompile  to  the  wrong
+    op-codes to inline defined bytes (DB). Thus, a program
+    could  be  recompiled  exactly  to the original binary
+    after being disassembled using this option.
+
+    Example: gremlin game.rom a o i
+
+    Output:
+
+    0000H:  41           ld   b,c
+    0001H:  42           ld   b,d
+    0002H:  C3 79 07     jp   0779H
+
+    0005H:  F3           di
+    0006H:  ED 5F        ld   a,r
+    0008H:  DD AE B5     xor  (ix-4BH)
+    000BH:  01 FE CA     ld   bc,CAFEH
+    000EH:  27           daa
+    000FH:  67           ld   h,a
+    0010H:  20 19        jr   nz,002BH
+    0012H:  2E 58        ld   l,58H
+    0014H:  ED C3        db   EDH,C3H ; invalid op-code
+    0016H:  FD CB 00 5E  bit  3,(iy+00H)
+    001AH:  28 07        jr   z,0023H
+    001CH:  ED 70        db   EDH,70H ; in   (c)
+    001EH:  E4 10 12     call po,1210H
+    0021H:  1B           dec  de
+    0022H:  C9           ret
+
+    0023H:  22 56 A4     ld   (A456H),hl
+>>  0026H:  ED 6B 56 A4  db   EDH,6BH,56H,A4H ; ld   hl,(A456H)
+    002AH:  EB           ex   de,hl
+    002BH:  06 A6        ld   b,A6H
+    002DH:  4F           ld   c,a
+    ...
+
+J = Parameter syntax: j
+
+    If this  option  is used, the  relative  branches  are
+    printed with their offsets instead of their calculated
+    addresses. Note about Z80/R800 behaviour:  the offsets
+    are relative  to the next instruction, right after the
+    branch instruction.  Note about assemblers: most DON'T
+    accept relative offsets, they require addresses to the
+    relative jump instructions.
+
+    Example: gremlin game.rom a o j
+
+    Output:
+
+    0000H:  41           ld   b,c
+    0001H:  42           ld   b,d
+    0002H:  C3 79 07     jp   0779H
+
+    0005H:  F3           di
+    0006H:  ED 5F        ld   a,r
+    0008H:  DD AE B5     xor  (ix-4BH)
+    000BH:  01 FE CA     ld   bc,CAFEH
+    000EH:  27           daa
+    000FH:  67           ld   h,a
+>>  0010H:  20 19        jr   nz,+19H
+    0012H:  2E 58        ld   l,58H
+    0014H:  ED C3        db   EDH,C3H ; invalid op-code
+    0016H:  FD CB 00 5E  bit  3,(iy+00H)
+>>  001AH:  28 07        jr   z,+07H
+    001CH:  ED 70        db   EDH,70H ; in   (c)
+    001EH:  E4 10 12     call po,1210H
+    0021H:  1B           dec  de
+    0022H:  C9           ret
+
+    0023H:  22 56 A4     ld   (A456H),hl
+    0026H:  ED 6B 56 A4  ld   hl,(A456H)
+    002AH:  EB           ex   de,hl
+    002BH:  06 A6        ld   b,A6H
+    002DH:  4F           ld   c,a
+    002EH:  DD 6E 21     ld   l,(ix+21H)
+    0031H:  DD 2B        dec  ix
+    0033H:  ED 51        out  (c),d
+    0035H:  ED 44        neg
+    0037H:  8B           adc  a,e
+    0038H:  ED 60        in   h,(c)
+    003AH:  EF           rst  28H
+>>  003BH:  10 F0        djnz -10H
+    003DH:  08           ex   af,af'
+    003EH:  CB 06        rlc  (hl)
+    ...
+
+
+K = Parameter syntax: k
+
+    This  option  activates  the "compact  mode". In  this
+    mode, the following differences are present:
+
+    * most messages from the program are not printed.
+    * indexed  instructions with index  zero are presented
+      in the simplified form:
+
+        (normal mode)      (simplified form)
+
+        ld a,(ix+00H)          ld a,(ix)
+
+    * if option "0" is active, only numbers beginning with
+      "A", "B", "C", "D", "E" or "F" receive  the  leading
+      zero:
+
+      (normal mode)     (zero-led)       (compact form)
+
+        ld a,E4H        ld a,0E4H          ld a,0E4H
+        or .a,95H       or .a,095H         or .a,95H
+
+    Example: gremlin game.rom a 0 k
+
+    Output:
+
+    0000H:  ld   b,c
+    0001H:  ld   b,d
+>>  0002H:  jp   0779H
+
+    0005H:  di
+    0006H:  ld   a,r
+>>  0008H:  xor  (ix-4BH)
+>>  000BH:  ld   bc,0CAFEH
+    000EH:  daa
+    000FH:  ld   h,a
+>>  0010H:  jr   nz,002BH
+>>  0012H:  ld   l,58H
+>>  0014H:  db   0EDH,0C3H ; invalid op-code
+    0016H:  bit  3,(iy)
+>>  001AH:  jr   z,0023H
+>>  001CH:  db   0EDH,70H ; in   (c)
+    001EH:  call po,1210H
+    0021H:  dec  de
+    0022H:  ret
+    ...
+
+
+L = Parameter syntax: l<Address>
+
+    Sets the file last read position. By default, the file
+    is read till the last byte. This option doesn't depend
+    either  on  the "Base Address" (option "B") or on  the
+    "First Position" (option "F"). Because  there  can  be
+    only one stopping condition, this option automatically
+    excludes the "E" option (the last given  option is the
+    one actually  used). If the  ending address  is in the
+    middle of  an instruction, the  needed remaining bytes
+    are read.
+
+    Example: gremlin game.rom a l20
+
+    Output:
+
+    0000H:  ld   b,c
+    0001H:  ld   b,d
+    0002H:  jp   0779H
+
+    0005H:  di
+    0006H:  ld   a,r
+    0008H:  xor  (ix-4BH)
+    000BH:  ld   bc,CAFEH
+    000EH:  daa
+    000FH:  ld   h,a
+    0010H:  jr   nz,002BH
+    0012H:  ld   l,58H
+>>  0014H:  db   EDH,C3H ; invalid op-code
+
+    Example: gremlin game.rom a f5 l20
+
+    Output:
+
+    0000H:  F3           di
+    0001H:  ED 5F        ld   a,r
+    0003H:  DD AE B5     xor  (ix-4BH)
+    0006H:  01 FE CA     ld   bc,CAFEH
+    0009H:  27           daa
+    000AH:  67           ld   h,a
+    000BH:  20 19        jr   nz,0026H
+    000DH:  2E 58        ld   l,58H
+>>  000FH:  ED C3        db   EDH,C3H ; invalid op-code
+
+
+N = Parameter syntax: n
+
+    When an  inconditional branch instruction  is reached,
+    the program  prints a "Line Feed" (separation line) to
+    make  the disassembled code easier to be read. If this
+    option is used, no  separation lines are printed after
+    incondition branches, which  are "JP x" and "JR x" for
+    Z80,  "BR x"  and  "SHORT BR x" for  R800, and  "RET",
+    "RETI" and "RETN" for both CPU.
+
+    Example: gremlin game.rom a n
+
+    Output:
+
+    0000H:  ld   b,c
+    0001H:  ld   b,d
+>>  0002H:  jp   0779H
+    0005H:  di
+    0006H:  ld   a,r
+    0008H:  xor  (ix-4BH)
+    000BH:  ld   bc,CAFEH
+    000EH:  daa
+    000FH:  ld   h,a
+    0010H:  jr   nz,002BH
+    0012H:  ld   l,58H
+    0014H:  db   EDH,C3H ; invalid op-code
+    0016H:  bit  3,(iy+00H)
+    001AH:  jr   z,0023H
+    001CH:  db   EDH,70H ; in   (c)
+    001EH:  call po,1210H
+    0021H:  dec  de
+>>  0022H:  ret
+    0023H:  ld   (A456H),hl
+    ...
+
+
+O = Parameter syntax: o
+
+    Prints the original op-codes in hexadecimal format.
+
+    Example: gremlin game.rom o
+
+    Output:
+
+    41           ld   b,c
+    42           ld   b,d
+    C3 79 07     jp   0779H
+
+    F3           di
+    ED 5F        ld   a,r
+    DD AE B5     xor  (ix-4BH)
+    01 FE CA     ld   bc,CAFEH
+    27           daa
+    67           ld   h,a
+    20 19        jr   nz,002BH
+    2E 58        ld   l,58H
+    ED C3        db   EDH,C3H ; invalid op-code
+    FD CB 00 5E  bit  3,(iy+00H)
+    28 07        jr   z,0023H
+    ED 70        db   EDH,70H ; in   (c)
+    E4 10 12     call po,1210H
+    1B           dec  de
+    C9           ret
+    ...
+
+
+R = Parameter syntax: r
+
+    This option makes the program use the turbo R's R800
+    CPU instruction set instead of the Z80's.
+
+    Example: gremlin game.rom a o r
+
+    Output:
+
+    0000H:  41           ld    .b,.c
+    0001H:  42           ld    .b,.d
+    0002H:  C3 79 07     br    0779H
+
+    0005H:  F3           di
+    0006H:  ED 5F        ld    .a,.r
+    0008H:  DD AE B5     xor   .a,[.ix-4BH]
+    000BH:  01 FE CA     ld    .bc,CAFEH
+    000EH:  27           adj   .a
+    000FH:  67           ld    .h,.a
+    0010H:  20 19        short bnz 002BH
+    0012H:  2E 58        ld    .l,58H
+    0014H:  ED C3        muluw .hl,.bc
+    0016H:  FD CB 00 5E  bit   3,[.iy+00H]
+    001AH:  28 07        short bz 0023H
+    001CH:  ED 70        in    .f,[.c]
+    001EH:  E4 10 12     call  po,1210H
+    0021H:  1B           dec   .de
+    0022H:  C9           ret
+    ...
+
+
+S = Parameter  syntax: s<Address>
+
+    Sets the disassembling start  address. By default, the
+    file is processed starting from the Base Address (that
+    is set to the first byte read from the input file). If
+    this option is given  with an address before the Base,
+    it is  automatically adjusted to it. This  options can
+    be used with "F" option, they are cumulative.
+
+    Example: gremlin game.rom a o s7
+
+    Output:
+
+>>  0007H:  5F           ld   e,a
+    0008H:  DD AE B5     xor  (ix-4BH)
+    000BH:  01 FE CA     ld   bc,CAFEH
+    000EH:  27           daa
+    000FH:  67           ld   h,a
+    0010H:  20 19        jr   nz,002BH
+    0012H:  2E 58        ld   l,58H
+    0014H:  ED C3        db   EDH,C3H ; invalid op-code
+    0016H:  FD CB 00 5E  bit  3,(iy+00H)
+    001AH:  28 07        jr   z,0023H
+    001CH:  ED 70        db   EDH,70H ; in   (c)
+    001EH:  E4 10 12     call po,1210H
+    0021H:  1B           dec  de
+    0022H:  C9           ret
+    ...
+
+    Example: gremlin game.rom a o b0x4000 s0x4007
+
+    Output:
+
+>>  4007H:  5F           ld   e,a
+    4008H:  DD AE B5     xor  (ix-4BH)
+    400BH:  01 FE CA     ld   bc,CAFEH
+    400EH:  27           daa
+    400FH:  67           ld   h,a
+    4010H:  20 19        jr   nz,402BH
+    4012H:  2E 58        ld   l,58H
+    4014H:  ED C3        db   EDH,C3H ; invalid op-code
+    4016H:  FD CB 00 5E  bit  3,(iy+00H)
+    401AH:  28 07        jr   z,4023H
+    401CH:  ED 70        db   EDH,70H ; in   (c)
+    401EH:  E4 10 12     call po,1210H
+    4021H:  1B           dec  de
+    4022H:  C9           ret
+    ...
+
+
+T = Parameter syntax: t[@]
+
+    Calculates execution time of the  disassembled segment
+    and  sub-routines. The optional parameter "@" commands
+    the program  to add  wait-states  to  the calculations
+    (necessary on  some machines, like MSX/MSX2/MSX2+). On
+    R800 mode (option "R"), the "@" parameter  is ignored,
+    because wait-states depend on memory  circuitry of the
+    machine. The times are presented on four columns:
+
+    1 - instruction cycles on successful execution;
+    2 - cycles  on  execution  failure:  only  conditional
+        instructions may  fail, when  the condition is not
+        fulfilled, so only them show this second column;
+    3 - sum of successful cycles till that breaking point:
+        breaking  points are  any kind of branches (either
+        conditional and inconditional), loop and repeating
+        isntructions; invalid instructions also will force
+        the program to stop counting cycles, because there
+        are no sure ways to calculate them.
+
+    Example: gremlin unknown.rom t
+
+    Output:
+
+     4             ld   b,c
+     4             ld   b,d
+    10     18      jp   0779H
+
+     4             di
+     9             ld   a,r
+    19             xor  (ix-4BH)
+    10             ld   bc,CAFEH
+     4             daa
+     4             ld   h,a
+    12/ 7  62/ 57  jr   nz,002BH
+     7             ld   l,58H
+    ?       7      db   EDH,C3H ; invalid op-code
+    20             bit  3,(iy+00H)
+    12/ 7  32/ 27  jr   z,0023H
+    12             db   EDH,70H ; in   (c)
+    17/10  29/ 22  call po,1210H
+     6             dec  de
+    10     16      ret
+    ...
+
+    Example: gremlin unknown.rom t@
+
+    Output:
+
+     5             ld   b,c
+     5             ld   b,d
+    11     21      jp   0779H
+
+     5             di
+    11             ld   a,r
+    21             xor  (ix-4BH)
+    11             ld   bc,CAFEH
+     5             daa
+     5             ld   h,a
+    13/ 8  71/ 66  jr   nz,002BH
+     8             ld   l,58H
+    ?       8      db   EDH,C3H ; invalid op-code
+    23             bit  3,(iy+00H)
+    13/ 8  36/ 31  jr   z,0023H
+    14             db   EDH,70H ; in   (c)
+    18/11  32/ 25  call po,1210H
+     7             dec  de
+    11     18      ret
+    ...
+
+
+U = Parameter syntax: u[@]
+
+    Shows the instructions in uppercase characters. If "@"
+    parameter is given, also capitalizes labels.
+
+    Example: gremlin unknown.rom gProg u
+
+    Output:
+
+    Prog0000:  LD   B,C
+               LD   B,D
+               JP   Prog0779
+
+               DI
+               LD   A,R
+               XOR  (IX-4BH)
+               LD   BC,ProgCAFE
+               DAA
+               LD   H,A
+               JR   NZ,Prog002B
+               LD   L,58H
+               DB   EDH,C3H ; INVALID OP-CODE
+               BIT  3,(IY+00H)
+               JR   Z,Prog0023
+               DB   EDH,70H ; IN   (C)
+               CALL PO,Prog1210
+               DEC  DE
+               RET
+
+    Prog0023:  LD   (ProgA456),HL
+    ...
+
+    Prog0000   equ  0000H
+    Prog0023   equ  0023H
+    Prog002B   equ  002BH
+    Prog002D   equ  002DH
+    ...
+
+    Example: gremlin unknown.rom gProg u@
+
+    Output:
+
+    PROG0000:  LD   B,C
+               LD   B,D
+               JP   PROG0779
+
+               DI
+               LD   A,R
+               XOR  (IX-4BH)
+               LD   BC,PROGCAFE
+               DAA
+               LD   H,A
+               JR   NZ,PROG002B
+               LD   L,58H
+               DB   EDH,C3H ; INVALID OP-CODE
+               BIT  3,(IY+00H)
+               JR   Z,PROG0023
+               DB   EDH,70H ; IN   (C)
+               CALL PO,PROG1210
+               DEC  DE
+               RET
+
+    PROG0023:  LD   (PROGA456),HL
+    ...
+
+    PROG0000   equ  0000H
+    PROG0023   equ  0023H
+    PROG002B   equ  002BH
+    PROG002D   equ  002DH
+    ...
+
+W = Parameter syntax: w
+
+    When more than one label is defined to the same value,
+    generally only the first defined  one is  shown. Using
+    this option, the program will replace matching  values
+    by all labels assigned to them. Referred addresses are
+    separated by slashes. Defined addresses are listed one
+    after  the other, with line  breaks, making the result
+    compatible  with most  assemblers. If  too many labels
+    are  defined  to  the same  value, some  labels may be
+    not shown (in  such  cases, omission  points "..." are
+    printed).
+
+    Example: gremlin game.rom a xLabel.lst gLabel w
+
+    Output:
+
+    Label0000:     ld   b,c
+    0001H:         ld   b,d
+>>  Begin:
+>>  OneMore:       jp   Entry+1/StartUpEntry
+
+    0005H:         di
+    0006H:         ld   a,r
+    0008H:         xor  (ix-4BH)
+    000BH:         ld   bc,BackDoor
+    000EH:         daa
+    000FH:         ld   h,a
+    0010H:         jr   nz,Label002B
+>>  0012H:         ld   l,'X'/SomeChar
+    0014H:         db   EDH,C3H ; invalid op-code
+    0016H:         bit  3,(iy+00H)
+    001AH:         jr   z,Label0023
+    Procedure1:    db   EDH,70H ; in   (c)
+    001EH:         call po,Label1210
+    0021H:         dec  de
+    0022H:         ret
+    ...
+
+>>  'X'            equ    58H ;  +88 "X"
+>>  SomeChar       equ    58H ;  +88 "X"
+    Label0000      equ  0000H
+    Begin          equ  0002H
+    OneMore        equ  0002H
+    Procedure1     equ  001CH
+    Label0023      equ  0023H
+    Label002B      equ  002BH
+    Label002D      equ  002DH
+>>  Entry+1        equ  0779H
+>>  StartUpEntry   equ  0779H
+    Label1210      equ  1210H
+    LabelA456      equ  A456H
+    BackDoor       equ  CAFEH
+
+X = Parameter syntax: x<Label List 1> [x<Label List 2>...]
+
+    This option will exchange some numeric parameters that
+    match with those of  labels defined in list files. The
+    numbers that are exchanged are addresses (absolute and
+    relative), signed  and  unsigned  bytes (only  numeric
+    parameters of valid instructions) and  two-byte (word)
+    numbers  (of  valid  instructions  and   disassembling
+    addresses, if option "A" is  active). The  Z80's "RST"
+    and R800's "BRK" instructions are not affected by this
+    option, once their  addresses are part of the mnemonic
+    and not branch  addresses. The  same is valid for  the
+    bit number of "BIT", "RES/CLR" and "SET" instructions.
+
+    The label list files are composed by pairs of a string
+    and a  number. If the  number is  preceded  by an "@",
+    then it  is treated  as a  byte number, else  it  is a
+    "word" (2 bytes). Labels may  have up to 63 characters
+    (this is not a program limitation, but a defined limit
+    set to avoid problems resulting from usage error).
+
+    Label list files are ASCII text files. Line breaks and
+    all other  control  characters (ASCII<32), spaces  and
+    most  symbols  are treated  as  separators. Labels may
+    contain numbers, letters  and the symbols "+", "-" and
+    "_", all  others  are  considered  separators.  Spaces
+    and other symbols may be  forced into  label names  by
+    enclosing them  between single-quotes (which are  kept
+    as part of the label). More than  one list file can be
+    used at  the same time. Gremlin accepts  as many label
+    list  files as  the system  allows  parameters  to  be
+    passed to the program. The order labels are defined is
+    generally not important, except if more than one label
+    is defined  to the same numeric value (in such  cases,
+    the   first  defined  ones  always   match  FIRST,  so
+    customized lists  should  be  included  in the command
+    line  before  the generic ones, unless  generic labels
+    should have priority over custom ones). Labels list
+    file example (used through the usage examples in this
+    documentation):
+
+    MainRoutine 0x58
+    ' '=@32
+    LineFeed @0xA
+    BackSpace>@010
+    '/'=@47
+    'X'...@0x58
+    Negative=@-1
+
+          RDVRM  0x004A | SETRD  0x0050 | WRTPSG 0x0093
+          WRTVRM 0x004D | SETWRT 0x0053 | FILVRM 0x0056
+
+          HKEYI 0xFD9A
+
+          Begin 0x0002! BackDoor: 0xCAFE???
+          MainBuf = 0xE000 MainBuf+1>0xE001
+          Entry=0xC000 Entry+1=0x779
+          StartUpEntry=0x779
+          Procedure1 0x001c
+    OneMore 2  SomeChar @88
+
+
+    In  this  sample labels list file, many and  different
+    characters  were used  as separators, but  any  others
+    would  do the job. No verification  is made  about the
+    fidelity and/or consistency of  references of  a label
+    and its given numeric value (it's up to the used to do
+    so, if  wanted or needed). In  the sample  list, there
+    is  a "Entry+1" label  that  is  set  to  0779H, while
+    "Entry" is set to C000H. This  behaviour allows values
+    exchange during  the  disassembling  process (but also
+    requires a little more attention of the user).
+
+    Example: gremlin game.rom a o xLabel.Lst
+
+    Output:
+
+    0000H:         ld   b,c
+    0001H:         ld   b,d
+    Begin:         jp   Entry+1
+
+    0005H:         di
+    0006H:         ld   a,r
+    0008H:         xor  (ix-4BH)
+    000BH:         ld   bc,BackDoor
+    000EH:         daa
+    000FH:         ld   h,a
+    0010H:         jr   nz,002BH
+    0012H:         ld   l,'X'
+    0014H:         db   EDH,C3H ; invalid op-code
+    0016H:         bit  3,(iy+00H)
+    001AH:         jr   z,0023H
+    Procedure1:    db   EDH,70H ; in   (c)
+    001EH:         call po,1210H
+    0021H:         dec  de
+    0022H:         ret
+    ...
+
+    'X'            equ    58H ;  +88 "X"
+    Begin          equ  0002H
+    Procedure1     equ  001CH
+    Entry+1        equ  0779H
+    BackDoor       equ  CAFEH
+
+    Note that the label defined  to a value does  not have
+    anything to do with the  value itself. The "'X'" label
+    was  defined to the value 58H, which  is the "X" ASCII
+    character,  what  is   very  convenient,  because  any
+    assembler would correctly compile 'X' to 58H, but that
+    is  not  necessary, any  other label  could  have been
+    associated  to  58H, or  any  value  could  have  been
+    assigned to "'X'" label. For example:
+
+    'A' @0x58
+
+    Changing  the  definition  of  the label to  the above
+    would cause all 58H  data to be changed to 41H ("A" in
+    ASCII). This can be useful if used carefully.
+
+
+----------------------------------------------------------
+
+                   More Usage Examples
+
+
+  gremlin prog-0.bin b0xc000 f7 o a
+
+  This command will disassemble file "prog-0.bin" starting
+from the eighth  byte [byte 7] as if it  was at &HC000. It
+will also show the original bytes and their addresses.
+
+
+  gremlin MegaGame.ROM S0100 E0X200 O C@ XMSXBIOS.Lst
+
+  This  command  will disassemble file "megagame.bin" from
+byte 64 [100 in octal]  till 512 [200 in  hexadecimal]. It
+will  also show  the  op-codes, their corresponding  ASCII
+characters,  ignoring  control  codes, and  will  exchange
+values  that  match  the  list in "msxbios.lst" for  their
+corresponding labels.
+
+
+  gremlin myprog-0.com r xmsxbios.dat b0x100 xmsxwrk.dat w
+
+  This  command  will disassemble  file  "myprog-0.com" as
+if  it was  at address &H100  and using R800 instructions.
+It will  also exchange numbers  that match  the  lists  in
+"msxbios.dat"  and "msx2bio.dat"  files  for  the  defined
+labels, showing  ambiguous  matching  labels separated  by
+slashes.
+
+  gremlin game.rom gProg b0x4000 0 d i
+
+  This command will disassemble "game.rom", which would be
+originally  loaded at 4000H, creating labels automatically
+and listing only the ones not assigned to addresses inside
+the file itself and removing op-code ambiguities. The file
+thus generated can be  directly  recompiled, restoring the
+original binary file. This is very useful to create source
+files of programs.
+
+  If  some some known  value is  not to  be  automatically
+indexed  by the "G" option, it may be declared  as a label
+in a  custom label list. For example, if  the values 0000H
+and FFFFH  are to be treated just  as numeric values, than
+they can be declared like this:
+
+  0000H 0
+  0FFFFH 0xffff
+
+  This  way, Gremlin will replace 0000H values by "0000H",
+and  FFFFH by "0FFFFH". Note  that  those  labels will  be
+listed on the label list, that's normal. If  the resulting
+listing is to be recompiled, they must be removed, because
+labels, for the compiler, may not start with numbers.
+
+----------------------------------------------------------
+
+               Program Exit Status Numbers
+
+
+0 = normal termination;
+1 = invalid option (solution: read this documentation);
+2 = couldn't allocate enough memory (solution: try to make
+    Label  File smaller some way, if any are used. If not,
+    the system is  running  low of memory or  this program
+    was not correctly compiled, try to recompile);
+3 = couldn't  open file (solution: check  if file name  is
+    correct and, if running in some strange shell program,
+    check if  file is  not protected  against  reading, it
+    may be  assigned for  exclusive reading by some  other
+    program);
+4 = found label too long (solutions: check  Label File for
+    typing  errors; if the  label is indeed too long, with
+    more than  127 characters, then try to truncate it);
+5 = found unclosed label (solution: check  Label File  for
+    typing errors and misuse of apostrophe "'").
+6 = found bad  numberic value  for  label (solution: check
+    typing errors and  the values  given to  byte and word
+    labels, check the value ranges);
+7 = label definition syntax  error (solution: check  Label
+    File  for  typing  errors,  misplaced  and/or  missing
+    labels and/or numbers);
+
+----------------------------------------------------------
+
+                     Release History
+
+
+Amaltheia: first release (1998).
+Bianca   : second version (2004)
+ * 3rd build, 4th rev.
+  - implemented options "D", "G", "I", "T" and "U";
+  - changed old options "U" to "J" and "T" to "K";
+  - some bug fixes;
+  - documentation revision.
+ * 4th build, no revision
+  - one major bug removed (unsigned constants declared
+    as signed);
+  - some minor internal bugs removed;
+  - some optimization;
+  - documentation revision.
+
+----------------------------------------------------------
+
+  That's all, by now, folks! Have a good disassembling...
