@@ -1,0 +1,49 @@
+-------
+LOADCAS
+-------
+
+Este programa sirve para cargar ficheros CAS en cualquier MSX2 con mapeador de
+128K. B†sicamente, lo que hace es copiar el bios en memoria ram y parchearlo,
+redirigiendo las rutinas de lectura del cassete. Este mÇtodo permite que
+cualquier fichero CAS en disco sea manejado por el sistema como una cinta real.
+
+El programa consiste en un cargador genÇrico, que debe copiarse al mismo disco
+o directorio donde estÇ el fichero CAS, renombrandolo para que los nombres
+coincidan. Por ejemplo, si tenemos el ZARTH.CAS, se hace COPY"LOADCAS"TO
+"ZARTH.BIN" o simplemente TO"ZARTH" (la extensi¢n es indiferente). Luego se
+ejecuta con BLOAD"ZARTH",R. El programa preparar† el sistema, e iniciar† la
+carga autom†ticamente con la instrucci¢n correcta.
+
+En la versi¢n 2.0 se mejoraron varios aspectos:
+  - La velocidad de carga es bastante r†pida. No tanto como en una versi¢n de
+    disco espec°fica, pero s° cuesti¢n de segundos.
+  - Al llegar al final, la "cinta" se rebobina autom†ticamente y contin£a.
+  - Las rutinas est†ndar de acceso a los slots est†n tambiÇn parcheadas, para
+    evitar que la copia en ram del bios sea sobreescrita. Pero muchos programas
+    usan los puertos directamente para manejar los slots, as° que la emulaci¢n
+    puede fallar con ellos.
+  - En los turbo R se aprovecha el modo DRAM para parchear el bios en el propio
+    slot 0-0, evitando completamente el problema anterior. El basic por supuesto
+    es tambiÇn parcheado, restableciendo instrucciones suprimidas como CLOAD o
+    BLOAD"CAS:".
+
+Mejoras de esta versi¢n 2.99 beta:
+  - Se incluye un cargador alternativo llamado LOADCASX. êste explora el
+    contenido de la ram al final de cada carga, parcheando los posibles accesos
+    del programa a puertos relacionados con los slots. Esta tÇcnica dista de
+    ser perfecta, por tanto se recomienda usar este cargador S‡LO cuando el
+    principal falle.
+  - LOADCASX tambiÇn resulta £til en los turbo R: no parchea los cambios de
+    slot primarios (usando el modo DRAM no es necesario), pero s° los
+    secundarios. As° logra que funcionen ciertos programas que manejan
+    incorrectamente el slot 0 expandido.
+  - En los 2+ de Panasonic y en los turbo R, se activa la velocidad extra de
+    estos ordenadores durante la carga del CAS.
+
+Aspectos que pienso mejorar en pr¢ximas versiones:
+  - Cambios de fichero CAS.
+  - Posibilidad de realizar grabaciones.
+  - Soporte de rutas de fichero. Actualmente, el fichero CAS debe estar en la
+    unidad y directorio seleccionados por defecto.
+  - Cargador en formato COM.
+

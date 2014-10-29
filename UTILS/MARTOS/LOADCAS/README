@@ -1,0 +1,45 @@
+-------
+LOADCAS
+-------
+
+This program acts as a general CAS file loader, and can be used on any MSX2
+with 128K memory mapper. Basically, it copies the bios to ram and patches it,
+redirecting the tape reading routines. This method allows any CAS file on disk
+to be handled by the system as a real tape.
+
+The program takes the form of a generic loader, which must be copied to the
+same disk or directory where the CAS file is, renaming to match its filename.
+For example, if you have ZARTH.CAS, do COPY"LOADCAS"TO"ZARTH.BIN" or simply
+TO"ZARTH" (extension doesn't count). Then execute with BLOAD"ZARTH",R. The
+program will set the system up and start loading with the proper command.
+
+Improvements in version 2.0:
+  - Load speed is quite fast. Not as much as in a tailored disk version, but
+    just a matter of seconds.
+  - Emulated tape automatically rewinds and restarts when finished.
+  - Standard routines for slot access are also redirected, protecting the copy
+    of bios in ram from being overwritten. But many programs use low-level port
+    access when handling slots, so emulation can fail with them.
+  - On MSX turbo R, the program takes advantage of DRAM mode for patching bios
+    in slot 0-0 itself, avoiding completely the former problem. Basic is also
+    patched, of course, restoring supressed commands like CLOAD or BLOAD"CAS:".
+
+Improvements in this version 2.99 beta:
+  - The package now includes an alternative loader called LOADCASX. This one
+    explores the contents of ram after loading, and patches the program's
+    possible accesses to slot-related ports. Since this technique is far from
+    perfect, its use is recommended ONLY when standard LOADCAS fails.
+  - LOADCASX is also useful on turbo R: it doesn't patch primary slot
+    switchings (using DRAM mode, that's not necessary) but does patch secondary
+    ones. This way, certain programs that mishandle expanded slot 0 are got
+    working.
+  - On MSX2+ from Panasonic and MSX turbo R, extra speed of these computers is
+    turned on during CAS load.
+
+Things to improve in future versions:
+  - Changing CAS file.
+  - Support for recording.
+  - Support for file paths. By now, the CAS file must be located in the
+    default drive or directory.
+  - Loader in COM format.
+
