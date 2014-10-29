@@ -1,0 +1,836 @@
+
+                           DskTool Version 2.0
+
+                 Original program by Ricardo Bittencourt
+
+      This version reprogrammed in 2000 by Cyberknight Masao Kawata
+                     Unicorn Dreams Artwork Programs
+
+
+---------------------------------------------------------------------------
+
+                                 Index
+
+                         1. Introduction
+                         2. Syntax and usage
+                         3. Examples
+                         4. Technical information
+                         5. Suggestions
+                         6. What's new
+                         7. Greetings
+                         8. The author
+                         9. The reprogrammer
+
+
+---------------------------------------------------------------------------
+
+1. Introduction
+
+        Hello, world. "Ohayou, minnasan!"
+
+        Most of the MSX emulator users knows the .DSK file format. It's
+a single file containing all the information from an entire floppy disk,
+a "mirror image" of all data contained in a disk, organized as close as
+possible as in the original medium. These files are also used by real MSX
+users to trade programs not in MSX-DOS format, like most of the Compile
+games.
+
+        The usual way to make a .DSK archive is by using some specific
+disk data copying program, like freeware "WIMAGE" (from FDFormat package,
+easily found in Internet program repositories, like "simtel.net") and
+"DCOPY". These programs copy the contents of floppy disk to a .DSK (or
+.DSC) archive. But, what if you want to handle the files of your .DSK
+archive?
+
+        Until now, the only way would be to copy the entire .DSK to a
+floppy, then modify the files in the floppy, and then copy the floppy back
+to .DSK format. This is a slow method and requires a temporary floppy disk.
+
+        To make things easier and faster, "DSKTOOL" program was developed.
+With DSKTOOL, you can add files to your .DSK archive, without all the slow
+steps required in the previous method. With DSKTOOL you can also list the
+contents of a .DSK archive and extract or delete files from an archive.
+Since version 2.0, it is also possible to rename files.
+
+        The original version was compiled to MS-DOS platforms, but since
+version 2.0 it has been (or should be) compatible with other machines and
+systems. Many, if not all, compiler dependencies were removed, toward a
+Unix/Linux C standard. Check the "Technical information" section.
+
+        Also since version 2.0, DSKTOOL is able to handle all kinds of
+disk mirror images with "FAT12" (12 bits FAT elements), including formats
+not usually allowed by MSX. Actually, it can handle even non-standard
+disks, given that they have a valid bootstrap sector. Maybe it can be
+useful for purposes other than about MSX.
+
+        This version was compiled and tested with GCC/DJGPP 2.7.2 and the
+executable and source code are under GNU GPL (support free software!) The
+following files should be available within the same package this and the
+executable files are found:
+
+    > dsktool.doc (this file)
+    - dsktool.exe (PC MS-DOS executable)
+    - dsktool.c   (C source file of DskTool version 2.0)
+    - dsktool.11  (C source file of version 1.1 of DskTool)
+    - dsktool.10  (C source file of version 1.1 of DskTool)
+    - msxboot.h   (include file for version 1.x of DskTool)
+    - copying     (GNU GLP document, please read this if you never did)
+
+
+        Before trying DSKTOOL, I recommend you to read carefully this
+document to avoid serious data loss. Thank you for your cooperation...
+
+
+---------------------------------------------------------------------------
+
+2. Syntax and usage
+
+        The syntax of DSKTOOL is very similar to the ARJ compressor:
+
+    DSKTOOL
+    DSKTOOL L archive [filemasks...]
+    DSKTOOL E archive [filemasks...]
+    DSKTOOL A archive filemask [filemasks...]
+    DSKTOOL D archive filemask [filemasks...]
+    DSKTOOL R archive filemask [filemasks...] filemask
+    DSKTOOL I archive [disktype]
+    DSKTOOL N archive
+
+
+        If no parameters are given when invoking the program, it will
+present a brief help. These are the five supported commands:
+
+    L: list the contents of the archive
+    E: extract files from the archive
+    A: add files to the archive
+    D: delete files from the archive
+    R: rename files and volume label
+    I: initialize a new disk archive or reset an existing one
+
+
+        "filemask" is a file specification, which can be a complete file
+name or a composition of common characters and wildcard characters. The
+"*" (matches any character, any number, including zero) and "?" (matches
+exactly one character, no more, no less) wildcard characters are supported.
+The dot (".") is treated as a common character when matching with files in
+the disk mirror image file, just like in Unix, except that there may be
+only one in a file name. For example, if you command:
+
+    DSKTOOL D MYDISC.DSK *
+
+        ... all files in "MYDISC.DSK" will be deleted (be careful, because
+it won't ask for confirmation). In DOS, only files without extension would
+be. If you want that effect, use "*." instead of just an "*" (because the
+dot is part of the file name).
+
+        The case of the characters are ignored for the command (both
+capital "A" and lower case "a" will command an add operation, for example).
+The MSX file names are case insensitive (cases are ignored), except for
+volume label renaming. The file names for adding are system dependent for
+the case. In MS-DOS and MS Windows it will be case insensitive, for example
+(though newer versions allow lower case characters in file names, the
+system file name matching routines simply ignore cases - check it by
+yourself, try to create two files with the same name, in the same
+directory, one all in lower case characters and the other all in capital
+characters... badabooom!) On the other hand, in Unix and similar systems,
+the cases of the characters will be important to the add command.
+
+        If a file name is larger than the "8 + 3" format of the MSX-DOS
+standard, then it will be truncated. The eight first characters, or until
+the first dot, whatever comes first, will form the first eight characters
+of the "short name". The last three characters, or until the last dot,
+whatever comes first, will form the last three characters (called the
+"file extension", which usually describes the type of the file or what
+it is about).
+
+
+        The "L" (list) command doesn't require any file mask. If more than
+one are specified, they are processed all at the same time, that is, the
+files are listed if they match the first mask, or the second mask, or the
+third and so on, not all that match the first mask first, then all that
+match the second mask, then the third and so on.
+
+        Subdirectories are presented inside "angle brackets" (the "lesser
+than" and "greater than" signs), like this: <subdirectory>. Volume labels
+are presented inside double quotes, like this: "label".
+
+        Unix systems store the space allocated by a subdirectory as in a
+regular file, while MSX-DOS2 doesn't, usually. The volume labels, on the
+other hand, shouldn't sign a size different of zero. In such irregular
+case, an "*" will be printed, indicating the abnormal situation.
+
+        Beside the volume label, which uses one directory entry in the
+disk root, there is the "disk volume label" or simply "disk label". It is
+usually only present in non-MSX disks, but is recognized and printed, if
+found. It uses some bytes in the bootstrap sector, so no directory entry
+is allocated.
+
+        Dates are printed in the Japanese format, year first, followed
+by the month, the day and the day of the week (calculated if the date is
+valid). This format was chosen for several reasons, like it seems to be
+the most logical and according configuration, once the time is also
+presented in such mode, from the most generic, the hours, to the most
+specific discriminator, the seconds (a format surely any advanced
+civilization would use...) and others, but none surely as good as "I like
+and prefer this way". Maybe in the future I could use a system variable to
+configure this to the user's preferences (or system country configuration).
+If a date is invalid, "--" is printed instead of the day of the week. If
+time is invalid, an "*" is printed next to it.
+
+
+        Command "E" (extract) also doesn't need any file mask. In that
+case, all files in the disk mirror image will be extracted. Files are
+extracted to the current directory, ever.
+
+
+        The "A" (add) command may be followed by more than one file mask.
+The file masks are processed one by one. No verification is made about
+conflicting names (if some masks evaluate to different files with the same
+name, the first is added, then overwritten by the second and so on).
+
+
+        Command "D" (delete) requires at least one file mask. Be careful
+when using wildcard characters, because it won't prompt for confirmation
+before deleting files (even read-only files). If you use this command with
+just an "*" as file mask, it will remove all files from the disk image.
+This command can also remove volume labels, but not directories (that is
+for a future version).
+
+
+        "R" (rename) command requires at least two file masks. The last
+parameter given must be always the renaming mask. It can also rename volume
+labels, which may contain lower case characters (different of PC's MS-DOS,
+MSX-DOS2 allows them). Be careful when using this command, because not much
+filtering is applied to the renaming mask, what may lead to "strange" file
+names (this gives a more flexible tool to the user, though restricting
+most common errors). Unlike MSX-DOS, this command allows blank spaces in
+volume labels, specifying the file masks inside quotes (or double quotes,
+depending on the system). File names, on the other hand, have blank spaces
+removed by the parsing filters of this command, so it can be used to fix
+some invalid entries in the disk, commanding:
+
+    DSKTOOL R archive * *
+
+        This command will rename all entries as themselves. If the name
+is already correctly formatted, nothing will be done, except that a warning
+will be printed. On the other hand, if there is any error in any file name,
+like blank spaces, then renaming filters will correct it.
+
+        Volume labels are independent of file entry names, so it doesn't
+matter that there are homonyms.
+
+
+        The "I" (initialize) command is used to create a new disk archive
+or to reset (`reformat') an already existing one (you will have to type
+"yes" to confirm such operation).
+
+        Initialized disks will have an MSX-DOS bootstrap sector specially
+adapted from a turbo R formatted disk (started in MSX-DOS[1] mode), which
+is completely compatible with all MSX-DOS versions, including MSX-DOS2.
+The adapted bootstrap sector contains volume identification number (only
+present in MSX-DOS2 disks) and disk label (originally present only in some
+PC's MS-DOS disks). The volume id. number is always present in PC's MS-DOS
+disks (it's called "disk serial number"), but in MSX there is a signature
+to indicate its presence. Because DSKTOOL was primarily developed for MSX,
+it will only identify MSX volume id. numbers. A random id. number is added
+when a disk is initialized or reset. You may also set the maker id. string,
+the disk label and add a volume label, using the following options:
+
+    Mxxx : set maker identification string to "xxx"
+    Lxxx : set disk label string to "xxx"
+    Vxxx : add volume label "xxx"
+
+
+        If the disk archive already exists, it will be reformatted
+according to its current format (you cannot change a disk's format).
+If you don't specify a disk format as a parameter, you will be asked
+to select it. These are the possible values:
+
+    Disk type    Size         Format specifications
+
+        1       160 KB   (8 sectors x 40 tracks x 1 side)
+        2       320 KB   (8 sectors x 40 tracks x 2 side)
+        3       320 KB   (8 sectors x 80 tracks x 1 side)
+        4       640 KB   (8 sectors x 80 tracks x 2 side)
+        5       180 KB   (9 sectors x 40 tracks x 1 side)
+        6       360 KB   (9 sectors x 40 tracks x 2 side)
+        7       360 KB   (9 sectors x 80 tracks x 1 side)
+        8       720 KB   (9 sectors x 80 tracks x 2 side)
+
+
+
+        The "N" (naming) command allows you to rename the maker
+identification string, the disk label and possible volume labels in the
+root directory (though there should be only one volume label in a disk,
+ever in the root directory, DSKTOOL will search for all entries with
+the volume label attribute bit active, setting only the first match and
+removing all other volume labels). There must be at least one renaming
+parameter when invoking this command. The options to set the names are the
+same of the initialization command:
+
+    Mxxx : change maker identification string to "xxx"
+    Lxxx : change disk label to "xxx", if available in bootstrap sector
+    Vxxx : add volume label "xxx" or rename it, if already defined
+
+
+        Maker id. string may be up to eight characters long, disk labels
+and volume labels may be up to eleven characters long. All exceeding
+characters are simply ignored. If the disk doesn't have a volume label
+and "V" option is defined, then DSKTOOL will create it in the root
+directory. If more than one volume label is found, only the first is
+changed, the others are removed.
+
+
+---------------------------------------------------------------------------
+
+3. Examples
+
+
+3.1. List all contents of TALKING.DSK:
+
+        DSKTOOL L TALKING.DSK
+
+
+3.2. Extract all files with the sequence "AB" in their names from
+     AMDTOOLS.DSK:
+
+        DSKTOOL E AMDTOOLS.DSK *ab*
+
+
+3.3. Add the games "Zanac" and "Gradius" to "ACTIONPK.DSK":
+
+        DSKTOOL A ACTIONPK.DSK ZANAC* GRADIUS*
+
+
+3.4. Delete all files with the letter Z followed by an X in their
+     names from "ZORAX.DSK":
+
+        DSKTOOL D ZORAX.DSK *Z*X*
+
+
+3.5. Rename all files that have at least three characters long names and
+     all that has an "A" before the extension to have the extension "XYZ"
+     in the disk mirror image file "GAMES.DSK":
+
+        DSKTOOL R GAMES.DSK ???* *A.* *.XYZ
+
+
+3.6. Rename disk "WORK.DSC" volume label from "PANASONIC" to "Ice_Gryphon":
+
+        dsktool r WORK.DSC PANASONIC Ice_Gryphon
+
+     Notice that this command will rename anything named "PANASONIC"
+as "Ice_Gryphon". To the program, it doesn't matter if it is a file, a
+directory or actually a volume label. If it is a file or directory named
+"PANASONI.C", then it will be renamed to "ICE_GRYP.HON".
+
+
+3.7. Create disk archive "newgames.tmp" in 360 KB (5"1/4) format, setting
+     the disk label (not the volume label) to "Salamander":
+
+        dsktool i newgames.tmp 6 lSalamander
+
+
+3.8. Rename volume label to "Red Phoenix" in archive "txtfiles.dsk":
+
+        dsktool n txtfiles.dsk "vRed Phoenix"
+
+
+---------------------------------------------------------------------------
+
+4. Technical information
+
+
+4.1. Program exit codes
+
+     0: no problem
+     1: unrecognized command or invalid option
+     2: missing parameters
+     3: <reserved>
+     4: error reading ".Dsk" file
+     5: error writing ".Dsk" file
+     6: invalid disk mirror image ".Dsk"
+     7: disk image data are damaged
+     8: not enough free space to add "file"
+     9: directory full
+    10: bad renaming mask
+    11: not enough memory
+    12: input file handling error (when adding)
+    13: output file handling error (when extracting)
+
+        If no file matches in any of the operations, program will return
+zero, what doesn't mean nothing went wrong, but that nothing was actually
+done. If "something" was expected to be done, and wasn't, check carefully
+the parameters passed to the program.
+
+        The two last error numbers are related to problems reading from
+or writing to the system. They may be anything, like not enough space to
+extract a file or attempt to read an unexistent file.
+
+        DSKTOOL loads the whole disk mirror image archive into memory
+for processing. That makes the processing faster and less dependent on
+the system (there are no need of file seek procedures, what could make
+operations very slow). The backdraw is that the program requires a good
+amount of free memory to run (almost 1 MB when handling 720 KB disks).
+A memory-economic version could be developed, but until someone can give
+me a good reason to do that, it won't be (though, I think, a version that
+could handle subdirectories would be better done in such "economic mode",
+using seek functions, but that's for the future...)
+
+        Beside those fatal errors, there are some non-fatal warnings:
+
+    - Cannot rename a file as itself.
+    - Cannot rename a file to a name already in use by another one.
+    - Removing extra label...
+    - Cannot add volume label, root directory is full.
+
+        These warnings may be generated during naming or renaming
+operations and don't stop the program.
+
+
+4.2. Compiling in MS-DOS
+
+        The program was compiled with GCC/DJGPP for MS-DOS. It could also
+be compiled with Borland C (version 3.1), but the resulting executable
+didn't work, due to memory management problems of the compiler. The
+program loads the whole disk mirror image into memory for processing, so
+it requires more than 720 KB of free memory (if it is a 720 KB disk mirror
+image archive). Any compiler able to generate code that can handle large
+memory blocks should do the job.
+
+        In GNU CC, the command line should look like this:
+
+    gcc dsktool.c -o dsktool.exe
+
+
+        You can add optimization options, if wanted:
+
+    gcc dsktool.c -O3 -o dsktool.exe
+
+
+        Also, you can define the machine to which the code will be
+generated (a common i486 PC/AT, for example):
+
+    gcc dsktool.c -O3 -m486 -o dsktool.exe
+
+
+        The version included in the package was compiled with the
+following command:
+
+ gcc dsktool.c -O3 -m486 -finline-functions -fomit-frame-pointer -o dt.exe
+
+        Personally, I have no idea what those really long options do, they
+were copied from a make file (originally included in the DSKTOOL package)
+and from a batch file I can't remember where I've got. If you have a good
+knowledge of DJGPP (or any other compiler), then feel free to set it up
+and customize your own version (that's what I did...)
+
+
+4.2. Compiling in Unix/Linux and other systems
+
+        Unfortunately, the program couldn't be tested in a Unix similar
+system. Everything possible was formatted to provide maximum compatibility
+with all systems, but there is ever something left out. To compile the
+program in Unix or similar (like Linux), it is required to define the
+word "Unix". In GNU CC, for example, the compilation line should look like
+this:
+
+    gcc dsktool.c -DUnix -o dsktool
+
+
+        Sun SPARC Stations use to bring more troubles with compiling than
+they should, but it seems to be "good enough" (or "generic enough") to
+compile even in the darkest Sun computer. If the compiler doesn't allow
+definitions in the command line, then add the following line in the
+very beginning of the source (dsktool.c):
+
+    #define Unix
+
+        ... Then compile the program:
+
+    cc dsktool.c -o dsktool
+
+
+        DSKTOOL executable can be renamed without prejudice. You can rename
+it to "dt", for example, a shorter and easier to use program name (beside
+that, it is compliant with the laconic two character Unix's commands...)
+
+    cc dsktool.c -DUnix -o dt
+
+
+4.3. Troubleshooting
+
+        The program has to deal with two standards at the same time,
+the MSX-DOS and the current system in which it has been compiled and/or
+executed. Thus, there can be two different kinds of problems that can
+appear, independently or together. Follow this procedure to find the
+problem:
+
+
+4.3.1. If you executed the compiled version available within the DSKTOOL
+       package, then read carefully the error message. The most common
+error messages:
+
+  - Load error: no DPMI -> the program cannot access the protected mode
+                           (called "real mode"). There may be some other
+    program using it at the time, like a memory managing utility or some
+    system shell.
+
+  - "file": No such file or directory -> the file name passed as parameter
+                                         to some function in the program
+    doesn't exist. This error should occur only if the disk mirror image
+    archive doesn't exist.
+
+  - "file": Bad file descriptor -> this error means the file name passed as
+                                   parameter to some function or procedure
+    in the program is not a valid file name or the file doesn't exist at
+    all (?). This is a "strange" error and could occur only if the disk
+    image archive doesn't exist or has, somehow, an invalid name not
+    accepted by the system (?).
+
+  - "file": No space left on drive -> the drive doesn't have enough free
+                                      space left to hold the file. This
+    error should occur only when extracting a file from an archive.
+
+  - "file": Permission denied -> you don't have access permission of the
+                                 kind you are requesting to "file". This
+    error may occur while reading or writing, while handling a disk mirror
+    image archive or an ordinary file.
+
+
+4.3.2. If the problem appeared in compilation time, that is, while
+       compiling, it is due to incompatibility of the C source. The
+  solution is to adapt the program to the compiler. If you can't do that
+  by yourself, then send the authors a report containing (a) the system
+  description (machine, operating system, compiler, parameters used,
+  version of everything) and (b) all messages generated during compilation
+  (passes, warnings, errors etc.)
+
+        If the program was compiled correctly, but there was some
+  "strange" warnings, then you should make some tests to be sure that it
+  was correctly compiled. Program compiling is not a beginners' game, so
+  you should know what "strange warnings" are.
+
+        C is not a very "standard" programming language, there are several
+  "flavours" around, some more common, some less. DSKTOOL was originally
+  written to the PC's MS-DOS compiler DJGPP, a version of the GNU CC
+  freeware. It was reprogrammed to get free of some specific functions
+  and libraries of that compiler, making it more compatible with the ANSI C
+  standard and the Unix/Linux most common compilers (including the original
+  GNU CC). There may be several different compilers for the same system,
+  each one with different implementations and interpretations of the
+  language and the most common libraries. Try changing to another compiler
+  if you can't make it compile correctly at first, it is easier than trying
+  to search the source for a possibly unexistent bug. If everything fails,
+  feel free to write and ask for help.
+
+
+4.3.3. If everything went well with compiling, then make a disk mirror
+       image from a disk that is known to be free of problems (don't trust
+  your "intution" or others' word, check it by yourself just before making
+  the mirror). Now test the program commands (assuming, as an example, that
+  the disk image is named "test.dsk" and has two files named "MSXDOS.SYS"
+  and "COMMAND.COM"):
+
+
+4.3.3.1. "L" (list) command:
+
+ > dsktool l test.dsk
+
+ DskTool Version 2.0 - Original version (C) 1998 by Ricardo Bittencourt.
+ Reprogrammed in 2000 by Cyberknight Masao Kawata, Unicorn Dreams Artworks.
+ This file is under GNU GPL, read "COPYING" and "DskTool.Doc" for details.
+
+ Name of disk: MSX-04      Disk id. number: A55C-IIC0
+
+ MSXDOS.SYS        2432   1/01/1984   0:00:00  ........
+ COMMAND.COM       6656   1/01/1984   0:00:00  ........
+
+ 9088 bytes are used in 2 files, 10240 bytes are allocated
+ 2 entries are used, 0 are directories
+ 719872 bytes are free and 10240 bytes are allocated in disk.
+
+      If the program doesn't produce a similar output, then the problem
+  is probably with memory allocation or file handling. If the disk mirror
+  image wasn't loaded, then probably some error message was printed. If
+  the program couldn't load the archive, then check if there is no problem
+  with the test file, check if you have permission to read it. The archive
+  handling routines were written with very common C functions (fopen,
+  fread, fwrite, rewind, fclose). If some of them are not allowed or have
+  troublesome implementation in your system, then that may be the cause of
+  the problem (there isn't much that can be done about it...)
+
+      If the file was loaded, but the output was "strange", then run the
+  program again and check if the result changes every time. If it does,
+  then the compiler may be having problem to generate a code that can
+  handle large memory blocks. Try another compiler.
+
+      Another sign of memory allocation problems is system hang up or
+  restarting. Try another compiler. If the problem persists, then there
+  may be a bug in the program, write the authors about it, as already
+  explained.
+
+
+4.3.3.2. Another "L" (list) command:
+
+ > dsktool l test.dsk *s*
+
+ DskTool Version 2.0 - Original version (C) 1998 by Ricardo Bittencourt.
+ Reprogrammed in 2000 by Cyberknight Masao Kawata, Unicorn Dreams Artworks.
+ This file is under GNU GPL, read "COPYING" and "DskTool.Doc" for details.
+
+ Name of disk: MSX-04      Disk id. number: A55C-IIC0
+
+ MSXDOS.SYS        2432   1/01/1984   0:00:00  ........
+
+ 2432 bytes are used in 1 file, 3072 bytes are allocated
+ 1 entry is used, 0 are directories
+ 719872 bytes are free and 10240 bytes are allocated in disk.
+
+      If the result is not similar, then something went wrong with
+  the string/file name matching routines or the parameter passing. The
+  routine "__crt0_glob_function" is defined in the program to avoid the
+  preprocessing of the wildcard characters "*" and "?" by the parameter
+  passing routines. Maybe your compiler cannot be "fooled" by this "trick".
+  Try the following commands:
+
+    dsktool l test.dsk msxdos.sys
+
+    dsktool l test.dsk "*s*"
+
+    dsktool l test.dsk '*s*'
+
+    dsktool l test.dsk `*s*`
+
+      If some of them produced the desired effect, then the problem is
+  surely with parameter preprocessing. Try to find a way to disable it or
+  try another compiler.
+
+
+4.3.3.3. "E" (extract) command:
+
+ > dsktool e test.dsk *x*
+
+ DskTool Version 2.0 - Original version (C) 1998 by Ricardo Bittencourt.
+ Reprogrammed in 2000 by Cyberknight Masao Kawata, Unicorn Dreams Artworks.
+ This file is under GNU GPL, read "COPYING" and "DskTool.Doc" for details.
+
+ Extracting "MSXDOS.SYS"...
+
+ 1 file was extracted.
+
+      Compare the extracted file with the original copy of "MSXDOS.SYS".
+  If the files are different, then something went wrong with the file
+  writing routines. The program uses very generic C functions to write
+  files (fopen, fwrite, fclose). If these functions aren't working, try
+  another compile. Check if you have writing permission in the system.
+
+
+4.3.3.4. "A" (add) command:
+
+ > dsktool a test.dsk msxdos.sys
+
+ DskTool Version 2.0 - Original version (C) 1998 by Ricardo Bittencourt.
+ Reprogrammed in 2000 by Cyberknight Masao Kawata, Unicorn Dreams Artworks.
+ This file is under GNU GPL, read "COPYING" and "DskTool.Doc" for details.
+
+ Updating "MSXDOS.SYS" as "MSXDOS.SYS"...
+
+ 1 file was updated.
+
+      After the updating, extract the file "MSXDOS.SYS" and compare it
+  with the original copy. If it is different, then something went wrong
+  when the file was read from the system for updating. Like in the case
+  of the archive file handling and the extraction command, the adding and
+  updating operations are implemented in very common C functions (stat,
+  fopen, fread, fclose). If they cause any problem with your compiler,
+  then try another one.
+
+
+4.4. Known bugs
+
+        By now, all file attributes are lost in the file extraction,
+including date, time, everything. I'll check how other programs deal with
+them, but that will be for the future...
+
+
+---------------------------------------------------------------------------
+
+5. Suggestions
+
+
+5.1. From the author
+
+        This program does everything I wanted it to do. This means I will
+not make any extension to this version (unless I find some bug).
+
+        But, with the source code, you can make improvements to the program.
+Some suggestions are:
+
+    5.1.1. A GUI, maybe like the Norton Commander, or a full Win95 GUI.
+    5.1.2. Support to subdirectories and MSX-DOS 2 disks.
+    5.1.3. Include other types of archives, like DDI or IMG.
+
+        It would be nice if you tell me of any new version.
+
+
+5.2. From the reprogrammer
+
+        The original program didn't do everything I wanted, so I made
+this version, which also covered two of the orginal author's suggestions,
+support to 180 KB and 360 KB archives (actually, it exceeded that feature,
+being able to handle any kind of FAT12 disks) and port to other platforms
+(though some more testing would be a good idea).
+
+        It still lacks some features I think would be nice. I really don't
+think an interactive interface would be a good idea, they usually restrict
+the portability of the program and are pretty annoying to create. A very
+useful feature, beside the others already mentioned, would be a disk image
+file integrity checker and recoverer. By now, inconsistencies in the disk
+image FAT are only detected and causes the program to abort with an error
+message. The "L" (list) command can detect invalid directory entries, but
+no correction is attempted. The renaming operation can be used to correct
+some problems with file entries, as already explained in the "Syntax and
+usage" section, but it is limited to the file names.
+
+        Subdirectories are currently the next step of development for the
+program, but it will take some time (it's not a priority in my life). Stay
+tuned, anyway...
+
+
+---------------------------------------------------------------------------
+
+6. What's new
+
+    [2.0 - Cyberknight release]
+
+    - swatted another bug with files greater than 64 KB;
+    - terminated a bug with drive name recognition;
+    - replaced "match" function, now it accepts any combination of
+      wildcard characters (also added "?" wildcard recognition), just
+      like Unix systems;
+    - replaced "findfirst", "findnext" and other system/compiler/library
+      dependent functions by more generic equivalents, allowing any
+      combination of wildcard characters, Unix-like style (not dummy
+      MS-DOS style);
+    - expanded "L" (list) command:
+      + now it accepts file masks;
+      + shows more information, like:
+        * file attributes;
+        * directory entries used;
+        * disk id. number (when available, usually only if disk was
+          formatted in MSX-DOS2 or created by DSKTOOL);
+        * disk volume label (if available, only if not a "bootable" MSX
+          disk, usually when not formatted in MSX, what may cause system
+          hang-up when initialized in an MSX);
+      + checks for invalid directory entries (volume labels with non-zero
+        sizes, invalid dates and times, invalid combination of attributes);
+    - added "R" (rename) command, which also can rename disk volume
+      labels, accepting upper and lower case characters, like MSX-DOS2,
+      unlike nasty MS-DOS;
+    - added "I" (initialize) command, which allows the creation of disk
+      archives of several formats and the reinitialization of any archive;
+    - added "N" (naming) command, which allows the renaming of maker
+      identification string, disk label (if available) and volume label;
+    - file deletion functions revised (now they can detect some more
+      errors in the data of disk image and can remove volume labels);
+    - restructuration of the whole source code toward a Unix compliant
+      C standard (not checked, yet), so now it should be able to compile
+      and run in most systems;
+    - the include file "msxboot.h" was removed, now the bootstrap sector
+      data is stored within the source "dsktool.c", reducing a little the
+      chances of anything going wrong during compilation (some compilers
+      can't search for include files in the current directory, just in
+      those specified in the configuration, and it may not be ever possible
+      to change the configuration or to move the include files to the
+      correct directory ("write permission denied");
+    - now the program recognizes any kind of disk mirror image archive
+      (standard and non-standard formats, as far as it has an FAT12
+      compatible disk structure and a valid bootstrap sector);
+    - expanded documentation.
+
+
+    [1.1 - R. Bittencourt release]
+
+    - fixed a bug with files greater than 64 KB.
+
+
+    [1.0 - R. Bittencourt release]
+
+    - first original public release.
+
+
+---------------------------------------------------------------------------
+
+7. Greetings
+
+7.1. From the author
+
+        All the information needed to make this program was obtained from
+the books:
+
+        "Guia do Programador MSX" - by Eduardo A. Barbosa
+        "MSX Top Secret" - by Edison A. Pires de Moraes
+
+        Many thanks to the authors!!
+
+        I also want to thanks DJ Delorie, Charles Sandmann and all the
+people behind the DJGPP project. Of course, many thanks to Richard Stallman
+and all the GNU people!! I couldn't forget the people from msxbr-l mailing
+list, and remember: MSX still alive!!!
+
+
+7.2. From the reprogrammer
+
+        I must thank Christoph Hochstaetter for his FDFormat public
+domain program and other tools that have been extremely useful in solving
+so many problems with floppy disk handling. The program has also helped to
+understand better the disk data structure. Special thanks to R. Bittencourt
+for creating this wonderful program. "Domo arigatou, nyan!"
+
+
+---------------------------------------------------------------------------
+
+8. The author
+
+        If you find any bug, want to make any comment, or have problems
+to understand the source code, send a e-mail to:
+
+    ricardo@lsi.usp.br
+
+        You can also reach me through my home page:
+
+    http://www.lsi.usp.br/~ricardo
+
+        Hope you find this program useful.
+
+
+Ricardo Bittencourt
+
+
+---------------------------------------------------------------------------
+
+9. The Reprogrammer
+
+        If some dirty, nasty and hideous bug has escaped my analysis,
+please let me know, too (mainly if it didn't exist in the previous
+version!) Write to me at:
+
+    cyberknight@catsrule.garfield.com
+
+        My Home Page:
+
+    http://unicorndreams.n3.net
+
+        or
+
+    http://welcome.to/unicorndreams
+
+        I also hope that this program is as useful to other people as it
+has been to me...
+
+
+Cyberknight Masao Kawata
+
+
+---------------------------------------------------------------------------
