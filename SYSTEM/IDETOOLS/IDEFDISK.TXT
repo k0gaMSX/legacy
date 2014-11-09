@@ -1,0 +1,59 @@
+File: IDEFDISK.TXT - 28/11/1999
+Subject: New FDISK version 2.1 for Sunrise MSX ATA-IDE interface
+By: Jon De Schrijder (jon@msx.ch)
+
+The IDEFDISK.COM program is used for three things:
+*Physically formatting ZIP-disks, LS120-disks (720K,1440K,UHD)
+*Partitioning large media (harddisk, ZIP, UHD)
+*Formatting these partitions to MSX format (logical format)
+
+New features in version 1.38:
+*Partitiontable format is more PC compatible
+*Possibility to make certain partitions read-only (This option is reachable through 'Display partition table')
+*a lot of invisible enhancements
+
+Some small changes in version 1.39:
+*Enhanced IDE detection and initialization
+*PC FAT16 partitions are recognized by 'Display partition table'
+
+Small optimization to IDE detection in version 1.40
+
+New in version 2.0:
+*Completely rewritten from 0, better, faster, smaller, ...
+*support for ATAPI devices such as Iomega ZIP and LS120Superdisk
+*support for 15 IDE interfaces in one MSX :-)
+*setting the boot partition (not supported yet by bios 1.97)
+
+New in version 2.1:
+*Physical format of media in 'ATAPI direct access' devices such as ZIP and LS120.
+
+Some important remarks:
+*IDEFDISK.COM requires that the IDE bios was initialized during boot and that the bios is at least version 1.9 or newer. So don't press [INS] or [GRAPH] during boot!
+In some cases however, you can try to start your computer with [CTRL] pressed. This will initialize the IDE bios, but no IDE drives will be installed. This might be helpful when the bootpartition of your IDE harddisk is damaged (or not good formatted yet). In that case you can run IDEFDISK from floppy.
+
+*If you want to physically format a HighDensity floppy in the LS120 as a DoubleDensity floppy, then you will have to close the hole in the HD floppy with some tape.
+
+*You can format 720kB and 1.44MB disks logically. This means that the bootsector, the FATs and the directory will be initialized. It has also the advantage that the bootsector will be MSX compatible. This is useful for 1.44MB floppies with a PC bootsector. Without a MSX compatible bootsector, it is not possible to use the floppy as a bootdisk. Doing so will result in a crash during the bootprocess.
+Since floppies do not have a partition table, you should choose the 'Format without partition table' option to format your IDE floppies. With the current bios (version 1.97) it is not possible yet to format your floppies with the FORMAT command in MSX-DOS or BASIC.
+
+*Don't forget do to a logical format [F] after a physical format [P].
+
+*If you want to upgrade the current partitiontable of your MSX IDE harddisks to a more-compatible-PC-format do as follows:
+-Start the IDEFDISK program and choose the right drive
+-Choose 'Autogenerate partition table'
+-Choose 'Display partition table'
+-Enable/Disable partitions as you wish and quit
+-Choose 'Write partition table'
+(Note: your data is not affected)
+
+*If you want to connect your MSX IDE to a PC, please note the following:
+-only partition 0,1,2 and 3 can be accessed by a PC; so make sure that at least one partition of these is enabled.
+-you will be able to read files, but don't write anything to your disk! This may corrupt your boot, fat or directory. (remember that your harddisk is MSX formatted and is not full-compatible with other operating systems)
+-It is possible that your MSX partitiontable is partially overwritten when you connect your harddisk to a PC. (I noticed this for partitiontable entries 17 and 18 (with Windows95)) This is not that bad: just run the IDEFDISK program again and do as above before using your harddisk on MSX again.
+
+*It is possible to logically format single partitions:
+-Start the IDEFDISK program and choose the right drive
+-Choose 'Display partition table'
+-Enable ONLY the partitions to be formatted, disable all other
+-Choose 'Write partition table' (DON'T FORGET THIS)
+-Choose 'Init all enabled partitions'

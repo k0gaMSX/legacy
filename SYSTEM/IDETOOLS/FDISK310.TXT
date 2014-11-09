@@ -1,0 +1,143 @@
+File: IDEFDISK.TXT - 11/09/2000
+Subject: New FDISK version 3.1 for Sunrise MSX ATA/IDE interface
+By: Jon De Schrijder (jon@msx.ch) (Comjoetania The Next Generation)
+
+The IDEFDISK.COM program is used for three things:
+*Physically formatting ZIP-disks, LS120-disks (720K,1440K,UHD)
+*Partitioning large media (harddisk, ZIP, UHD)
+*Formatting these partitions to MSX format (logical format)
+
+BE CAREFUL WHEN USING THE IDEFDISK PROGRAM. ALWAYS VERIFY THAT YOU ARE WORKING ON THE RIGHT DEVICE BEFORE WRITING ANY CHANGES TO DISK. YOU ARE USING THE SOFTWARE AT YOUR OWN RISK.
+
+
+Some IMPORTANT remarks to start:
+--------------------------------
+
+*IDEFDISK.COM requires that the IDE bios was initialized during boot and that the bios is at least version 2.01 or newer. So don't press [INS] or [GRAPH] during boot! In some cases however, you can try to start your computer with [DEL] pressed. This will initialize the IDE bios, but no IDE drives will be installed. This might be helpful when the bootpartition of your IDE harddisk is damaged (or not good formatted yet). In that case you can run IDEFDISK from floppy.
+
+*The IDEbios since version 2.00 uses a slight different type of partitiontable. When IDEFDISK detects an old type of partitiontable, it will automatically update the old partitiontable. You will be prompted that the partitiontable has been changed. Choose 'Write partitiontable' to save the updated partitiontable. This has no effect on your data or partitioning.
+
+*It is only possible to create FAT16 partitions when IDEFDISK is started with the /FAT16 commandline option. Only use FAT16 partitions if you are an experienced user. (if you don't know what a commandline option is, don't use FAT16 ;-)
+Note also the fact that your bootpartition must use FAT12 because during boot the FAT16 driver is not installed yet. For more info concerning FAT16, refer to the IDEFAT16.TXT file.
+
+
+Adding and Killing partitions
+-----------------------------
+
+Since this release it is also possible to add and remove partitions from the partition table. However this is only possible when you are using an MSX IDE compatible partitiontable. The add/kill option won't be available when using a medium with a PC formatted partitiontable.
+
+On a new medium, an MSX IDE compatible partition table can only be created by choosing the 'Autogenerate partition table' option.
+
+The add/kill functions are available in the 'Display partition table' menu.
+
+It is only possible to kill the last partition. To do so, move the cursor to the partition entry which contains the 'last' partition and press K. Confirm by pressing Y. (ALL DATA ON THAT PARTITION WILL BE LOST)
+
+Press A to add a partition. The number of unused SECTORS (NOT kilobytes; 1 kilobyte=2 sectors) on the medium will be displayed. Now you can enter manually the number of sectors to be used for the new partition OR you can use the up and down cursors to choose one of the standard sizes OR you can specify the size in kilobytes, megabytes or gigabytes by using the K, M or G suffix. (example: 5M for 5MB partitions)
+Confirm with RETURN or press ESC to abort.
+
+The chosen number of sectors will automatically be adjusted to the nearest existing FAT12 or FAT16(if enabled) partition size.
+
+The smallest size that can be used is 1440 sectors (=720K).
+
+
+Enabling/disabling partitions
+-----------------------------
+
+By default all created partitions are enabled. This means that the MSX will use a driveletter for such a partition when the computer is turned on. Since the number of driveletters is limited to 6, this is not always desirable. (for instance, when you want to use 1 driveletter for a CDROM, you can leave only 5 harddiskpartitions enabled)
+Therefore you can disable partitions. Use the E and D key to enable/disable partitions.
+
+
+You can also make partitions read-only by using the R key. It is also possible to set the bootpartition with the B key, but this feature is not yet supported by the current IDEbios 2.01.
+
+If your partitiontable seems ok, you have to write it to the medium by choosing the 'Write partition table' option.
+
+
+Logical formatting
+------------------
+
+Each partition has to be logically formatted before it can be used. This will erase all old data in these partitions. Use the 'Initialize all enabled partitions' function to do this. The FAT12 or FAT16 format will automatically be chosen depending on the partitionsize.
+
+The following table gives an overview with some technical details for who's interested...
+
+|size in sectors|FATtype|MediaID|rootDIRentries|sectors/cluster|
+|---------------+-------+-------+--------------+---------------|
+|      1-1439   |       |       | not supported|               |
+|     1440      | FAT12 |  F9   |     112      |       2       |
+|   1441-2879   | FAT12 |  F0   |     112      |       2       |
+|   2880-4126   | FAT12 |  F0   |     224      |       1       |
+|   4127-8212   | FAT12 |  F0   |     256      |       2       |
+|   8213-16388  | FAT12 |  F0   |     256      |       4       |
+|  16389-32732  | FAT12 |  F0   |     256      |       8       |
+|  32733-65404  | FAT12 |  F0   |     256      |      16       |
+|  65405-262610 | FAT16 |  F0   |     512      |       4       |
+| 262611-524754 | FAT16 |  F0   |     512      |       8       |
+| 524755-1048962| FAT16 |  F0   |     512      |      16       |
+|1048963-2097378| FAT16 |  F0   |     512      |      32       |
+|2097379-4194145| FAT16 |  F0   |     512      |      64       |
+
+Note: the maximum sized FAT12 partition (approx. 32MB) is somewhat larger than the autogenerated 32MB partitions with the previous IDEFDISK versions, because the rootdirectory can now store up to 256 files. I have actually verified this in DOS2.2x and it worked. The 257th file resulted in an error. This also means that the autogenerated partitiontables generated with the new and old IDEFDISK programs ARE NOT THE SAME. THEREFORE YOU SHOULD NOT DO AN 'autogenerate partition table' IF YOUR MEDIUM WAS FORMATTED WITH A PREVIOUS IDEFDISKVERSION BECAUSE THAT WILL DESTROY ALL DATA ON YOUR HARDDISK !
+
+
+Other issues:
+-------------
+
+*To avoid IDEbios 2.xx problems, the maximum usable disksize is 8 gigabyte. You can connect larger harddisks, but IDEFDISK will only let you use the first 8 gigabyte.
+
+
+*IN ALMOST ALL CASES IT IS *NOT* NECESSARY TO DO A 'physical format' OF THE MEDIA YOU USE. IN FACT IT IS PROBABLY ONLY USEFUL FOR FORMATTING 720K AND 1.44M FLOPPIES IN AN LS120 DRIVE. THERE HAVE BEEN REPORTS ABOUT CRASHED UHD SUPERDISKS AND ZIP DISKS WHEN USING CERTAIN TYPES OF DEVICES THAT DON'T IMPLEMENT THE ATAPI FORMAT IN A PROPER WAY.
+
+*If you want to physically format a HighDensity floppy in the LS120 as a DoubleDensity floppy, then you will have to close the hole in the HD floppy with some tape.
+
+*You can format 720kB and 1.44MB disks logically. This means that the bootsector, the FATs and the directory will be initialized. It has also the advantage that the bootsector will be MSX compatible. This is useful for 1.44MB floppies with a PC bootsector. Without a MSX compatible bootsector, it is not possible to use the floppy as a bootdisk. Doing so will result in a crash during the bootprocess.
+Since floppies do not have a partition table, you should choose the 'Format without partition table' option to format your IDE floppies. With the current bios (version 2.01) it is not possible yet to format your floppies with the FORMAT command in MSX-DOS or Disk-BASIC.
+
+*Don't forget do to a logical format [F] after a physical format [P].
+
+
+*If you want to connect your MSX IDE harddisk to a PC, please note the following:
+-only partition 0,1,2 and 3 can be accessed by a PC; it is not necessary for these partitions to be enabled.
+-you will be able to read files, but don't write anything to your disk! This may corrupt your boot, fat or directory. (remember that your harddisk is MSX formatted and is not full-compatible with other operating systems)
+-It is possible that your MSX partitiontable gets damaged when you connect your harddisk to a Windows9x PC. I noticed this for partitiontable entries 17 and 18. So don't use those partition entries if you frequently connect your hd to a Win PC.
+-When connecting a Windows9x partition to your MSX, it is possible that the MSX crashes when showing the directory contents; it has something to do with erased long filename entries in Windows...
+
+
+*It is possible to logically format single partitions:
+-Start the IDEFDISK program and choose the right drive
+-Choose 'Display partition table'
+-Enable ONLY the partitions to be formatted, disable all other
+-Choose 'Write partition table' (DON'T FORGET THIS)
+-Choose 'Init all enabled partitions'
+
+
+Version history:
+----------------
+
+New in version 3.1:
+*New type of FAT12 bootsector fixes DOS2.3x bootproblems
+*Additional red alert when writing stuff to disk
+*Automatic 8 gigabyte limit
+*Input of partitionsize in kilobyte, megabyte and gigabyte
+
+New in version 3.0:
+*Userspecified sized partitions
+*The autogenerated partitiontable uses all available diskspace
+
+New in version 2.1:
+*Physical format of media in 'ATAPI direct access' devices such as ZIP and LS120.
+
+New in version 2.0:
+*Completely rewritten from 0, better, faster, smaller, ...
+*support for ATAPI devices such as Iomega ZIP and LS120Superdisk
+*support for 15 IDE interfaces in one MSX :-)
+*setting the boot partition (not supported yet by bios 2.00)
+
+Small optimization to IDE detection in version 1.40
+
+Some small changes in version 1.39:
+*Enhanced IDE detection and initialization
+*PC FAT16 partitions are recognized by 'Display partition table'
+
+New features in version 1.38:
+*Partitiontable format is more PC compatible
+*Possibility to make certain partitions read-only (This option is reachable through 'Display partition table')
+*a lot of invisible enhancements

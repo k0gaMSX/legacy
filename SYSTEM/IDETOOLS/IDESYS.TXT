@@ -1,0 +1,152 @@
+File: IDESYS.TXT - 12/04/1999
+Subject: Sunrise MSX ATA-IDE Bios 1.9x system documentation
+By: Jon De Schrijder (Jon.DeSchrijder@rug.ac.be)
+
+IDESYS.TXT history list:
+************************
+*12/04/1999
+added more info about the ROM IDENTIFICATION
+added more info about the device codebyte (bit 3,4)
+*26/03/1999
+correction: 'additional partition info' bit 7 and 6 were swapped
+*21/03/1999
+release first version
+
+Actual document starts here:
+
+THE ROM IDENTIFICATION
+----------------------
+
+All IDE biosses have the following 3 characters at address #7F80/1/2:
+ID#
+
+Since IDE bios 1.8, also the bios version number can be obtained. It is situated at address #7FB6/7/8:
+Examples: #01 #80 #00 =version 1.80=version 1.8
+          #01 #80 #04 =version 1.80beta4
+          #01 #91 #00 =version 1.91
+
+Older biosses have #FF #FF #FF.
+
+The following piece of code can be used to see if the bios is at least version #1.80:
+
+	...
+	LD	HL,(#7FB5)	;#7FB6 to H
+	LD	A,(#7FB7)
+	LD	L,A		;#7FB7 to L
+	INC	HL		;!!! if it is #FFFF, it will turn to #0000
+	LD	DE,#0180+1	;when comparing also #0180 should be increased by 1
+	OR	A		;clear carry
+	SBC	HL,DE		;compare
+	JR	C,too_old
+	...
+
+THE WORKSPACE
+-------------
+
+During the bootprocess the IDE interface allocates 6*8+6+12 bytes of workspace in page 3 to store its system variables. The address of the first byte can be found in the SLTWRK (#FD09) table. The element corresponding with the slot the IDE is in, will contain the start address of the IDE workspace.
+
+* IDE workspace consists of:
++00..2F: 6 fields of 8 bytes, related to the 6 possible driveletters
++30..35: 6 device info bytes
++36..41: 12 bytes free space (used for ATAPI command packets)
+
+* Drivefield consists of:
++0    :device codebyte
++1/2/3:partition start (24 bit sector number: 0...)
++4/5/6:partition length minus 1 (24 bit sector count)
++7    :additional partition info
+
+* Device codebyte consists of:
+bit 0: 0=this partition is located on the Master device
+       1=this partition is located on the Slave device
+bit 21:
+    00=this partition is located on an ATA device (=harddisk)
+    10=this partition is located on an ATAPI direct access device
+    11=this partition is located on an ATAPI CDROM (not used yet)
+
+bit 3: 0=the medium of this partition has been changed
+       1=the medium of this partition has not been changed
+
+bit 4: 0=this partition is in use
+       1=this partition is not in use/disabled (see note)
+
+bit 5/6/7: not used yet, don't alter them
+
+notes:
+-so, bit 2 indicates if it is an ATAPI device
+-ATAPI direct access devices: Iomega ZIP, LS120SuperDisk, ...
+-Bit 3 is used as disk-changed-flag for DOS2
+-When bit 4=1 and bit 3=1: unexisting drive, not in use
+-When bit 4=1 and bit 3=0: no medium present in drive
+
+* Additional partition info consists of:
+bit 0..5: not used yet, don't alter them
+bit 6: 0=this partition is the boot partition (not used yet)
+       1=this partition is not the boot partition (not used yet)
+bit 7: 0=this partition is logically write-protected
+       1=this partition is not logically write-protected
+
+* 6 device info bytes consist of:
++0: number of heads Master (in case of ATA device)
++1: number of heads Slave  (in case of ATA device)
++2: number of sectors/cylinder Master (in case of ATA device)
++3: number of sectors/cylinder Slave  (in case of ATA device)
++4: devicetype codebyte Master device
++5: devicetype codebyte Slave device
+
+*Devicetype codebyte consists of:
+bit 0: 1=this device is an ATA device (harddisk)
+bit 1: 1=this device in an ATAPI device (CDROM, ZIP, LS120, ...)
+bit 2: 0=this device uses only CHS addressing
+       1=this device supports also LBA addressing
+bit 43:
+    00=this device is a direct-access device (harddisk, ZIP, ...)
+    01=this device is a CDROM
+    10=reserved
+    11=reserved
+
+bit 765: not used yet, don't alter them
+
+
+SOME USEFUL ROUTINES
+--------------------
+
+The following addresses are entries to some useful routines when doing tests with the IDE.
+
+7F89: absolute sector read
+      input: A=device codebyte (see above for description)
+             CDE=24 bit sector number (E=lowbyte)
+             B=number of sectors to read
+             HL=destination address
+      output: Carry=error, errorcode in A register (same as DISKIO)
+7F8C: absolute sector write
+      input: A=device codebyte (see above for description)
+             CDE=24 bit sector number (E=lowbyte)
+             B=number of sectors to write
+             HL=source address
+      output: Carry=error, errorcode in A register (same as DISKIO)
+7FB9: select device: selects the Master or Slave device
+      input: bit0 of A register: 0=Master 1=Slave
+      output: Carry if controller time-out error
+      changes: A,BC,IX,EI
+7FBC: issue ATAPI packet (packet is sent to the selected device)
+      input: HL=pointer to 12-byte ATAPI command packet (not in page1!)
+             DE=transfer address for data (if any)
+      output: NC=succesful
+              C+NZ=error, A contains IDE errorregister contents
+              C+Z=error, controller time-out
+      changes: all
+
+Notes:
+*if data is transferred in page 0 or 1, this can only be from the primairy mapper ramslot.
+*for the absolute sector read/write routines it is necessary that the IDE bios is installed during the MSX boot process. That is not needed for the other two routines.
+
+Example:
+	ld	a,1
+	call 	selectdevice	;select slave device
+	ld	hl,open
+	call	packet		;this will open your CDROM tray!
+	...
+open	db	#1b,0,0,0,#02,0,0,0,0,0,0,0
+
+More info about ATAPI command packets can be found on the Internet. Look for 'SFF8020'. (example: 8020r26.pdf)

@@ -1,0 +1,140 @@
+File: IDETECH.TXT version 1.0 (17 Nov. 1998)
+Subject: Sunrise MSX IDE-interface technical information
+By: Jon De Schrijder (Jon.DeSchrijder@rug.ac.be)
+
+The interface contains 128kB FLASHROM; divided into 8 segments of 16kB
+each. Only one segment can be 'visible' at once. This segment is mapped
+into the address space #4000-#7FFF.
+
+The desired segment is selected by writing a byte to address #4104. This
+address is also used for enabling the 'IDE registers'. The meaning of the
+bits is as follows:
+
+bit 0: 0=IDE registers disabled
+       1=IDE registers enabled
+bit 1,2,3,4: reserved
+bit 5,6,7: FLASHROM segmentnumber (0..7)
+
+Remark: if address #4104 is read, normal FLASHROM contents of address
+#4104 is read. So address #4104 can be used to store normal programcode.
+
+When IDE registers are enabled, these registers are mapped into the 
+address space from #7C00 till #7EFF. For more information on IDE registers
+and IDE specifications, please refer to other documents on the internet.
+
+There are 16 IDE registers, some of them aren't used yet. All of them are
+8 bit, except the Data Register which is 16 bit. 
+
+The 16 IDE registers are mapped to address space #7E00-#7E0F, but also to
+#7E10-#7E1f and also to #7E20-#7E2F, ... #7EF0-#7EFF. But it is
+recommended to use only addresses #7E00-#7E0F.
+
+Because the Data Register is 16 bit long, it is mapped in the following
+way: each word in the address space #7C00-#7DFF is mapped onto the Data
+Register. For example, if you want to write a word to the Data Register
+you can write it to address #7C00/1 or to address #7C02/3 or to address
+#7C04/5, etc. This has the following advantage: when reading or writing
+sectors from/to disk, 256 words (=512 bytes=the lenght of a sector) should
+be read from/written to the Data Register. Because the Data Register is
+mapped onto the whole address space from #7C00-#7DFF, it is possible to
+use a single LDIR instruction for the whole transfer operation.
+
+Examples:
+
+Reading from IDE device to memory:
+LD HL,#7C00
+LD DE,destination
+LD BC,512
+LDIR             ;256 words are read from the Data Register
+
+Writing from memory to IDE device:
+LD HL,source
+LD DE,#7C00
+LD BC,512
+LDIR             ;256 words are written from memory to the Data Register
+
+Important remark:
+When writing to the lowbyte of the Data Register, the byte is temporarily
+stored onto the interface. When the highbyte is written, this highbyte and
+the stored lowbyte are actually send to the IDE device(s). So the lowbyte
+should always be written first.
+
+The following is WRONG:
+LD A,highbyte
+LD (#7C01),A    ;a random lowbyte and the highbyte are sent to the IDE
+LD A,lowbyte
+LD (#7C00),A
+
+It should be:
+LD A,lowbyte
+LD (#7C00),A    ;temporarily storage of the lowbyte
+LD A,highbyte
+LD (#7C01),A    ;complete word is sent to the IDE device(s)
+
+When reading from the Data Register it is as follows:
+first read the lowbyte; the complete word is read from the IDE device and
+the highbyte is temporarily stored into the interface.
+Now read the highbyte; the stored value is returned.
+
+So it it important to read the lowbyte first, followed by the highbyte and
+not otherwise.
+
+Z80 and R800 microprocessors do this fine when executing instructions like
+LD HL,(#7C00) etc.
+
+The IDE registers: brief overview:
+----------------------------------
+The meaning of the registers depends on the IDE device type: normal ATA or
+ATAPI. The following goes for normal ATA:
+
+#7E00: r/w :Data Register, should not be used, use #7C00/1 instead
+#7E01: r   :Error Register
+       w   :Feature Register
+#7E02: r/w :Sector Count Register
+#7E03: r/w :Sector Register
+#7E04: r/w :Cylinder Low Register
+#7E05: r/w :Cylinder High Register
+#7E06: r/w : 
+       bit 0..3: Head Register (0..15)
+       bit 4   : 0=master registers selected 1=slave registers selected
+       bit 5   : reserved
+       bit 6   : 0=use CHS addressing 1=use LBA addressing
+       bit 7   : reserved
+
+#7E07: r   : Status Register
+             Most important bits:
+       bit 0: 1=Error Occurred
+       bit 3: 1=Data Request
+       bit 7: 1=Busy
+
+       w   : Command Execute Register
+
+#7E08: only used by special IDE devices, otherwise unconnected
+#7E09: only used by special IDE devices, otherwise unconnected
+#7E0A: only used by special IDE devices, otherwise unconnected
+#7E0B: only used by special IDE devices, otherwise unconnected
+#7E0C: only used by special IDE devices, otherwise unconnected
+#7E0D: only used by special IDE devices, otherwise unconnected
+#7E0E: r   :Alternate Status Register
+       w   :Device Control Register
+#7E0F: only used by special IDE devices, otherwise unconnected
+
+Other remarks:
+*IDE devices are capable of generating an interrupt. Nevertheless this
+feature isn't supported by the Sunrise IDE interface. All status checking
+should be performed by polling the IDE Status Registers.
+*When you reset your MSX, the IDE devices on the cable are *not* reset.
+*The 'official' name for IDE (Integrated Drive Electronics) is ATA (AT
+Attachment) So if you want to look on the net for some documents, search
+for ATA. I used some 'working drafts' I've found on a site from
+WesternDigital. (don't remember the URL)
+*There are several ATA specifications: ATA-1, ATA-2 and ATA-3. I believe
+they are all 'upwards compatible'.
+*Because ATA specifications are rather limited, there is also an extended
+ATA specification which allows you to send more complex commando packets
+to your IDE devices: ATAPI (AT Attachment Packet Interface). ATAPI is used
+for CDROM devices, IDE ZIP disks, LS120 Optical floppy disks and other
+recent storage devices.
+Documents can be found on the net.
+*When writing to registers with 'reserved' bits, you should write a
+zero-bit to these 'reserved' bits (e.g. #7E06)

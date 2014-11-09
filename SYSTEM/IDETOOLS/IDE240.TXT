@@ -1,0 +1,116 @@
+File: IDE240.TXT - 23/03/2005
+Subject: New bios for the Sunrise MSX ATA/IDE interface
+By: Jon De Schrijder (jon@msx.ch)
+
+Please read this file first. It contains EXTREMELY IMPORTANT information!
+
+General info:
+-------------
+Use the program IDEFLOAD.COM for installing the new bios IDE240.DAT into the Flashrom of your interface. (see IDEFLOAD.TXT for more info)
+
+This bios is version 2.40 and is suitable for MSX1 and higher (at least 128kB of mapped memory is required). If you don't use a Turbo-R, DOS2.20 will be installed. This bios is capable of handling all IDE harddisks (CHS and LBA mode), CompactFlash memory cards and also all ATAPI direct access devices such as Iomega ZIP100&250 and LS120 SuperDisk. It does also support reading ATAPI cdrom types like CDROM, CDRW and DVD. It does not support removable *harddisks* yet; when using these devices you should reset the computer after changing the medium. OTHERWISE THIS CAN CAUSE DATACORRUPTION.
+
+
+What's new:
+-----------
+*Bios 2.40: The IDE can now be used on MSX1! However this requires a memory mapper of at least 128kB be present in the system. This is a requirement of DOS2.20 being installed.
+Note that the current version of IDEFDISK.COM (v3.10) is for MSX2 and higher. So MSX1 users will need to format their disks on a MSX2 system first.
+
+*Bios 2.30: some small enhancements in the IDE device detection routines
+
+*Bios 2.21:
+-The bios supports now the boot indicator setting that can be set with IDEFDISK. This means that the bios will try to install the partition which is indicated as boot partition as the first drive. In this way DOS will boot from it when it tries to use the IDE as boot interface.
+IMPORTANT NOTICE: it is possible that the boot partition indicator for your harddisk is set to a wrong partition. In that way the MSX might try to boot from that wrong partition. In that case you should run IDEFDISK to correct the boot partition indicator (in the Display Partition Table menu). It is advised to do that before installing IDE bios 2.21!
+
+*Bios 2.10:
+-Support for CompactFlash memory cards: these can be used as a normal harddisk
+
+*Bios 2.01:
+-FAT16 bugfix in GETDPB entry
+-Some extra small delay in IDE initialization fixes problems with my old CDROM at 7MHz.
+
+*Bios 2.00:
+- FAT16 support
+- slight faster ATAPI driver
+- pressing [DEL] caused some trouble on Turbo-R: fixed
+- ATA read uses IDE statusregister in stead of alternate status register. This fixes the problems with Quantum Maverick 540A series. Thanks to Sergio Guerrero for reporting this problem.
+
+*Bios 1.99:
+- Some ATAPI devices worked VERY slow: this is fixed, BUT now it is possible that some old, slow ATAPI devices won't work anymore, especially on a fast Turbo-R or 7MHz. Please let me know if your device worked with bios 1.98 and not with 1.99.
+*Bios 1.98: [CTRL] was changed to [DEL]
+*Bios 1.97: enhancements to ATAPI driver; no more lock-up danger for very fast ATAPI devices and DOS2 interrupts aren't turned on anymore because some DOS1 games doesn't seem to like this when they are run from LS120 floppy drive.
+*Bios 1.96 fixes the startup problems with certain devices, like 'LS120 VER5 00'.
+*New in bios 1.95: PIO Mode is set to fastest mode, ATAPI driver bugfix
+*New in bios 1.94: enhancement to interface hardware test and new ATAPI driver
+*New in bios 1.93: extra interface hardware test to detect transferfailures
+*New in bios 1.92: FASTER harddisk access, absolute sector reading of CDROM is enabled
+
+
+Keys:
+-----
+
+During startup you can use the following keys:
+
+[RETURN]:force IDE bus reset immediately. Can be useful when 'Please wait' takes very long after a reset of the MSX.
+
+[INS]:disables the interface completely (no DOS2.20, nor IDE)
+Reprogramming the Flashrom when DOS2.20 inside the Flashrom is running, is not possible. So you should use this key to disable DOS2.20 and run IDEFLOAD.COM from floppy to install a new bios. For Turbo-R users this is not necessary because the DOS2.20 inside the IDE interface is not used. (however, the bios datafile can't be loaded from the IDE drive since the Flashrom is erased, disabling all IDE communication) 
+
+[GRAPH]:disables all IDE functionality
+In this case, only DOS2.20 will be installed. This can be used by people who don't have any IDE devices, but want to use the DOS2.20 inside the IDE interface.
+
+[DEL]:no driveletter assignment
+DOS2.20 will be installed, as well as the IDE functionality. But there will be no driveletters assigned to any IDE device. This mode should be used when using IDEFDISK. It has the advantage that the computer will not boot from a (yet not good formatted/partitioned) medium.
+
+Remark: there is an utility available (IDKEYSET.COM) to choose other keys than the [INS] or [GRAPH] key. You are also able to 'reverse the keypressing': the option is always chosen unless you press the key. Can be useful for people only using the DOS2.20 inside the interface: in that way they don't need to hold down the [GRAPH] key anymore.
+
+
+Driveletter assignment:
+-----------------------
+
+One IDE interface can use a maximum of 6 driveletters. The driveletters that are used, are determined at startup and can't be changed afterwards.
+
+One driveletter is used for each enabled FAT12 or FAT16 partition that is found on a harddisk or removable media such as ZIP, LS120, ...
+One driveletter is used for a CDROM drive.
+
+When using removable media such as ZIP, LS120, ... you should be aware of the following: when there is no medium present in the drive, only 1 driveletter will be assigned. So if you insert a partitioned medium afterwards, you will only be able to access the first partition. To be able to access to whole medium it should be inserted during startup OR you can access the other partitions by paging them in using the IDEPAR utility.
+
+
+It is possible to use different media on the same drive(letter).
+Examples:
+*You can insert a partitioned ZIP disk and later on replace it by an unpartitioned one. Accessing the unused driveletters will result in a disk offline error.
+*You can use a 1.44MB floppy in the LS120 drive and later on replace it by a partitioned 120MB SuperDisk, etc..., etc...
+*It is also possible to mix FAT12 and FAT16 partitions without problems on the same driveletter (e.g. use a 720K floppy (which has a FAT12 system) in the LS120 and replace it by a FAT16 partitioned SuperDisk.)
+
+
+CDROM and FAT16:
+----------------
+
+To access a CDROM drive, you first need to run the IDECDEX driver. As long as this driver isn't installed, the drive(letter) to which the CDROM is assigned, will respond with 'disk offline'.
+
+To access a FAT16 partition, you first need to run the FAT16 driver made by Okei. As long as this driver isn't installed, the drive(letter) to which the FAT16 partition is assigned, will respond with 'Not a DOS disk' error. BUT WHEN YOU USE A PC-FORMATTED FAT16 PARTITION, WRITING DATA TO THE PARTITION IF THE FAT16 DRIVER IS NOT INSTALLED, WILL CERTAINLY CAUSE DATA CORRUPTION ON THE FAT16 PARTITION.
+
+
+Important notices:
+------------------
+*When using an 'old' IDE interface ('MSX ATA-IDE interface #1.0 (C)1995 Henrik Gilvad') you have to make sure that it was hardwaremodified. Otherwise you might encounter all kinds of problems and even random loss of data. Read more about it in the IDEFIX.TXT file from September 24th 1999.
+
+*For 'old bios' users (like IDEDOS2.DAT and D2P0/1/2/3.DAT):
+These old biosses and old FDISKIDE (versions older than 1.36) use a very bad way for addressing sectors on a harddisk. It only works for harddisks with a certain geometry (number of Cylinders, Heads & Sectors) Because of this, all your files are 'scrambled' all over your harddisk.
+Recent biosses (NEWBIOS.DAT, NEW4BIOS.DAT, NEW5BIOS.DAT, IDECHS16.DAT, IDECHS17.DAT and IDExxx.DAT) work in another way (compliant with the IDE standards)
+So, if you have been using such old bios (IDEDOS2.DAT or D2P0/1/2/3.DAT) till now, you'll have to copy all your files to another medium (a SCSI harddisk, another IDE with a good bios, floppydisks, ...) *before* installing IDE240.DAT !!!
+
+*For 'more recent bios' users (NEWBIOS.DAT, NEW4BIOS.DAT, NEW5BIOS.DAT, IDECHS16.DAT):
+All biosses since version #1.7 use a more logical way when assigning driveletters to your partitions. The first enabled partition will be drive A:, the second enabled partition will be drive B:, etc. In previous biosversions this was a bit strange: the last enabled partition was drive A:, ... So your last enabled partition was your bootpartition. But now the first enabled partition will be your bootpartition!
+THIS MEANS THAT YOU WILL HAVE TO MOVE YOUR FILES FROM YOUR OLD BOOTPARTITION (=the last enabled one) TO YOUR NEW BOOTPARTITION (=the first enabled one) You can copy only MSXDOS2.SYS and COMMAND2.COM from within MSX-BASIC to drive A: and then reboot your MSX. Now you can move the rest of your files/directories as you like. (with XCOPY or other program)
+
+*Don't use the old fdiskprograms (older versions than 1.36) anymore! Or you will destroy your data! Simply running it and quitting can screw up your partition table! In that case: run the new fdiskprogram, choose 'autogenerate partition table', followed by 'write partition table' and your partition table will be as good as new :-)
+
+*Older biosses than IDE18.DAT contain a bug: only partitions 0, 1, 2, 3, 4 and 5 can be installed as a drive when the computer is turned on. This problem was fixed in IDE18.DAT.
+
+*Bios versions 1.80 till 1.85 contained a SERIOUS DANGEROUS bug when using a slave harddisk: when data was supposed to be written to the slave harddisk, it was actually written to the master harddisk, causing data corruption on the master harddisk. This was fixed in version 1.86.
+
+*DOS2.20 bugfix in version 1.91! All previous bios versions used the DOS2.20 kernel from the old bios versions from Henrik Gilvad. When I compared it to a normal DOS2.20 kernel I noticed one wrong byte!
+
+Have fun!
+JDS (Compjoetania TNG)
