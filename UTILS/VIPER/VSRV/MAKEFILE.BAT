@@ -1,0 +1,21 @@
+m80 =vwork/z
+m80 =vkey/z
+m80 =sysdrv/z
+m80 =mathdrv/z
+m80 =vdpdrv/z
+m80 =filedrv/z
+m80 =vsys/z
+m80 =veditor/z
+m80 =vfiler/z
+m80 =vinpbox/z
+m80 =vmenubox/z
+m80 =vjump/z
+m80 =vstack/z
+m80 =vtext/z
+m80 =vcsr/z
+m80 =vview/z
+m80 =vput/z
+m80 =vlh/z
+m80 =vset/z
+m80 =vsys2/z
+

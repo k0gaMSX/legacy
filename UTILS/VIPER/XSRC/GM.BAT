@@ -1,0 +1,2 @@
+COPY B:\MARK\X.COM C:
+

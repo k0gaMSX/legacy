@@ -1,0 +1,50 @@
+;VWORK.MAC
+
+EXTRN STARTUP,DTA
+
+JP STARTUP
+DB 0F0H
+DW DTA - 100H
+DW 0000H
+
+MS000::
+
+DB 13,10,13,10,9,"  x m a r k",13,10,13,10
+DB 9," Version 1.10",13,10,13,10
+DB "Copyright (C) 1992 by Y.Usami",13,10,13,10
+DB "$"
+
+;--------------------- SYSTEM CONTOROL BLOCK
+BUFSIZ::DW 4000H
+BUFPTR::DW DTA
+DEFDRV::DB 00H
+
+FCBX::
+ DB 0
+ DB "TEMP0000$$$"
+ DS 35
+
+FCBY::
+ DB 0
+ DB "TEMP0001$$$"
+ DS 35
+
+MS001::DB " generate object.",13,10,"$"
+MS002::DB " linking.",13,10,13,10,"$"
+MS003::DB "complete.",13,10,13,10,"$"
+MS004::DB " check target file.",13,10,"$"
+MS005::DB "break.",13,10,13,10,"$"
+MS006::DB " no fatal error(s).",13,10,"$"
+
+ER000::DB "!!File not found.",13,10,"$"
+ER001::DB "!!Illegal operand.",13,10,"$"
+ER002::DB "!!Out of memory.",13,10,"$"
+ER003::DB "!!Syntax error.",13,10,"$"
+ER004::DB "!!Wrong version of target.",13,10,"$"
+ER005::DB "!!Disk error.",13,10,"$"
+ER006::DB "!!Parameter error.",13,10,"$"
+ER007::DB "!!No [end] eroor.",13,10,"$"
+
+ END
+
+

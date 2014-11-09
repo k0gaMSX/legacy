@@ -1,0 +1,66 @@
+VIPER Version 2.50のビルドに関して
+1999/09/25,12/25 Tatsuhiko Syoji(Tatsu)
+
+[このドキュメントについて]
+　今回のビルドでは、MSXで一般的なM80&L80及び、フリーソフトであることや、高速なコンパイル速度、現在も開発が継続されていることで話題のM80&L80互換アセンブラ、RELAでコンパイルできるようにするために、行った作業の記録です。
+
+[ソースファイルの改変]
+　まず、RELAでは、MACLIB擬似命令が使えないため、同等のINCLUDE擬似命令に置き換えました。
+　次に、自分の環境(MSX-DOS1 TOOLSのM80&L80)に合わせるために、INCLUDE命令のファイル名についているディレクトリ名を削除しました。
+　その後、M80では、INCLUDE擬似命令のネストはできない為、VSCREEN.INC,VMEMORY.INC,VBIOS.INC,VBASE.INCをインクルードしている所を、それぞれのファイルがインクルードしているファイルをインクルードするように、コンパイル前に擬似命令を展開しました。
+　また、VSMALLのソースファイルに関しては、MSX-DOS1 TOOLSのM80&L80がファイル名のアンダースコアを認識しないので、それぞれ、
+VSYS2_S.MAC -> VSYS2S.MAC
+VWORK_S.MAC -> VWORKS.MAC
+VSET_S.MAC  -> VSETS.MAC
+　とリネームし、アセンブル、リンクを行っております。
+
+　以下は、頭にタブが入っていないのが元の命令、頭にタブが入っているのが、展開後の擬似命令です。
+　今回は、MSX-Cで簡単なプログラムを組んで展開を行いました。
+
+INCLUDE VSCREEN.INC
+	INCLUDE VCSR.INC
+	INCLUDE VVIEW.INC
+	INCLUDE VPUT.INC
+
+INCLUDE VMEMORY.INC
+	INCLUDE VSTACK.INC
+	INCLUDE VTEXT.INC
+	INCLUDE VLH.INC
+
+INCLUDE VBIOS.INC
+	INCLUDE RABELS.INC
+	INCLUDE SYSDRV.INC
+	INCLUDE MATHDRV.INC
+	INCLUDE VDPDRV.INC
+	INCLUDE FILEDRV.INC
+
+INCLUDE VBASE.INC
+	INCLUDE VWORK.INC
+	INCLUDE RABELS.INC
+	INCLUDE SYSDRV.INC
+	INCLUDE MATHDRV.INC
+	INCLUDE VDPDRV.INC
+	INCLUDE FILEDRV.INC
+	INCLUDE VKEY.INC
+
+[アセンブル]
+　以上の改変を行った後、アセンブル・リンクを行いました。
+M80でのアセンブルには、同梱のMAKEFILE.BATを製作し、実行しました。
+いくつかのソースファイルで、%No END statement 警告が出ましたが、MEGA-SCSIに640M MO(540Mメディア使用)を接続したMSX Turbo R(FS-A1ST)のMSX-DOS2上で、無事コンパイルに成功しました。
+
+　リンクの方ですが、オブジェクトファイルが多く、コマンドライン長制限に引っかかったため、MSX-DOS2のリダイレクト機能を利用して、リンクを行いました。
+　リンク手順は、
+L80 <LINK.RES (V.COM)
+L80 <LINKS.RES (VS.COM)
+　という手順で行いました。
+
+　MSX実機では、TPAの制限により、? Out of Memoryエラーが出てリンクできなかったため、CP/MエミュレータCPM.EXE V0.6上でMSX-DOS TOOLSのL80を利用して、リンクすることで、リンクに成功しました。この際、CP/Mの仕様で、オリジナルよりファイルサイズが大きくなりました。
+
+庄子 達彦(Tatsu)
+Bamboo Field:AKFU0007 K.Y-Network   :KYN00115 MTC-NET:MTC0067
+@nifty      :RXK16664 NetComplex Net:NAT28347 ray-net:RAY113
+Official E-mail Address rxk16664@nifty.ne.jp
+Private  E-mail Address tatsu_syo@geocities.co.jp
+My Homepage 1st. http://www.geocities.co.jp/SiliconValley/7512/
+My Homepage 2nd. http://member.nifty.ne.jp/Tatsu/
+------------------------------------------------------------------------
