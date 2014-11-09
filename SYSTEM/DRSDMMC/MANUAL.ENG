@@ -1,0 +1,1093 @@
+-------------------------- 
+SDMMC Driver version 0.1 
+for LPE-MMC-V4/6 Card
+(c) 2007 Kralizec
+--------------------------
+
+
+---- CONTENTS -------
+
+
+1.- INTRODUCTION AND FEATURES
+
+2.- SYSTEM REQUERIMENTS
+
+3.- QUICK INSTALLATION GUIDE
+
+4.- INTERNAL TOOLS
+	4.1.- SDMMC MENU
+	4.2.- PTSDMMC		
+		4.2.1.- CARD FORMATTING
+			4.2.1.1.- DOS1 FORMATTING
+			4.2.1.2.- DOS2 FORMATTING
+			4.2.1.3.- MIXED FORMATTING
+			4.2.1.4.- FAT12/FAT16 FORMATTING
+			4.2.1.5.- FAT16 FORMATTING
+		4.2.2.-	NOTES ABOUT FORMATTING
+		4.2.3.- FORMATTING FROM OS
+	4.3.- HESDMMC
+	4.4.- UUSDMMC
+
+5.- FAT16.
+
+6.- BIOS INSTALLATION/UPDATING (FLSDMMC.COM)
+
+7.- BOOTING THE OS
+
+8.- EXTENDED COMMANDS USING CALLS
+	8.1.- _SDCHDRV
+	8.2.- _SDXCHG
+	8.3.- _SDMMCPART
+	8.4.- _SDMMCCP
+
+9.- LOGIC DRIVES IN DOS1 AND DOS2
+
+10.- EXTERNAL TOOLS FOR MSXDOS
+	10.1.- SDXCHG.COM
+	10.2.- SDMMCCP.COM
+	10.3.- SDMMCEP.COM
+	
+11.- DISKS EMULATION AND EXTENDED PARTITIONS (SDMMCEP.COM)
+
+12.- SHORTCUT KEYS IN SDMMC Driver
+
+13.- USING NON-PTSDMMC-FORMATTED CARDS
+	13.1.- JUST ONE PARTITION IN NON-PTSDMMC-FORMATTED CARDS.
+	13.2.- BOOT DISK EMULATION OR EXTENDED PARTITION.
+	13.3.- FORMAT AND PARTITION CHANGE.
+
+14.- CARD HOT-SWAPPING
+
+15.- SDDMMC DRIVER AND OPF (MegaFlashRom)
+
+16.- SDPEED.COM
+
+17.- WARNINGS
+	
+18.- AKNOWLEDGEMENTS
+
+19.- CONTACT
+
+---- CONTENTS -------
+
+
+
+
+
+
+
+
+
+
+
+
+
+1.- INTRODUCTION AND FEATURES
+
+SDMMC Driver consists of a BIOS, Tools and a set of programs intended for handling the LPE-MMC-V4/6 board.
+The board uses MultiMedia Card and SD Card as massive storing devices in the MSX computers family.
+
+It includes next features:
+	
+	* Compatible with any MSX computer with a minimum of 16k RAM.
+	* Support of DOS1, DOS2 or higher partitions in both FAT12 and FAT16.
+	* Embedded MSXDOS 2.31 Kernel inside the System. Fully functional in MSX1.
+	* Internal set of tools. No need of external tools to work.
+	* Tools available using CALL command in BASIC. (Format, partition changing,
+	card swapping). 
+	* Support of any MMC/SD card from 4 Mb to 2 Gb. 
+	* DSK file(s) emulation as extended partition and boot.
+	* Possibility of disabling all system interfaces during the BOOT DSK
+	emulation.
+	* No need of use tools as IMPROVE to emulate DSK files.
+	* Support of card Hot-Swapping.
+	* Possibility of using memory mappers in MSX1 without needing the driver
+	installation.
+	* Possibility of using the bigger memory mapper as the main one in TurboR
+	and 2+ Panasonic MSX computers in DOS1 and DOS2.31.
+	* Compatible with Okei's FAT16 driver.
+	* Use of Shortcut keys to avoid disk booting, force the DOS2 for ROM games
+	which require disk access, avoid the system...
+	* Easy-of-use GUI, 100% MSX1 compatible.
+	* Functional from any slot/subslot, primary or extended. No interference
+	with other disk interfaces.
+	* Boot system from a FAT16 partition allowed.
+	* Can use any other OS FAT12/FAT16 formatted cards.
+	* Compatible with driver LPEMMC-formatted cards.
+
+
+2.- SYSTEM REQUERIMENTS
+
+These minimum requeriments are necessary to run SDMMC Driver:
+
+       - MSX with 16k RAM (*)
+       - 1 free slot/subslot
+       - 1 SD/MMC card (**)
+
+
+(*)     A minimum of 16KB of RAM is needed to install the driver in the
+system. Internal tools work with only 8k of available RAM.
+(**)    SDMMC driver offers the possibility of using DOS 2.31 OS without
+needing an MMC/SD card.
+
+
+
+3.- QUICK INSTALLATION GUIDE
+
+a) BIOS installation. If the card has been recently purchased from LPE,
+the driver will be already present in the system so you can ignore this step
+and continue with b). You must install the system otherwise. In this case
+you have to follow the indications in point 6 of this guide.
+
+b) Insert an MMC/SD card in the MMC_A slot of the LPE-MMC-V4/6 board.
+
+c) Insert the LPE-MMC-V4/6 board in the MSX computer while the computer is off. Then
+turn it on and hold pressed [DEL] key while it boots, until the *tools selector
+menu* appears.
+
+d) Select the PTSDMMC option and press [SPACE] key.
+
+f) If system can't detect the card it will show a message on screen which
+will invite you to exit the application.
+
+g) If the card is detected the type, name and capacity will be shown on the top
+of the screen. Select the option "Write Partition Table" and press [SPACE] key.
+
+h) Next menu has several options to format cards. They will be explained in
+following points. Choose the option "MIX DOS ..." and press [SPACE] key. If your MSX computer has at least 128k mappered memory, then you can format with FAT16 option as well.
+
+i) The informative box shows the total amount of partitions and their type
+to be done in the card. Press [SPACE] key to write the partitions.
+
+j) Select the YES option and press [SPACE] key to start the process.
+
+k) If everything was successful the next message will be shown: "All Data
+Written OK". After pressing [SPACE] key the MSX must be resetted.
+
+l) If everything was correct, the SDMMC Driver will boot the system. Now the
+user must decide the boot system by copying the related files to the desired OS
+(MSXDOS or MSXDOS2) into the first drive.
+
+
+
+4.- INTERNAL TOOLS
+
+To make the installation, formatting and system update easier, SDMMC Driver
+incorporates a set of tools inside its own BIOS. There's no need of loading
+any external program to access these tools.
+
+These tools can be accessed by booting the system with LPE-MMC-V4/6 board plugged in a free slot and holding the [DEL] key during this boot.
+
+
+
+4.1.- SDMMC MENU
+
+The SDMMC menu with the internal tools is useful to select one of the three
+utils added to the system. The keys to move through the menu are [CURSOR UP]
+and [CURSOR DOWN]. To select an option press [SPACE] key. 
+
+The selector has 3 tools which will be explained better later:
+
+	* PTSDMMC: Utility to make partitions and format the cards.
+	* HESDMMC: Small RAW hexa sectors editor.
+	* UUSDMMC: Utility to update the BIOS. (Not enabled).
+	
+Choose the desired tool and press [SPACE] key to execute it.
+
+Press [ESC] key to exit this menu. A confirmation is needed to leave the
+utils menu of SDMMC Driver.
+
+
+4.2.- PTSDMMC (Partition Utility)
+
+This formatting util offers a complete program to format MMC/SD cards to use
+them with the system. 
+
+After the util is selected the system will try to detect the inserted cards
+in the slots MMC_A and MMC_B. If no card is detected the system will ask for
+a key pressed to reboot.
+
+If an MMC/SD card has been detected its type and size (*) will be shown
+in the top of the screen. 
+
+The utility constains a selection menu with a similar working mode as the one
+explained in 4.1. The available options are:
+
+	* Show Partition Info		: Disabled right now.
+	* Write Partition Table		: To access to the formatting menu
+	* Change Partition Options	: Disabled right now.
+
+In the actual version of the bios only the option to format cards is available.
+It will be explained in the next section of this manual (4.2.1).
+
+
+To come back to the selection menu te [ESC] key must be pressed.
+
+
+(*)	Total size in bytes of an SD/MMC card is variable regarding to the size
+pointed out in the card. Nowadays most of providers don't use the classical
+technician notation where 1Mega = 1024K (2^10) but the base 10. So, a card of
+256 Megs can have a difference real capacity depending on the manufacturer.
+
+
+
+4.2.1.- CARD FORMATTING.
+
+Once the option "Write Partition Table" is selected a new menu will be deployed.
+This works in the same way as the other ones already explained. It has 5
+formatting options which will be explained right now. The option "Exit" has to
+be selected if there is no need to continue with the formatting progress.
+
+The card *must be* formatted by using PTSDMMC in order to work correctly on the system if there is no mapped memory enough (128k) or there is no way to format the card in FAT12.
+
+	
+Once the card is formatted we have just to come back to the main menu to reboot
+the system or to reset our computer.
+
+To come back to the main menu the [ESC] must be pressed.
+	
+
+4.2.1.1	DOS1 FORMATTING.
+
+With DOS1 formatting all the partitions will have 16 MB in FAT12 mode. This
+kind of partitions are fully compatible with MSX-DOS and Disk Basic 1.0 version
+and they can work as floppy disks. 
+
+It's not possible to make bigger partitions on MSX-DOS 1.0 version. This OS needs to save all FAT information in memory and a bigger partition needs a bigger FAT, so it's impossible to work in this version since it requires more memory than it has.
+
+
+4.2.1.2	DOS2 FORMATTING.
+
+DOS2 formatting divide the MMC/SD card into 32MB partitions in FAT12 mode. This
+kind of partitions are only compatible with MSX-DOS and Disk Basic 2.0 or
+higher. To get them working with all the improvements that MSXDOS2.31 offers
+(MSXDOS2.31 is included in the driver) the computer must have at least
+128KB of mapped RAM. 
+
+
+
+4.2.1.3 MIXED FORMATTING.
+
+MIXED formatting makes 16 and 32MB partitions, it doesn't matter which, in the
+MMC/SD card. This is the ideal mode to make the card compatible with both 1.0
+and 2.0 versions of MSX-DOS.
+
+In this way if the card is used in a MSX computer unable to execute the MSXDOS2
+OS we will be able to use the DOS1 partitions (16MB) inside the card.
+
+
+
+4.2.1.4 FAT12/FAT16 FORMATTING.
+
+Using this kind of formatting only two partitions will be created in the card.
+A DOS1 FAT12 partition (16 MB) and a FAT16 partition with the rest of the
+available space. 
+
+This mode is ideal to use the FAT16 driver by Okei. SDMMC Driver is compatible
+with it. So the system can be booted with the FAT12 partition, the driver
+installed and be able to use the FAT16 partition.
+
+With this kind of formatting (or Mixed one) you have and MSX-DOS 1.0 compatible partition in order to use the card on a computer which can't boot using MSX-DOS2.
+
+
+
+4.2.1.5 FAT16 FORMATTING.
+
+The FAT16 formatting will create an unique FAT16 partition in the card. This
+can be done if the card has more than 32MB of capacity. 
+
+This format is perfect to have an unique, maximum size partition on our SD/MMC card. Also it will make easier the usage for Windows users, since this OS can only recognize the first partition of an external storage device.
+
+In order to use this kind of format on your MSX computer, you *must* have at least 128k mapped memory.
+
+
+
+
+4.2.2.-	NOTES ABOUT FORMATTING.
+
+SDMMC Driver makes many formatting types depending on the user's needs.
+Each formatting type is made in an standard way. Any OS which can work with
+SD/MMC cards must be able to handle and read all the partitions created by the
+SDMMC Driver. But, unfortunately, this is not happening always.
+
+Last versions of the Windows OS are only capable of recognizing the first
+partition. The rest of partitions, if they exist, will be ignored and won't be
+assigned to a drive letter. Therefore, if we check the "Drives management"
+of the system we'll find these partitions being recognized but it will be
+impossible to assign them to logical units (drive letters).
+
+In more advanced OS such as Mac OS X or any Linux distros all the partitions
+created by SDMMC Driver inside the cards will have the possibility of being
+mounted and work with these systems. Sending and receving information between
+both systems will be done without problems. 
+
+The partitions will be numbered from number 0 until the number of partitions
+minus 1. The volume name of each partition will show which is the actual
+partition. Later the user can modify this value. So, the name for the first
+partition will be named as MMC000.
+
+
+
+4.2.3.- FORMATTING FROM OS
+
+Once the system is initialized it is possible to format an independent
+partition from the OS or Disk Basic. So, the internal command from DOS FORMAT
+or from DiskBasic _FORMAT with their respective arguments can be used.
+
+The partition will be formatted with its original characteristics, as it was
+initializated with PTSDMMC: DOS1, DOS2 or FAT16. It is not possible to format
+an emulated DSK or an emulated extended partition.
+
+
+4.3.- HESDMMC
+
+HESDMMC is an small tool to visualize absolute sectors in a MMC/SD card. It is
+not necessary that the partition is previously initialized by SDMMC Driver
+since HESDMMC reads the data (sectors) directly from the card and shows that
+on screen.
+
+HESDMMC does only let the visualization of sectors. It is not possible to
+modify them as a security system. Future versions will include an edit mode for
+advanced users. 
+
+If a MMC/SD card has been detected plugged in the system, the option "Show
+Sector Info" will let its visualization by pressing [SPACE] key.
+
+Because of the screen mode limits where the application has been developed, it
+is only possible to show 128 bytes of each sector. Each sector is composed of
+512 bytes, so a set of shortcut keys was needed to visualize its contents.
+
+The top shows information of the sector which is being visualized (in HEXA
+notation) and the OFFSET inside that sector.
+
+Shortcut keys during the visualization:
+
+	* CURSOR UP/ CURSOR DOWN		: Next Sector, Previous Sector.
+	
+	* CURSOR LEFT/ CURSOR RIGHT		: Offset -080h, Offset +080h
+	
+	* CTRL							: Together with [UP] [DOWN] 
+	increments/decrements 01000h to the visualized sector.
+	
+	* SHIFT							: Together with [UP] [DOWN] 
+	increments/decrements 00100h to the visualized sector.
+	
+	* SPACE							: Together with [UP] [DOWN] 
+	increments/decrements 00010h to the visualized sector.
+
+	* ESC							: Comes back to the main menu.
+
+
+
+4.4.- UUSDMMC	
+	
+This option is not still enabled. To upgrade the BIOS to a new version follow
+the steps of point 6.-
+
+
+
+5.- FAT16
+
+SDMMC Driver supports FAT16 by Okei and it can be freely downloaded it through:
+
+http://www.ucatv.ne.jp/~kmizuo/
+
+DOS 2.31 must be started to get FAT16 working. Of course, a FAT16 partition
+must be available. Steps 4.2 and followers can be checked to learn more about
+partitions.
+
+Once the driver is installed any usual DOS2 operation can be done from the
+formatted FAT16 partition. The disks emulation added to the system works
+correctly from a FAT16 partition too.
+
+The driver has been tested with the version 0.12 of the FAT16 driver. Its
+behaviour with older versions of the FAT16 driver is unknown so it is always
+recommended to use the v0.12 or higher.
+
+FAT16 has some problems with some DOS2 internal commands: As Ramdisks, the
+FORMAT command will be disabled.
+
+
+SDMMC Driver carries Okei's FAT16 0.12 version driver inside.
+If driver detects a FAT16 boot partition, it will load driver before MSXDOS2.SYS or skip to Basic.
+So it's possible to work with FAT16 even for booting the system.
+
+
+
+6.- BIOS INSTALLATION/UPDATING
+
+The SDMMC Driver has an specific section to update the version of the driver
+without needing any other device. This update can be done from any MSX computer
+with 16KB of RAM.
+
+This option is still disabled but will be incorporated in future versions.
+This is the main reason to need an MSX computer with a disk drive and use the program included on FLSDMMC.COM pack.
+
+
+BIOS updating and instalation is only posible when using other storage devices 
+as internal diskdrives, MegaSCSI, Sunrise IDE, etc.
+
+FLSDMMC usage is easy. Just type this on the OS:
+
+
+FLSDMMC DRIVER.ROM
+
+
+The program will look for the LPE-MMC-V4/6 board on the system and all slots or subslots. Once found the first one, it will show where it has been detected. For instance:
+
+
+------------------------------------------
+
+FLSDMMC v.0.1 Flash Loader LPSDMMC Card
+(c) 2007 Ramones
+
+Searching LPSDMMC: FOUND
+Found in slot: 2 Subslot: 0
+Choose Slot/Sub (Cursors): 2
+
+------------------------------------------
+
+
+If our card is in the detected slot we just have to push [INTRO] to start driver installation. If our card is in any other slot/subslot the system will allow us to change by using cursor keys::
+
+
+	[CURSOR UP]   / [CURSOR LEFT]  : previous Slot/Subslot.
+	[CURSOR DOWN] / [CURSOR RIGHT] : next Slot/Subslot.
+
+
+Once selected, just push [INTRO] to start installation.
+
+FLSDMMC will install the driver on the card if no trouble comes up.
+
+When the installation is finished, we just have to make a RESET (or turn off/on the computer) to start using it.
+
+
+ 
+7.- BOOTING THE OS
+
+Once the card is formatted the system can boot. To do this the files MSXDOS.SYS
+and COMMAND.COM (if the system has at least 64K RAM) or MSXDOS2.SYS and
+COMMAND2.COM (if the system has at least 128K of mapped RAM) must be copied
+to the first partition.
+
+If the system has less than 64K of RAM MSXDOS won't boot. Neither will do the
+OS external tools.
+
+These files can be copied using other disk drive in the same MSX or from other
+system such as Windows, Linux or MacOSX.
+
+The first partition is the one which has the volume name MMC000. In this way
+the system is initialized but after it the user can put any partition as
+the first one or as a boot partition.
+
+
+
+8.- EXTENDED COMMANDS USING CALLS
+
+SDMMC Driver has extended commands used through the BASIC instruction CALL.
+It will let some systems with less than 64K of RAM to use all the advantages of
+the SDMMC Driver. 
+
+All the commands will be called in this way:
+
+	CALL COMMAND (arguments)
+	_COMMAND (arguments)
+
+
+
+8.1.- _SDCHDRV	(ONLY DISKBASIC 1.0)
+
+As Disk Basic 1.0 does not have any command to change the work drive a command
+has been incorporated for that reason. This is similar to the command _CHDRV
+of the Disk Basic 2.0. 
+
+_SDCHDRV ("Drive:")
+
+"Drive" is the new work drive. This command only works with Disk Basic 1.0
+(DOS1).
+
+
+
+8.2.- _SDXCHG
+
+The command _SDXCHG lets a card exchange by hot plugging the new one. So, the
+actual card is extracted and the new one inserted and then the next command is
+executed:
+
+_SDXCHG
+
+The changes will be shown on screen. This command acts in all LPE-MMC-V4/6 boards which are plugged into the MSX. So the change can be done in all
+of them at the same time.
+
+
+
+8.3.- _SDMMCPART
+
+SDMMCPART will show information of the actual partition where we are placed or
+the one which is passed in the arguments. So
+
+_SDMMCPART
+
+will show us information about the actual partition.
+
+_SDMMCPART ("Drive:")
+
+It will show information of the partition written in "Drive:". 
+
+The information shows the detail of the actual partition, the total amount of
+partitions of that MMC/SD card and its types. 
+
+
+
+8.4.- _SDMMCCP
+
+As MSXDOS and Disk Basic only let a maximum of 8 drives at the same time (being
+it impossible in MSXDOS 1.0 because of a lack of high memory) it is impossible
+to show the complete content of the card when it is formatted with FAT12 and
+versions of DOS1 and DOS2.
+
+So it is needed to cheat the OS and make a hot swapping of partitions assigning
+to the desired logical drive a different partition.
+
+Its syntax is the next one:
+
+_SDMMCCP ("Drive:",number of partition)
+
+"Drive:" is the logical unit where we want to change the *number or partition".
+
+For instance, imagine that we have a card with 6 partitions. Initially the
+partition 0 is assigned to the logical unit A: and the partition 1 to the
+logical unit B:. We want to put the partition 5 in the unit B:
+
+_SDMMCCP ("B:",5)
+
+Once the command is executed the logical unit B: will have the contents of the
+partition 5 until it will be changed again. All the changes made by SDMMCCP are
+permanent. (*)
+
+The possible errors that we can find, besides of the syntactic errors when
+writing the command, can be:
+
+	* The unit doesn't belongs to a LPEMMC or MMC Reader: The unit doesn't belong
+	to our disk interface.
+	
+	* Partition not found: The partition that we want to put does not exit. It
+	has a number higher of the "number of partitions - 1". (We have to remember
+	that the partitions start with 0).
+	
+	* Partition already assigned: To avoid possible problems, if a partition is
+	already assigned to an active logical unit, the system won't let the change.
+	
+	* Unknown error: An unknown error is caused by an error when reading/writing
+	from/to the MMC/SD card. If the card has been extracted before executing the
+	command and a general error appears we will receive this error message.
+
+	
+(*) Changes are permanent only on cards formatted with PTSDMMC. If the card has been formatted with any other OS, data will be volatile and they'll just keep working until the computer is turned off.
+
+	
+
+9.- LOGIC DRIVES IN DOS1 AND DOS2
+
+The logical units assigned to boot DOS1 and DOS2 are fixed in this preliminary
+version of the LPEMMC driver. Using DOS2 4 reserved logical units are available
+if possible. If any other disk interface has reserved all units or more than 4,
+then if it is placed in a previous slot the system will only reserve the rest.
+
+In the same way if our card has less than 4 units the rest will be reserved.
+
+The number of reserved units in DOS1 will be 2. It is dangerous to reserve more
+than 2 units in DOS1 and Disk Basic 1.0 because of their internal operation.
+DOS1 stores in memory a whole copy of the FAT of every unit and keeps used a
+big amount of high memory. This behaviour makes that many software don't work
+properly. The TPA is smaller and these programs could not work properly.
+
+By pressing the [CTRL] key when booting the number of reserved units will be
+reduced to half in both DOS1 and DOS2. In this case 1 unit for DOS1 and 2 units
+for DOS2.
+
+When emulating disks with boot the system will reserve 1 unit in both DOS1 and
+DOS2, forced mode. It will reserve two units in emulation mode with normal boot.
+
+If our card has just one unit (what can happens with FAT16) the system will reserve 2 units, 1 if we push CTRL. This allows us to emulate a DSK file as partition in an added unit.
+
+
+
+10.- EXTERNAL TOOLS FOR MSXDOS
+
+As the enabled Basic commands (CALLs), SDMMC driver has a set of executable
+utils for MSXDOS 1.0, 2.0 or higher. There is a tool which is only
+executable by MSXDOS: SDMMCEP. It will be included as a CALL for Basic in future versions of the driver.
+
+
+
+10.1.- SDXCHG.COM
+
+Tool for the hot extraction of MMC/SD cards. It is similar to the CALL version.
+The main difference lies in the possibility of waiting until a key is pressed to
+start the process.
+
+In this way it is possible to execute the command from a card which will be
+exchanged later.
+
+As in the CALL version of this tool (8.2.-), the command will search for all LPE-MMC-V4/6 boards plugged into the system and will do the exchange of all
+cards at the same time. 
+
+
+
+10.2.- SDMMCCP.COM
+
+SDMMCCP.COM includes the commands _SDMMCPART and _SDMMCCP of Basic (8.3.- and 8.4.-)
+in a single tool. Then it has two working modes.
+
+
+* Information of the partition.
+
+SDMMCCP 
+or
+SDMMCCP Drive:
+
+_SDMMCPART will work as the Basic tool in this way. It will show us the info
+of the assigned partition to the logical unit passed as parameter or of the
+actual unit if no parameters are given. The provided data are the same that
+in _SDMMCPART (8.3.-). The data inform us of the number of total partitions in
+that card, its type and the current partition where we are placed.
+
+
+* Change partition.
+
+SDMMCCP Drive: Number of Partition
+SDMMCCP Number of Partition
+
+It will work as _SDMMCCP of Basic (8.4.-) in this mode, placing the partition
+"Number of Partition" as drive "Drive:" if it is given as parameter or in the current drive if it is not given.
+
+
+When trying to do a change of partition some errors can appear. They are the
+same as in 8.4.- and will be shown on screen in any case. 
+
+NOTE ABOUT EMULATING DSK AS PARTITION: When a disk is emulated as a partition
+through the command SDMMCEP.COM, that emulation can be disabled by using SDMMCCP
+and putting a real partition of the card in its place. If the disk is emulated
+with boot the instructions to follow to disable the emulation are the same as
+given in section 12.- about the key [STOP].
+
+
+
+10.3.- MMCEP.COM
+
+SDMMCEP.COM is the Emulator of Partitions and Emulation of discs of LPEMMC Driver. 
+As MMCCP.COM it has two working modes depending on the passed arguments as
+parameters given to the tool. The explanation about how it works will be given
+without big detail. Many questions about the disks emulation and extended
+partitions can be answered in section 11.-.
+
+
+* Extended partitions emulation. 
+
+The next syntax must be used to emulate a DSK file as an extended partition:
+
+SDMMCEP FILE.DSK Drive: /W 
+
+The file FILE.DSK will be assigned to the drive "Drive:" and it can be used as
+if it were a normal partition. All DOS commands will work in the same way as
+if it were a normal partition.
+
+The modifier /W is totally optional and is useful to write protect it during
+the emulation. A disk emulated as a partition and with the /W modifier can't
+be written.
+
+The disk will rest enabled from that moment until it will be disabled with the
+command SDMMCCP even if the system is turned off and on. (*)
+
+The format and disk emulation won't work from an extended partition.
+
+The extended partition can be disabled by putting a real partition in that
+logical unit by using SDMMCCP.
+
+(*) Changes are permanent only on cards formatted with PTSDMMC. If the card has been formatted with any other OS, data will be volatile and they'll just keep working until the computer is turned off.
+
+
+* Emulating disks with boot. (Real FDD).
+
+The emulation of a disk (or a set of disks) as if it were an internal diskdrive
+has the next syntax:
+
+SDMMCEP FILE.DSK /B /F
+
+The file FILE.DSK will work as a single and main partition as if it were a real
+floppy disk. 
+
+If a set of disks has to be emulated then wildcards of MSXDOS must be used.
+SDMMCEP will use the commands _SFIRST and _SNEXT (in DOS1) and _FFIRST and _FNEXT
+(in DOS2) to search the files selected by the user. It is similar to use the
+DIR command with wildcards. 
+
+Example: 
+
+Three files are ready to be emulated.
+
+ALESTE2D0.DSK
+ALESTE2D1.DSK
+ALESTE2D2.DSK
+
+That set of disks will be emulated with:
+
+SDMMCEP ALESTE*.DSK /B /F
+
+The set of disks will be emulated and all the disks will be available after
+booting. A swap between them is possible as it is explained in sections 11.-
+and 12.- ([INS] key).
+
+The /B modifier tells to SDMMCEP that the desired emulation is with boot
+(Real FDD). It is mandatory.
+
+The /F modifier forces the system to initialize only our diskrom. By doing
+this the emulated disks will have the maximum amount of high memory available.
+This modifier has some disadvantages since some programs won't work properly
+if they are forced with this parameter.
+
+The emulation with boot uses the attrib of the file "read only" (+r) to protect
+the emulated disk. If the emulated file(s) has that attrib selected it can't
+be overwritten. This is great when emulating games to avoid accidental
+writes in these disks.
+
+
+NOTES FOR THE EMULATION WITH BOOT:
+
+	* The disks order for emulation will be the given by DOS commands (_SFIRST,
+	_SNEXT,_FFIRST,_FNEXT). So this sequence is not given in an alphabetical
+	order but in the order in which they were copied to the disc (directory
+	order).
+	
+	* SDMMCEP does not test if the file is a real disk. So any file can be emulated
+	but its behaviour won't be appropiate.
+
+	* The maximum size of a DSK file is 32MB. It is not possible to emulate FAT16
+	disks.
+
+
+11.- DISKS EMULATION AND EXTENDED PARTITIONS (SDMMCEP.COM)
+		
+The emulating system used by LPEMMC is rather special to make the partitions &
+disks emulation easier to the user. Other hard disk interfaces where this kind
+of emulation is used normally force the user to store all the sectors of the
+DSK file in a consecutive way inside the partition. In other words, all the
+clusters in the FAT chain must be consecutive. The way to get it is keep our
+partitions defragmented or copy the disks forming a block. Even if it makes
+the emulation task easier since the disks are used as normal partitions and
+the driver sees no difference between a disk and a partition, it can be a
+tedious task for users.
+
+SDMMC driver does not work in that way since it emulates DSK files wherever
+they are. In other words, if the partition is fragmented it is not a problem.
+So the driver will emulate the DSK file even if the disk sectors are not
+stored in a consecutive way.
+
+This can be shown as a great advantadge but it has a small disadvantadge too:
+this way the disk emulation is slower. An extended partition or an emulated
+disk won't have ever the same speed as a real partition and this won't be
+a constant speed. It will depend on the fragmentation level of the partition
+where it is stored as well as on the required sector for the emulation.
+Closer to the end of the DSK, slower the read/write will be.
+
+SDMMC Driver can emulate until 14 disks with different boots and so many extended partitions as possible logical units (8).
+
+The emulated files are not protected in a special way. If we are emulating
+an extended partition we can access the file which is being emulated and
+modify it simultaneously to this emulation. The same goes for erasing it.
+It works using the MSX or other OS. So the user must be careful with these
+files if he is using them.
+
+The size of the emulated files is not forced to 720k or 360k. Any size is
+allowed but they must be FAT12 (up to 32MB).
+Of course the file must fit in the partition where it is located. In order to
+create disks with any size easily the tool NDIC by Néstor Soriano (aka
+Konamiman) can be used. It can be downloaded from his website:
+
+http://www.konamiman.com/msx/msx-e.html
+
+The name of the util -> NDICREAT.LZH
+
+There is no limitation on the OS. The LPEMMC driver can emulate any DOS1 or
+DOS2 disk if the host (MSX used) can boot it.
+
+The DSK emulation os not perfect. Even having the "Force" mode some disks
+won't work because of several reasons. Some of them are in the next list:
+
+	* Damaging memory searches. These searches write in the main ROM of the
+	SDMMC Driver by switching banks in the internal mapper and making the system
+	not working. After working on this problem most of the cases will work but
+	maybe other disks with this problem can arise and not work properly. 
+	
+	* Illegal use of system functions. The emulated disks could not be working
+	because they wait for incorrect answers.
+	
+	* Illegal use of system memory. Some disk programs use memory which is
+	reserved for system. Then fatal errors during execution may arise. 
+
+Emulating one disc is only posible from / to the same card. This means that if
+we have two LPE-MMC-V4/6 boards plugged in the same system an emulated
+file will only work from the card where it is included.
+
+
+
+12.- SHORTCUT KEYS IN SDMMC Driver
+
+SDMMC Driver has some special keys which add functionalities to the system
+besides of the main keys of DOS 2.31. 
+
+
+* Functional keys when booting.
+
+The following set of keys is active during the initialization of the system.
+
+
+	[DEL]
+	
+	Internal utilities will be available. 
+
+	[ESC]		
+	
+	Avoids the installation of SDMMC Driver and DOS 2.31 or DOS 1.0 Kernel. 
+	
+	[GRAPH]		
+	
+	Installs the DOS 2.31 Kernel but the MMC/SD driver is not installed. So no 
+	units are reserved. This key will only work if the system is able to install
+	the DOS 2.31 kernel.
+	
+	[HOME]
+	
+	If [HOME] is pressed during boot it will avoid the reading of the first disk
+	sector and the loading of the operative system, so it will force the system
+	to skip to the DiskBasic. This key can be really useful in the case of having
+	a damaged booting partition. This can be solved by formatting the card and
+	obviously losing all the data inside. But by using this key the system can
+	be booted to switch the partition and/or format that one using the CALL
+	commands of DiskBasic.
+	
+	[TAB]
+	
+	Some users of other disc interfaces know that when using them together with
+	carts which make use of the disk drive some problems can arise during boot.
+	The user has to disable the disk interface to get the cart working. This is
+	really common when the system can boot DOS2 and the kernel is DOS 2.31. Some
+	examples can be turboR or MegaSCSI. If 5 or more reserved logical units are
+	present the next message will be shown on screen: "Not enough memory".
+	This happens due an special protection of Kernel 2.31 avoiding to boot DOS2
+	if a cart which is going to use the disk is present. As DOS1 reserves a big
+	amount of memory for each logical unit the system has no enough high memory
+	and booting is impossible.
+	
+	The user can press the [TAB] key to avoid this problem. It will force the
+	system to install DOS2 then the program inside the cart will boot with any
+	problems. Furthermore the SD/MMC card can be used as a disk too.
+	
+	[BS] (Only turboR)
+	
+	MSX turboR computers were made to be faster inside the MSX standard. That
+	makes that external memory mappers are a problem with these computers.
+	If the kernel DOS 2.31 is executed in a turboR places as the main memory
+	the internal one *always* even if it is not the bigger one.
+	
+	On the opposite most of the MSX BIOS put as the main memory the bigger and
+	placed in the lesser slot. This is different in MSX turboR since the external
+	memory mappers are really slower in these computers. The user can avoid this
+	problem by pressing the [BS] key to force the system (turboR) to behave
+	as a normal MSX. This could produce a rare behaviour in the system but until
+	this moment nothing has been detected.
+	
+	[SELECT]
+	On MSX2 or higher we force frequency to 60Hz by keeping pressed this key while booting.
+
+
+	[STOP]
+	
+	It stops the emulation of disks with boot and force the system to boot
+	normally. When a disk or a set of disks is emulated with SDMMCEP this emulation
+	will be permanent (if the card has been formatted with PTSDMMC or until the computer is turned off -if it's not-) while the booting will be done from that card. It must be
+	avoided with this key.
+	
+	
+* Functional keys during the emulation of disks with boot.
+
+	[INS]
+	
+	Disk swapping. While the system reads/writes to disk during the emulation,
+	the SDMMC Driver will test if this key is pressed. If pressed, the led of
+	the [CAPS] key will start to flicker pointing out to the user to press the
+	number of the desired disk. Once the [INS] key is released one of the next
+	keys are available:
+	
+	[1] - [9]		: The set of keys from [1] to [9] of the normal keyboard will
+	select the emulated disk (from 1 to 9).
+	
+	[F1] - [F5]	: This set of function keys from [F1] to [F5] will select the
+	emulated disks 10,11,12,13 and 14.
+	
+	[0]					: It avoids the disk selection and keeps the one previously
+	selected. It is useful if the [INS] key is accidentally pressed.
+	
+Note about the number of disks:
+
+	* If the number pressed is greater than the last disk emulated the system
+	will try to access to the next connected disk interface if it exists. On the
+	opposite, pressing that key would have the same effect that pressing [0] key. No other interface will exist on "forced" mode, so it'll work as [0] key.
+	
+	In a hypothetical example, if 4 disks are being emulated, the [5] key is
+	pressed, the /F modifier has not been selected and no other disk interface
+	is present in the system, the LPEMMC driver will try to read the internal
+	disk drive.
+	
+	This can be useful to make easier the usage of programs which have copy
+	protections in one of their disks. The system can be forced to use that
+	disk until this verifies that the program is original and has been purchased
+	legally. Later the emulation can be done from the MMC/SD card.
+
+	* The last selected disk will be stored and keeped in the next boot.
+
+
+
+13.- USING NON-PTSDMMC-FORMATTED CARDS
+
+As you can read along this user's manual, SDMCC Driver is able to use any SD/MMC card formatted on any other OS, as long as that format is FAT12 or FAT16. In this case the driver deals with these cards but with some limitations (explained next).
+
+13.1.- JUST ONE PARTITION IN NON-PTSDMMC-FORMATTED CARDS.
+
+Tough the card (formatted with other OS) has more than one partition, in this driver 0.1 version they will be completely ignored. The system will recognize the card at boot, common or PTSDMMC-formatted, and it'll entitle just the first partition.
+
+13.2.- BOOT DISK EMULATION OR EXTENDED PARTITION.
+
+Disks emulation, boot type or extended partition, is only functional until the computer is turned off. The information of the emulation will be completely volatile.
+This *doesn't mean* that saved data on these disks vanish when the computer is turned off. But if we emulate a set of disks, boot mode or extended partitions, and then we turn off the computer and we turn it on again, it will start with OS.
+
+The same happens if we change the card or we extract and replace the same card.
+
+13.3.- FORMAT AND PARTITION CHANGE.
+
+For security reasons is not possible to format a PTSDMMC-formatted-card with FORMAT or _FORMAT (OS) commands.
+As we use only the first partition, neither the partition change (SDMMCCP, _SDMMCCP) will be possible.
+
+
+
+14.- CARD HOT-SWAPPING
+
+SDMMC Driver allows to extract/insert cards once the OS has started, in any moment without using any special commands as SDXCHG or _SDXCHG. For instance, if we are on MSXDOS (any version), doing anything, we remove the card to introduce it in another computer, copy or erase anything, and then back again to our MSX computer, the system will detect the change and it'll reinitializate the card.
+
+However, user must know some little problems before making these changes:
+
+	* DOS2 uses disk access buffers while working with an unit. It's impossible that SDMMC erases these buffers, since the change is possible while OS is reading/writing data. In that case we will read an error warning, but we'll be able to continue if we insert the card again. Errors may happen if we insert different cards or the system may not be able to read files that we have added or erased until it fills those buffers. This problem grows up when we use FAT16. To avoid it we can jump from/to OS to/from Basic, so the DOS2 can eliminate and recharge those buffers. It's been tested that File Managers as MultiMente work properly with the changes, since they reread automatically all data in each access.
+
+	* If we work starting with a card which boot partition is FAT12, SDMMC Driver doesn't automatically load the FAT16 driver. So if we insert a FAT16 card after starting with this card, it won't work if we haven't load the driver.
+
+
+
+15.- SDDMMC DRIVER AND OPF (MegaFlashRom)
+
+To make easier the usage of OPF program (rom loader for MegaFlashRom), it makes an automatic search of MegaFlashRom card.
+
+Automatic search is common stuff in this kind of programs, though is not recommended because system specs. The right way to do this operations is through user, asking or giving him the possibility to select the slot/subslot where the MegaFlashRom card is placed.
+
+
+For all this, and baring in mind that MegaFlashRom and LPE-MMC-V4/6 board use the same flash memory to save their data, the OPF program  (*old versions*) is not able to detect if the memory is MegaFlash or not.
+
+This provoke an error in old OPF versions, which puts the OS down if LPE-MMC-V4/6 board is plugged in a lower slot than MegaFlash.
+
+
+So it's strongly recommended:
+
+	* Download the latest OPF version which fixs up the problem
+
+	http://personales.mundivia.es/mpazos/flashrom/index.html
+
+	* Use the /F command of OPF to tell the program the slot/subslot in which the MegaFlashRom is placed. For instance:
+
+	OPF MYROM.ROM /F21
+
+	We point slot 2, subslot 1 as the one for the MegaFlashRom.
+
+
+
+16.- SDSPEED.COM
+
+When using an MSX Turbo R computer, DOS2.31 makes disk accesses in Z80 mode in order to allow full compatibility with all commercial disk interfaces. Turbo R internal disk drive does work under R800 mode.
+
+SDPEED utility parches the routine that makes this change to avoid Z80 accesses, so the board's speed access will be increased.
+
+Use this utility under your own responsibility.
+
+ 
+
+
+17.- WARNINGS	
+
+	* The authors of SDMMC Driver are not responsible of any damage caused by
+	its usage with MSX computers.
+	
+	* The user assumes the whole responsability of the usage of SDMMC Driver.
+	
+	* SDMMC Driver has been tested in MSX1, MSX2, 2+ and Turbo R computers, but 
+	not in all existing models. There could exist any peculiarity in these MSX
+	that could cause SDMMC not to work correctly. It could happen with other
+	interfaces or peripherals too.
+	
+	* The package DRSDMMC can be spreaded freely as long as the original content
+	is kept unaltered. Any tool inside the package can used freely without
+	expressed permission of the authors. This package will have these files:
+
+		DRSDMMC.ROM		-> Driver/Bios/Firmware SDMMC
+		MANUAL.CAS		-> Spanish version of this manual
+		MANUAL.ENG		-> This file. 
+		SDMMCEP.COM		-> Partition Emulator.
+		SDMMCCP.COM		-> Change Partition.
+		SDXCHG.COM		-> Xchange card utility.
+		FLSDMMC.COM		-> Flash Utility.
+		
+		
+
+18.- AKNOWLEDGEMENTS
+
+	* Nestor Soriano (Konamiman) : For the information exchange and ideas about
+	the patching and operation of the DOS kernel.
+	
+	http://www.konamiman.com/
+
+	* Eduardo Falces (aka usuario_msx2): For his ideas, his support to
+	the project from the beginning and the driver betatesting.
+
+	* Vincent van Dam (aka JoyRex) : For his help to fix diskrom problems,
+	patience to bear my bad English and contribution with new ideas.
+	
+	http://home.kabelfoon.nl/~vincentd/
+	
+	* Francisco Álvarez (SaebaMSX): For lending his LPEMMC Card to work in this
+	driver and the translation of this manual to English.
+	
+	* Manuel Pazos (aka Guillian): For his good ideas to improve this driver and
+	help to fix bugs.
+	
+	* YeongMan Seo (aka Sharksym) : For creating the original MMC Reader. Without
+	this card this project would never appear.
+	
+	* Arjen Zeilemaker : For his great dissassembling of the MSX system ROMs. It
+	made it easier to create this driver.
+	
+	http://sourceforge.net/projects/msxsyssrc/
+
+	* Angel Alonso Quero (Harrison): For lending his LPEMM Card as well, in order to develop the driver.
+
+
+
+19.- CONTACT.
+
+If you have any doubts or you want inform about bugs or other problems:
+
+e-mail:  ramones@kurarizeku.net
+Fidonet: 2:343/107.20
+
+http://www.kurarizeku.net
+
+
+(c) 2007 Kralizec.
+
