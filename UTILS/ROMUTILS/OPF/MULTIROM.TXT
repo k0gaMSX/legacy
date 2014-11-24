@@ -1,0 +1,179 @@
+ANEXO MULTIROM PARA OPF V.0.4
+------------------------------
+
+
+En esta nueva versión de OPF, se ha incluido la posibilidad de crear MULTIROMs.
+Esto es, posiblidad de tener tantos juegos cargados en la flash como capacidad
+de Flash tengamos y poder ejecutar mediante un intuitivo menú el juego al que
+deseamos jugar.
+
+Para ello se han creado nuevos ficheros que funcionan enlazados a OPF.
+
+[] MULTIROM.ROM	: La Rom maestra que se encargará de ejecutar el menú.
+[] MAKEOPF.COM 	: Programa para facilitar la tarea de selección de ROMs
+[] MULTIROM.OPF	: Este fichero lo crea MAKEOPF.COM o podemos crearlo a mano
+siendo el fichero que busca OPF para realizar la carga de ROMs en la flash. En
+este paquete viene un ejemplo de MULTIROM.OPF
+
+
+1.- PREPARANDO UN MULTIROM
+--------------------------
+
+Para poder cargar varias ROMs en la flash es necesario, de momento, disponer de
+las ROMs en el mismo directorio / unidad, donde se encuentren los ficheros :
+
+* MULTIROM.ROM
+* MULTIROM.OPF
+
+MULTIROM.OPF es un fichero de texto NORMAL, que contiene la lista de ROMs que
+deseamos cargar. Podemos realizarlo nosotros mismos. En el paquete viene un
+ejemplo de MULTIROM.OPF
+
+Por ahora este fichero es bastante estricto, en su formato siendo :
+
+
+FICHERO.ROM[INTRO]
+FICHERO2.ROM[INTRO]
+....
+[CTRL-Z]
+
+Para poder realizar este fichero de forma cómoda, se puede hacer directamente
+desde MSX con un editor tipo AKID.COM. Akid.COM se encarga el solo de realizar
+el final de fichero con CTRL-Z, como si lo hiciesemos con un COPY CON
+
+Por desgracia otros editores de texto, sobre todo de Windows, no realizan bien
+el final de fichero y puede dar problemas para el OPF.COM.
+
+NOTA: En el fichero MULTIROM.OPF NO debemos poner la rom MULTIROM.ROM, pues esta
+ya se carga automáticamente.
+
+2.- UTILIZANDO MAKEOPF.COM
+--------------------------
+
+Para evitar problemas a la hora de construir un fichero MULTIROM.OPF, hemos
+desarrollado una pequeña utilidad que realiza una busqueda de todos los ficheros
+ROM que se encuentran en el directorio donde es ejecutado y construye
+automáticamente el fichero MULTIROM.OPF
+
+Simplemente hay que ejecutarlo para que realice el proceso.
+
+Una vez creado MULTIROM.OPF solo hemos de quitar ROMs en caso de que alguna no
+queramos cargarla, siempre que dejemos la estructura idéntica.
+
+
+3.- REALIZANDO EL MULTIROM (OPF / T)
+------------------------------------
+
+Una vez creado ya nuestro fichero MULTIROM.OPF, y teniendo en el directorio las
+ROMS, MULTIROM.OPF y MULTIROM.ROM sólo hemos de realizar el proceso final, para
+cargar las ROMs en la flash :
+
+OPF /T
+
+o bien
+
+OPF /T:d (siendo "d" la unidad donde se encuentra el MULTIROM.ROM. Ej: OPF /T:C)
+
+El proceso es automático. OPF leerá el fichero MULTIROM.OPF y se encargará de
+meterlos en la FLASH. Al final meterá MULTIROM.ROM una vez terminado el proceso.
+
+NOTA : OPF reconoce automáticamente el espacio que queda disponible para cargar
+ROMs y evitará cargar la ROM en caso de que no quepa.
+
+Una vez terminado el proceso, tendremos nuestra ROM lista para ejecutar.
+
+
+4.- EJECUTANDO EL MULTIROM.
+---------------------------
+
+Como si fuese cualquier otro juego. OPF / X o resetear.
+
+Nos aparecerá un logo, que podemos dejar o pasar pulsando <SPACE>.
+
+A continuación tendremos la lista de ROMs que hemos cargado, en un intuitivo
+menú para seleccionar.
+
+Con los cursores nos movemos de ROM a ROM, que quedará marcada en AMARILLO.
+
+Con los cursores <LEFT> o <RIGHT> cambiamos de columna.
+
+Para ejecutar un juego, simplemente pulsar <SPACE>.
+
+Si queremos modificar las opciones que tenemos abajo <HZ> o <CPU>, para poder ir
+a este menú sólo hemos de pulsar <TAB>, y nos aparecerá un cursor en la primera
+opción.
+
+Ahora podremos movernos con los cursores por las 4 opciones y simplemente con
+pulsar <SPACE> cambiaremos la opción.
+
+Para volver a la selección de ROMs, sólo tenemos que pulsar de nuevo <TAB>.
+
+NOTA : Las opciones de abajo estarán disponibles segun sistema. En MSX1 no es
+posible modificar ninguna opción. En MSX2 o 2+ sólo las opciones de VDP y en
+TURBO R todas.
+
+Multirom, tiene una capacidad de hasta 63 ROMS DIFERENTES. Esto nos da la
+posilibidad de tener muchísimas ROMs en nuestro MULTIROM. En pantalla sólo
+tenemos disponibles 30 a la vez. Para ver otras 30, las siguientes, hemos
+de movernos a la DERECHA para acceder a las siguientes columnas. Y con izquierda
+regresaremos a las anteriores.
+
+
+5.- SCC
+--------
+
+MULTIROM DETECTA AUTOMÁTICAMENTE EL SLOT DEL SCC. Esto quiere decir que si
+usamos una flash ASCII sea cual sea su modelo, y ejecutamos un juego que usa el
+SCC, y tenemos un SCC pinchado en nuestro MSX, Multirom PREPARARA
+AUTOMATICAMENTE EL JUEGO para que busque el SCC para la música en el slot donde
+lo tengamos ubicado.
+
+NO ES NECESARIO tener versiones parcheadas de juegos de Konami para un slot
+especifico, de las que muchas ya circulan por ahi.
+
+Es obligado usar la ROM original, pues MULTIROM y OPF ya se encargan de
+parchearla, añadiendo asi comodidad al usuario.
+
+
+6.- EJECUTANDO UNA ROM QUE USE DISCO
+-------------------------------------
+
+Si ejecutamos una ROM que utiliza disco para el propio juego, al ejecutar el
+propio juego buscara la DISKROM y seguidamente se ejecutará. Esto siempre que
+ejecutemos el multirom en FRIO, ya que con OPF / X será automático.
+
+Con algunas ROMs no modificadas, y con interfaces de disco, esto puede provocar
+segun el orden de slot donde tengamos ubicada la flash y el juego, un error al
+ejecutar como este :
+
+"Not enough memory"
+
+
+Para evitarlo tenemos 3 posiblidades :
+
+[] Buscar alguna Rom que corrija el problema automáticamente. Por ejemplo METAL
+GEAR 1 con grabación a disco, ya lo hace. SOLID SNAKE castellano también.
+
+[] Anular la ejecución del Interface, mediante las teclas asignadas por el
+propio Interface (sea IDE, MEGASCSI, NOVAXIS...)
+
+[] No tener pinchado el interface.
+
+Este error, que no es culpa de nadie, si no de la propia BIOS, puede ser evitado
+de las formas explicadas, o bien, evitando la ejecucion del MultiRom, y
+ejecutandolo desde disco una vez inicializado con OPF / X, de forma que
+disfrutaremos asi del poder guardar partidas y demas con nuestro HD.
+
+7.- ANULANDO EL MULTIROM AL ARRANCAR
+------------------------------------
+
+No es necesario tener pulsado el boton / anulado interruptor de nuestra Mega
+Flash Rom para evitar la ejecución del MultiRom. 
+
+Simplemente cuando es ejecutado y despues de pasar el logo, si pulsamos la tecla 
+<ESC> el MSX arrancará normalmente, sin ejecutar nada.
+
+
+(c) 2003 Manuel Pazos y Armando Perez (Ramones).
+
+
