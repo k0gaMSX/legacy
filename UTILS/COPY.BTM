@@ -1,0 +1,32 @@
+if not %@mid[%@parse[%1]%,3,1]% == 0 goto ~Copy direct
+
+set temporary = %2
+if %@len[%temporary% ]% == 1 set temporary = *.*
+if %@right[%@parse[%temporary%]%,1]% == 0 set temporary = %temporary%*.*
+if %@mid[%@parse[%temporary%]%,4,2]% == 00 goto ~No filename
+iff %@len[%@fileattr[%temporary%]% ]% == 1
+  then set file = %@path[%temporary%]%%@newfile[%1 %@file[%temporary%]%]%
+  else iff %@fileattr[%temporary%]% == D
+         then set file = %temporary%\%@file[%1]%
+         else set file = %@path[%temporary%]%%@newfile[%1 %@file[%temporary%]%]%
+       endiff
+endiff
+goto ~Check existance
+
+~No filename
+set file = %temporary%%@file[%1]%
+
+~Check existance
+if not exist %file% goto ~Reset vars
+echo File %file% already exists
+inkey Make back-up? %%key
+if %@upper[%key%]% == Y copy %file% %@path[%file%]%%@newfile[%file% *.BAK]%
+
+~Reset vars
+set key =
+set file =
+set temporary =
+
+~Copy direct
+@copy %1 %2
+

@@ -1,0 +1,47 @@
+PDEL                                                       usch 1989
+----
+
+Format:      PDEL [/H] compound-filespec
+
+
+Purpose:     Deletes  one  or  more files,  prompting  the  user  to 
+        confirm each deletion.
+
+
+Use:         The compound-filespec specifies which files are to   be 
+        deleted.  The /H option allows hidden files to also  be  de-
+        leted. If /H is given after the command name, it applies  to 
+        all  files that match the compound-filespec. It may also  be 
+        appended  to  any of the single filespecs in  the  compound-
+        filespec,  qualifying  only  the filespec  to  which  it  is 
+        attached.
+
+             Before  a  file is deleted, the complete path  name  is 
+        displayed  and  the  user is prompted to  enter  either  'Y' 
+        (delete  this file) or 'N' (do not delete), unless the  file 
+        is  set to 'read only', in which case a message  is  printed 
+        and the operation continues with the next file.
+
+             If files are deleted unintentionally on a disk that was 
+        formatted  under MSX-DOS 2, then the UNDEL command  may   be 
+        used immediately afterwards to restore them again.
+
+Examples:
+
+        PDEL FILE1.BAK
+        A:\DIR1\FILE1.BAK -- Delete (Y/N)? Y
+
+        The file FILE1.BAK is deleted from the current directory  of 
+        the current drive, which is A:\DIR1 in this example.
+
+
+        DEL B:\UTIL\*.COM/H + B:\UTIL\*.BAT
+        B:\UTIL\TEST.COM -- Delete (Y/N)? Y
+        B:\UTIL\AUTOEXEC.BAT -- Read only file
+        B:\UTIL\REBOOT.BAT -- Read only file
+        B:\UTIL\COMMAND2.COM -- Read only file
+        B:\UTIL\TEST2.COM -- Delete (Y/N)? N
+
+        Only the file TEST.COM is deleted, since the other files are 
+        marked 'Read only', or the user did not confirm the delete.
+
