@@ -250,26 +250,33 @@ SUBSITUTION REFERENCES
 	PART2.O : PART2.C PROG.H EXTRA.H
 		CC -c -o -v PART2.C
 
+REDIRECTIONING
+	Make supports redirectioning of the standard input stream with  "<",
+        of standard output with ">" and ">>" and of standard error with "2>"
+        and "2>>". This is done by replacing handles 0,1,2 with  the  "close
+        file handle" and the "duplicate file handle" msxdos2 bdos  calls  as
+        appropriate.
 
 HERE-DOCUMENTS
-        If a line contains "<<" direcctly followed by a word, the  following
+        If a line contains "<<" directly followed by a word,  the  following
         lines until a line starting with the word are copied to '$M.T'.  The
-        characters "<<" and the word are removed from the line  and  "<$M.T"
-        is appended. This is useful in combination with  HiTech-C  when  one
-        wants to link more object files than would fit on a command line.
+        characters "<<" and the word are removed from the line and "$M.T" is
+        opened for input and provided as standard input. This is  useful  in
+        combination with HiTech-C when one wants to link more  object  files
+        than would fit on a command line.
 	For example:
 	bigprog.com : $(COBJ) $(ASOBJ) $(LIBS)
 		cc <<EOF
 		-Obigprog.com -Mbigprog.map@-R
-		 $(COBJ)
+		 $(COBJ:.o=.o \\\n)
 		 $(ASOBJ)
 		 $(LIBS)
 		EOF
 
-        It is up to the program open and read $M.T. The  tools  from  HiTech
-        and programs compiled with -R do this when executed with "<$M.T"  in
-        the command line.
-	
+        Note the substitution trick to prevent overly long  lines,  this  is
+        needed for programs that use the 'buffered input' bdos  call  (0x0a)
+        to read standard input.
+        
 
 UNIX(tm) MAKE AND THIS ONE
         They are NOT the same. Do not expect Unix  makefiles  to  work  with
@@ -381,5 +388,6 @@ AUTHORS
 		- code for executing subprocesses and continuing
 		- %-rules
 		- here-documents
-		- additional macro functionality 
+		- additional macro functionality
+		- redirectioning
 

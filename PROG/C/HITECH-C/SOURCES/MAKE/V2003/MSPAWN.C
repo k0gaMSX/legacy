@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <unixio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -11,60 +12,77 @@
 #define O_WRONLY 0
 #endif
 
-extern int _spawn(char*, char*);
+extern int _spawn(char*, char*, char *);
 extern char *token(char **);
 
 int spawnblock(char *);
 char * pathfind(char *);
-int spawnline(char *);
+int spawnline(char *, char *);
 extern int verbose;
 extern int noexec;
 
-static char * tmpnam = "<$M.T";
+static char * tmpnam = "$M.T";
 
-char * mkfile(char *s, char *q)
+int mkfile(char *s, char *fds, char **q)
 {
-  int klen;
+  int klen, val;
   FILE * fp; 
   register char * res;
   
-  for (klen=0, s+=2 ; isalnum(*s) ; s++, klen++) /* nix */;
+  for (klen=0, s+=2 ; isalnum(*s) ; ++s) ++klen;
   s-=klen;
   if (noexec) printf("<<%.*s\n", klen, s);
-  for (res=q ; strncmp(res,s,klen) && *res ; ++res) {
+  for (res=*q ; *res && strncmp(res,s,klen) ; ++res) {
     if ( !(res=strchr(res,'\n')) ) 
       break;
   } 
   if (!res)
     fputs("make: runaway << text\n", stderr);
   else {
-    fp=noexec ? stdout : fopen(tmpnam+1,"w");
+    fp=noexec ? stdout : fopen(tmpnam,"w");
     if (!fp) {
-      perror(tmpnam+1);
+      val=errno;
+      perror(tmpnam);
       fputs(" while creating temp. file in make:mkfile()\n",stderr);
-      return NULL;
+      return val;
     }
     *res=0;
-    if ((fputs(q,fp)==EOF)||(fputs("\32\n",fp)==EOF)) {
-      perror(tmpnam+1);
+    if ((fputs(*q,fp)==EOF)||(fputs("\32\n",fp)==EOF)) {
+      val=errno;
+      perror(tmpnam);
       fputs(" while writing temp. file in make:mkfile()\n",stderr);
       if (!noexec) 
 	fclose (fp); 
-      return NULL;
+      return val;
     }
     *res=*s;
     if (!noexec && fclose(fp)) {
-      perror(tmpnam+1);
+      val=errno;
+      perror(tmpnam);
       fputs(" while closing temp. file in make:mkfile()\n",stderr);
-      return NULL;
+      return val;
     }
     if (noexec) 
       printf("%.*s\n", klen, s);
     while ( *res && ('\n'!=*res++) ) /* nix */ ;
-    strcpy(s-2, s+klen);
-    strcat(s-2, tmpnam);
+    memmove(s-2, s+klen, strlen(s+klen)+1);
   }
-  return res;
+  if (noexec)
+    val=0;
+  else {
+    val=open(tmpnam, O_RDONLY|O_INHER);
+    if (val<0) {
+      val=errno;
+      perror(tmpnam);
+      fputs(" while opening for redirectioning.\n", stderr); 
+    }
+    else {
+      fds[0]=val;
+      val=0;
+    }
+  }
+  *q=res;
+  return val;
 }
 
 
@@ -90,6 +108,61 @@ void pop_env()
   }
 } 
 
+/* process redirectioning */
+int redir(char *p, char *fds)
+{
+  int mode, append, n, fd;
+  char *s, *t;
+
+  n=append=0;
+  s=p;
+  switch (*s) {
+  case '2':
+    ++n;
+    ++s;
+  case '>':
+    ++n;
+    ++s;
+    mode=O_WRONLY|O_INHER;
+    if ('>'==*s) {
+      append=1;
+      ++s;
+    }
+    break;
+  case '<':
+    ++s;
+    mode=O_RDONLY|O_INHER;
+  }
+  while (*s && isspace(*s)) 
+    ++s;
+  for (t=s ; *t && !isspace(*t) ; ++t)  
+    ;
+  if (noexec||verbose) putchar(*p);
+  *p=*t;
+  *t=0;
+  if (noexec||verbose) {
+    printf("%s ",p+1);
+    fd=0;
+  }
+  if (!noexec) {
+    if (n && !append) {
+      fd=creat(s,0666); /* Ensure the file exists.  */
+      close(fd);
+    }
+    fd=open(s,mode);
+    if (fd<0) {
+      perror(s);
+      fputs(" while opening for redirectioning.\n", stderr);
+    }
+    else {
+      fds[n]=fd;
+      if (append) lseek(fd, 0, SEEK_END);
+    }
+  }
+  if (*p) memmove(p+1, t+1, strlen(t+1)+1);
+  return (fd<0)?errno:0;
+}
+
 
 /* 
  * Executes a subprocess for each line in blok.
@@ -100,13 +173,14 @@ void pop_env()
  *
  * if a line contains "<<" followed by a word, the following lines
  * until a line starting with the word are copied to '$M.T'.
- * "<<" and the word are removed from the line and "<$M.T" is appended.
+ * "<<" and the word are removed from the line and '$M.T' is open for input.
  */
 
 int spawnblock(char *blok)
 {
-  int res;
+  int res, i;
   char *linbuf, *p, *q, *s;
+  char quote, heredoc, fds[3];
 
   env_stack = NULL;
   linbuf=malloc(strlen(blok)+1); 
@@ -114,22 +188,49 @@ int spawnblock(char *blok)
     fputs("*** Out of memory\n",stderr);
     return 0xDE;
   }
+  heredoc=0;
   for (p=strcpy(linbuf,blok),res=0 ; (res==0) && (*p) ; p=q) {
+    fds[0]=0; fds[1]=1; fds[2]=2;
     for (q=p ; (*q)&&(*q!='\n') ; ++q) /* nix */;
     if (*q=='\n') *q++='\0';
-    s=strchr(p,'<');
-    if (s && ('<'==s[1])) {
-      q=mkfile(s,q);
-      if (!q) { res=2; break; }
+    /* messy; obey "" and '' */
+    for (s=p ; *s && (res==0); ) {
+      switch (*s) {
+      case '"':
+      case '\'':
+	quote=*s++;
+	while (*s && (*s++ != quote)) 
+	  ;
+	break;
+      case '>':
+	res=redir(((s>p) && ('2'==s[-1])) ? s-1 : s, fds);
+	break;
+      case '<':
+	if ('<'==s[1]) {
+	  res=mkfile(s, fds, &q);
+	  heredoc=!noexec;
+        }
+        else
+	  res=redir(s, fds);
+	break;
+      default:
+	s++;
+      } 
     }
-    res = spawnline(p);
-    if (s) unlink(tmpnam+1);
+    if (res) break;  
+    res = spawnline(p,fds);
+    for ( i=0 ; i<3 ; ++i) 
+      if (fds[i]>2) 
+	close(fds[i]);
+    if (heredoc) {
+      unlink(tmpnam);
+      heredoc=0;
+    }
   }
   pop_env();
   free(linbuf);
   return res;  
 }
-
 
 /*
  * change the environment like set would do, but store the old value
@@ -163,7 +264,7 @@ char *shell = NULL;
  * otherwise line is interpreted by the program pointed to by the 
  * environment variable SHELL.
  */ 
-int spawnline(char *line)
+int spawnline(char *line, char *fds)
 {
   char *command, *progfile, ignore;
   static char set[]="set";
@@ -202,12 +303,13 @@ int spawnline(char *line)
      res=0x8D; /* BUFUL */
   }  
   else {    
-    if (verbose||noexec)
+    if (verbose||noexec) {
       printf(noexec ? "%s %s\n": "[MAKE] %s %s\n", progfile, line);
+    }
     if (progfile==&set)
       res=do_set(line);
     else
-      res=noexec ? 0 : _spawn(progfile, line);
+      res=noexec ? 0 : _spawn(progfile, line, fds);
     if (progfile == shell) {
       if (res==0x8C) 
 	res=0; /* internal 'error' code meaning no error */
@@ -219,74 +321,6 @@ int spawnline(char *line)
      fprintf(stderr, "'%s' failed with error code %d%s.\n", 
 		     command, res, ignore ? " (ignored)" : "");
   return (ignore ? 0 : res);
-}
-
-static char *nopath[]={"", NULL};
-
-#define MAXLEN 66
-static char **path_elt;
-static char padbuf[MAXLEN+1];
-extern _flip(char *, char *, int); /* substitute '\\' for '/' */ 
-
-/*
- * Tries to find command s in the search path.
- * Returns the filename if it is found and
- * NULL otherwise.
- */
-char * pathfind(char* s)
-{
-  char *pad,*p;
-  int n,i;
-  struct stat dummy;
-
-  if (path_elt==NULL) {
-    pad=getenv("PATH");
-    if ((!pad)||strlen(pad)==0) path_elt=nopath;
-    else {
-      for (p=pad, n=1 ; *p ; ) if (*p++ == ';') ++n;
-      path_elt=malloc((n+1)*sizeof(char*)); 
-      if (path_elt) {
-	path_elt[0]=pad;
-	for (i=0,p=pad ; (*p) ; )
-	  switch (*p) {
-	    case ';':
-	      *p='\0';
-              path_elt[++i]=++p;
-              break;
-            case ' ':
-              ++path_elt[i];
-              /* fall through */
-            default:
-              ++p;
-          }
-        path_elt[++i]=NULL;
-      }
-      else {
-	fputs("Not enough memory, ignoring $PATH\n",stderr);
-	path_elt=nopath;
-      }
-    }
-  }
-  
-  for (i=0,pad=NULL ; path_elt[i] && !pad ; ++i)
-    if (strlen(path_elt[i])+strlen(s)+5<=MAXLEN) {
-      strcpy(padbuf,path_elt[i]);
-      if (*padbuf)
-        switch (padbuf[strlen(padbuf)-1]) {
-        case ':': 
-        case '/': 
-        case '\\':
-          break;
-        default: 
-          strcat(padbuf,"\\");
-        }
-      strcat(strcat(padbuf,s),".COM");
-      if (stat(padbuf, &dummy)==0) { 
-	_flip(padbuf, padbuf, MAXLEN+1);
-	pad=padbuf;
-      } 
-    }
-  return pad;
 }
 
 
