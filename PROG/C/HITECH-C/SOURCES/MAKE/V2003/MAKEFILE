@@ -1,0 +1,48 @@
+#
+# MSXDOS2 Make utility
+# Compile with HI-TECH C. 
+# Needs: 
+#	- vsh3.o, which belongs to cc.com
+# 	- libdos2.lib 
+# 	- strcasecmp(), addition to libc.lib (get the fixes for HiTech libs)
+# 	- strcasestr(), idem
+
+# Directory where the libraries and vsh3.o are stored
+CDIR = A:/HITECH
+ 
+LIBS = $(CDIR)/libdos2.lib $(CDIR)/libc.lib
+COBJ = make.o utils.o macro.o token.o parsedir.o file.o mspawn.o
+H = make.h
+FILES = $H $(COBJ:.o=.c)
+DIST = make_003.lzh
+DOCUMENTATION = readme make.man makefile
+
+#
+# update make.com
+#
+
+MAKE.COM : $(COBJ) $(CDIR)/VSH3.O $(LIBS)
+	CC -V -OMAKE.COM -MMAKE.MAP -R -N VSH3.O $(COBJ) -lDOS2 
+
+#
+# update object files
+#
+
+%.O : COBJ : %.C $H
+	CC -c -o -v %.C
+
+#
+# update distribution archive
+#
+	
+distribution : $(DIST)
+
+$(DIST) : MAKE.COM $(FILES) $(DOCUMENTATION)
+	:del $(DIST)
+	echo lhpack $(DIST) MAKE.COM $(DOCUMENTATION) > pack.bat
+	echo lhpack $(DIST) $(FILES) >> pack.bat
+	echo lhpack can not be run from make, please run pack.bat from the command prompt 
+
+#
+# end of makefile
+

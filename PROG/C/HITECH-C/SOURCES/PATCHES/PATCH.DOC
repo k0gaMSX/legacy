@@ -1,0 +1,57 @@
+How to patch Hi-Tech C for MSX
+
+First make a copy of your original Hi-Tech C programs CGEN,
+CPP, CREF, DEBUG, LIBR, LINK, OBJTOHEX, OPTIM, P1 and ZAS.
+Copy the COM-files you found in this patch archive also to
+that disk. Make sure there is enough room left (about 275 kB).
+
+Under MSXDOS-1, run PATCH1.BAT on the disk with these copies.
+Under MSXDOS-2, run PATCH2.BAT.
+
+Start your disk editor (DISKVIEW, SUPERZAP, DISKIT etc.). Then
+make the following changes directly in the files.
+
+The first part is easy. Change the first 3 bytes of the program
+to the following (which are jump instructions in machine language):
+
+CGEN.COM:	C3 00 AE
+CPP.COM:	C3 80 66
+CREF.COM;	C3 00 43
+DEBUG.COM:	C3 00 36
+LIBR.COM:	C3 80 47
+LINK.COM:	C3 80 76
+OBJTOHEX.COM:	C3 80 60
+OPTIM.COM:	C3 00 6F
+P1.COM: 	C3 00 9D
+ZAS.COM:	C3 00 94
+
+Now you still have to change the exit error code addresses. Some
+programs like SUPERZAP show the offset from 0100H if a COM-file
+is edited. This is what we need and what the addresses below
+are based on. Other programs show only the offset from 0. In that
+case, substract 100H from every address below. If you see the
+following 6 bytes there, you have found the right address:
+22 80 00 C3 00 00 or also correct: 22 80 00 CD 00 00. Then change
+the second byte (the 80H) to 0AH. The error code will now be saved
+in address 0AH..0BH. Address 80H cannot be used because MSXDOS
+resets it after a program ends. 0AH is in the RST 08 area of tpa,
+which is not used on MSX.
+
+Addresses for Hi-Tech exit error code:
+
+CGEN.COM:	0784CH
+CPP.COM:	0535FH
+CREF.COM:	032F2H
+DEBUG.COM:	024D9H
+LIBR.COM:	03900H
+LINK.COM:	05EEDH
+OBJTOHEX.COM:	04E46H
+OPTIM.COM:	05AD1H
+P1.COM: 	083DAH
+ZAS.COM:	07354H
+
+If you want to change the patches, edit the assembly language files
+and compile them with the Macro-80 assembler.
+
+PGN 6/94
+

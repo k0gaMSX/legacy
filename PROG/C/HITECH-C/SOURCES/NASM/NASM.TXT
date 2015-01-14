@@ -1,0 +1,361 @@
+NASM 1.1 - Por Konami Man, 2-2001
+---------------------------------
+
+
+1. ¨QUE ES ESTO?
+
+NASM es una librer¡a de funciones C que permiten efectuar llamadas a rutinas 
+en c¢digo m quina, especificando los registros de entrada y consultando los 
+de salida. Se incluyen cinco rutinas: ASMCALL, funci¢n gen‚rica para ejecutar 
+rutinas en c¢digo m quina; DOSCALL, para ejecutar funciones del DOS; 
+BIOSCALL, para ejecutar rutinas de la BIOS; SUBCALL, para ejecutar rutinas de 
+la sub-BIOS; y EXTCALL, para efectuar llamadas a la BIOS extendida.
+
+Los ficheros que se incluyen en la distribuci¢n completa de NASM son:
+
+* NASM.LIB: La librer¡a que contiene los ficheros objeto correspondientes a 
+las funciones nombradas anteriormente.
+
+* NASM.H: Fichero con la cabecera de las funciones, en el que tambi‚n se 
+definen las estructuras necesarias para el paso y retorno de registros.
+
+* DOSCODES.H: En este fichero se definen los nombres de todas las funciones 
+del DOS 2, igual que en el documento "MSX DOS 2 Function Codes 
+Specification". Tambi‚n se definen los nombres de todos los posibles errores 
+igual que en el documento "MSX DOS 2 Program Interface Specification", pero 
+se han cambiado los "." por "_" dado que el compilador no acepta nombres que 
+contengan puntos. Por esta raz¢n se han definido algunos errores con un 
+nombre distinto al original, pues ‚ste coincid¡a con el nombre de alguna 
+funci¢n. Los errores con nombre cambiado son:
+
+_SEEKE, el original es .SEEK (error 0F3h)
+_FOPENE, el original es .FOPEN (error 0CAh)
+
+* NASM.TXT: Este documento.
+
+* NASME.TXT: Versi¢n en ingl‚s de este documento.
+
+* ASMCALL.AS, DOSCALL.C, BIOSCALL.C, SUBCALL.C, EXTCALL.C: El c¢digo fuente 
+de las funciones de NASM.
+
+
+2. ESTRUCTURAS PARA EL PASO DE REGISTROS
+
+Todas las funciones de NASM admiten como £ltimo par metro un puntero a una 
+estructura de tipo REGSET. Esta estructura contiene los valores que se 
+pasar n a la rutina por medio de los registros, y tras la ejecuci¢n de ‚sta, 
+contiene los valores devueltos en los registros. La estructura REGSET se 
+define como sigue en el fichero NASM.H (en el que tambi‚n se definen uint y 
+uchar, como "unsigned int" y "unsigned char" respectivamente):
+
+typedef struct{
+	uchar f;
+	uchar a;
+	uint bc;
+	uint de;
+	uint hl;
+	uint ix;
+	uint iy;
+} regset;
+
+En NASM.H tambi‚n se define una forma alternativa de esta estructura, 
+REGSET8, que trata los registros individualemente, no a pares como REGSET:
+
+typedef struct{
+	uchar f;
+	uchar a;
+	uchar c;
+	uchar b;
+	uchar e;
+	uchar d;
+	uchar l;
+	uchar h;
+	uchar ixl;
+	uchar ixh;
+	uchar iyl;
+	uchar iyh;
+} regset8;
+
+Aunque las funciones de NASM est n preparadas para aceptar un puntero a una 
+estructura de tipo REGSET como par metro, tambi‚n se les puede pasar un 
+puntero a una estructura de tipo REGSET8, efectuando un "cast" para evitar 
+que el compilador muestre un warning. Es decir, se puede hacer
+
+regset8 regs8;
+...
+asmcall (dir, (regset*) &regs8);
+
+en vez de
+
+regset regs;
+...
+asmcall (dir, &regs)
+
+Sin embargo muchas veces lo que interesa es mezclar ambas estructuras, es 
+decir, manejar algunos registros como pares y otros como registros sueltos. 
+Una posible soluci¢n es definir una estructura REGSET o REGSET8 y acceder a 
+los registros del tipo contrario multiplicando, dividiendo y rotando. Pero 
+una forma m s sencilla de conseguir lo mismo es definir una estructura de un 
+tipo, y a continuaci¢n definir un puntero a una estructura del tipo 
+contrario, que haremos apuntar a la estructura que hemos definido antes. Es 
+decir: 
+
+regset regs;
+regset8* regs8 = (regset8*) &regs;
+
+As¡, podemos acceder a los pares de registros mediante el operador ".", y a 
+los registros sueltos mediante el operador "->":
+
+regs.de = ... /* valor de tipo UINT */
+regs8->b = ... /* valor de tipo UCHAR */
+
+Observa que los registros A y F se definen por separado tanto en REGSET como 
+en REGSET8.
+
+Finalmente, si no queremos pasar ning£n dato de entrada en los registros ni 
+nos interesa el valor de ‚stos tras la ejecuci¢n de la rutina, podemos 
+ejecutar la funci¢n correspondiente pasando un NULL en vez de un puntero a 
+una estructura REGSET o REGSET8. En ese caso, los registros de entrada 
+tendr n un valor aleatorio, y los registros de salida ser n ignorados.
+
+
+3. DESCRIPCION DE LAS FUNCIONES
+
+A continuaci¢n se describen las funciones incluidas en NASM.LIB y se da un 
+ejemplo para cada una.
+
+
+* ASMCALL
+
+void asmcall(void* direcci¢n, regset* registros)
+
+Esta es la funci¢n base que ejecuta la rutina en c¢digo m quina situada en 
+"direcci¢n", interaccionando con la estructura de registros pasada seg£n se 
+explica en la secci¢n anterior. NULL puede usarse en vez de "registros" para 
+indicar que no queremos pasar registros de entrada ni nos interesan los 
+registros de salida.
+
+El resto de las funciones de NASM llaman a su vez a ASMCALL, por tanto los 
+c¢digos fuente de cada una de ellas sirven como ejemplos del uso de ASMCALL.
+
+
+* DOSCALL
+
+void doscall(uchar funcion, regset* registros)
+
+Esta funci¢n llama a la funci¢n del DOS especificada, interaccionando con la 
+estructura de registros pasada seg£n se explica en la secci¢n anterior. NULL 
+puede usarse en vez de "registros" para indicar que no queremos pasar 
+registros de entrada ni nos interesan los registros de salida.
+
+En realidad la funci¢n se limita a copiar el c¢digo de la funci¢n DOS en el 
+registro C de "registros", y posteriormente efect£a una llamada a la 
+direcci¢n 0005h por medio de ASMCALL. Si "resgistros" es NULL, se crea 
+temporalmente un juego de registros, que es borrado al finalizar la 
+ejecuci¢n.
+
+Ejemplo: el siguiente programa muestra la fecha y la hora del sistema, que 
+averigua mediante llamadas a las funciones _GDATE (2Ah) y _GTIME (2Ch).
+
+-----
+#include "stdio.h"
+#include "nasm.h"
+#include "doscodes.h"
+
+regset rdate;	/* Registros para llamar a _GDATE */
+regset rtime;	/* Registros para llamar a _GTIME */
+regset8* rdate8 = (regset8*) &rdate;
+regset8* rtime8 = (regset8*) &rtime;
+
+char* meses[]=	{"Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio",
+		 "Agosto","Septiembre","Octubre","Noviembre","Diciembre"};
+
+char* diasem[]= {"Lunes","Martes","Miercoles","Jueves","Viernes",
+		 "Sabado","Domingo"};
+
+main()
+{
+
+doscall (_GDATE, &rdate);
+doscall (_GTIME, &rtime);
+
+printf ("\n\rFecha y hora:\n\n\r");
+printf ("%s, %d de %s de %d; %d:%02d:%02d.\n\r",
+	diasem[(rdate.a)-1],	/* Dia de la semana */
+	rdate8->e,		/* Dia del mes */
+	meses[(rdate8->d)-1],	/* Mes */
+	rdate.hl,		/* Anyo */
+	rtime8->h,		/* Hora */
+	rtime8->l,		/* Minutos */
+	rtime8->d		/* Segundos */
+        );
+}
+-----
+
+
+* BIOSCALL
+
+void bioscall(void* direcci¢n, regset* registros)
+
+Esta funci¢n llama a la rutina de la BIOS especificada, interaccionando con 
+la estructura de registros pasada seg£n se explica en la secci¢n anterior. 
+NULL puede usarse en vez de "registros" para indicar que no queremos pasar 
+registros de entrada ni nos interesan los registros de salida.
+
+En realidad la funci¢n se limita a copiar la direcci¢n de la rutina BIOS en 
+el registro IX de "registros", carga el contenido de la direcci¢n 0FCC1h en 
+IYh, y posteriormente efect£a una llamada a la direcci¢n 001Ch por medio de 
+ASMCALL. Si "resgistros" es NULL, se crea temporalmente un juego de 
+registros, que es borrado al finalizar la ejecuci¢n.
+
+Ejemplo: la siguiente funci¢n establece el modo gr fico que se le pasa como 
+par metro en "modo", mediante la rutina BIOS CHGMOD (005Fh). Devuelve 1 si el 
+par metro "modo" es incorrecto (no est  entre 0 y 8), en caso contrario 
+devuelve 0.
+
+-----
+#include "nasm.h"
+#include "doscodes.h"
+
+#define CHGMOD ((void*)0x005F)
+
+int screen(int modo)
+{
+	regset regs;
+	if(modo<0 || modo>8) return 1;
+	regs.a = (uchar) modo;
+	bioscall (CHGMOD, &regs);
+	return 0;
+}
+-----
+
+
+* SUBCALL
+
+void subcall(void* direcci¢n, regset* registros)
+
+Esta funci¢n llama a la rutina de la sub-BIOS especificada, interaccionando 
+con la estructura de registros pasada seg£n se explica en la secci¢n 
+anterior. NULL puede usarse en vez de "registros" para indicar que no 
+queremos pasar registros de entrada ni nos interesan los registros de salida.
+
+En realidad la funci¢n se limita a copiar la direcci¢n de la rutina sub-BIOS 
+en el registro IX de "registros", carga el contenido de la direcci¢n 0FAF8h 
+en IYh, y posteriormente efect£a una llamada a la direcci¢n 001Ch por medio 
+de ASMCALL. Si "resgistros" es NULL, se crea temporalmente un juego de 
+registros, que es borrado al finalizar la ejecuci¢n.
+
+Ejemplo: la siguiente funci¢n establece las coordenadas RGB de un determinado 
+color, usando la rutina de la sub-BIOS SETPLT (014Dh). Devuelve 1 si alguno 
+de los par metros es incorrecto, 0 en caso contrario.
+
+-----
+#include "nasm.h"
+#include "doscodes.h"
+
+#define SETPLT ((void*)0x014D)
+
+int setpal(int color, int rojo, int verde, int azul)
+{
+	regset8 regs8;
+	if(color>15 || (rojo|verde|azul)>7) return 1;
+	regs8.d = (uchar) color;
+	regs8.a = (uchar) (rojo<<4)|azul;
+	regs8.e = (uchar) verde;
+	subcall (SETPLT, (regset*) &regs8);
+	return 0;
+}
+-----
+
+
+* EXTCALL
+
+void extcall(uchar dispositivo, uchar funcion, regset* registros)
+
+Esta funci¢n llama a la funci¢n de la BIOS extendida especificada para el 
+dispositivo especificado, interaccionando con la estructura de registros 
+pasada seg£n se explica en la secci¢n anterior. NULL puede usarse en vez de 
+"registros" para indicar que no queremos pasar registros de entrada ni nos 
+interesan los registros de salida.
+
+En realidad la funci¢n se limita a copiar el n£mero de dispositivo en el 
+registro D de "registros" y el n£mero de funci¢n en el registro E, y 
+posteriormente efect£a una llamada a la direcci¢n 0FFCAh por medio de 
+ASMCALL. Si "resgistros" es NULL, se crea temporalmente un juego de 
+registros, que es borrado al finalizar la ejecuci¢n.
+
+Ejemplo: el siguiente programa muestra datos sobre la memoria mapeada 
+presente en el sistema (segmentos totales, libres y ocupados), que averigua 
+por medio de llamadas al gestor de memoria mapeada del DOS 2 (BIOS extendida, 
+dispositivo 4).
+
+-----
+#include "stdio.h"
+#include "nasm.h"
+#include "doscodes.h"
+
+regset regs;
+int total=0;
+int libres=0;
+int sistema=0;
+int usuario=0;
+int mapeadores=0;
+uchar* tabla;
+
+main()
+{
+
+if (!((*(char*)0xFB20)&1))
+{
+	printf("Error: no hay BIOS extendida.\n\r");
+	doscall(_TERM0, NULL);	/* Finaliza la ejecuci¢n del programa */
+}
+
+regs.a=0;
+extcall(4, 1, &regs);	/* Obtiene tabla de variables de los mapeadores */
+if (!regs.a)
+{
+	printf("Error: no hay rutinas de soporte del mapeador.\n\r");
+	doscall(_TERM0, NULL);
+}
+
+tabla = (uchar*) regs.hl;
+while(tabla[0]) 	/* Un paso por cada mapeador */
+{
+	mapeadores++;
+	total+= tabla[1];
+	libres+= tabla[2];
+	sistema+= tabla[3];
+	usuario+= tabla[4];
+	tabla+= 8;
+}
+
+printf("\n\rNumero de mapeadores: %d\n\r", mapeadores);
+printf("Memoria total: %dK\n\r", total*16);
+printf("Memoria libre: %dK\n\r", libres*16);
+printf("Memoria reservada para el sistema: %dK\n\r", sistema*16);
+printf("Memoria reservada para el usuario: %dK\n\r", usuario*16);
+}
+-----
+
+
+4. LO DE SIEMPRE
+
+NASM es gratuito, as¡ que distrib£yelo como quieras, pero por favor 
+distribuye todos los ficheros (los listados en la secci¢n 1), y si haces 
+alguna modificaci¢n expl¡cala en un fichero aparte.
+
+Si quieres pegarme o felicitarme o bla, bla... contacta conmigo en 
+konamiman@konamiman.com, y visita mi p gina web en http://www.konamiman.com
+
+Y que Kyoko es la jefa.
+
+
+5. INFORMACION SOBRE VERSIONES
+
+* 1.1 (14-2-2001): Versi¢n mejorada de ASMCALL, que puede ser llamada 
+recursivamente. Esto permite usar las funciones de NASM desde rutinas de 
+gesti¢n de error de disco (definidas con la funci¢n del DOS _DEFERR, 64h) y 
+desde rutinas de salida (definidas con la funci¢n del DOS _DEFAB, 63h).
+
+
