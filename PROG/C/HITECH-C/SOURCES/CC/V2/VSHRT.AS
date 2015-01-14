@@ -5,7 +5,7 @@
 	psect	text
 	defs	100h		;Base of CP/M's TPA
 
-	global	start,_main,_exit,__Hbss, __Lbss, __argc_, startup
+	global	start,_main,_exit,__Hbss, __Lbss, __argc_, startup, bDos
 ; get value for mypages:
 *include mypages.as 
 ; mypages equ	PAGES
@@ -19,7 +19,7 @@ global	indir
 ; check dos version
 
 	ld	c, 6Fh ; _DOSVER
-	call	5
+	call	bDos
 	or	a
 	jp      nz,nodos2
 	ld	a,b
@@ -56,7 +56,7 @@ global	indir
 	call	indir	; get_p2
 	ld	(map2p),a ; mapper segment for page 2
 
-; move stack to keep everything we need to restore in <mypages> pages@
+; move stack to keep everything we need to restore in <mypages> pages
 	ld	sp,mypages * 4000h
 ; the rest is standard
 	ld	de,__Lbss	;Start of BSS segment
@@ -106,7 +106,7 @@ nodos2:
 	push	hl
 1:
 	ld	c,9 ; _STROUT
-	call	5
+	call	bDos
 	jp	_exit
 
 	psect	data
@@ -121,7 +121,7 @@ nodos2m:
 ;De onderstaande code is gebaseerd op code uit MCCM 65, pp 12--15
 ;ipv MemMan wordt echter video RAM (en evt EXT. RAM) gebruikt
 
-; int _spawn (char * program, char *args)
+; int _spawn (char * program, char *args, char fds[3])
 
  	psect	text
 __spawn: 
@@ -133,7 +133,7 @@ global csv, cret, indir, __spawn, _errno
 	push	ix
 	ld	bc,0640h ; _FFIRST, attr hidden/system
 	ld	ix,80h
-	call	5 ; DOS2
+	call	bDos ; DOS2
 	jr	z,1f
 	pop	ix
 	ld	(_errno),a
@@ -151,13 +151,13 @@ global csv, cret, indir, __spawn, _errno
 	inc	hl
 	ex	de,hl
 	ld	c,5Eh ; _WPATH
-	call	5 ; DOS2
+	call	bDos ; DOS2
 	dec	de
 	dec	de
 	dec	de
 	ld	hl, program
 	ld	c,6Ch ; _SENV
-	call	5 ; DOS2
+	call	bDos ; DOS2
 	pop	ix
         ld	hl,81h
         ld	(hl),' '
@@ -184,7 +184,7 @@ global csv, cret, indir, __spawn, _errno
         ld	de,81h
 	ld	hl,param
 	ld	c,6Ch	; _SENV
-	call	5 	; DOS2
+	call	bDos 	; DOS2
 
 	psect	data
 program:
@@ -200,7 +200,7 @@ param:
         ; vshell is nu opgezet en iy is exitcode - 9
 
         ld	c,60h ; _FORK
-        call	5
+        call	bDos
 	jr	z,2f
 1:
 	ld 	(_errno),a
@@ -209,14 +209,45 @@ param:
 2:
 	ld	a,b
 	ld	(ppidp),a
+
+
+; The handles in fds[] are used for the stdin/stdout/stderr of the program we
+;  start, works only if these handles are inheritable!
+	ld	(ixp),ix
+	ld	l,(ix+10)
+	ld	h,(ix+11) ; fds
+	xor	a
+4:
+	cp	(hl)
+	ld	b,a
+	jr	z,5f
+	push	af
+	ld	c,45h ; _CLOSE
+	push	hl
+	call	bDos
+	pop	hl
+	ld	b,(hl)
+	ld	c,47h ; _DUP
+	push	hl
+	call	bDos
+	pop	hl
+	ld	e,a
+	pop	af
+5:		
+        cp	b
+	jr	nz,reopen_err
+	inc	hl
+	inc	a
+	cp	3
+	jr	c,4b
+
  	ld	c,43h ; _OPEN
  	ld	de,mypages * 4000h 
         ld	a,1 ; no write
-        call	5
+        call	bDos
         jr	nz,open_err ; unlikely, file is known to exist
 	; handle in b
         ld	c,mypages   ; # pages
-	ld	(ixp),ix
 	ld	de,vramcode
         ld	hl,(6)
         inc	hl
@@ -226,12 +257,14 @@ param:
 ;        jr	c, novram
 
 novram:
- 	ld	a,0DEh
+ 	ld	e,0DEh
+reopen_err:
+	ld	a,e
 open_err:
  	ld	(_errno),a
 	ld	bc,(ppidp-1) ; pid in b
-	ld	c,061h
-	call	5 ; DOS2
+	ld	c,061h ; _JOIN
+	call	bDos ; DOS2
 	ld	ix,(ixp)
 	ld	hl,-1
         jp	cret
@@ -260,6 +293,48 @@ is_vsh:
 ; zet de code voor een shell aan de top van het TPA
 ; UIT: iy - adres kopie exitcode - 9
 setvsh: 
+; look for VSHTOP in environment
+; if it exists, stop testing for videomemory pages at its value 
+psect	data
+vshtopn:
+	defm	'VSHTOP'
+	defb	0
+psect	bss
+vshtopv:
+	defs	4
+
+psect	text
+	ld	hl, vshtopn
+	ld	de, vshtopv
+	ld	bc,046Bh ; 4 bytes buffer space, _GENV
+	call	bDos ; DOS2
+	jr	nz,3f ; too long
+	push	de
+global	_atoi
+	call	_atoi
+	pop	de
+	ld	a,h
+	or	a
+	jr	nz,3f	; way too high
+	ld	a,l
+	cp	12
+	jr	nc,3f	; too high
+	cp	2
+	jr	c,3f	; too small
+	add	a,070q
+	ld	(topp),a
+3:
+        ld	hl,6
+	ld	a,(0fcc1h) ; exptbl : slotadres bios
+        call	0Ch ; RDSLT
+        ld	(vdprd_),a ; poortnr lezen Vram/Xram
+        inc	hl
+	ld	a,(0fcc1h) ; exptbl : slotadres bios
+        call	0Ch ; RDSLT
+        inc	a
+        ld	(vdpcmd_),a ; poortnr vdp commando's
+
+; turn off interrupts while working with jump addresses and the vdp
 	di
  	ld	a,(0007h)
         ld	h,a
@@ -316,48 +391,7 @@ setvsh:
         ld	b,(hl)
         ld	(iy+old_wb+1),b
         ld	(hl),a ; bevat nog steeds msB nieuwe top TPA
-        ld	hl,6
-	ld	a,(0fcc1h) ; exptbl : slotadres bios
-        call	0Ch ; RDSLT
-        ld	(iy+vdprd),a ; poortnr lezen Vram/Xram
-        inc	hl
-	ld	a,(0fcc1h) ; exptbl : slotadres bios
-        call	0Ch ; RDSLT
-        inc	a
-        ld	(iy+vdpcmd),a ; poortnr vdp commando's
 
-; look for VSHTOP in environment
-; if it exists, stop testing for videomemory pages at its value 
-psect	data
-vshtopn:
-	defm	'VSHTOP'
-	defb	0
-psect	bss
-vshtopv:
-	defs	4
-
-psect	text
-	ld	hl, vshtopn
-	ld	de, vshtopv
-	ld	bc,046Bh ; 4 bytes buffer space, _GENV
-	call	5 ; DOS2
-	jr	nz,3f ; too long
-	push	de
-global	_atoi
-	call	_atoi
-	pop	de
-	ld	a,h
-	or	a
-	jr	nz,3f	; way too high
-	ld	a,l
-	cp	12
-	jr	nc,3f	; too high
-	cp	2
-	jr	c,3f	; too small
-	add	a,070q
-	ld	(topp),a
-
-3:
 ; tel het video geheugen
  	ld	a,071q
 2:
@@ -399,7 +433,7 @@ vramtest:
         in	a,(c)
         cpl
         sub	h
-        or	a
+        or	b
         ld	e,40h ; schrijven
         call	setvdpoff
         dec	bc	; dec c verandert F, daarom dec bc
@@ -531,8 +565,12 @@ magic:  ; ..b
 jump:
 	defb	0C3h ; jp
 data:	; ..f
- 	defw	0
- 	defb	0104q, 0104q, 98h, 99h ; overschreven door hoofdprog.
+ 	defw	0 ; overschreven door hoofdprog.
+ 	defb	0104q, 0104q
+vdprd_:
+	defb	98h
+vdpcmd_:
+	defb	99h
 
 
 old_wb	equ	data-exitcode+9
@@ -624,11 +662,11 @@ seton0:	call	-1  ; add hl,-1 geeft carry -> stoppen met invullen
         ld	hl,-500h ; keep at least 1KiB space for stack
         add	hl,sp
         ld	c,48h ; _READ
-        call	5
+        call	bDos
         jp	nz,0 ; als het fout gaat, return via new_wb
         pop	bc
         ld	c,45h ; _CLOSE
-        call	5
+        call	bDos
 	ld	a,1
 	ld	(37h),a ; set load flag; PROGRAM and PARAMETERS set in _spawn
 	ret	; to 100h

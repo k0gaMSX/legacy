@@ -483,7 +483,7 @@ register char *   s;
    }
 }
 
-int _spawn(char *, char *);
+int _spawn(char *, char *, char fds[3]);
 
 int
 doexec(name, vec)
@@ -497,6 +497,7 @@ char **   vec;
    FILE *   cfile;
    char   redbuf[20];
    char   xbuf[130];
+   static char fds[3] = { 0, 1, 2 };
 
    pvec = vec;
 
@@ -535,7 +536,7 @@ char **   vec;
       strcat(strcat(xbuf, " "), *vec++);
 
    if (verbose) printf("[CC] %s %s\n", name, xbuf);
-   res=_spawn(name, xbuf);
+   res=_spawn(name, xbuf, fds);
 
    if (*redbuf)
       remove(redbuf+1);
