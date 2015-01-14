@@ -2,13 +2,13 @@
 	
 # Directory where the libraries are installed:
 # Backslashes must be doubled twice here because make will process them twice
-DIR = e:\\\\hitech
+DIR = a:\\\\hitech
 # Command to move a library file,
 # change to copy if the library files are on a different drive or partition:
 MV = move
 
 # Name for distribution package:
-DIST = libfix02.lzh
+DIST = libfix01.lzh
 
 # Options to pass to the C compiler:
 # -o : optimise, *strongly recommended*,
@@ -38,12 +38,11 @@ help :
 # source files
 #
 LC_C = sleep.c time.c convtime.c strftime.c doprnt.c
-LC_C += strdup.c strstr.c stristr.c strnstr.c strnistr.c strtok.c assert.c
-LC_C += signal.c abort.c raise.c strerror.c
+LC_C += strdup.c strstr.c stristr.c strnstr.c strnistr.c strtok.c 
 LF_C = fdoprnt.c
 LC_AS1 = msxtime.as memcmp.as memcpy.as memmove.as memset.as memchr.as getch.as
 LC_AS2 = frelop.as strnicmp.as stricmp.as strchr.as strrchr.as inout.as
-LC_AS2 += peekpoke.as rcsv.as sigchk.as
+LC_AS2 += peekpoke.as signal.as rcsv.as
 SRC  = $(LC_C) $(LF_C) $(LC_AS1) $(LC_AS2)
 
 # all object files for libc.lib, order is important:
@@ -57,8 +56,7 @@ LIBC_ALL += fgetc.obj filbuf.obj stdclean.obj fclose.obj fflush.obj open.obj
 LIBC_ALL += read.obj write.obj seek.obj stat.obj chmod.obj rename.obj creat.obj
 LIBC_ALL += isatty.obj close.obj unlink.obj dup.obj execl.obj getfcb.obj
 LIBC_ALL += cleanup.obj setbuf.obj ctime.obj cgets.obj cputs.obj ungetc.obj
-LIBC_ALL += buf.obj abort.obj sigchk.obj signal.obj raise.obj
-LIBC_ALL += exit.obj sleep.obj time.obj strerror.obj
+LIBC_ALL += buf.obj abort.obj signal.obj exit.obj sleep.obj time.obj
 LIBC_ALL += convtime.obj timezone.obj getch.obj getuid.obj bdos.obj bdoshl.obj
 LIBC_ALL += bios.obj _exit.obj fakeclean.obj fakecpcln.obj sys_err.obj
 LIBC_ALL += memcpy.obj memcmp.obj memset.obj abs.obj asallsh.obj allsh.obj
@@ -120,22 +118,11 @@ extract :
 	% : L : LIBC.LIB
 		libr x libc.lib %
 	EOF
-
+	
 # Install the changes
 #
 install : $(DIR)/libc.lib $(DIR)/string.h $(DIR)/time.h $(DIR)/libf.lib
-$(DIR)/stdio.h $(DIR)/stdlib.h $(DIR)/errno.h $(DIR)/assert.h $(DIR)/signal.h
 
-$(DIR)/signal.h : signal.h
-	copy signal.h $(DIR)\\*.*
-$(DIR)/assert.h : assert.h
-	copy assert.h $(DIR)\\*.*
-$(DIR)/stdio.h : stdio.h
-	copy stdio.h $(DIR)\\*.*
-$(DIR)/stdlib.h : stdlib.h
-	copy stdlib.h $(DIR)\\*.*
-$(DIR)/errno.h : errno.h
-	copy errno.h $(DIR)\\*.*
 $(DIR)/string.h : string.h
 	copy string.h $(DIR)\\*.*
 $(DIR)/time.h : time.h
@@ -174,7 +161,6 @@ veryclean : clean cleanmore
 # make a package for distribution
 #
 EXTRA = fixes.txt makefile string.h time.h fbcd.obj libc.lib libf.lib
-EXTRA += stdio.h stdlib.h errno.h assert.h signal.h
 
 distribution : $(DIST)
 

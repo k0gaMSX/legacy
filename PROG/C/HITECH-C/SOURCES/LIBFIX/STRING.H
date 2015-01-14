@@ -36,6 +36,4 @@ extern char *	strstr(char*, char*);
 extern char *	strcasestr(char*, char*);
 extern char *	strnstr(char*, char*, size_t);
 extern char *	strncasestr(char*, char*, size_t);
-extern char *	strerror(int);
-
 
