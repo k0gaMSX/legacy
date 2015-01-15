@@ -1,0 +1,247 @@
+                        WORKING WITH ASCII C FOR MSX
+
+
+     This is the third part of a course on ASCII MSX C, which is originally
+      published on the disk magazine Sunrise Special of Sunrise Foundation.
+                    This course is written by Alex Wulms.
+
+
+In this third part of the course, the working of XelaSoft's code optimizer is
+explained. Furthermore, some hints are given to make the code as fast as
+possible with ASCII MSX C. As these hints are also very usefull, I have put
+the complete third part of the course in this READ.ME file. Maybe, I will
+also translate the other parts of the course into English in future.
+
+As is stated in the first part of this course, the build in code optimizer
+of ASCII MSX C generates rather fast code. It is possible to work in different
+modi with this compiler, each mode having its own influence on the speed of
+the generated code.
+
+These modi, and other topics, will be discussed in this part of the course. The
+following topics will be discussed:
+1) The compiler directives 'nonrec' and 'recursive'
+2) The compiler directives 'noregalo' and 'regalo'
+3) General hints for making fast code
+4) The working of XelaSoft's code optimizer
+5) How to use XelaSoft's code optimizer
+6) Hints with respect to the source of XelaSoft's code optimizer
+
+1) THE COMPILER DIRECTIVES 'NONREC' AND 'RECURSIVE'
+
+Normally, the compiler supposes all functions are recursive. Therefore, the
+code will be generated in such a way that all variables will be placed on the
+stack. However, this is not good for the speed. Fortunately, ASCII corporation
+recognized this problem and they solved it:
+When you know that a certain function is not recursive, you can tell this to
+the compiler with the compiler directive 'nonrec'.
+Example: Suppose that you have the following function which calculates the sum
+         of a list of numbers:
+  int sum(list, number)
+  int *list;
+  int number;
+  {
+    int sum;
+
+    while (number--)
+      sum += *(list++);
+    return sum;
+  }
+
+This function is not recursive: it does not (indirectly) call itself.
+To tell this to the C compiler, the header of the function can be replaced
+with:
+  nonrec int sum(list, number)
+
+When you want the compiler to generate non-recursive code for all functions
+from a certain point in the source then you can tell this to the compiler with:
+  #pragma nonrec     /* all functions from here on are non-recursive */
+
+And you can switch back to recursive mode with:
+  #pragma recursive  /* all functions from here on are recursive     */
+
+
+2) THE COMPILER DIRECTIVES 'NOREGALO' AND 'REGALO'
+
+The compiler of ASCII normally performs a register optimalisation. This means
+that local variables are placed in the CPU registers as much as possible. Only
+when this is not possible -for example when too much variables are being used
+at the same time-, some variables are placed in the memory. Note that main-
+taining variables in the memory can be done in two manners:
+1) On the stack, this is done for recursive procedures.
+2) With direct adressing in the 'normal' memory, this is done for non-recursive
+   procedures.
+
+Sometimes, the register optimalisation will go wrong. In such a case, it is
+possible to switch the optimalisation of with:
+  #pragma noregalo /* do not use register optimalisation from now on */
+
+Switching the optimalisation on again can be done with:
+  #pragma regalo   /* use register optimalisation from now on        */
+
+The following is an example where the register optimalisation fails (it is
+taken from the C manual):
+  int n;
+  int *p;
+
+  p = &n;
+  n = 10;
+  *p = 100;
+  printf("%d", n);
+
+In this case, only two variables exist; n and p. Thus, these variables can
+be maintained in registers. The compiler will place the value of 10 in the
+register which is used to maintain n and that register will be passed to
+the printf function. The compiler does not detect that the real value of n
+is changed via the pointer p.
+On the contrary, the code generation would not have failed when the code was
+as follows:
+  int n;
+  int *p;
+
+  n = 10;
+  p = &n;
+  *p = 100;
+  printf("%d",n);
+
+In this case, the compiler will store the value of n in the memory before
+placing the address of n in the pointer p and the printf function will get
+the value of n from memory.
+
+The compiler analyses the total variable usage within a function to allocate
+the right variables to registers. When within a loop only a few variables are
+used, these variables will be maintained in registers within the loop. Outside
+the loop, the register optimalisation may differ.
+Furthermore, the compiler can better handle short functions then large and
+complex one. Therefore, it is advisable to split up a large function as much
+as possible into smaller functions which are being called from the larger
+function.
+
+
+3) GENERAL HINTS FOR MAKING FAST CODE
+
+Shortly summarized, making fast code can be done as follows:
+-Indicate which functions are non-recursive, making it possible for the
+ compiler to avoid slow stack usage.
+-Do not turn off the register optimalisation when it is not necessary. Try
+ to rewrite your code in the rare cases that the register optimalisation fails.
+ Use the '#pragma noregalo' directive only when everything else fails.
+-Make much small functions in stead of a few large ones. However, do take care
+ that you you do not introduce extra complexity by splitting up a complex
+ algorithm to far!
+
+
+4) THE WORKING OF XELASOFT'S CODE OPTIMIZER
+
+When you use the method mentioned uphere, you can get rather fast code.
+However, it is possible to get your code even faster. As is stated in part 1
+of this course, the code generator of ASCII MSX C only uses instructions which
+can be executed by the Intel 8080. This is a predecessor of the Z80.
+Therefore, some pieces of code are a little bit stupid (from the viewpoint of a
+Z80 user). An example of this statement is the following piece of code, which
+is generated to fetch a variable from memory into the register pair BC:
+        push    hl
+        ld      hl,(variable)
+        ld      c,l
+        ld      b,h
+        pop     hl
+
+It is possible to do this much faster and easier on the Z80:
+        ld      bc,(variable)
+
+I have written a code optimizer to replace this kind of Intel 8080 junk by
+equivalent Z80 instructions. This code optimizer can be used between the
+code generation phase and the assembly phase. The batch file C.BAT to compile
+your programs can be written for example as follows:
+cf %1
+cg -k %1
+optimize %1.mac %1.opt
+del %1.mac
+ren %1.opt %1.mac
+m80 =%1
+del %1.mac
+l80 ck,%1,clib/s,crun/s,cend,%1/n/e:xmain
+
+The code optimizer can replace most load instruction groups by appropriorate
+load instructions. Furthermore, the shift instruction will be coded a bit
+more efficient. In the normal case, the compiler generates for each shift
+instruction a call to a system routine from crun.rel. The routines in this
+runtime library are written in such a general way that even a >>0 or a <<0 is
+handled properly. This introduces some extra overhead; a CALL and a RET
+instruction and checking for a zero count. Therefore, the code optimizer
+replaces each call to a shift instruction by a piece of code which executes
+the same shift instruction. The compiler can choose between two different
+types of code to achieve this:
+- Code which does check for a zero count (the standard case).
+- Code which does not check for a zero count. You can use the option /z
+  on the commandline to get this second case. Please use it only when you
+  are certain that no shifts over a distance of zero bits are being used!
+
+Furthermore, the optimizer checks wether you use a shift over a constant
+distance. When you use a shift over a distance of 1 or 2 (thus >>1, >>2, <<1
+or <<2), the code optimizer will not generate a loop but a few repeated
+register shift instructions instead.
+
+Except for these Z80 optimalisations, the optimizer also has two R800
+optimalisations. These can be activated with the option /r. When this option
+is being used, all calls to the multiply routines of the runtime library will
+be replaced with equivalent R800 multiply instructions.
+Note that in this case, the code can only be executed on the MSX turbo R.
+
+
+5) HOW TO USE XELASOFT'S CODE OPTIMIZER
+
+The usage of the code optimizer is as follows:
+  optimize sourcefile destinationfile [optional parameters]
+With this command, the file 'sourcefile' will be read and the optimized code
+will be written to the file 'destinationfile'.
+
+The optional parameters are:
+  /z    : do not check for a zero count with the shift instructions
+  /r    : use the multiply of the R800
+
+There are two versions of the code optimizer in this archive:
+optd1.com   : the optimizer compiled with MSX C 1.1, for under MSX DOS 1
+optd2.com   : the optimizer compiled with MSX C 1.2, for under MSX DOS 2
+
+
+6) HINTS WITH RESPECT TO THE SOURCE OF XELASOFT'S CODE OPTIMIZER
+
+Not only the compiled versions of the optimizer are placed in this archive,
+but also the source. The source is made up of two parts:
+optimize.c  : the source of the optimizer
+pcmsx.h     : a headerfile to make it possible to compile the optimizer on
+              the PC, on the MSX and under UNIX.
+
+This source is public domain. It may be studied and modified for own purpose.
+It is not allowed to distribute any modified version of this source or of
+the compiled version of such a modified version. Please contact me when
+you have any interresting ideas which can be used in new versions of the
+optimizer.
+You can reach me at the following addresses:
+via snail mail:
+  A. Wulms
+  Pelikaanhof 127 c
+  2312 EG Leiden
+
+via email:
+  awulms@wi.leidenuniv.nl
+
+
+This text was originally written (in dutch) for:
+Sunrise special,   the diskmagazine for the MSX specialists.
+
+Copyright (C) 1994 XelaSoft
+
+
+Intel 8080 is a trademark of Intel corporation
+Z80 is a trademark of Zilog corporarion
+MSX and ASCII MSX C are trademarks of ASCII corporation
+XelaSoft is an unregistered and unofficial trademark of A. Wulms
+ en ASCII MSX C zijn trademarks van ASCII corporation
+rporation
+n
+Z80 is een trademark van Zilog corporarion
+MSX en ASCII MSX C zijn trademarks van ASCII corporation
+
+MSX en ASCII MSX C zijn trademarks van ASCII corporation
+                                          

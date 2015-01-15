@@ -1,0 +1,241 @@
+                      HET WERKEN MET ASCII C VOOR MSX
+
+
+        Dit is het derde deel van een cursus over ASCII MSX C, die
+  oorspronkelijk is uitgebracht op de Sunrise Special van Stichting Sunrise.
+                Deze cursus is geschreven door Alex Wulms
+
+
+In dit derde deel van de cursus wordt de werking van XelaSoft's code optimizer
+uitgelegd. Verder worden nog een aantal andere tips gegeven voor het maken
+van zo snel mogelijke code met ASCII MSX C. Aangezien ook deze tips wel handig
+zijn, heb ik dit hele deel van de cursus opgenomen in dit lees.mij bestand.
+
+
+Zoals ook al in deel 1 van deze serie staat vermeld, genereert de code
+optimizer van ASCII MSX C vrij snelle code. Er kan echter met deze compiler
+in verschillende modi gewerkt worden die allemaal hun eigen invloed hebben
+op de snelheid van de gegenereerde code.
+
+In dit deel van de cursus zullen achtereenvolgens de volgende onderwerpen
+worden besproken:
+1) De compiler directives 'nonrec' en 'recursive'
+2) De compiler directives 'noregalo' en 'regalo'
+3) Algemene wenken voor het maken van snelle code
+4) De werking van XelaSoft's code optimizer
+5) Het gebruik van XelaSoft's code optimizer
+6) Aanwijzingen m.b.t. de source van XelaSoft's code optimizer
+
+1) DE COMPILER DIRECTIVES 'NONREC' EN 'RECURSIVE'
+
+Normaal gaat de compiler ervan uit dat alle functies recursief zijn. Daarom
+wordt de code zo aangemaakt dat een functie alle lokale variabelen op de stack
+bijhoudt. Dit is echter niet bevorderlijk voor de snelheid. Aangezien ook ASCII
+corporation dit heeft ingezien hebben ze hier een oplossing voor verzonnen:
+Als je weet dat een bepaalde functie niet recursief is dan kun je dit aan de
+compiler vertellen met de compiler directive 'nonrec'.
+Vb. Stel je hebt de volgende functie die de som van een lijst getallen berekent
+  int sum(lijst, aantal)
+  int *lijst;
+  int aantal;
+  {
+    int sum;
+
+    while (aantal--)
+      sum += *(lijst++);
+    return sum;
+  }
+
+Deze functie is niet recursief (ze roept zichzelf namelijk nergens aan, ook
+niet via een omweg).
+Om dit aan de C compiler door te geven dient de header van de functie vervangen
+te worden door:
+  nonrec int sum(lijst, aantal)
+
+Als je wilt hebben dat de compiler vanaf een bepaald punt in de source voor
+alle functies niet recursieve code genereert, dan kan dit met een compiler
+directive, namelijk:
+  #pragma nonrec     /* alle functies vanaf hier zijn niet recursief */
+
+En dit kan weer worden uitgezet met:
+  #pragma recursive  /* alle functies vanaf hier zijn recursief      */
+
+
+2) DE COMPILER DIRECTIVES 'NOREGALO' EN 'REGALO'
+
+De compiler van ASCII doet normaal aan register optimalisatie, dit houdt in dat
+lokale variabelen zoveel mogelijk in de registers worden bijgehouden. Pas als
+dit niet kan -er zijn bijv. teveel variabelen tegelijk in gebruik-, dan worden
+sommige variabelen in het geheugen bijgehouden. Dit laatste kan dus op twee
+manieren gebeuren, namelijk op de stapel -bij recursieve procedures- of via
+directe adressering in het 'normale' geheugen -bij niet recursieve procedures-.
+
+Soms kan de register optimalisatie misgaan, in dit geval kan de register
+optimalisatie worden uitgezet met:
+  #pragma noregalo /* vanaf hier wordt geen register optimalisatie gebruikt */
+
+Het weer aanzetten kan vervolgens met:
+  #pragma regalo   /* vanaf hier wordt wel register optimalisatie gebruikt  */
+
+Een voorbeeld waarin de register optimalisatie misgaat (uit de C handleiding)
+  int n;
+  int *p;
+
+  p = &n;
+  n = 10;
+  *p = 100;
+  printf("%d", n);
+
+In dit geval zijn er slechts 2 variabelen, namelijk n en p. Deze kunnen dus
+in registers worden bijgehouden. De compiler zal de waarde 10 dan ook in het
+register zetten waarin n wordt bijgehouden en dit register vervolgens door-
+geven bij de printf instructie. Het feit dat de echte waarde van n dan via de
+pointer p is veranderd ziet de compiler niet. Dit zou wel goed gaan als de
+code er als volgt uit had gezien:
+  int n;
+  int *p;
+
+  n = 10;
+  p = &n;
+  *p = 100;
+  printf("%d",n);
+
+De compiler zal nu namelijk de waarde van n in het geheugen opslaan voordat
+in de pointer p het adres van de variabele n wordt gestopt, en bij de printf
+zal de waarde van deze n weer worden opgehaald.
+
+Bij de register optimalisatie kijkt de compiler naar het totale variabelen
+gebruik binnen een functie. In het algemeen is het zo dat als er binnen een
+lus maar weinig variabelen worden gebruikt, dat dan de variabelen binnen die
+lus in registers worden bijgehouden. Buiten de lus kan de register
+optimalisatie weer anders zijn.
+Verder is het zo dat de compiler bij korte functies vaak beter herkent wat in
+registers kan dan bij grote, complexe functies. Het is daarom verstandig om een
+grote functie zoveel mogelijk op te splitsen in kleinere functies die dan
+worden aangeroepen vanuit die grote functie (vanuit het standpunt van
+gestructureerd programmeren bekeken is dit toch al aan te bevelen!).
+
+
+3) ALGEMENE WENKEN VOOR HET MAKEN VAN SNELLE CODE
+
+Kort samengevat is de algemene werkwijze voor het maken van snelle code
+als volgt:
+-Geef aan welke functies niet recursief zijn zodat de compiler bij deze
+ functies de variabelen niet op de stack hoeft bij te houden.
+-Laat de register optimalisatie zoveel mogelijk aanstaan. Mocht de register
+ optimalisatie in een zeldzaam geval misgaan, kijk dan of je de code kunt
+ herschrijven. Gebruik de '#pragma noregalo' directive pas als het niet anders
+ kan.
+-Maak liever veel kleine functies dan een paar grote. Let er bij de opsplitsing
+ in kleine functies wel op, dat je geen extra complexiteit introduceert doordat
+ je een ingewikkeld algoritme te ver probeert op te splitsen!
+
+
+4) DE WERKING VAN XELASOFT'S CODE OPTIMIZER
+
+Als bovenstaande werkwijze wordt gevolgd, kan er behoorlijk snelle code worden
+verkregen. Het kan echter nog sneller. Zoals namelijk ook al in deel 1 stond,
+maakt de code generator alleen gebruik van instructies die de Intel 8080 kent.
+Hierdoor worden sommige dingen een beetje dom aangepakt (vanuit Z80 standpunt
+bekeken), een voorbeeld hiervan is het volgende stuk code, dat gegenereerd
+wordt om een variabele op te halen naar het register paar BC:
+        push    hl
+        ld      hl,(variable)
+        ld      c,l
+        ld      b,h
+        pop     hl
+
+Dit kan op de Z80 natuurlijk een stuk eenvoudiger en sneller, op de Z80 kan het
+namelijk als volgt:
+        ld      bc,(variable)
+
+Om dit soort stukken Intel 8080 code te vervangen door equivalente Z80
+instructies heb ik een code optimizer geschreven. Deze optimizer kan tussen
+de code generatie en de assemblatie in komen. De C batch file kan er
+dan bijvoorbeeld als volgt komen uit te zien:
+cf %1
+cg -k %1
+optimize %1.mac %1.opt
+del %1.mac
+ren %1.opt %1.mac
+m80 =%1
+del %1.mac
+l80 ck,%1,clib/s,crun/s,cend,%1/n/e:xmain
+
+De code optimizer kan de meeste load instructie groepen vervangen door de
+juiste load instructie. Verder worden de shift instructies iets efficienter
+opgelost. Normaal maakt de compiler voor iedere shift instructie een call
+naar een systeem routine (uit crun.rel). De routines die hier staan zijn dan
+ook nog op zo'n algemene manier geschreven dat zelfs een >>0 of <<0 goed
+wordt uitgevoerd. Dit introduceert echter extra overhead (namelijk de call
+en de ret instructie en de controle op een 0-count). Daarom vervangt de
+code optimizer een call naar een shift instructie door een stukje code dat
+deze shift instructie uitvoert. Hierbij kan de optimizer 2 verschillende
+stukken code aanmaken:
+- code die wel controleert op een 0-count (het standaard geval)
+- code die niet controleert op een 0-count. Om dit 2de geval te krijgen dien
+  je de optie /z op te geven. Doe dit alleen als je zeker weet dat er geen
+  shift over een afstand van 0 bits kan voorkomen!
+Verder is het zo dat de code optimizer ook nog controleert of je een shift
+over een constante afstand doet. Als je namelijk over een afstand van 1 of
+van 2 schuift (dus >>1, >>2, <<1 of <<2), dan wordt er geen lus gemaakt
+om de shift instructie uit te voeren, maar er worden een paar register shift
+instructies achter elkaar gezet.
+
+Behalve deze Z80 optimalisaties kent de optimizer ook nog twee R800
+optimalisaties. Deze kunnen worden geactiveerd met de optie /r.
+Als deze optie is opgegeven worden namelijk alle calls naar de multiply
+routines vervangen door R800 multiply instructies. In dit geval is de code
+uiteraard wel alleen nog maar geschikt voor de MSX turbo R.
+
+5) HET GEBRUIK VAN XELASOFT'S CODE OPTIMIZER
+
+Het gebruik van de code optimizer is als volgt:
+  optimize sourcefile destinationfile [optionele parameters]
+Hiermee wordt het bestand 'sourcefile' ingelezen, en de geoptimaliseerde code
+wordt weggezet in het bestand 'destinationfile'.
+
+De optionele parameters zijn:
+  /z    : controleer niet op een 0-count bij de shift instructies
+  /r    : gebruik de multiply instructie op de R800
+
+Op dit archive staan 2 versies van de code optimizer, namelijk:
+optd1.com   : de optimizer gecompileerd met MSX C 1.1, voor onder MSX DOS 1
+optd2.com   : de optimizer gecompileerd met MSX C 1.2, voor onder MSX DOS 2
+
+
+6) AANWIJZINGEN M.B.T. DE SOURCE VAN XELASOFT'S CODE OPTIMIZER
+
+Behalve de gecompileerde versies, staat ook de source van de optimizer in dit
+archive, deze source bestaat uit 2 bestanden:
+optimize.c  : de source van de optimizer
+pcmsx.h     : een headerfile om de optimizer op de PC, op de MSX en onder
+              UNIX te kunnen compileren.
+
+Deze source is public domain, ze dient ter studie ende vermaak en mag NIET
+gewijzigd worden verspreid (veranderen voor eigen gebruik mag, maar verspreid
+de veranderde source en de object code die erbij hoort niet!). Laat het me
+weten als je nog interessante ideeen hebt voor toekomstige versies van de code
+optimizer zodat ze verwerkt kunnen worden. Ik ben bereikbaar op onderstaand
+adres of via email op het adres:
+awulms@wi.leidenuniv.nl
+
+
+
+Deze tekst is geschreven door:
+A. Wulms
+Pelikaanhof 127 c
+2312 EG Leiden.
+
+voor:
+Sunrise special,   het diskmagazine voor de MSX specialisten.
+
+Copyright (C) 1994 XelaSoft
+
+
+
+Intel 8080 is een trademark van Intel corporation
+Z80 is een trademark van Zilog corporation
+MSX en ASCII MSX C zijn trademarks van ASCII corporation
+XelaSoft is een ongeregistreerd en onofficieel handelsmerk van A. Wulms
+                                             
