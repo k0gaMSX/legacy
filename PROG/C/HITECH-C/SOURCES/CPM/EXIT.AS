@@ -1,8 +1,12 @@
-	global	_exit, __cpm_cle
+EXITSTS	equ	80h		;where to store exit status
+
+	global	__exit, __cpm_clean
 
 	psect	text
-_exit:
-	ld	(80h),hl	;store exit status
-	call	__cpm_cle
+__exit:
+	call	__cpm_clean
+	pop	hl		;return address
+	pop	hl		;exit status
+	ld	(EXITSTS),hl
 	jp	0		;Warm boot CP/M
-
+
