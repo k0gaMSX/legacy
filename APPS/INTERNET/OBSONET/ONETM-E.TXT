@@ -1,0 +1,1018 @@
+
+
+Version 1.1.0                                                 N. Soriano
+                                                           MSX Community
+                                                      September 12, 2007
+
+
+                      ObsoNET Programmer's Manual
+
+
+
+   ObsoNET Copyright (c) 2004
+   Daniel Berdugo Gonzalez (hardware), dberdugo1@yahoo.es
+   Nestor Soriano Vilchez (software), konamiman@konamiman.com
+
+   MSX-DOS 2 adapted to ObsoNET by Armando Perez Abad
+
+
+*** CAUTION ***
+
+   ObsoNET card's FRONT side is the one in which the LEDs, the RJ45
+   cable connector and the "ObsoNET" logo are placed.
+
+
+Table of Contents
+
+   1.  Introduction
+   2.  Requirements and installation
+   3.  Obsonet features
+     3.1   General features
+     3.2   Memory layout
+     3.3   ROM mapping
+     3.4   Detecting ObsoNET
+   4.  ObsoNET BIOS
+     4.1   Features and usage
+     4.2   BIOS routines
+     4.3   Integration of BIOS with other programs in ROM
+     4.4   Use of BIOS by resident programs
+     4.5   Notes on BIOS version 1.1. Ethernet UNAPI compatibility.
+   Appendix A.  Ethernet frame formats
+   Appendix B.  Code for ObsoNET detection
+   Appendix C.  References
+   Author's Address
+
+
+1.  Introduction
+
+   ObsoNET is a 10BaseT Ethernet card with RJ45 connector for MSX
+   computers.  With ObsoNET it is possible to connect any MSX computer
+   to an Ethernet network, and even directly to Internet by means of an
+   ADSL router.
+
+   This manual contains information of interest for developers willing
+   to develop applications that make use of ObsoNET at the low level
+   (direct manipulation of Ethernet frames and configuration of the
+   card).  To work at the TCP/IP level it is necessary to install
+   InterNestor Lite for ObsoNET; this application has its own manual so
+   it will not be treated here.
+
+   About general users, they should look directly at the manuals of the
+   applications that they will use.  Only section 2 of this manual will
+   be of certain interest for them.
+
+
+2.  Requirements and installation
+
+   ObsoNET works on all the MSX computers, from MSX1 to Turbo-R.
+
+   Installing ObsoNET is as simple as:
+
+   1.  Insert the card on any free slot of the MSX.
+
+   2.  Plug a twisted pair cable connected to a network on the RJ45
+       connector of the card.
+
+   3.  Switch on your MSX.
+
+   Once the MSX has booted, it is already possible to send and receive
+   Ethernet frames by using the ObsoNET BIOS routines (described on
+   section 4).  Who said Plug & Play? :-)
+
+   To use TCP/IP, however, it is necessary to install InterNestor Lite
+   for ObsoNET; this program requires MSX2 with 128K of mapped RAM.
+   Refer to InterNestor Lite manual itself for more details.
+
+   It is possible to plug more than one ObsoNET card simultaneously in a
+   MSX.  The BIOS routines of each card will act on its own Ethernet
+   port without provoking any conflict with the others.  However,
+   InterNestor Lite and the utilities supplied with ObsoNET work only on
+   the first card (the one with the smaller slot number).  To
+   effectively use more than one card simultaneously, specific software
+   must be written.
+
+
+3.  Obsonet features
+
+3.1  General features
+
+   ObsoNET consists basically on a RTL8019AS Ethernet controller and a
+   512K long Flash ROM.  On that ROM, a BIOS with routines to
+   send/receive Ethernet frames and to configure the card is stored;
+   BIOS is described on section 4.  There is also a 1K EEPROM -not
+   modifiable by software- that stores the Ethernet address of the card.
+
+   The BIOS size is approximately 2K, and the remaining of the ROM
+   space is free so any other software can be stored on it.  More
+   details are given later.
+
+3.2  Memory layout
+
+   The ObsoNET memory space is organized in the following way:
+
+      #4000-#7FDF: Flash ROM
+      #7FE0-#7FFF: RTL8019AS registers
+      #BFE0-#BFFF: RTL8019AS registers (mirror of #7FE0-#7FFF)
+
+   The RTL8019AS is controlled by means of 32 register that are mapped
+   to ObsoNET in the following manner:
+
+      #7FE0 and #BFE0: Register 0
+      #7FE1 and #BFE1: Register 1
+      .
+      .
+      .
+      #7FFF and #BFFF: Register 31
+
+   For details about the behavior of each register and of the RTL8019AS
+   as a whole, refer to the controller's manual on Realtek web (see
+   Appendix C).  Under normal circumstances, however, it is not
+   necessary to manually access these registers; it is enough to use the
+   BIOS routines (except for ROM mapping and for searching ObsoNET cards
+   on the system, as it will be detailed soon).
+
+   NOTE: RTL8019AS has actually four banks of 32 registers.  The visible
+   bank is selected by bits 7 and 6 of register 0 (this register is
+   special, it is visible from all the banks).  This knowledge is
+   necessary for ROM mapping manipulation and for searching ObsoNET
+   cards on the system.
+
+3.3  ROM mapping
+
+   The Flash ROM size is 512K, but the ObsoNET address space shows only
+   16K simultaneously (actually 16K-32 bytes, due to the space occupied
+   by the RTL8019AS registers).
+
+   The ROM is therefore divided in 32 logical pages of 16K each,
+   numbered 0 to 31.  To select (or obtain) the visible page, it is
+   necessary to access to one of the RTL8019AS registers, specifically
+   the BPAGE register (register 2 of bank 3).
+
+   So, to select a ROM page it is necessary to do the following:
+
+   1.  Write the value #C0 on register 0 (to select bank 3).
+
+   2.  Write the desired page number in the BPAGE register (register 2).
+
+   In code:
+
+           ld      a,#C0
+           ld      (#7FE0),a
+           ld      a,<page>
+           ld      (#7FE2),a
+
+   If BPAGE is read instead of written, then the currently selected page
+   number is obtained.
+
+   To save data on the ROM, the ONETFRL.COM utility, supplied with
+   ObsoNET and available on Internet (see Appendix C), must be used.
+
+3.4  Detecting ObsoNET
+
+   To check if there is an ObsoNET card plugged on a given slot, the
+   following algorithm must be used:
+
+   1.  The slot to be checked is switched on page 1.
+
+   2.  Assuming that there is an ObsoNET plugged, the registers bank 0
+       is switched (see Section 3.2) and the 8019ID0 and 8019ID1
+       registers (10 and 11, respectively) are read.  The obtained
+       values must be #50 and #70 respectively.  Otherwise the slot has
+       NOT an ObsoNET plugged in.
+
+   3.  The registers bank 2 is switched and registers 10 and 11 are read
+       again.  The values obtained this time must be DIFFERENT from the
+       values obtained in the previous step.  Otherwise the slot has NOT
+       an ObsoNET plugged in.
+
+       Once this point is reached, we know that the slot has an ObsoNET
+       plugged in.  Now we check whether it has the BIOS saved on the
+       Flash ROM or not.
+
+   4.  ROM page 0 is selected (see Section 3.3) and the string
+       "ObsoNET", with this exact casing and zero-terminated, is
+       searched on address #7FD0.  If found, the ObsoNET has BIOS.
+
+
+   Appendix B contains the code that implements this detection
+   algorithm.
+
+
+4.  ObsoNET BIOS
+
+4.1  Features and usage
+
+   ObsoNET, when correctly configured (see Section 3.4), has in its ROM
+   a BIOS with routines that allow sending and receiving Ethernet
+   frames, as well as to perform basic card configuration tasks.  If the
+   ObsoNET has no BIOS, it can be burned from the file BIOS.ROM or
+   BIOSDOS2.ROM using the ONETFRL.COM utility; these files are supplied
+   with ObsoNET and are also available on Internet (see Appendix C).
+
+   To use the ObsoNET BIOS you must, first, search the ObsoNET and check
+   that it has the BIOS on ROM (see Section 3.4); then, do the
+   following:
+
+   1.  Switch the ObsoNET on page 1:
+
+   ENASLT: equ     #0024
+
+           ld      a,<ObsoNET slot>
+           ld      h,#40
+           call    ENASLT
+
+   2.  Select the ROM page 0 (see Section 3.3):
+
+           ld      a,#C0
+           ld      (#7FE0),a
+           xor     a
+           ld      (#7FE2),a
+
+   3.  Execute the desired routine or routines with CALL instructions.
+
+   -- Or alternatively --
+
+   1.  Select the ROM page 0 by using WRSLT (see Section 3.3):
+
+   WRSLT:  equ     #0014
+
+           ld      a,<ObsoNET slot>
+           ld      e,#C0
+           ld      hl,#7FE0
+           call    WRSLT
+           ld      a,<ObsoNET slot>
+           ld      e,0
+           ld      hl,#7FE2
+           call    WRSLT
+
+   2.  Execute the desired routine or routines with CALSLT:
+
+   CALSLT: equ     #001C
+
+           ld      iy,<ObsoNET slot>*256
+           ld      ix,<routine address>
+           ld      ...     (setup other registers as appropriate)
+           call    CALSLT
+
+   (Note: none of the ObsoNET BIOS routines use IX/IY registers for
+   input or output parameters)
+
+   The BIOS routines use exclusively the stack for temporary data
+   storage, and do not access any other part of the system RAM (except
+   when sending or receiving packets): the BIOS do not reduce the memory
+   available for the user nor uses "illegal" addresses on the system
+   work area.
+
+   In the next section, all the ObsoNET BIOS routines are described.
+
+4.2  BIOS routines
+
+   Note: all routines modify all registers unless otherwise stated.
+
+   * ONET_RESET (#7FCD): Initializes the ObsoNET card
+     Input:  -
+     Output: -
+
+      This routine, which is automatically executed when the computer
+      boots, initializes the ObsoNET card, leaving it ready for use.
+      More precisely, it performs the following tasks:
+
+      1.  Sends a RESET command to the RTL8019AS controller.
+
+      2.  Aborts the current packed transmission, if there is one.
+
+      3.  Initializes the RTL8019AS registers to their appropriate
+          values.
+
+      4.  Configures reception to admit broadcast packets and reject
+          multicast packets and those with bad CRC, or not addressed to
+          ourselves (except broadcast).
+
+      5.  Reads the hardware address of the card from EEPROM and stores
+          it on registers PAR0 to PAR5.
+
+      6.  Configures the multicast mask as all ones.
+
+   * GET_VERS (#7FCA): Obtains the BIOS version.
+     Input:  -
+     Output: A = Main version
+             B = Secondary version
+             C = Revision
+     Preserves F, DE, HL
+
+      This routine simply returns the BIOS version.  The obtained
+      information should be shown as "Version A.B.C".  This manual
+      describes version 1.1.0.
+
+   * GET_HWAD (#7FC7): Obtains the ObsoNET physical address.
+     Input:  -
+     Output: L-H-E-D-C-B = ObsoNET physical address
+     Preserves AF
+
+      This routine returns the physical address (also known as hardware
+      address, ethernet address or MAC) of ObsoNET.  This information is
+      read from registers PAR0 to PAR5 of the RTL8019AS, registers that
+      on turn are set up from the information read from the EEPROM by
+      the RTL_RESET routine.
+
+      The information is returned in a format that eases its storage in
+      memory in the correct order, for example:
+
+              call    GET_HWAD
+              ld      (HWAD),hl
+              ld      (HWAD+2),de
+              ld      (HWAD+4),bc
+              ...
+
+      HWAD:   ds      6
+
+
+   * GET_NETSTAT (#7FC4): Obtains the network connection status
+     Input:  -
+     Output: A = 0 if there is no network connection
+                 1 if there is network connection
+
+      This routine checks that ObsoNET is physically connected to an
+      active network, that is, if it is possible to send and receive
+      packets.
+
+      To perform the checking, a test packet is sent (whose source and
+      destination physical addresses are 00-00-00-00-00-00), so the
+      routine execution takes certain amount of time.  Therefore, it is
+      not recommended to execute it too often.
+
+   * ONET_ONOFF (#7FC1): Activates or deactivates ObsoNET
+     Input:  A = 0: Obtain the current state
+                 1: Activate the card
+                 2: Deactivate the card
+     Output: A = Card status
+                 1: Active
+                 2: Inactive
+     Preserves C, DE, HL
+
+      This routine activates or deactivates the RTL8019AS controller of
+      ObsoNET.  While inactive, all the received packets will be
+      ignored.
+
+   * CONF_RX (#7FBE): Configuration of the reception parameters
+     Input:  A = Flags that indicate the configuration when set:
+                 bit 7: Only return the current configuration
+                        (the other flags are ignored)
+                 bit 4: Accept all the incoming packets, regardless of
+                        their destination address ("promiscuous mode").
+                 bit 3: Accept the incoming packets whose destination
+                        address is a multicast address.
+                 bit 2: Accept the incoming packets whose destination
+                        address is the broadcast address
+                        (FF-FF-FF-FF-FF-FF)
+                 bit 1: Accept the incoming packets whose length
+                        is smaller than 64 bytes
+     Output: A = Current configuración (same as the input except bit 7)
+     Preserves BC, DE, HL
+
+      When the RTL8019AS controller detects a new incoming packet
+      received from the network, it examines its physical destination
+      address to determine whether the packet should be captured (for
+      being obtained later, see routine GET_PACKET) or not.  This
+      routine configures the kind of addresses that will be considered
+      valid for performing the capture:
+
+      *  The packets whose destination address is equal to the address
+         of the card (according to PAR0-PAR5 registers) are always
+         captured, regardless of the reception configuration.
+
+      *  If bit 4 is set to 1 ("promiscuous mode"), all the packets that
+         traverse the network will be captured, regardless of their
+         destination address.  This mode is useful to develop network
+         analyzers.
+
+      *  If bit 3 is set to 1, all the packets whose destination address
+         is a multicast address will be captured, if the multicast mask
+         allows it (see the CONF_MCAST routine).
+
+      *  If bit 2 is set to 1, all the packets whose destination address
+         is the broadcast address (FF-FF-FF-FF-FF-FF) will be captured;
+         these packets are addressed to all the machines on the network
+         and in normal circumstances should be accepted.
+
+      *  If bit 1 is set to 1, packets whose length is smaller than 64
+         bytes will be captured.  The Ethernet standard forces all the
+         packets that traverse the network to have a size of at least 64
+         bytes, although there are operating systems that send smaller
+         packets.
+
+      The default configuration (established by RTL_RESET) is %00000110,
+      that is, broadcast packets and packets smaller than 64 bytes are
+      accepted and multicast packets are rejected; this configuration is
+      the most appropriate in normal circumstances.
+
+   * CONF_MCAST (#7FBB): Configuration of the multicast mask
+     Input:  Cy = 0 to obtain the current mask,
+                  1 to set up the mask
+             HL = Address to write the mask to if Cy=0;
+                  address to read the mask from Cy=1
+     Output: -
+
+      This routine obtains or establishes the multicast mask, which
+      decides what multicast addresses are considered valid as the
+      destination address for captured packets (it is also necessary to
+      activate the reception of multicast packets; see the description
+      of the CONF_RX routine).
+
+      The multicast mask consists of eight bytes, which are treated as a
+      table of 64 bits.  When a packet arrives whose physical
+      destination address is multicast (the lowest bit of its first byte
+      is one), the RTL8019AS applies on the address a hash function that
+      gives a 6 bit number as a result.  This number is used as an index
+      in the multicast mask: if the corresponding bit is set to one, the
+      packet is captured, otherwise it is discarded.
+
+      The default value of the mask (established by RTL_RESET) is all
+      ones (eight #FF bytes).
+
+   * GET_INSTAT (#7FB8): Obtains information about
+                         the oldest received packet
+     Input:  -
+     Output: A =  0: There are no incoming packets available
+                  1: There are incoming packets ready to be obtained
+             BC = Size of the oldest incoming packet
+             HL = Bytes 12 (H) and 13 (L) of the oldest incoming packet
+                  (length or Ether-Type)
+
+      This routine checks if there are captured incoming packets in the
+      RTL8019AS internal buffer.  If there is at least one, it returns
+      A=1, and in HL and BC it returns information about the oldest
+      packet, which is the one that will be obtained if GET_PACKET is
+      executed.
+
+      BC returns the total size of the packet (including the Ethernet
+      header), while HL returns bytes 12 and 13 of the packet; this
+      allows to distinguish the type of frame used by the packet,
+      Ethernet 2 o IEEE802.3, before obtaining it (see (see Appendix A)
+      for details about the Ethernet frame types).
+
+      The size of the buffer used to capture packets is 8K.  If it
+      overflows, no new packets will be captured, so it is convenient to
+      get the captured packets (with GET_PACKET) regularly.
+
+   * GET_PACKET (#7FB5): Obtains the oldest captured incoming packet
+     Input:  HL = Address where to put the packet
+                  (0 to discard it)
+     Output: A  = 0 if a packet has been obtained (or discarded)
+                  1 if there were no captured packets
+             BC = Size of the obtained packet
+
+      This routine copies to the address passed in HL the oldest
+      captured incoming packet, then erases the packet from the
+      RTL8019AS reception buffer.  The passed address cannot be a page 1
+      address (#4000-#7FFF).
+
+      If HL=0 is specified, the packet is discarded: it is erased from
+      the buffer but it is not copied to memory.
+
+      To know in advance whether there are availavle packets before
+      trying to obtain them, the GET_INSTAT routine can be used.
+
+   * SEND_PACKET (#7FB2): Sends a packet to the network
+     Input:  HL = Address of the packet to be sent
+             BC = Length of the packet to be sent (14 to 1514 bytes)
+             A  = 0: Synchronous execution
+                     (wait until the transmission finishes)
+                  1: Asynchronous execution
+                     (exit immediately after
+                      initiating the transmission)
+     Output: In synchronous execution:
+             A = 0: Packet successfully sent
+                 1: Invalid packet length
+                 3: Transmission aborted due to carrier loss
+                 4: Transmission aborted due to excessive collisions
+             In asynchronous execution:
+             A = 0: The packet transmission has started
+                 1: Invalid packet length
+
+      This routine sends (or starts sending) the packet stored in the
+      address passed in HL.  This address cannot be a page 1 address
+      (#4000-#7FFF).
+
+      The total packet size, including the Ethernet header, must be
+      passed in BC, and must be a value between 14 and 1514.  If a value
+      smaller than 64 is passed, then actually 64 bytes will be sent to
+      the wire: the packet, followed by random data.
+
+      If synchronous execution is selected, the routine will wait until
+      the packet transmission finishes (or fails), then it will return
+      the appropriate termination code in A.  Otherwise (if asynchronous
+      execution is selected), the routine will order the RTL8019AS to
+      start the packet transmission, then it will return immediately; to
+      know the transmission status (in progress, successfully finished,
+      or failed) the SEND_STATUS routine must be used.
+
+      Note that if there is already a transmission in progress when
+      SEND_PACKET is executed, the routine will wait until that
+      transmission finishes before starting the new one.  This happens
+      always, regardless of whether synchronous or asynchronous
+      transmission is requested.
+
+   * SEND_STATUS (#7FAF): Obtains the status of the packet transmission
+     Input:  -
+     Output: A = 0: No packets have been sent
+                    since the last execution of RTL_RESET
+                 1: Transmission in progress
+                 2: The packet has been successfully sent
+                 3: Transmission aborted due to carrier loss
+                 4: Transmission aborted due to excessive collisions
+     Preserves C, DE, HL
+
+      This routine returns the state of the last packet transmission
+      performed with the SEND_PACKET routine.  The returned state is
+      always valid, regardless of whether synchronous or asynchronous
+      transmission was requested; for example, if a synchronous
+      execution of SEND_PACKET returned A=0, then this routine will
+      return A=2.
+
+      The obtained information will not be erased: successive executions
+      of this routine will always return the same value until
+      SEND_PACKET (or RTL_RESET) is executed again.
+
+
+4.3  Integration of BIOS with other programs in ROM
+
+   The ObsoNET BIOS has a size of only 2K (in the current version),
+   and the remaining of the ROM (which has a total size of 512K) may be
+   used to store other programs (for example, the adapted MSX-DOS 2 that
+   is supplied with ObsoNET).  In this section we explain how to
+   integrate the ObsoNET BIOS with other programs that are burned on the
+   ObsoNET Flash ROM.
+
+   The ObsoNET BIOS is distributed in three files:
+
+   o  BIOS.ROM (16K): The BIOS plus padding blank space and a ROM
+      header, ready to be burned in the Flash ROM with ONETFRL.COM.
+
+   o  BIOSDOS2.ROM (64K): The BIOS plus an adapted version of MSX-DOS 2,
+      also ready to be burned in the Flash ROM with ONETFRL.COM.  This
+      is the ROM that ObsoNET has burned as "factory settings".
+
+   o  BIOS.DAT (2048 bytes): The BIOS alone.
+
+   The last of these files, BIOS.DAT, is the one interisting for
+   integration purposes.  Integration consists simply on including the
+   contents of BIOS.DAT in the .ROM file that contains the code to be
+   burned, with the following conditions must applying:
+
+   1.  The contents of BIOS.DAT must appear in the position #3800 of the
+       .ROM file to be burned (assuming that the first position is 0).
+       That is, once the ROM is burned, the BIOS must be visible at
+       address #7800 of the ObsoNET slot when ROM page 0 is selected.
+
+   2.  The ROM initialization code must perform a call to address #7800.
+       If the ROM has no initialization code, the value #7800 must
+       appear on the INIT position of the ROM header (position 2 of the
+       file, address #4002 of the slot).
+
+   For example, assume that a program smaller than 14K in size is to
+   be burned together with the BIOS.  Then the following should be done:
+
+   1.  Generate the file PROGRAM.DAT, containing the program plus
+       padding up to a size of 14K (14336 bytes).  The program code
+       should have this structure:
+
+           org     #4000
+
+           db      #41,#42 ;ROM header
+           dw      INIT
+           ds      12      ;Or pointers to CALL commands, etc
+
+   INIT:   call    #7800   ;Mandatory
+           ...  (program's own initialization code)
+           ret
+
+           ...  (remaining of the programa)
+
+   CODE_END:
+           ds      #7800-CODE_END  ;Padding up to 14K
+
+        Or alternatively, if the program has no own initialization code:
+
+           org     #4000
+
+           db      #41,#42 ;ROM header
+           dw      #7800
+           ds      12      ;Or pointers to CALL commands, etc
+
+           ...  (program)
+
+   CODE_END:
+           ds      #7800-CODE_END  ;Padding up to 14K
+
+   2.  Concatenate PROGRAM.DAT with BIOS.DAT to generate the ROM file to
+       be burned; for example, from the DOS 2 command interpreter:
+
+       CONCAT /B PROGRAM.DAT BIOS.DAT PROGRAM.ROM
+
+       The resulting file PROGRAM.ROM, 16K long, is ready for being
+       burned in the ObsoNET ROM with the utility ONETFRL.COM.
+
+   If the program to be burned is bigger than 14K, another file,
+   PROGRAM2.DAT, containing the code and/or the data to be visible
+   starting at ROM page 1, must be generated.  The size of this file can
+   be up to 496K, and this time, to generate the definitive ROM file the
+   command is:
+
+   CONCAT /B PROGRAM.DAT BIOS.DAT PROGRAM2.DAT PROGRAM.ROM
+
+
+4.4  Use of BIOS by resident programs
+
+   The ObsoNET BIOS routines have not been designed to be re-entrance
+   safe.  That is, if when a BIOS routine is being executed an interrupt
+   happens, resulting in the execution of code that in turn executes the
+   same (or other) BIOS routine, then the behavior of the routines (and
+   therefore the behavior of ObsoNET itself) will probably be incorrect.
+   An example of a program that uses the ObsoNET BIOS from code
+   associated to the timer interrupt is InterNestor Lite.
+
+   Therefore, when developping normal programs (not attached to an
+   interrupt) that make use of the ObsoNET BIOS, there are two
+   workarounds for this limitation:
+
+   1.  Warn in the program's documentation that for its correct
+       execution no resident programs making use of the ObsoNET BIOS can
+       be installed.
+
+   2.  In the case of InterNestor Lite, it is not necessary to uninstall
+       it: if it is paused (with INL P), its timer interrupt associated
+       code will not be executed (it is also possible to pause
+       InterNestor Lite from code, see the manual of this program for
+       more details).
+
+   3.  Disable interrupts (DI) before each call to a ObsoNET BIOS
+       routine, and if necessary enable them (EI) again after the call.
+
+   About the resident programs that execute ObsoNET BIOS routines from
+   code triggered by an interrupt, they should warn about this
+   circumstance as well in its documentation.
+
+
+4.5   Notes on BIOS version 1.1. Ethernet UNAPI compatibility.
+
+   Starting at version 1.1, ObsoNET BIOS is compatible with the Ethernet
+   UNAPI specification.  The UNAPI implementation name is "ObsoNET"
+   (without the quotes), and there are no implementation specific
+   routines.
+
+   The ETH_GET_NETSTAT routine invokes GET_NETSTAT, which sends a test
+   packet to check the network connection state, so it should not be
+   called too oftern.  The ETH_GET_FRAME and ETH_SEND_FRAME routines
+   invoke GET_PACKET and SEND_PACKET, respectively; they don't accept a
+   page 1 address (#4000-#7FFF) as the source or destination for frames.
+
+   Please note that the size of BIOS.DAT has changed from 1536 bytes on
+   version 1.0 to 2048 bytes on version 1.1.  Also, the file position
+   for BIOS.DAT with integrating it in another ROM program has changed
+   from #3A00 to #3800; and the initialization address to be called has
+   changed from #7A00 to #7800.  See Section 4.3.
+
+   The Ethernet UNAPI specification is available at
+   http://www.konamiman.com.
+
+
+Appendix A.  Ethernet frame formats
+
+   In this appendix the Ethernet frame formats are described.  This
+   information is provided for reference only, and it is not exhaustive.
+   More detailed information can be found on Internet.
+
+   There are two types of Ethernet frame: Ethernet II, and IEEE802.3
+   with SNAP extension (IEEE in short).
+
+   The Ethernet II frame format is as follows (one line is 32 bits):
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                 Ethernet address of receiver                  |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |  E. Add. of receiver (cont.)  |       E. Add. of sender       |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |            Ethernet address of sender (continues)             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |          Ether-Type           |                               |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               |
+      .                                                               .
+      .                    Ethernet packet data                       .
+      .                                                               .
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   The IEEE frame format is as follows:
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                 Ethernet address of receiver                  |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |  E. Add. of receiver (cont.)  |       E. Add. of sender       |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |            Ethernet address of sender (continues)             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |         Frame length          |      170      |      170      |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |       3       |       0       |       0       |       0       |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |          Ether-Type           |                               |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               |
+      .                                                               .
+      .                    Ethernet packet data                       .
+      .                                                               .
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+   The Ethernet addresses, six bytes long, are unique for each card and
+   are assigned in the factory.  The address composed by all ones (six
+   #FF bytes) is special: it is the broadcast address, and when it
+   appears on the destination address field, it indicates that the
+   packet is addressed to all the machines on the network, rather than
+   to a given machine only.
+
+   Normal Ethernet addresses have the lowest bit of the first byte set
+   to zero.  When it is one, it is a multicast address (the packet is
+   addressed to a group of computers).
+
+   The minimum size of an Ethernet frame (including all the headers) is
+   64 bytes.  The maximum size is 1514 bytes.
+
+   The "Frame length" of IEEE frames counts from the first byte with
+   value 170.  That is, it equals the packet data part plus eight.
+
+   The "Ether-Type" field indicates the type of the packet being
+   transported on the packet data part.  The two most commonly used
+   types are:
+
+      #0800: IP datagram
+      #0806: ARP packet
+
+   Both frame types, Ethernet II and IEEE, can exist mixed in the same
+   network.  To know whether an incoming frame is Ehternet II type or
+   IEEE type, the 16 byte number placed at positions 12 and 13 of the
+   frame must be checked:
+
+   o  If the number is less than or equal to 1500, it is an IEEE frame
+      (the number is the frame length).
+
+   o  If the number is greater than 1500, it is an IEEE frame (the
+      number is the frame Ether-Type).  All the Ether-Type codes are
+      greater than 1500.
+
+   When sending packets, they must be sent in Ethernet II type frames
+   unless we know for sure that the machines on the network work
+   exclusively with the IEEE format.
+
+   Note that the frame length and Ether-Type fields are stored in
+   Big-Endian format, that is with the high byte first; contrarywise to
+   MSX, that stores the 16 bit numbers in Little-Endian format, with the
+   low byte first.  Therefore, to obtain the Ether-Type/frame length in
+   HL we can't do the following:
+
+           ld      hl,(PACKET+12) ;WRONG !!!
+
+   Instead we should do:
+
+           ld      a,(PACKET+12)
+           ld      h,a
+           ld      a,(PACKET+13)
+           ld      l,a
+
+   Or alternatively:
+
+           ld      hl,(PACKET+12)
+           ld      a,h
+           ld      h,l
+           ld      l,a
+
+   Or alternatively:
+
+           ld      ix,PACKET
+           ld      h,(ix+12)
+           ld      l,(ix+13)
+
+
+Appendix B.  Code for ObsoNET detection
+
+   In this appendix, a routine that scans all the slos on the system in
+   search for an ObsoNET card is presented.
+
+   The routine consists mainly of thee subroutines:
+
+   o  NEXTSLOT returns, every time it is called, the next slot number
+      available on the system.
+
+   o  CHKOBSO checks if there is an ObsoNET plugged on the slot
+      connected on page 1, by using the registers test described in
+      section 3.4.
+
+   o  CHKBIOS checks if the ObsoNET plugged on the slot connected on
+      page 1 has BIOS.
+
+
+   	;SRCHOBSO - ObsoNET searching routine - by Nestor Soriano
+   	;ObsoNET (c) 2004
+   	;by Daniel Berdugo (hardware) and Nestor Soriano (software)
+   	;
+   	;Input:   -
+   	;Output:  A  = ObsoNET slot (#FF if not found)
+   	;         Cy = 1 if the ObsoNET has BIOS
+   	;         ObsoNET slot connected on page 1
+   	;         (if not found, last available slot connected
+   	;          on page 1)
+
+   ENASLT:
+   	equ     #0024
+
+   SRCHOBSO:
+   	ld      a,#FF        ;Initializes the NEXTSLOT routine
+   	ld      (NEXTSL),a
+
+   SRCHLOOP:
+   	call	NEXTSLOT	;Obtains the next available slot...
+   	cp	#FF	;(if no more slots are availabe, terminates)
+   	ret	z
+
+   	push	af
+   	ld	h,#40	;...and conects it.
+   	call	ENASLT
+   	pop	af
+
+   	ld	c,a
+   	call	CHKOBNET	;Checks if there is an ObsoNET...
+
+   	jr	nc,SRCHLOOP	;...if not, go to the next slot.
+
+   	call	CHKBIOS	;Checks if it has BIOS and terminates.
+   	ld	a,c
+   	ret
+
+
+   ;--- Checks the presence of an ObsoNET on page 1.
+   ;    Input:    -
+   ;    Output:   Cy = 1 if there is an ObsoNET on page 1, 0 if not
+   ;    Modifies: AF, B
+
+   CHKOBNET:
+   	ld	a,(#7FE0)       ;Save value to restore it
+   	ld	b,a             ;if there is no ObsoNET
+
+   	xor     a       	;Switches registers bank 0
+   	ld	(#7FE0),a
+
+   	ld	a,(#7FEA)	;Reads registers 10 and 11 (8019ID0/1),
+   	cp	#50	        ;they must return #50 and #70 respectively
+   	jr	nz,NO_OBNET
+   	ld	a,(#7FEB)
+   	cp	#70
+   	jr	nz,NO_OBNET
+
+   	ld	a,#80   	;Switches registers bank 0
+   	ld	(#7FE0),a
+
+   	ld	a,(#7FEA)	;Reads registers 10 and 11 (unused,
+   	cp	#50	        ;they must NOT return #50 and #70)
+   	scf
+   	ret     nz
+   	ld	a,(#7FEB)
+   	cp	#70
+   	scf
+   	ret	nz
+
+   NO_OBNET:
+   	ld	a,b             ;No ObsoNET found: restores contents
+   	ld	(#7FE0),a	;of #7FE0 in case it is RAM
+   	or	a
+   	ret
+
+
+   ;--- Checks if there is BIOS in the ObsoNET of page 1.
+   ;    Input:    -
+   ;    Output:   Cy = 1 if there is BIOS, 0 if not
+   ;    Modifies: AF, HL, DE
+
+   CHKBIOS:
+           ld      a,#C0           ;Connects ROM page 0
+           ld      (#7FE0),a
+           xor     a
+           ld      (#7FE2),a
+
+           ld      hl,#7FD0
+           ld      de,OBSTRING
+
+   CHKBLOOP:       ;Strings comparison loop
+           ld      a,(de)
+           cp      (hl)
+           scf
+           ccf
+           ret     nz
+
+           or      a
+           scf
+           ret     z
+
+           inc     hl
+           inc     de
+           jr      CHKBLOOP
+
+   OBSTRING:
+           db      "ObsoNET",0
+
+
+   ;--- NEXTSLOT:
+   ;    Returns in A the next slot available on the system every time it is called.
+   ;    When no more slots are available it returns #FF.
+   ;    To initialize it, #FF must be written in NEXTSL.
+   ;    Modifies: AF, BC, HL
+
+   EXPTBL:
+   	equ	#FCC1
+
+   NEXTSLOT:
+   	ld	a,(NEXTSL)
+   	cp	#FF
+   	jr	nz,NXTSL1
+   	ld	a,(EXPTBL)      ;First slot
+   	and	%10000000
+   	ld	(NEXTSL),a
+   	ret
+
+   NXTSL1:
+   	ld	a,(NEXTSL)
+   	cp	%10001111
+   	jr	z,NOMORESL      ;No more slots?
+   	cp	%00000011
+   	jr	z,NOMORESL
+   	bit	7,a
+   	jr	nz,SLTEXP
+
+   SLTSIMP:
+   	and	%00000011       ;Simple slot
+   	inc	a
+   	ld	c,a
+   	ld	b,0
+   	ld	hl,EXPTBL
+   	add	hl,bc
+   	ld	a,(hl)
+   	and	%10000000
+   	or	c
+   	ld	(NEXTSL),a
+   	ret
+
+   SLTEXP:
+   	ld	c,a              ;Expanded slot
+   	and	%00001100
+   	cp	%00001100
+   	ld	a,c
+   	jr	z,SLTSIMP
+   	add	%00000100
+   	ld	(NEXTSL),a
+   	ret
+
+   NOMORESLT:
+   	ld	a,#FF
+   	ret
+
+   NEXTSL:
+   	db	#FF             ;Last returned slot
+
+
+Appendix C.  References
+
+   In this appendix, some interisting Internet addresses are shown.
+
+   * Konamiman's page: http://www.konamiman.com
+
+   This page contains information about ObsoNET, as well as the latest
+   versions of the BIOS and of the associated software (including
+   InterNestor Lite for Ethernet) available for download.
+
+   * Realtek page: http://www.realtek.co.tw
+
+   Page of the makers of the Ethernet controller RTL8019AS, core of the
+   ObsoNET card.
+
+   * The RFC Editor: http://www.rfc-editor.org
+
+   This page contains all the existing RFC (Request for Comments).  RFCs
+   are documents that describe and specify, amongst other things, the
+   protocols used by Internet applications (TCP/IP protocols and the
+   protocols based on these: Telnet, FTP, SMTP, POP3, HTTP, IRC...)
+
+   * The MSX Resource Center: http://www.msx.org
+
+   Page with MSX related news and resources.  If someone develops an
+   application to be used with ObsoNET and/or with InterNestor Lite,
+   this will probably be announced here.  :-)
+
+
+Author's Address
+
+   Nestor Soriano Vilchez
+
+   EMail: konamiman@konamiman.com
+   URI:   http://www.konamiman.com

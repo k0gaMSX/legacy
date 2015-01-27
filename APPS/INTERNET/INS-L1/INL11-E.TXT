@@ -1,0 +1,4068 @@
+InterNestor Lite 1.1.1
+Copyright (c) 2003-2007 by Konamiman
+------------------------------------
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 3 of the License, or (at your option) any later
+version. See http://www.gnu.org/licenses/
+
+ObsoNET Copyright (c) 2004
+by Daniel Berdugo (hardware) and Nestor Soriano (software)
+
+
+1. INTRODUCTION
+
+1.1. WHAT IS INTERNESTOR LITE?
+
+InterNestor Lite (INL) is a TCP/IP stack for MSX2 computers with 128K RAM.
+There are two versions: INL for serial port, and INL for Ethernet.
+
+INL for serial (RS232) port allows Internet connection via ISP using a modem,
+as well as direct connection to another computer using a null-modem cable.
+This version uses PPP as the link layer protocol, and requires the Fossil
+driver (developed by Erik Mass) to be installed in order to work.
+
+INL for Ethernet allows communication with other machines in an Ethernet
+network, as well as Internet connection by means of an ADSL or cable router.
+An Ethernet UNAPI implementation is required by this version.
+
+Both the serial version and the Ethernet version are compatible at the IP
+level, so network applications usually do not need to know which version is
+running. However there is some low level functionality that differs between
+versions (for example the serial version handles modem commands and PPP
+connections, while the Ethernet version deals with the ARP and DHCP
+protocols). There is a function that informs about which version is running,
+in case it is needed by applications (see section 3.1.3).
+
+This manual is divided in three parts: Introduction, where the general
+features of INL are enumerated; User's Guide, where it is explained how to
+install and configure INL, as well as the usage options of the included
+applications; and Programmer's Guide, useful for those who want to develop
+applications with Internet access using INL.
+
+(Note for ObsoNET users: INL for Ethernet replaces INL for ObsoNET cards,
+providing the same level of functionality; INL for ObsoNET is now
+discontinued. ObsoNET BIOS is compatible with the Ethernet UNAPI starting at
+version 1.1, so with the appropriate BIOS upgrade, ObsoNET users can use INL
+for Ethernet.)
+
+
+1.2. OVERVIEW OF INTERNESTOR LITE ARCHITECTURE
+
+INL is a resident program: once installed, it works as a background task,
+coupled to the timer interrupt hook. Other programs may use the routines and
+variables exposed by INL in a similar way of how they use the BIOS routines
+and DOS functions, gaining then Internet access or local point-to-point/
+network access.
+
+For the serial version, Internet access is obtained by means of a standard
+modem and an account subscribed with any Internet Service Provider (ISP). For
+this reason, besides of the TCP/IP protocols it supports the PPP protocol,
+which is the link layer protocol used to establish connections with ISPs; and
+of course, INL can also send commands to the modem to dial the ISP's phone
+number.
+
+On the other hand, the serial version of INL may also be used to perform a
+direct point-to-point connection with another computer. A null-modem cable is
+required for this, and the other computer must also support PPP and TCP/IP
+(for example another MSX running INL, or a PC running Linux). In this case, a
+little of additional work is required before establishing the connection,
+since the IP addresses must be configured manually (when connecting via ISP,
+these addresses are obtained automatically).
+
+As for the Ethernet version, Internet access os obtained by means of an ADSL
+or cable router; connection to an Ethernet local network is also possible.
+The DHCP protocol is supported for obtaining the IP address and other
+parameters; of course, manual configuration is also possible, for connections
+to simple networks.
+
+The serial version uses the Fossil driver developed by Erik Maas for low
+level access to the serial port. The Ethernet version needs an Ethernet UNAPI
+implementation to be present for low level network access.
+
+INL consists of one single file, INL.COM, which allows installing/
+uninstalling INL (the resident code itself is also embedded into INL.COM),
+opening/closing PPP connections (serial version only), managing the ARP and
+routing tables (Ethernet version only), setting/obtaining various INL
+configuration parameters, obtain the state of the TCP connections, and
+resolving host names.
+
+INL installs itself in two RAM segments located always at the primary mapper:
+one for code and another one for data buffers and variables; also, it
+allocates a 256 bytes area in TPA. All of this is detailed in the
+Programmer's Guide.
+
+
+1.3. FEATURES AND LIMITATIONS
+
+INL has been designed to be fast and to use few memory. For this reason, it
+has some limitations:
+
+* General
+
+- ICMP is not supported, except for "Destination unreachable" messages and echo
+messages(PINGs). The size of these messages may be choosen, but not its
+contents. On the other hand, the size of the replies received may be obtained,
+but not its contents.
+- Raw datagram sending and capturing is supported, but only one raw datagram
+can be captured at the same time.
+- Serial version: the maximum transmission rate is 9600 bauds for Z80, and
+19200 bauds for R800.
+- Serial version: the implementation of the PPP protocol is a simplified
+version of the complete specification; it should work well in normal
+circumstances. For example, a simplified automaton of only five states is
+used (closed, LCP negotiation, authentication, IPCP negotiation and opened).
+- Serial version: although the PPP standard states that incoming data packets
+up to 1500 bytes long must be accepted until a smaller size is negotiated,
+INL will always discard all the incoming packets that are larger than 582
+bytes.
+- Ethernet version: the ARP table is limited to 32 entries, and the routing
+table is limited to 16 entries.
+
+* IP
+
+- The maximum datagram size supported is 576 bytes.
+- IP fragmentation is not supported, nor it is the reassembly of incoming
+fragmented datagrams; received datagram fragments are aways ignored (except
+when sending and receiving raw datagrams).
+- It is not possible to include IP options in the outgoing datagrams; besides,
+the IP options of the received datagrams are always ignored (except when
+sending and receiving raw datagrams).
+- The loopback address (127.x.x.x) is not supported and INL cannot send
+datagrams to itself.
+
+* UDP
+
+- INL may hold up to eight incoming UDP packets of up to 556 bytes each. These
+packets must be consumed by an application in a reasonable time; new packets
+arriving when there are already eight pending packets stored will be lost. The
+same applies for the ICMP echo reply messages.
+
+* TCP
+
+- Only four TCP connections can be opened simultaneously.
+- Each TCP connection has assigned a fixed-length buffer of 1024 bytes for
+outgoing data, and another buffer of the same size for incoming data.
+- The TIME-WAIT state does not exist. Connections enter directly the closed
+state when they should enter the TIME-WAIT state.
+- Only the TCP option MSS is recognized (but INL will send segments larger
+than 448 bytes). On connection initiation, a MSS=448 option is always sent.
+- It is not possible to send urgent data. Besides, the URG flag and the urgent
+data pointer of the received datagrams are always ignored.
+- It is possible to send data to a TCP connection only when it is in the
+ESTABLISHED state or in the CLOSE-WAIT state.
+- It is not possible to convert a passive connection into an active connection
+(neither by reopening it as active, nor by sending data to it).
+- The initial sending sequence number for new connections is always zero.
+- Only one data segment is sent at a time. That is, once a segment is sent, no
+more segments are sent (except retransmissions) until the acknowledgment for
+the sent segment is received, regardless of the transmission window.
+- The retransmission timeout is fixed to three seconds. The zero window
+probing interval is fixed to 10 seconds.
+- A simplified approach to the "SWS Avoidance" algorithm is used: the receive
+window announced is equal to the free space on the receive buffer, with the
+seven low order bits set to zero. That is, the announced receive window
+increases and decreases in steps of 128 bits. When the free space is smaller
+than 128 bytes, the real value is announced.
+- A simplified approach to the Nagle algorithm is used. If the outgoing data
+has the PUSH bit set, data is sent immediately. Otherwise, it is sent when
+enough bytes are available to send a maximum sized segment or when 0.5 seconds
+elapses since the older outgoing data was enqueued, whatever happens first.
+- The Slow Start/Congestion Avoidance algorithms have not been implemented,
+but an ACK segment is sent immediately when out-of-order segments are
+received, so if the peer's TCP module implements these algorithms, it will
+work correclty when interacting with INL.
+- The TCP Delayed ACK algorithm is implemented an ACK segment is sent when at
+least 256 bytes of new data have been received, or when 0.1 seconds elapses
+since the older unacknowledged new data arrived, whatever happens first.
+
+* DNS
+
+- Only translations from host names to IP addresses are possible.
+- Only one query can be performed at the same time.
+- When a query returns a list of servers instead of a reply (non recursive
+queries), only the first of them is queried, and if no reply is obtained then
+the query is considered to have failed.
+- Only UDP is used. Fallback to TCP when a truncated datagram is received is
+not supported.
+
+
+2. INTERNESTOR LITE - USER'S GUIDE
+
+2.1. REQUIREMENTS
+
+INL requires the following machine configuration to work:
+
+- MSX2, 2+ or Turbo-R computer.
+- MSX-DOS 1 and MSX-DOS 2 are supported (DOS 2 is recommended).
+- 128K of mapped RAM in the primary mapper. When using DOS 2, 256K are
+recommended, and there must be two free segments.
+- For the serial version: RS-232 interface, or ACCNET or any other hardware
+recognized by the Fossil driver. Also, modem and Internet access account
+subscribed with any ISP, or null-modem cable for direct connection to another
+computer.
+- For the Ethernet version: an Ethernet UNAPI implementation installed
+(usually provided by Ethernet hardware, for example the ObsoNET card). Also,
+connection to an Ethernet network, or Internet connection via ADSL or cable
+router.
+
+INL will work on computers with 128K RAM under DOS 2 only if other programs
+have not allocated any RAM segment. This implies that with such configuration
+it is not possible to use COMMAND 2.4x, to create RAM disk nor to install
+other resident programs.
+
+INL will not work on MSX Tubo-R with external memory mapper under DOS 1. If
+you have such configuration, to run INL you must either boot in DOS 2 mode
+(recommended) or to remove the external memory expansion.
+
+
+2.2. INCLUIDED FILES
+
+The current INL distribution consists of the following files:
+
+- INL-SER.COM: INL installation, configuration and control program (serial
+version).
+
+- INL-ETH.COM: INL installation, configuration and control program (Ethernet
+version).
+
+- DRIVER.COM: Fossil driver for RS-232 port access, it must be installed
+prior to installing INL (for the serial version only).
+
+- INL11-S.TXT: INL User's and Programmer's guide, in spanish.
+
+- INL11-E.TXT: INL User's and Programmer's guide, in english.
+
+- PING.COM: Simple PING client.
+
+- TFTP.COM: TFTP client and server.
+
+- TCPCON.COM: TCP console (simplified Telnet client).
+
+- TELNET.COM: Telnet client.
+
+- PING-S.ASC: PING.COM source code, with comments in spanish.
+
+- PING-E.ASC: PING.COM source code, with comments in english.
+
+- TFTP-S.ASC: TFTP.COM source code, with comments in spanish.
+
+- TFTP-E.ASC: TFTP.COM source code, with comments in english.
+
+- TCPCON-S.ASC: TCPCON.COM source code, with comments in spanish.
+
+- TCPCON-E.ASC: TCPCON.COM source code, with comments in english.
+
+NOTE: In this document, the INL control program is referred generically as
+INL.COM. Actually, you must use either INL-SER.COM or INL-ETH.COM. You can
+rename the one you will use to INL.COM for convenience.
+
+
+2.3. QUICK START GUIDE
+
+In this section, the steps needed to install INL and leave it ready to use
+network applications are briefly explained. The usage options of INL.COM are
+fully explained in section 2.4.
+
+NOTE: Successive installations and uninstallations of INL may cause the "Not
+enough memory" error to appear when trying to execute any program. When this
+happens, it is enough to go to BASIC (BASIC command) and to return to DOS
+(CALL SYSTEM command) to solve the problem.
+
+
+2.3.1. SERIAL VERSION
+
+1) Install the Fossil driver, by simply executing DRIVER.COM; return to DOS
+with CALL SYSTEM
+
+2) Install INL by executing: INL I
+
+3) To open a connection to Internet, excute:
+
+INL PPP O /N:<number> /U:<user> /P:<password> /I
+
+where <number> is the ISP phone number, and <user> and <password> are the
+account data as provided to you by your ISP.
+
+Note: this step assumes that you are connecting to Internet via ISP using a
+modem. For direct null-modem cable connection, you do not need the /N
+parameter, and probably, you don't need the /U and /P parameters either.
+
+4) Once connected you can use programs that make use of INL to gain Internet
+access, for example PING.COM, TFTP.COM and TCPCON.COM, supplied with this
+distribution of INL.
+
+5) To close the Internet connection, execute:
+
+INL PPP C
+
+You can connect again at any time as explained in step 3.
+
+6) To uninstall INL, execute:
+
+INL U
+
+You can install INL again at any time as explained in step 2.
+
+
+2.3.2. ETHERNET VERSION
+
+1) Create, with any text editor, a configuration file named INL.CFG, and save
+it in the same directory as INL.COM.
+
+If using DHCP for configuration (which is the most common case when using an
+ADSL or cable router), the contents of the file must be simply this line:
+
+ip d 63
+
+In case of manual configuration, the contents of the file must be as follows:
+
+ip l <IP address of MSX>
+ip m <subnet mask>
+ip g <default gateway>
+ip p <primary DNS server>
+ip s <secondary DNS server>
+
+An example of manual configuration file:
+
+ip l 192.168.0.2
+ip m 255.255.255.0
+ip g 192.168.0.1
+ip p 10.20.30.40
+ip s 50.60.70.80
+
+Note: under DOS 2, environment items can be used as an alternative to the
+configuration file. See the INL I command description in section 2.4 for more
+details.
+
+2) If necessary, install the Ethernet UNAPI implementation (usually, you will
+use Ethernet hardware card with the API implementation in ROM, so you do not
+need to install anything).
+
+3) Install INL by executing: INL I.
+
+4) Check that the network is active and that the configuration is correct by
+executing INL S. When using DHCP, the network will be operational when the
+automaton reaches the "BOUND" state.
+
+5) Now you can use programs that make use of INL to gain Internet access or to
+communicate with other computers on the network, for example PING.COM,
+TFTP.COM and TCPCON.COM, supplied with this distribution of INL.
+
+6) To uninstall INL, execute: INL U. You can install INL again at any time by
+returning to step 3.
+
+
+2.4. INTERNESTOR LITE CONTROL PROGRAM
+
+INL.COM is the unified control program of InterNestor Lite. Using this program
+you can install/uninstall INL, check the Internet/network connection, manage
+the ARP and routing tables, and read/modify various INL parameters. The
+following is a summary of all the INL.COM usage options, they are explained
+with detail in section 2.4.1.
+
+- General options:
+
+inl i [/s:<segment>] [<commands>]  -  Installs INL
+inl u [<commands>]  -  Uninstalls INL
+inl p  -  Pauses INL
+inl r  -  Resumes INL execution
+inl s  -  Shows the PPP/network connection status and the IP addresses in use
+inl v  -  Shows the value of all the INL configuration variables
+inl d  -  Restores INL configuration to default values
+inl o <value>  -  Sets the INL checksums calculation vector
+inl f [<filename>]  -  Reads a configuration file
+
+- PPP connection and modem options (serial version only):
+
+inl ppp m <command>  -	Sends a command to the modem
+inl ppp b <baud code> - Sets the RS232 transmission rate
+inl ppp n [<number>]  -  Sets the ISP phone number
+inl ppp r <reply>  -  Sets the positive reply for the modem
+inl ppp u [<name>]  -  Sets the PPP user name
+inl ppp p [<password>]	-  Sets the PPP password
+inl ppp o [/n:[<number>]] [/u:[<user>]] [/p:[<password>]]
+	  [/r:<modem reply>] [/i]  -   Opens a PPP connection
+inl ppp c  -  Closes the PPP connection
+inl ppp e 0|1  -  Activates or deactivates the PPP echo sending
+inl ppp v 0|1  -  Activates or deactivates the negotiation of the
+		  Van Jacobson compression
+
+- IP protocol options:
+
+inl ip i  -  Initializes all IP addresses to 0.0.0.0
+inl ip l <IP add.>  -  Sets the local IP address
+inl ip r <IP add.>  -  Sets the remote IP address (serial version only)
+inl ip m <IP add.>  -  Sets the subnet mask (Ethernet version only)
+inl ip g <IP add.>  -  Sets the default gateway IP address
+                       (Ehernet version only)
+inl ip p <IP add.>  -  Sets the primary DNS server IP address
+inl ip s <IP add.>  -  Sets the secondary DNS server IP address
+inl ip n 0|1  -  Activates or deactivates the negotiation of the DNS servers
+                 (serial version only)
+inl ip e 0|1  -  Activates or deactivates the automatic reply for PINGs
+inl ip t <value>  -  Establishes the TTL for outgoing datagrams
+inl ip o <value>  -  Establishes the TOS for outgoing datagrams
+inl ip z <value>  -  Establishes the default size for outgoing PINGs
+inl ip d <value>  -  Establishes the DHCP configuration vector
+
+- Name resolution options
+
+inl dns r <host name>  -  Resolves a host name
+
+- TCP protocol options:
+
+inl tcp s [<connection>]  -  Shows the state of one single
+			     TCP connection or the state of all of them
+inl tcp c <connection>  -  Closes the specified connection
+inl tcp a <connection>  -  Aborts the specified connection
+
+- Ethernet layer options (Ehernet version only):
+
+inl eth h  -  Shows the Ethernet physical address
+inl eth f 0|1  -  Establishes the frame type to send,
+                  Ethernet II or IEEE802.3
+inl eth c 0|1  -  Activates o deactivates the automatic checking
+                  of the network connetion every ten seconds
+inl eth r  -  Resets the Ethernet hardware
+
+- ARP protocol options (Ehernet version only):
+
+inl arp t <valor>h|m|s  -
+              Establishes the lifetime of the dynamic ARP entries
+inl arp s  -  Show the contents of the ARP table
+inl arp c  -  Clears the whole ARP table
+inl arp a <IP add.> <physical add.>  -  Adds a static entry to the ARP table
+inl arp d <IP add.>  -  Erases an entry from the ARP table
+
+- Routing options (Ehernet version only):
+
+inl rou s  -  Show the contents of the routing table
+inl rou c  -  Clears the whole routing table
+inl rou a <net add.> <mask> <router add>  -
+              Adds an entry to the routing table
+inl rou d <net add.> <mask>  -  Erases an entry from the routing table
+
+
+2.4.1. GENERAL OPTIONS
+
+* InterNestor Lite installation
+
+inl i [/s:<segment>] [<commands>]
+
+Installs INL, leaving it ready for use. For the serial version, the Fossil
+driver must have been installed previously; for the Ethernet version, there
+must have an Ehternet UNAPI implementation installed in the system (usually,
+this is provided by Ethernet harwdare BIOS). If using DOS 2, two free
+segments are required in the primary mapper.
+
+The optional parameter /s means that INL should be installed in the segments
+with numbers <seg> and <seg>+1. If not specified, when using DOS 1 the last
+two segments of the primary mapper will be used, and when using DOS 2 two
+segments will be allocated, also in the primary mapper. This option should be
+used only in case of conflicts with other resident programs, and only in DOS 1.
+
+The optional parameter [<command>] is the DOS command to be executed after INL
+is installed. It only works on DOS 2. When using COMMAND 2.4x, you can specify
+more than one command; separate the commands with "&".
+
+In the serial version, the RS-232 transmission rate is established to 9600
+bauds when using MSX2/2+ or Turbo-R in Z80 mode; when using Turbo-R in R800
+mode, it is established to 19200 bauds. A Z80 supports up to 9600 bauds only,
+at higher speeds there is data loss.
+
+It is possible to automatize the INL configuration process at installation
+time, by using two mechanisms:
+
+1) Environment items (in DOS 2 only, and for the Ethernet version only).
+
+During the installation, the existence of some environment items associated to
+certain configuration parameters of INL will be checked. If these items are
+found, their values will be used to set up the parameters.
+
+The environment items recognized by INL and their associated parameters are:
+
+* INL_IP: IP address of MSX.
+* INL_MASK: Subnet mask.
+* INL_GW: Default gateway.
+* INL_DNS_P: Primary DNS server.
+* INL_DNS_S: Secondary DNS server.
+* INL_DHCP: DHCP configuration vector.
+
+For example, if the IP addresses are to be configured by using DHCP, the
+following line could be added to the AUTOEXEC.BAT file (or it could be
+executed manually before installing INL):
+
+SET INL_DHCP=63
+
+Or, for manual configuration:
+
+SET INL_IP=192.168.0.2
+SET INL_MASK=255.255.255.0
+etc.
+
+2) Configuration file.
+
+During the installation, the existence of a file named INL.CFG in the same
+directory as INL.COM will be checked, and if found, its contents will be used
+to configure INL exactly in the same way as the INL F command does. See the
+description of this command for more details.
+
+If both environment items and configuration file exist, both will apply. If
+they refer to the same parameter, the value indicated in the file is the one
+that applies.
+
+NOTE: For the Ethernet version, it is necessary to configure INL by any means,
+either automatically by using one of the two mechanisms explained, or
+manually after the installation. Otherwise, INL will remain with all the IP
+addresses equal to 0.0.0.0 and will  not work.
+
+
+* InterNestor Lite uninstallation
+
+inl u [<comamnd>]
+
+Uninstalls INL, freeing the segments that were allocated if DOS 2 was used.
+[<command>] works as in the installation case (INL I).
+
+NOTE: Successive installations and uninstallations of INL may cause the "Not
+enough memory" error to appear when trying to execute any program. When this
+happens, it is enough to go to BASIC (BASIC command) and to return to DOS
+(CALL SYSTEM command) to solve the problem.
+
+
+* Pause InterNestor Lite execution
+
+inl p
+
+This option decouples INL from the system's timer interrupt hook. What is
+achieved with this action is to pause INL, that is, its resident code is not
+executed 50/60 times per second so it does not perform any process. This may
+be useful when it is necessary to perform a long task (for example to copy
+some big files), since when INL is installed and active it slows down the
+computer.
+
+Note: on the Ethernet version, Ethernet hardware may continue capturing
+incoming packets while INL is paused, so its internal buffer may overflow
+and in this case no more packets will be captured.
+
+The normal execution of INL may be resumed with INL R, as it is explained next.
+
+
+* Resume InterNestor Lite execution
+
+inl r
+
+This option couples again INL to the system's timer interrupt hook, so it
+reverts to the normal execution mode that was previously interrupted when
+pausing INL with INL P. It does nothing if INL is already active.
+
+
+* Information about the PPP/network connection and the IP addresses
+
+inl s
+
+For the serial version:
+
+This option shows information about the current PPP connection status, the
+reason of the last connection close, and the IP addresses established (local,
+remote and the ones of the DNS servers). It also tells if INL is active or
+paused.
+
+The information about the IP addresses is shown even if there is no opened
+PPP connection currently. In this case, this information refers to the IP
+addresses that were used in the last connection, or to the IP addresses that
+the user has established for being used in the next connection. See the
+description of the IP protocol related options for more details.
+
+For the Ethernet version:
+
+This option shows the following information:
+
+- State of INL (active or paused).
+- State of the network connection (ON or OFF).
+- IP addresses in use (address of MSX, subnet mask, default gateway and DNS
+servers addresses).
+- DHCP automaton state (only if any parameter is configured by using DHCP).
+
+If the automatic checking of the network state every ten seconds is switched
+off, then the state is checked when this command is executed. Otherwise,
+simply the result of the last performed checking is shown. See the INL ETH C
+command.
+
+The DHCP automaton state will be one of the following (see RFC2131 for more
+details):
+
+- INIT: Initial state, the configuration process will start immediately.
+- SELECTING: DHCP servers are being searched in the net.
+- REQUESTING: A DHCP server has been found in the net, and an IP address and
+the desired configuration parameters are being requested to him.
+- BOUND: The DHCP server has assigned an IP address to us and has given to us
+the required parameters. This is the "stable" state of the automaton.
+- RENEWING: Part of the lease time of the IP address has passed, and an
+extension of the lease is being requested to the DHCP server.
+- REBINDING: The DHCP server is not replying to the requests made to him in
+the RENEWING state, so the requests are now sent to the broadcast address
+(thus an alternative server is being searched).
+
+Note that it is possible that the server denies the IP address lease extension
+and that it instead assigns a new address to us. If this happens, all the
+opened TCP connections will be closed.
+
+If the IP address is manually configured and we are only intereseted in
+obtaining other parameters by using DHCP, the automaton will only pass by
+these two states, besides of INIT:
+
+- INFORMING: Similar to SELECTING, but now we simply inform about our IP
+address and request the other parameters.
+- CONFIGURED: The requested parameters have been obtained. This state is
+similar to BOUND, but contrarywise to BOUND, this state is permanent.
+
+Note that the DHCP server may not permit us to manually configure our IP
+address, and thus it may not accept the requests made to him in the INFORMING
+state.
+
+See the description of the INL IP D command for more information about the
+configuration process when using DHCP.
+
+
+* Information about INL configuration variables
+
+inl v
+
+This option shows information about the variables that govern the global
+functionning of INL in which regard to the PPP connection/Ethernet layer and
+the IP protocol. These variables are listed in section 3.1.4; there is an
+option of INL.COM asociated to each variable that allows modifying it.
+
+
+* Restoring INL to its initial state
+
+inl d
+
+This option restores INL to its initial state, it is equivalent to
+uninstalling and reinstalling it. The actions it performs are:
+
+1) Resets the Ethernet hardware (Ethernet version only).
+
+2) Closes all the TCP connections and discards all the received UDP and ICMP
+packets. For the Ethernet version, empties the ARP and routing tables.
+
+3) Restores all the configuration parameters to their default values:
+
+Serial version:
+
+ISP phone number: Empty string
+Modem positive reply: CONNECT
+PPP user name: Empty string
+PPP password: Empty string
+Negotiate DNS servers IP addresses: Yes
+Periodically send PPP echo requests: Yes
+Negotiate the use of Van Jacobson compression: Yes
+
+Ethernet version:
+
+Send Ethernet frames with IEEE802.3 encapsulation: No
+Check the network connection state every ten seconds: Yes
+DHCP configuration vector: 0
+Dynamic ARP entries lifetime: 300 seconds (5 minutes)
+
+All versions:
+
+All the IP addresses: 0.0.0.0
+Automatically reply incoming PINGs (ICMP echo requests): Yes
+TTL for outgoing datagrams: 64
+TOS for outgoing datagrams: 0
+Default size for outgoing PINGs (data part): 64
+Checksums calculation vector: 31
+
+4) Reads and applies the environment item recognized during installation and
+the INL.CFG file, if they exist (see the INL I command for more details).
+
+Note for the serial version: do not use this function when there is an open
+connection, since all IP addresses will revert to 0.0.0.0 as well.
+
+
+* Establishing the checksums calculation vector
+
+inl o <vector>
+
+By modifying this value it is possible to force INL to accept as valid the
+incoming data packets without calculating one or more of the associated
+checksums. In this way some execution speed is gained, but there is the risk
+of accepting damaged packets as if they were correct. It may be useful when
+directly connecting two computers, since in this case the probability of
+receiving damaged packets is small.
+
+<vector> is a number in the range 0 to 30 that must be interpreted as a
+five bit vector. Each bit controls the calculation of a given checksum type:
+if it is one, the checksum is calculated for all the incoming packets; if it
+is zero, the checksum is not calculated, assuming that if it were calculated
+it would be valid.
+
+The <vector> bits are assigned as follows:
+
+Bit 0 (value 1): FCS of PPP frames (serial version only)
+Bit 1 (value 2): Checksum of IP datagrams header
+Bit 2 (value 4): Checksum of TCP segments
+Bit 3 (value 8): Checksum of UDP packets header
+Bit 4 (value 16): Checksum of ICMP messages
+
+For example, if you want only the TCP and UDP checksums to be calculated, use
+vector 4+8=12: INL O 12.
+
+Default value is 31, meaning that all checksums are calculated. Normally this
+is the value that should be used, unless you note speed problems in your
+computer.
+
+
+* Read a configuration file
+
+inl f [<filename>]
+
+This option allows executing multiple options with one single execution of
+INL.COM; the options to be executed are stored in a text file, whose path and
+name is passed as an argument. If no filename is specified, the file INL.CFG
+located at the same directory of INL.COM is used.
+
+The text file must contain the options to be executed, with the same syntax as
+if they were executed directly. For example, if you want to set the checksums
+calculation vector to 31, to disable the periodic network connection state
+checking (Ethernet version only), and to set the local IP address to 1.2.3.4,
+then the configuration  file contents should be as follows:
+
+o 31
+eth c 0
+ip l 1.2.3.4
+
+Blank lines and lines starting with a ";" or "#" character are ignored.
+
+It is not possible to nest configuration file reads (that is, you can't
+execute the "f" option from a configuration file). Also, you can't uninstall
+INL ("U" option) from a configuration file.
+
+
+2.4.2. MODEM AND PPP CONNECTION OPTIONS (SERIAL VERSION ONLY)
+
+* Send a command to the modem
+
+inl ppp m <command>
+
+This option sends the string <command> to the modem, waits the reply and
+shows it. It may be useful, for example, to silent the modem speaker before
+performing the connection (this is achieved with the command ATM0).
+
+
+* Establishing the RS-232 inteface transmission rate
+
+inl ppp b <bauds code>
+
+This option establishes the RS-232 interface transimission rate according to
+the specified <bauds code>:
+
+0 for 75 bauds
+1 for 300 bauds
+2 for 1200 bauds
+3 for 1200 bauds
+4 for 2400 bauds
+5 for 4800 bauds
+6 for 9600 bauds
+7 for 19200 bauds
+8 for 38400 bauds
+9 for 57600 bauds
+10 or 11 for 115200 bauds
+
+INL supports up to 19200 bauds for R800 and up to 9600 bauds for Z80, at
+higher speeds there is data loss. After INL installation the speed will have
+been established to the appropriate value according to the processor
+detected.
+
+
+* Establishing the ISP phone number
+
+inl ppp n [<number>]
+
+This option establishes the phone number that the modem will dial when
+opening a connection by executing INL PPP O. If <number> is an empty string,
+no dial will be performed, and the PPP connection will be attempted directly
+(assuming that at the other side there is another computer connected via null-
+modem cable).
+
+The maximum length for <number> is 15 characters. If a larger string is
+specified, only ther first 15 chracatres will be taken in account.
+
+
+* Establishing the positive modem reply
+
+inl ppp r <reply>
+
+This option establishes the starting part of the string that the modem will
+return after a sucessful dialing to the ISP while opening a connection with
+INL PPP O. INL.COM needs to know this string in order to decide whether to
+display an error, or to continue and attempt to open the PPP connection after
+the dialing process has finished, depending on the modem reply. In most
+modems this string is "CONNECT", and so this is the string that INL
+establishes by default.
+
+It is not necessary to specify the full reply, the first characters are
+enough. For example, modems normally reply with something like "CONNECT
+48000/V24BIS", but it is enough to specify "CONNECT".
+
+The maximum length for <reply> is 15 characters. If a larger string is
+specified, only ther first 15 characters will be taken in account. It is not
+possible to specify an empty string.
+
+
+* Establishing the PPP user name
+
+inl ppp u [<name>]
+
+This option establishes the PPP user name that will be used when a connection
+is opened by executing INL PPP O; in other words, the user name of the
+internet access account supplied by the ISP.
+
+If an empty string is specified, INL will abort the connection if
+authentication is required.
+
+The maximum length for <name> is 31 characters. If a larger string is
+specified, only ther first 31 characters will be taken in account.
+
+
+* Establishing the PPP password
+
+inl ppp p [<password>]
+
+This option establishes the PPP password that will be used when a connection
+is opened by executing INL PPP O; in other words, the password of the
+internet access account supplied by the ISP.
+
+The maximum length for <password> is 31 characters. If a larger string is
+specified, only ther first 31 characters will be taken in account.
+
+
+* Open a PPP connection
+
+inl ppp o [/n:[<number>]] [/u:[<user>]] [/p:[<password>]]
+	  [/r:<modem reply>] [/i]
+
+This option starts a PPP connection, either to Internet via ISP or to another
+machine using a null-modem cable.
+
+<number> is the ISP phone number that the modem will dial. If it is an empty
+string, no dial will be performed (that is, INL will assume that there is
+another computer at the other side, connected directly with a null-modem
+cable). The maximum length is 15 characters.
+
+<user> and <password> are the PPP authentication data that will be used (that
+is, the Internet account data supplied by the ISP). If <user> is not
+specified, INL.COM will abort the connection if authentication is required.
+The maximum length for both parameters is 31 characters.
+
+<modem reply> is the start of the string that the modem will return if a
+successful dialing to the ISP is achieved. In most modems this string is
+"CONNECT", which is the string that INL establishes by default, and it is not
+necessary to modify it. The maximum length is 15 characters.
+
+/I causes all the IP addresses (local, remote and the ones for the DNS
+servers) to be reset to 0.0.0.0, and the negotiation of the IP addresses of
+the DNS servers to be activated, all of this before initiating the
+connection. This is the most usual behavior, since usually we will connect
+via an ISP that will dinamically supply us all the IP addresses. However it
+is possible that we want to directly connect to other computer via null-modem
+cable and that we already know (or want to supply to the other computer) one
+or more of the IP addresses to use. In this case, we must first establish the
+desired addresses using any of the INL IP x commands, and then open the
+connection without specifying /I.
+
+If any of the parameters /N, /U, /P and/or /R is are not specified, then the
+value previously established with INL PPP N, INL PPP U, INL PPP P and/or INL
+PPP R, respectively, will be used. That is, the following execution sequences
+are equivalent:
+
+- Sequence 1:
+
+INL PPP N 12345
+INL PPP U kyoko
+INL PPP P jap0paya
+INL PPP O /R:OK
+
+- Sequence 2:
+
+INL PPP O /N:12345 /U:kyoko /P:jap0paya /R:OK
+
+Note that specifying a null value for a parameter is not the same that not
+specifying the parameter at all (/N alone means that no number will be
+dialed; not specifying /N means that the number previously specified with INL
+PPP N will be used).
+
+
+* Closing a PPP connection
+
+inl ppp c
+
+This option closes the Internet connection (or the connection to the other
+computer in case of direct connection); normally the modem will automatically
+disconnect from the ISP in few seconds. The IP addresses are not modified,
+nor are any of the INL parameters that were established before or during the
+connection.
+
+
+* Activation or deactivation of the automatic PPP echo
+
+inl ppp e 0|1
+
+INL cannot detect the physical drop of the connection (that is, the modem
+carrier loss or the sutdown or crash of the other computer in case of direct
+connection). For this reason it uses a connection checking mechanism provided
+by the PPP protocol, consisting on periodically sending echo packets to the
+ISP or to the other computer (note that they are PPP protocol level packets;
+do not confuse with PINGs, which are IP protocol level packets).
+
+INL has this feature activated by dafault, but it may be deactivated by
+executing INL PPP E 0, and activated again with INL PPP E 1. When activated,
+INL will send PPP echo packets to the other side every five seconds; if four
+consecutive packets are sent without receiving any reply, INL will assume
+that the connection is lost and will close it automatically.
+
+
+* Activation or deactivation of the Van Jacobson compression negotiation
+
+inl ppp v 0|1
+
+This option activates (1) or deactivates (0) the negotiation of the Van
+Jacobson compression for TCP/IP headers during the PPP connection
+establishment; if it is negotiated and the remote side supports this
+compression as well, then it will be used during all the connection lifetime.
+
+The Van Jacobson compression is specific of the point to point connections
+and allows to reduce the size of the TCP/IP headers, originally 40 bytes
+long, down to an average of five bytes. In exchange, additional processing is
+required for all the incoming and outgoing TCP segments.
+
+Changes in this option will have effect the next time a PPP connection is
+open; it is not possible to activate or deactivate the Van Jacobson
+compression for an already opened connection.
+
+
+2.4.3. IP PROTOCOL OPTIONS
+
+* IP addresses initialization
+
+inl ip i
+
+This option initializes (sets to 0.0.0.0) all the IP addresses. For the
+serial version, these are: local, remote and DNS servers. For the Ethernet
+version, these are: local, subnet mask, default gateway, and DNS servers.
+
+Serial version: by protocol specification, announcing an address of 0.0.0.0
+during the PPP negotiation means that we don't know the address of interest
+and that we request that the peer assign one for us (all the connections to
+ISPs work in this way).
+
+Ethernet version: this option must not be executed if one or more of these
+addresses are to be obtained by using DHCP (see INL IP D  command).
+
+
+* Establishing the local IP address
+
+inl ip l <IP address>
+
+This option establishes the local IP address (the address of the MSX itself)
+to the specified value.
+
+Serial version: using this option makes sense only with direct cable
+connections, and only if we know that the peer is unable of supplying us our
+IP address. If the peer supplies us an address during the connection
+establishment (this will always occur in ISP connections), this address will
+have preference over the address that we have established manually. Do not
+use this option when there is a connection opened.
+
+Ethernet version: this option must not be executed if the local address is to
+be obtained by using DHCP (see INL IP D command).
+
+
+* Establishing the remote IP address (serial version only)
+
+inl ip r <IP address>
+
+This option establishes the remote IP address (that is, the address of the
+other side of the connection) to the specified value. It must never be used
+when there is a connection opened.
+
+Using this option makes sense only with direct cable connections, and only if
+we know that the peer does not know its own IP address and we must supply one
+to him. If the peer announces us his own IP address during the connection
+establishment (this will always occur in ISP connections), this address will
+have preference over the address that we have established manually.
+
+
+* Establishing the subnet mask (Ethernet version only)
+
+inl ip m <mask>
+
+This option establishes the subnet mask (that is, the mask that will be
+applied to IP addresses to decide whether they are local or not) to the
+specified value. Must not be executed if this parameter is to be obtained by
+using DHCP (see INL IP D command).
+
+
+* Establishing the default gateway (Ethernet version only)
+
+inl ip g <IP address>
+
+This option establishes the default gateway address (that is, the address of
+the computer to which non local datagrams will be sent in absence of an
+appropriate entry in the routing table) to the specified value. Must not be
+executed if this parameter is to be obtained by using DHCP (see INL IP D
+command).
+
+
+* Establishing the IP address of the primary DNS server
+
+inl ip p <IP address>
+
+This option establishes the IP address of the primary DNS server, that is, the
+name server that the INL built-in resolver queries when a host name resolution
+is requested.
+
+Ethernet version: this option must not be executed if this parameter is to be
+obtained by using DHCP (see INL IP D command).
+
+Serial version:
+
+The logic behind this parameter is similar to the logic behind the IP L and
+IP R parameters (local and remote IP addresses): any address proposed by the
+peer during the connection establishment will have preference over the
+addresses manualy established by us before opening the connection. However
+there are two important differences:
+
+1) There is no problem on modifying the IP address of the DNS server once the
+PPP connection is opened.
+
+2) It is possible to deactivate the negotiation of this address by executing
+INL IP N 0 before opening the connection. In this case, the address that we
+assign by executing INL IP P will still be valid once the connection is
+opened (actually, we don't even give the peer an opportunity to propose an
+alternative address). This is true even when connecting via ISP.
+
+The use of INL IP N 0 followed by INL IP P <address> prior to opening the
+connection is useful when we want to use DNS servers other than the ones
+supplied by the ISP.
+
+Note: The /I parameter of INL PPP O not only establishes all the IP addresses
+to 0.0.0.0, but also activates the DNS addresses negotiation. Therefore, if
+you want to connect to an ISP without negotiating the DNS addresses you must
+use this execution sequence:
+
+INL IP I
+INL IP N 0
+INL PPP O /N:<number> /U:<user> /P:<password>
+
+
+* Establishing the IP address of the secondary DNS server
+
+inl ip s <IP address>
+
+This option works like INL IP P, but refers to the secondary DNS server
+address. The resolver of INL always queries the primary DNS server as the
+first try; only if this one does not reply, the query will be repeated using
+the secondary DNS server.
+
+
+* Activation or deactivation of the negotiation of the DNS servers
+  (serial version only)
+
+inl ip n 0|1
+
+This option activates or deactivates the negotiation of the IP addresses of
+the DNS servers for the future PPP connections. By default it is activated;
+it can be deactivated by executing INL IP N 0 and activated again with INL IP
+N 1. The /I option of INL PPP O activates this negotiation as well.
+
+Supressing the negotiation of the DNS servers may be useful when we want to
+use servers other than the ones supplied by the ISP. See the description of
+INL IP P above for more details.
+
+
+* Activation or deactivation of the automatic reply to PINGs
+
+inl ip e 0|1
+
+This option activates or deactivates the automatic sending of replies for all
+the ICMP echo requests (PINGs) received from any computer of Internet. By
+default it is activated; it can be deactivated by executing INL IP E 0 and
+activated again with INL IP E 1.
+
+
+* Establishing TTL for outgoing datagrams
+
+inl ip t <value>
+
+This option establishes the value of the TTL (Time To Live) field for all the
+outgoing datagrams; it must be a number in the range 1 to 255. The default
+value is 64 and in normal circumstances it should not be modified.
+
+
+* Establishing TOS for outgoing datagrams
+
+inl ip o <value>
+
+This option establishes the value of the TOS (Type Of Service) field for all
+the outgoing datagrams; it must be a number in the range 0 to 15. The default
+value is 0 and in normal circumstances it should not be modified.
+
+
+* Establishing the default size for outgoing PINGs
+
+inl ip z <value>
+
+This option modifies the default size for the data part of the outgoing ICMP
+echo requests (PINGs) that are sent by using the routine that INL supplies to
+programmers for this purpose. That routine allows to specify the size of the
+packet to be sent, but also allows the special value -1, meaning that the
+default value specified by this option will be used. <value> must be a number
+in the range 0 to 548.
+
+The supplied program PING.COM always sends the echo requests with the default
+size.
+
+
+* Establishing the DHCP configuration vector
+  (Ethernet version only)
+
+inl ip d <vector>
+
+This option establishes the DHCP configuration vector, which is a value that
+indicates what configuration parameters will be obtained by using DHCP.
+
+<vector> is a number in the range 0 to 63 that must be interpreted as a six
+bit vector. Each bit controls the configuration of a given parameter: if it is
+one, the parameter will be tried to be obtained by using DHCP; if it is zero,
+the parameter must be configured manually.
+
+The <vector> bits are assigned as follows:
+
+Bit 0 (value 1): IP address of MSX
+Bit 1 (value 2): Subnet mask
+Bit 2 (value 4): Default gateway
+Bit 3 (value 8): DNS servers
+Bit 4 (value 16): Lifetime of dynamic ARP entries
+Bit 5 (value 32): Ethernet encapsulation type for outgoing frames
+                  (Ethernet II or IEEE802.3)
+
+For example, if you want only the local IP address, the subnet mask and the
+DNS servers addresses to be obtained by using DHCP, use vector 1+2+8=11: INL
+IP D 11. The most usual case is to either use value 0 (completely manual
+configuration) or value 63 (obtain everything by DHCP). The default value for
+the vector is 0.
+
+It is possible that the DHCP server do not provide us all the requested
+parameters. Parameters that are configured to be obtained by using DHCP but
+that are not supplied by the server are established to their default values:
+0.0.0.0 for the IP addresses, five minutes for the lifetime of dynamic ARP
+entries, and Ethernet II encapsulation for outgoing frames.
+
+It is recommended to execute this command at installation time only (see the
+INL I command). To switch from DHCP configuration to manual configuration, it
+is recommended to reinitialize INL (INL D command) instead of executing INL IP
+D 0.
+
+The behavior of the DHCP automaton will be different depending on the value of
+bit 0 of the vector. See INL S for more details.
+
+
+2.4.4. NAME RESOLUTION OPTIONS
+
+* Host name resolution
+
+inl dns r <host name>
+
+This option asks the INL built-in resolver to resolve the specified host name,
+and shows the resulting IP address if the query has success, or an error
+message otherwise. While the query is in progress it is possible to abort the
+process by pressing any key; this will cause the program to terminate
+immediately without displaying any result.
+
+
+2.4.5. TCP PROTOCOL OPTIONS
+
+* TCP connections state information
+
+inl tcp s [<connection>]
+
+This options shows information about the state of the specified connection (a
+number between 0 and 3), or about the state of all the connections if no
+connection number is given.
+
+If the connection does not exist (its state is CLOSED), the cause of the
+connection closing is shown or otherwise the fact that this connection has
+never been used is indicated. Otherwise, the TCP connection state, the local
+port and the remote IP address and port are shown.
+
+
+* TCP connection close
+
+inl tcp c <connection>
+
+This option closes the specified connection (a number between 0 and 3) via a
+standard TCP CLOSE call.
+
+The fact of closing a TCP connection does not imply that the connection will
+cease to exist immediately, since for this it is necessary that the other side
+of the connection close it as well. On the other hand, if there is still
+pending outgoing data not yet sent, the close request will not become
+effective until all the data has been sent. Therefore, if what you wish is to
+immediately destroy the connection so it becomes free immediately, you should
+abort the connection rather than closing it (see the TCP A option next).
+
+
+* TCP connection abort
+
+inl tcp a <connection>
+
+This option aborts the specified connection (a number between 0 and 3) via a
+standard TCP ABORT call. The connection reaches the CLOSED state immediately
+and it becomes available for further re-opening.
+
+
+2.4.6. ETHERNET LAYER OPTIONS (ETHERNET VERSION ONLY)
+
+* Obtaining the Ethernet hardware address
+
+inl eth h
+
+This option simply shows the Ethernet hardware address (also called pysical
+address, Ethernet address or MAC). The hardware address is unique  for each
+card, is assigned in the factory and cannot be changed.
+
+
+* Establishing the Ethernet frame type for outgoing packets
+
+inl eth f 0|1
+
+This option establishes the Ethernet encapsulation type to be used for the
+packets to be sent: Ethernet II (0) or IEEE802.3 (1). Must not be executed if
+this parameter is to be obtained by using DHCP (see INL IP D command).
+
+The default value (0, Ethernet II frames) must be left unmodified unless we
+know for sure that the other machines of the net work with the IEEE802.3.
+encapsulation only. INL recognizes and can process both frame types in the
+received packets.
+
+
+* Activation or deactivation of the periodic network connection check
+
+inl eth c 0|1
+
+This option activates (1) o deactivates (0) the periodic checking of the
+network connection status.
+
+If active, the Ethernet UNAPI routine for checking the physical network
+connection (this routine may send a test packet) is executed every ten
+seconds. If the test fails, then the network is considered to be unavailable
+and all the TCP connections are closed.
+
+The arrival of any packet resets the timer used for the checking, so the tests
+are performed only when there is no network traffic.
+
+If the checking is deactivated, INL will always assume that the network is
+available.
+
+
+* Reinitialization of the Ethernet hardware
+
+inl eth r
+
+This option resets the Ethernet hardware. It may be used after executing an
+application that directly uses the Ethernet UNAPI routines, if it is not
+sure in which state the application has left the hardware. In these cases it
+is not necessary to reset the whole INL (with the INL D command), and it is
+enough to use this command.
+
+
+2.4.7. ARP PROTOCOL OPTIONS (ETHERNET VERSION ONLY)
+
+* Establishing the lifetime of dynamic ARP entries
+
+inl arp t <time>h|m|s
+
+When INL wants to send a local datagram, it must learn which is the hardware
+address of the computer whose IP address is the destination of the datagram.
+For this purpose it uses the ARP protocol, and when the information has been
+obtained, INL stores the pair hardware address-IP address in a table for being
+used when later delivering other datagrams to the same IP address.
+
+The entries in the table have a given lifetime, and when it expires, the entry
+is erased; this is done in prevision of the fact that any machine may retire
+from the network or change its Ethernet card. This command allows to specify
+that lifetime, and must not be executed if this parameter is to be obtained by
+using DHCP (see INL IP D command).
+
+The lifetime can be indicated in three ways:
+
+- A number between 1 and 18, followed by "h", indicating hours.
+- A number between 1 and 1080, followed by "m", indicating minutes.
+- A number between 1 and 65535, followed by "s", indicating seconds.
+
+The default value is five minutes.
+
+
+* Showing the ARP table
+
+inl arp s
+
+This option shows the current contents of the ARP table. For each entry the IP
+address, the associated hardware address, and the entry type, static or
+dynamic (static entries are added with INL ARP A) are shown.
+
+
+* Clearing the ARP table
+
+inl arp c the ARP table
+
+This option erases the whole contents of the ARP table; the dynamic entries as
+well as the static entries are deleted.
+
+
+* Adding an entry to the ARP table
+
+inl arp a <IP address> <hardware address>
+
+This option adds the indicated IP address-hardware address pair to the ARP
+table. The entries added in this way are static, that is, their lifetime is
+infinite: they remain until they are explicitly deleted (with INL ARP C or INL
+ARP D) or until INL is reset or uninstalled (with INL D or INL U,
+respectively).
+
+If there is already an entry whose IP address equals the one specified in the
+command, then the entry is updated with the specified hardware address, and if
+the entry is dynamic it becomes static.
+
+The ARP table has room for 32 entries in this code version of INL, and up to
+30 can be static entries.
+
+
+* Erasing an entry from the ARP table
+
+inl arp d <IP address>
+
+This option erases from the ARP table the entry whose IP address equals the
+specified address. Static entries as well as dynamic entries can be deleted.
+
+
+2.4.8. ROUTING TABLE OPTIONS (ETHERNET VERSION ONLY)
+
+* Show the routing table
+
+inl rou s
+
+When INL wants to send a datagram, it first checks if the destination IP
+address corresponds to a computer attached to the same physical network of the
+MSX; this will happen if (IP of MSX) AND (subnet mask) = (destination IP) AND
+(subnet mask). In that case the datagram is sent directly, previously
+resolving the physical address by using ARP if necessary.
+
+Otherwise, the datagram must be sent to a router that will in turn resend the
+datagram to its destination. To know the address of the router, the routing
+table is examined; this table consists of terns net address-subnet mask-router
+address. If an entry is found for which (destination IP AND entry mask) =
+(entry net address AND entry mask) applies, then the datagram is sent to the
+router whose address appears in the entry (which must be in the same physical
+network), previously resolving its physical address by using ARP if necessary.
+
+If no appropriate entry is found in the routing table, then the datagram is
+sent to the default gateway (whose address can be established with INL IP G).
+
+This option shows the contents of the routing table. New entries can be added
+with INL ROU A, and existing entries can be deleted with INL ROU C and INL ROU
+D.
+
+
+* Clearing the routing table
+
+inl rou c
+
+This option erases the whole contents of the routing table. The default
+gateway address is not modified.
+
+
+* Adding an entry to the routing table
+
+inl rou a <network address> <subnet mask> <router IP address>
+
+This option adds the indicated IP network address-subnet mask-router IP
+address tern to the routing table. The entries remain until they are
+explicitly deleted (with INL ROU C or INL ROU D) or until INL is reset or
+uninstalled (with INL D or INL U, respectively).
+
+If there is already an entry whose pair network address-subnet mask matches
+the pair specified in the command, then the entry is updated with the
+specified router address.
+
+If more than one entry in the table is appropriate for a given outgoing
+datagram, then the information of the first entry found will be used. For
+example, if the following is executed:
+
+inl ip l 192.168.0.7
+inl ip m 255.255.255.0
+inl rou a 1.2.0.0 255.255.0.0 192.168.0.1
+inl rou a 1.2.0.0 255.255.255.0 192.68.0.2
+
+then a datagram destinated to 1.2.0.34 will be sent to touter 192.168.0.1.
+
+The routing table has room for 16 entries in this code version of INL.
+
+
+* Erasing an entry from the routing table
+
+inl rou d <network address> <subnet mask>
+
+This option erases from the routing table the entry whose IP network address-
+subnet mask pair matches the specified pair.
+
+
+2.5. INCLUDED APPLICATIONS
+
+This section explains the usage of the Internet applications supplied with
+this distribution of INL.
+
+
+2.5.1. THE PING CLIENT
+
+PING.COM is a simple ICMP echo (PING) request client that permits to check if
+a given Internet host is available. It must be used in the following way:
+
+PING <host name>|<host IP address>
+
+The program will send one single echo request packet, but additional packets
+may be manually sent by pressing Enter (pressing any other key will terminate
+the program). Every time an answer to these requests arrives, information
+about its sequence number and TTL will be displayed.
+
+PING.COM always sends the echo packets with the TTL equal to 255 and with the
+default value for the data part size (this value can be modified with INL IP
+Z).
+
+
+2.5.2. THE TFTP CLIENT/SERVER
+
+TFTP.COM is an utility for transferring files between two machines using TFTP,
+a simple protocol based on UDP (described in RFC1350). A TFTP transfer
+requires one of the machines to be running in server mode and the other one in
+client mode; TFTP.COM supports both modes.
+
+TFTP.COM can transfer only one file at a time, and has no security mechanisms
+(any existing file will be transferred to or from the server upon client
+request). At the beginning of the application source code, in the file TFTP-
+E.ASC, other limitations of the program are mentioned.
+
+There are three ways of executing TFTP.COM, depending on the running mode and
+on the direction of the transfer:
+
+* Client mode, to receive a file:
+
+TFTP <host IP or name> R[CV]|G[ET] <remote file> [<local file>]
+
+<host IP or name> indicates the name or the IP address of the machine which
+will send us the file (it must be running a TFTP server).
+
+<remote file> is the path and name of the file that will be sent to us, in the
+appropriate format for the filesystem of the remote host (it can't contain
+spaces). It must be an accessible file according to the security policy of the
+remote host, if it has any.
+
+<local file> is the path and name of the file that will be created in the
+local machine to store the received data. It must be a path and name valid for
+DOS 1 or DOS 2, depending on the version which is running the local computer.
+If the path is omitted, the default drive and directory will be used.
+
+If <local file> is omitted, then <remote file> without the path information
+will be used. This is possible only under DOS 2, and only if <remote file> has
+a valid path for DOS 2.
+
+* Client mode, to send a file:
+
+TFTP <host IP or name> S[END]|P[UT] <local file> [<remote file>]
+
+<host IP or name> indicates the name or the IP address of the machine to which
+we will send the file (it must be running a TFTP server).
+
+<local file> is the path and name of the file that we will send. It must be an
+exixsting file on the local machine.
+
+<remote file> is the path and file name as it will be announced to the remote
+file when initiating the transfer. It must have a valid path for his
+filesystem (and accessible according to his security policy, if it has any).
+
+If <remote file> is omitted, then <local file> without the path information
+will be used. This is possible only if the resulting name is acceptable for
+the remote machine according to his filesystem and security policy.
+
+* Server mode
+
+TFTP /S[ERVER]
+
+In this mode, the application will enter a loop in which it will wait for
+incoming file transfer requests; all the sending requests referring to
+existing files and all the receiving requests referring to a valid DOS 1 or
+DOS 2 file name will be served (there is no security policy). In this mode it
+is possible to exit the application at any moment by pressing any key.
+
+- Example 1
+
+To receive the file TextFileTest.Text from the directory /home/konamiman on a
+Linux box, and store it locally in c:\texts with the name test.txt
+
+TFTP mylinuxbox.com G /home/konamiman/TextFileTest.Text c:\texts\test.txt
+
+- Example 2
+
+To send the file program.com to another MSX running TFTP.COM in server mode,
+and make it to store the file in its default directory and with the same name:
+
+TFTP 192.168.0.2 S c:\tests\program.com
+
+
+2.5.3. THE TCP CONSOLE
+
+TCPCON.COM is a simple TCP console utility. Once a connection has been
+established with the desired host, all the received data is directly printed
+out on the screen, and all the data typed on the keyboard is directly sent to
+the connection; no further processing is performed on the received data nor in
+the outgoing data. TCPCON can be seen as a simplified Telnet client (in fact,
+it is a Telnet client except for the fact that the incoming Telnet commands
+are ignored and these commands are never sent; besides of the fact that it
+does not process urgent data, since INL does not support it).
+
+TCPCON is invoked in the following way:
+
+TCPCON <host IP or name> <remote port> [<local port>] [P]
+
+<host IP or name> is the name or the IP address of the host with which we want
+to connect.
+
+<remote port> is the TCP port to which we want to connect. Some well-known
+ports are 23 for Telnet, 25 for SMTP and 110 for POP3.
+
+<local port> is an optional parameter that indicates the local TCP port to be
+used. If not specified, INL will choose a random number in the range 16384 to
+32767.
+
+"P" is an optional parameter that indicates that the connection must be opened
+in passive mode, that is, TCPCON will wait for the remote host to initiate the
+connection instead of actively initiating it.
+
+If passive connection is specified, the special value 0.0.0.0 may be used for
+the host name. In this case the connection is opened in "unespecified remote
+socket" mode. This implies that any connection request from any host using any
+remote port will be accepted (in this case, the remote port number must still
+be specified in the command line, but this parameter will be ignored; you can
+for example specify the value 0).
+
+Once the connection is open, the program enters a loop in which all the
+incoming data is printed out on the screen, and all the data collected from
+the keyborad is sent. Besides, the following special keys are accepted:
+
+F1: Shows a brief help.
+
+F2: Toggles the input mode between line mode (full text lines are sent, with a
+trailing CR-LF, every time ENTER is pressed) and character mode (every time a
+character is typed, it is immediately sent).
+
+F3: Toggles on or off the local echo (only for character mode).
+
+ESC: Closes the connection and terminates.
+
+CTRL+ESC: Aborts the connection and terminates.
+
+CTRL+C or CTRL+STOP: Terminates and returns to DOS. Under DOS 2, the
+connection is aborted before terminating. Under DOS 1, it is necessary to
+manually close it with INL TCP C or INL TCP A (it is better to use ESC or
+CTRL+ESC to terminate the program).
+
+If the remote host closes or aborts the connection, the program terminates
+immediately.
+
+Examples:
+
+- Active connection to telnet.molamazo.com, port 23, using a random local port:
+
+TCPCON www.molamazo.com 23
+
+- Passive connection to out port 34, the remote host must have the IP address
+1.2.3.4 and must use the port 100:
+
+TCPCON 1.2.3.4 100 34 P
+
+- Passive connection to our port 7, unespecified remote socket (any connection
+request for our port 7 will be accepted):
+
+TCPCON 0.0.0.0 0 7 P
+
+
+2.5.4. THE TELNET CLIENT
+
+TELNET.COM is a program that is similar to TCPCON, but it complies with the
+Telnet protocol specifications as described in RFC854 and RFC855.
+
+TELNET is invoked in the following way:
+
+TELNET <host IP or name> [<remote port>] [P]
+
+<host IP or name> is the name or the IP address of the host with which we want
+to connect.
+
+<remote port> is the TCP port to which we want to connect, by default it is
+the port 23. The local port used is always 23.
+
+"P" is an optional parameter that indicates that the connection must be opened
+in passive mode, that is, TELNET will wait for the remote host to initiate the
+connection instead of actively initiating it. If passive connection is
+specified, the special value 0.0.0.0 may be used for the host name, meaning
+that a connection from any machine will be accepted, as it happens with TCPCON.
+
+The keys with special meaning in TELNET are the same as the ones of TCPCON,
+except for F1. In TELNET, pressing F1 causes a status/options screen to
+appear, from which some special characters can be sent to the server and some
+communication parameters can be configured (for example, from this screen it
+is possible to ask the server to send, or to stop sending, echo of all the
+information it receives).
+
+TELNET recognizes some ANSI escape sequences, more precisely the sequences
+related to the cursor positionning. In this way it is possible to connect to
+VT100 terminals, although with limited functionality.
+
+TELNET recognizes and processes the SUPRESS-GA, BINARY-TRANSMISSION, EOR, ECHO
+and TERMINAL-TYPE options. Regarding the last one, the following terminal
+types will be announced according to the rules described in RFC1091: ANSI,
+NETWORK-VIRTUAL-TERMINAL and UNKNOWN, in that order.
+
+
+2.6. USING PROXY-ARP (ETHERNET VERSION ONLY)
+
+Some routers issue a reply providing its own hardware address when they
+receive an ARP packet that requests the resolution of a non-local IP address.
+This mechanism is called proxy-ARP, and it is intended mainly to offer routing
+services to machines whose TCP/IP stack do not support the usage of subnets.
+
+There are three circumstances in which INL will try to resolve non-local IP
+addresses using ARP, thus being possible to use the services of a router that
+supports proxy-ARP:
+
+1) When the configured subnet mask is 0.0.0.0, INL will try to resolve all the
+IP addresses using ARP.
+
+2) When a suitable entry is found in the routing table for a non-local IP
+address, INL will always try to resolve the address of the involved router
+using ARP, even when it is not in the same subnet as the MSX.
+
+3) When there is no suitable entry in the routing table for a non-local IP
+address, and the default gateway address is 0.0.0.0, INL will try to resolve
+the IP address using ARP.
+
+In other words, when INL needs to resolve the IP address "A", it uses the
+following algorithm:
+
+Is the subnet mask 0.0.0.0?
+  Yes: resolve A using ARP. End.
+Is A in the same subnet as the MSX?
+  Yes: resolve A using ARP. End.
+Is there a suitable entry R for A in the routing table?
+  Yes: resolve R using ARP. End.
+Is the default gateway address, G, equal to 0.0.0.0?
+  Yes: resolve A using ARP. End.
+  No:  resolve G using ARP. End.
+
+Once the appropriate address has been resolved, the datagrams whose
+destination address is "A" are sent to the obtained harwdware address (the
+"resolve X using ARP" step may imply a real resolution or to simply obtain the
+information from the ARP table).
+
+Note that when the routing table is empty, having 0.0.0.0 as the subnet mask
+is equivalent to having 0.0.0.0 as the default gateway.
+
+
+3. INTERNESTOR LITE - PROGRAMMER'S GUIDE
+
+This part of the INL manual supplies all the required information to develop
+programs that use INL to gain Internet access or to communicate with other
+machines in a point-to-point way or in a local network by using TCP/IP.
+
+
+3.1. INTERNESTOR LITE PARTS
+
+Once installed, INL modifies the timer interrupt hook and occupies three
+memory areas:
+
+- A jump area in page 3.
+- One segment of the primary mapper used to store code. This is the zone that
+the programmer will access the most when interacting with INL.
+- Another segment of the primary mapper used to store variables and data
+buffers.
+
+Following is the detailed description of the contents of each of these areas.
+
+
+3.1.1. INTERNESTOR LITE DETECTION AND AREA LOCATION
+
+To test if INL is installed, and to obtain the segment numbers and the page 3
+jump area address, the extended BIOS hook #FFCA is used. The procedure is as
+follows:
+
+1) Call #FFCA passing A=0 and DE=#2203.
+
+2) If INL is not installed, the call does nothing and preserves AF, BC, DE and
+HL; therefore, A=0 is returned.
+
+3) If INL is installed, A=1 is returned, as well as the following information:
+
+B = Number of the code segment (always refers to the primary mapper).
+
+C = Number of the variables and buffers segment (always refers to the primary
+mapper).
+
+HL = Address of the jump area on page 3.
+
+The following is a sample of code for detecting INL:
+
+
+	xor	a
+	ld	de,#2203
+	call	#FFCA
+	or	a
+	jp	z,ERROR	;INL not installed
+	ld	a,b
+	ld	(INL_SEG1),a
+	ld	a,c
+	ld	(INL_SEG2),a
+	ld	(INL_P3ADD),hl
+	...
+
+INL_SEG1:	ds	1	;Code segment
+INL_SEG2:	ds	1	;Data segment
+INL_P3ADD:	ds	2	;Jump area address
+
+
+NOTE: On INL versions prior to 1.0, detection and area location were done
+using a six byte area located at a fixed memory position. The description of
+that area is included here for helping in the modification of programs that
+work with these old versions of INL:
+
+* P3_ID (#F400): String "IN" (bytes #49, #4E). The presence of this string
+indicated that INL was installed.
+
+* P3_SEG1 (#F402): Number of the code segment (always refers to the primary
+mapper).
+
+* P3_SEG2 (#F403): Number of the variables and buffers segment (always refers
+to the primary mapper).
+
+* P3_P3DIR (#F404): Address of the jump area on page 3.
+
+
+3.1.2. THE JUMP AREA
+
+This area is located at the end of TPA, whose address is obtained as explained
+in 3.1.1. It is an about 256 bytes long area pointed to by the timer interrupt
+hook; the code called in this way is the responsible for connecting the INL
+slot+segment on page 1, to call the INL interrupt service routine, and finally
+to restore the original slot+segment on page 1 and to pass control to the
+original interrupt hook. That is, the usual behavior of a resident program
+that loads code in a RAM segment.
+
+However, the jump area is not limited to that: starting at its position +12
+there is a jump table to low-level routines that may be useful for the
+programmer. They are the following ones (the specified offset, in decimal,
+referes to start address of the area):
+
++12: LDIRP3. Auxiliary routine useful for transferring data blocks from one
+segment to another. It performs the following process:
+
+1) Switches slot L and segment H on page 1.
+2) Copies BC bytes from the address indicated by IX to the address indicated
+by IY.
+3) Restores the original slot and segment on page 1.
+
++15: PUT_P1. This is a DOS version independent routine for switching a RAM
+segment on page 1: under DOS 1, an OUT (#FD),A instruction will be executed;
+under DOS 2, the routine PUT_P1 supplied by DOS will be called. Using this
+hook and the three that follow it is possible to do segment switching without
+having to worry about the DOS version being used.
+
++18: GET_P1. This is the complementary routine to the previous one: it will
+execute an IN A,(#FD) instruction or call the DOS routine GET_P1, depending on
+the DOS version being used.
+
++21: PUT_P2. The same as PUT_P1, but for page 2.
+
++24: GET_P2. The same as GET_P1, but for page 2.
+
++27: GETSLOT1. Returns in A the slot currently switched on page 1, with the
+standard format %E000SSPP (Extended, Secondary, Primary).
+
++30: PUTSLOT1. Switches the slot passed in A in page 1, but only if A<>B. If
+LD B,A is executed before calling this routine, it is the same as calling
+ENASLT directly.
+
+
+3.1.3. THE CODE SEGMENT AND THE USER ROUTINES
+
+This is the most important part of INL from the programmer's point of view. It
+is a RAM segment on the primary mapper containing all the executable code of
+INL; at the beginning of it there is a jump table for routines that the
+programmer may use to interact with INL (send and receive data, obtain and
+establish INL configuration parameters, or perform some auxiliary operations
+regarding data manipulation).
+
+The procedure for executing an INL routine is as follows:
+
+1) Make sure that the primary mapper is swiched on pages 1 and 2 (this is the
+default state for .COM programs).
+
+2) Switch the INL code segment on page 1 (obtain the segment number as
+exmplained in 3.1.1; you can use the PUT_P1 routine of the jump area to switch
+the segment).
+
+3) Execute the desired routine with a simple CALL.
+
+4) Optionally, restore the previous slot/segment on page 1 and/or 2 (see
+section 3.3, "Programming considerations", below for a note about this).
+
+Note that in the case of page 2 it is only necessary to ensure that the
+primary mapper slot is connected, it is not necessary to perform any segment
+switching.
+
+Following is the list of the routines available through this jump table; after
+it, there is a detailed description for each one.
+
+* Timer interrupt
+
+- TIME_INT (#4000): Entry point for the timer interrupt service routine. It
+must not be directly called from a program.
+
+* Slot and segment management routines (LDIRP3 to PUTSLOT1 are direct jumps to
+the routines with the same name in the jump area on page 3, previously
+described)
+
+- LDIRP3 (#4003)
+- PUT_P1 (#4006)
+- GET_P1 (#4009)
+- PUT_P2 (#400C)
+- GET_P2 (#400F)
+- GETSLOT1 (#4012)
+- PUTSLOT1 (#4015)
+- GETSLOT2 (#4018): Obtains the slot switched on page 2.
+- PUTSLOT2 (#401B): Switches a given slot on page 2.
+
+* RS232 port access (serial version only)
+
+Note: these are direct jumps to the routines with the same name provided by
+the Fossil driver.
+
+- RS_IN (#401E): Obtains an incoming byte.
+- RS_OUT (#4021): Sends a byte.
+- RS_IN_STAT (#4024): Checks if there are incoming bytes available.
+- RS_OUT_STAT (#4027): Checks if it is possible to send bytes (not used by
+INL in this code version, data is sent directly).
+
+* Data manipulation and configuration routines
+
+- VERS_PAUSE (#402A): Obtains the INL version and code version number, and
+obtains or modifies the pause/activation state of INL.
+- GET_VAR (#402D): Reads a variable from the INL data segment.
+- SET_VAR (#4030): Modifes a variable of the INL data segment.
+- COPY_DATA (#4033): Copies a block of data from the INL data segment to TPA
+or vice versa.
+- IP_STRING (#4036): Generates a string representing a given IP address.
+- CALC_MD5 (#4039): Calculates the MD5 hash of a given data block up to 512
+bytes long.
+- CALC_CHKSUM (#403C): Calculates the standard checksum of a given data block
+up to 576 bytes long.
+- B64_INIT (#403F): Begins a Base64 encoding or decoding operation.
+- B64_ENCODE (#4042): Encodes a data chunk in Base64.
+- B64_DECODE (#4045): Decodes a Base64 sequence chunk.
+
+* Modem access and PPP connection (serial version only)
+
+- SEND_MODEM (#4048): Sends a command to the modem and returns the reply.
+- PPP_OPEN (#404B): Opens a PPP connection.
+- PPP_CLOSE (#404E): Closes the PPP connection.
+
+* Sending and receiving PINGs
+
+- SEND_ECHO (#4051): Sends an ICMP echo request packet (PING).
+- RCV_ECHO (#4054): Obtains the oldest ICMP echo reply (PING) received.
+
+* Sending and receiving UDP packets
+
+- UDP_SEND (#4057): Sends an UDP packet.
+- UDP_RCV (#405A): Obtains the oldest UDP packet received.
+
+* Host name resolution
+
+- DNS_Q (#405D): Performs a name resolution query.
+- DNS_S (#4060): Obteains the state of the name resolution query.
+
+* TCP connections
+
+- TCP_OPEN (#4063): Opens a TCP connection.
+- TCP_CLOSE (#4066): Closes a TCP connection.
+- TCP_ABORT (#4069): Aborts a TCP connection.
+- TCP_SEND (#406C): Sends data to a TCP connection.
+- TCP_RCV (#406F): Obtains incoming data from a TCP connection.
+- TCP_STATUS (#4072): Obtains the state of a TCP connection.
+- TCP_FLUSH (#4075): Clears the outgoing data buffer of a TCP connection.
+
+* Raw datagrams send and receive
+
+- RAW_SEND (#4078): Sends a raw datagram.
+- RAW_CONTROL (#407B): Controls the capture of a raw datagram.
+- RAW_RCV (#407E): Retrieves the captured raw datagram.
+
+* Miscellaneous
+
+- WAIT_INT (#4081): Waits until a timer interrupt arrives.
+- NETWORK_STATE (#4084): Obtain information about the network state.
+
+* Ethernet specific (Ethernet version only)
+
+- ENET_INFO (#4087): Obtains the Ethernet hardware address.
+- ETH2ASCII (#408A): Converts a hardware address into an ASCII string.
+- ASCII2ETH (#408D): Obtiains the hardware address represented by an ASCII
+string.
+- MASK2BITS (#4090): Counts the number of bits set to one on a subnet mask.
+- BITS2MASK (#4093): Generates a subnet mask from the number of bits set to
+one.
+- ARP_ROUTE (#4096): Returns the address and capacity of the ARP and routing
+tables.
+
+Following is the detailed description of all of these routines.
+
+
+* LDIRP3 to PUTSLOT1: See the description of the routines with the same name
+in section 3.1.2.
+
+
+* GETSLOT2 (#4018): Obtains the slot switched on page 2
+Input:   -
+Output: A = Slot currently switched on page 2, with the standard format
+	    %E000SSPP (Extended, Secondary, Primary).
+
+
+* PUTSLOT2 (#401B): Switches a given slot on page 2.
+Input:   A = Slot to switch
+         B = Slot to compare
+Output:  -
+
+The slot specified in A will be switched on page 2 only if it is different
+from the value specified in B.
+
+
+* RS_IN (#401E): Obtains an incoming byte from the RS232 port
+                 (serial version only)
+Input:   -
+Output:  A = Oldest byte recieived by the RS232 port
+
+Before executing this routine it is necessary to execute RS_IN_STAT in order
+to check if there are actually incoming bytes available.
+
+
+* RS_OUT (#4021): Sends a byte to the RS232 port (serial version only)
+Input:   A = Byte to be sent
+Output:  -
+
+
+* RS_IN_STAT (#4024): Checks if there are incoming bytes available
+                      from the RS232 port (serial version only)
+Input:   -
+Output:  A = #FF if there are available bytes, 0 otherwise
+
+It is necessary to use this routine before executing RS_IN.
+
+
+* RS_OUT_STAT (#4027): Checks if it is possible to send data
+                       to the RS232 port (serial version only)
+Input:   -
+Output:  A = #FF if it is possible to send data, 0 otherwise
+
+It is not necessary to use this routine before executing RS_OUT. In fact,
+this code version of INL does never use this routine.
+
+
+* VERS_PAUSE (#402A): Obtaining INL version and code version number, and
+                      checking or modifying the pause/activation state of INL
+Input:   A = 0 to not modify the pause/activation state of INL
+             1 to pause INL
+             2 to activate INL
+Output:  A = INL state after the routine execution:
+             1 if INL is paused
+             2 if INL is active
+         C = Main code version number of INL
+         D = Secondary code version number of INL
+         E = Code revision number of INL
+         B = INL version
+             0: INL for Fossil driver and PPP (serial port)
+             1: INL for ObsoNET (discontinued)
+             2: INL for the Ethernet UNAPI
+
+If you just want to check the INL version and/or the code version number,
+simply execute this routine with A=0 and check the output registers C, D and
+E.
+
+The value returned in B indicates the version of INL that is installed.
+Applications that use routines and variables specific of a given
+version should execute VERS_PAUSE and check the value returned on B.
+
+When INL is paused, its timer interrupt service routine is not executed, and
+therefore incoming data is not recovered, timers are not updated and pending
+outgoing data is not send. The pause state may be useful when it is necessary
+to perform a long task (for example to copy some big files), since when INL is
+installed and active it slows down the computer.
+
+Note: in this document, the term "INL version" refers to the supported
+hardware type (that is, serial version or Ethernet version) and not to the
+code version number, unless otherwise stated.
+
+
+* GET_VAR (#402D): Reads a variable from INL data segment
+Input:   HL = Address of the variable to read
+Output:  A = Variable contents, as a single byte
+         DE = Variable contents, as a two-byte word (E=A)
+
+The INL data segment variables govern various parameters related to the global
+behavior of INL and give various information, for example the IP addresses in
+use. The variables that are useful for the programmer are listed in section
+3.1.4.
+
+INL always accesses the data segment through page 2, but it is not necessary
+that the address passed in HL be in the range #8000-#BFFF. For example, there
+is no difference on specifying #0034, #4034, #8034 or #C034.
+
+
+* SET_VAR (#4030): Modifying a variable of INL data segment
+Input:   HL = Address of the variable to be modified
+         Cy = 0 and A = Byte to write; or,
+         Cy = 1 and DE = Two-byte word to write
+Output:  -
+
+The INL data segment variables control some parameters of INL's global
+behavior and offer various information, for example the IP addresses in use.
+The variables that are useful for the programmer are listed in section 3.1.4;
+note that some of them are intended to be read-only and should never  be
+modified from a program.
+
+As it happens with GET_VAR, it is not mandatory for the address passed on HL
+to be in the range #8000-#BFFF.
+
+
+* COPY_DATA (#4033): Copying a block of data from INL data segment
+		     to TPA or vice versa
+Input:   HL = Source address
+         DE = Destination address
+         BC = Block length
+         Cy = Direction of the transfer:
+              0: From INL data segment to TPA
+              1: From TPA to INL data segment
+Output:  -
+
+This routine is used primarily by INL code when it executes code that implies
+data exchange between the user and INL, but it may be also useful for the
+programmer, for example to obtain/establish IP addresses or to read with a
+simple call all the INL configuration variables.
+
+As it happens with SET_VAR and GET_VAR, the address referring to the INL data
+segment (HL if Cy=0, DE if Cy=1) is not needed to be in the range #8000-#BFFF.
+
+
+* IP_STRING (#4036): Generating a string representing a given IP address
+Input:   HL, DE = IP address, with the format L.H.E.D
+         IX = Address on TPA where the string will be generated
+	 (maximum 16 bytes)
+         A = Termination character to be used in the generated string
+Output:  -
+
+This function is useful for applications that need to display information
+about IP addresses. For example, if HL=#0304, DE=#0A0B and A="$" are passed,
+it will generate the string "4.3.11.10$".
+
+The buffer in TPA for the generated string should have a length of 16 bytes,
+to allow the storage of the longest possible generated string (with the form
+"xxx.xxx.xxx.xxx$").
+
+
+* CALC_MD5 (#4039): Calculation of the MD5 hash of a block of data
+Input:   HL = Block address in TPA
+         DE = Address where the resulting hash will be stored (16 bytes)
+         BC = Block length (0 to 1024 bytes)
+Output:  Cy = 1 if error (BC>1024 was specified)
+
+This routine calculates the hash code of the passed data block using the MD5
+algorithm described in RFC1321. The resulting hash is a 16 byte "signature"
+generated from the data of the block; theorically it is unique for each data
+block and it is irreversible (that is, it is not possible to obtain back the
+original data block from the hash).
+
+This routine is used by the INL serial version in the authentication phase
+using the CHAP protocol during the PPP connection establishment. It may be
+useful when implementing higher level protocols over TCP that use MD5 based
+authentication mechanisms (for example a SMTP client).
+
+
+* CALC_CHKSUM (#403C): Calculation of the standard checksum
+                       for a block of data
+Input:   HL = Block address in TPA
+         BC = Block length (1 to 1024 bytes)
+Output:  Cy = 1 if error (BC>1024 or BC=0 was specified)
+         DE = Resulting checksum
+
+This routine calculates the standard checksum (that is, the one based on one's
+complements used in the IP, TCP and UDP headers) of the specified block. The
+checksum is a verification sum generated from the data on the block, and it is
+used normally to verify the integrity of the packets received from Internet.
+
+The following is a simple procedure to test how this routine works:
+
+1) Generate a random data block.
+2) Put the two first bytes of the block to 0.
+3) Pass the block to CALC_CHKSUM.
+4) Write the returned chekcsum in the two bytes that we had previously set to
+0:
+   LD (BLOCK),DE
+5) Pass again the block to CALC_CHKSUM.
+
+The result returned by the last operation should be DE=0 (correct checksum,
+meaning that the block was not modified -apart from modifying the checksum
+itself- between the two calls to CALC_CHKSUM). In a real case, the block would
+be a datagram, and between steps 4 and 5 there would have been a transfer of
+the dtagaram through Internet, with a possible data corruption; that's why the
+checksum is useful.
+
+
+* B64_INIT (#403F): Begins a Base64 encoding or decoding operation
+Input:  A = Length of an encoded line, or 0 for Infinite
+            (used only when encoding)
+Output: All registers preserved
+
+This routine initializes the internal variables used by INL for Base64
+encoding and decoding, so after its execution it is possible to begin a
+encoding or decoding operation on a block of data using the B64_ENCODE and
+B64_DECODE routines.
+
+INL allows the encoding to and the decoding from Base64 of an arbitrarily big
+data block. For doing this it is necessary to divide the block in small chunks
+(up to 512 bytes long each) and then to encode or decode each of them with
+successive calls to B64_ENCODE or B64_DECODE (which in turn will return chunks
+of the output sequence). For this being possible, INL needs to internally
+store certain information about the encoding or decoding process; that is, in
+each execution of B64_ENCODE or B64_DECODE the state information stored in the
+previous execution is used. For this reason, before starting the encoding or
+decoding of a new block it is necessary to execute B64_INIT once, to reset the
+state variables to its initial values.
+
+Put another way, the process for encoding or decoding a block of data of any
+size is as follows:
+
+1) Logically divide the block to be encoded or decoded in chunks up to 512
+bytes long each.
+2) Execute B64_INIT once.
+3) Execute B64_ENCODE or B64_DECODE with Cy=0 for each chunk except for the
+last one (intermediate chunks).
+4) Execute B64_ENCODE or B64_DECODE with Cy=1 for the last chunk (final chunk).
+
+Note that for 512 byte or shorter blocks you can override step 3 (although you
+can also, for example, divide a 512 byte block in four 128 byte chunks; it all
+depends on the buffer size used by the application). Also, it is not required
+that all the intermediate chunks have the same size.
+
+B64_ENCODE and B64_DECODE return the input and output data pointers
+appropriately updated according to the size of the input and output chunks,
+respectively; therefore, if chunks are consecutively stored in memory it is
+easy to compose a loop for sequentially encoding or decoding them (see the
+description of the B64_ENCODE for a code sample).
+
+The length of an encoded line passed in A indicates how many Base64 characters
+will the routine B64_ENCODE generate before inserting a line end (CR-LF
+sequence) in the output sequence. This is useful, for example, if the
+resulting data is to be sent using the SMTP protocol, which imposes a limit in
+the length of the lines to be sent; in this case, the value 76 is often used.
+This parameter is not used by B64_DECODE.
+
+The value passed as the length of an encoded line must be a multiple of four,
+otherwise it will be rounded to the nearest multiple of four by default
+(except for the values one to three, which will be rounded to four). A value
+of zero means "Infinite", that is, no line ends will be inserted in the
+encoded output sequence.
+
+Note: do not mix calls to B64_ENCODE and calls to B64_DECODE without first
+executing B64_INIT again, since both routines use the same memory area to
+store the state of the encoding or decoding process.
+
+Note: when encoding ot decoding very big blocks, and there are UDP or TCP data
+transfers in progress, it may be convenient to insert calls to WAIT_INT among
+the calls to B64_ENCODE or B64_DECODE (see section 3.3, "Programming
+considerations"). The execution of the INL main code during a timer interrupt
+do not affect the variables used to store the state of the encoding or
+decoding process.
+
+
+* B64_ENCODE (#4042): Encodes a data chunk in Base64
+Input:  IX = TPA source address of the chunk to be encoded
+        IY = TPA destination address for the encoded sequence chunk
+        BC = Size of the chunk to be encoded (0 to 512)
+        Cy = 0 if it is an intermediate chunk
+             1 if it is a final chunk
+Output: If error, Cy = 1 y A = Error code:
+             1: Invalid chunk size (larger than 512)
+        If success, Cy = 0, A = 0 and other registers as follow
+        BC = Size of the Base64 sequence chunk generated
+        IX = IX + BC at input
+        IY = IY + BC at output
+        HL:DE = Cummulated size of the Base64 sequence chunks generated
+
+This routine encodes a block of data up to 512 bytes long using the Base64
+encoding. As explained in the description of the B64_INIT routine, it is
+possible to encode data blocks of any size by dividing them in chunks up to
+512 bytes long each and then successively executing this routine for each
+chunk, passing Cy=0 for all of them except for the last one. Before initiating
+the encoding process it is necessary to call B64_INIT once.
+
+If a value other than zero was passed as the length of an encoded line when
+executing B64_INIT, this routine will insert a line end (CR, ASCII 13 followed
+by LF, ASCII 10) in the output sequence when the specified number of encoded
+characters has been generated. No line end will be inserted when encoding a
+final block, unless the total number of encoded characters is an exact
+multiple of the encoded line length.
+
+If no errors arise, this routine returns the pointers passed on IX and IY
+appropriately updated according to the input and output chunk sizes,
+respectively. Therefore, the encoding process is easy if the chunks are stored
+consecutively in memory. For example, to encode a 1280 byte block
+(512+512+256) which is stored in the memory address #4000 and to store the
+result in #8000 (both addresses referring to TPA) one can do the following
+(assuming that the INL code segment is switched on page 1):
+
+        xor     a
+        call    B64_INIT        ;Necessary before beginning
+
+        ld      ix,#4000        ;Input and output
+        ld      iy,#8000        ;initial addresses
+
+        ld      bc,512  ;First intermediate chunk
+        or      a
+        call    B64_ENCODE
+
+        ld      bc,512  ;Second intermediate chunk
+        or      a
+        call    B64_ENCODE
+
+        ld      bc,256  ;Final chunk
+        scf
+        call    B64_ENCODE
+
+The Base64 encoding produces four encoded characters for each three input
+characters group, therefore the generated sequence will always be larger than
+the passed data chunk. More precisely, the size of the generated sequence will
+vary, depending on the encoded line length passed to B64_INIT, from 4/3 of the
+input chunk size (for an infinite encoded line length) to double of the input
+chunk size (for an encoded line length of four). Therefore, the absolute
+maximum length of a sequence generated by this routine is 1024 bytes.
+
+The value returned in HL:DE represents the cummulated generated sequence size,
+that is, the sum of the size of all the Base64 sequences generated by
+B64_ENCODE wince B64_INIT was executed. Or in other words, after encoding the
+final block it is the size of the complete Base64 encoding of the complete
+input block.
+
+Following is a generic routine capable of encoding a block of data of "any"
+size stored in the TPA address #4000; the resulting Base64 sequence is
+returned in #8000. The maximum acceptable size for the encoded sequence is 16K
+(the whole TPA page 2), therefore, strictly speaking the maximum acceptable
+size for the block to be encoded is 8K. More realistic limits for this maximum
+size are 12288 bytes (if the encoded line length is infinite) or 11972 bytes
+(if the encoded line length is 76). It is assumed that the INL code segment is
+switched on page 1.
+
+        ;Routine to generate the Base64 encoding of a data block
+        ;Input:  Data in #4000
+        ;        A=Encoded line length
+        ;        BC=Data block length
+        ;           (up to 8192 or 12288 bytes depending on A)
+        ;Output: Base64 sequence in #8000
+        ;        DE=Base64 sequence length
+
+B64_ENC:        call    B64_INIT        ;Does not modify BC
+                ld      ix,#4000
+                ld      iy,#8000
+
+B64_ENC_LOOP:   ld      a,b     ;Less than 512 bytes available?
+                cp      2
+                jr      c,B64_ENC_FIN
+
+                push    bc      ;Encodes an intermediate chunk
+                ld      bc,512
+                or      a
+                call    B64_ENCODE
+
+                pop     bc      ;Substracts 512 to the pending length
+                dec     b       ;and repeats the loop
+                dec     b
+                jr      B64_ENC_LOOP
+
+B64_ENC_FIN:    scf     ;Encodes the final chunk
+		call	B64_ENCODE  ;Returns the total encoded length in DE
+		ret
+
+This sample routine works even if the data size passed on BC is an exact
+multiple of 512, since B64_ENCODE works correctly event if an input chunk size
+of zero is specified (in this case, if it is a final block it is possible that
+some encoded data is still returned, depending on the stored process state).
+
+IMPORTANT: Please take in account the restrictions on the use of TPA by the
+INL routines that are detailed in section 3.3, "Programming cosiderations".
+More precisely, it is important to remember than a data block passed to or
+returned from INL cannot cross a page boundary.
+
+
+* B64_DECODE (#4045): Decodes a Base64 sequence chunk
+Input:  IX = TPA source address of the chunk to be decoded
+        IY = TPA destination address for the decoded data chunk
+        BC = Size of the chunk to be dencoded (0 to 512)
+        Cy = 0 if it is an intermediate chunk
+             1 if it is a final chunk
+Output: If error, Cy = 1 y A = Error code:
+             1: Invalid chunk size (larger than 512)
+             2: Invalid total length of the Base64 encoded sequence
+                (can occur only when decoding a final block)
+             3: Invalid character found in the Base64 sequence
+        If success, Cy = 0, A = 0 and other registers as follow
+        BC = Size of the data chunk generated
+        IX = IX + BC at input
+        IY = IY + BC at output
+        HL:DE = Cummulated size of the data chunks generated
+
+This routine is the complementary for B64_DECODE: it accepts a Base64 sequence
+as input and generates the data block resulting of decoding it. As with
+B64_ENCODE, it is possible to decode a Base64 sequence of any size by dividing
+it in chunks up to 512 bytes long each and then successively executing this
+routine for each chunk, passing Cy=0 for all of them except for the last one.
+Before initiating the decoding process it is necessary to call B64_INIT once.
+
+The B64_ENCODE and B64_DECODE routines are essentially symmetric: both have
+the same input and output parameters, and the sample code shown for B64_ENCODE
+can be used with B64_DECODE with few modifications. The only points of caution
+are that B64_DECODE can return two additional error codes, and that the ratio
+between the passed data block and the returned data block is different.
+
+The size of a Base64 sequence is always bigger than the corresponding encoded
+data block, hence per symmetry the decoded data block returned by this routine
+will be always smaller than the Base64 sequence passed. More precisely, if the
+Base64 sequence has no line ends then the decoded block size will be 3/4 of
+the size of the sequence; otherwise it will be even smaller. Therefore, the
+absolute maximum length of a block generated by this routine is 384 bytes.
+
+The characters of the passed sequence are treated by this routine as follows:
+
+1) Characters A-Z, a-z, 0-9, "/" and "+" are valid Base64 characters and
+therefore they are properly processed.
+
+2) Tabulator (ASCII 9), space (ASCII 32), carriage return (ASCII 13) and line
+feed (ASCII 10) characters are ignored: they are not processed but no error is
+returned.
+
+3) Character "=" (or the sequence "==") has a special treatment: if found, it
+is considered to mark the end of the encoded sequence. If after reaching the
+end of the sequence by this means there are still characters to be processed
+that do not belong to the group mentioned in 2), they are considered to be
+invalid characters and an error 3 is returned.
+
+4) Any other character found is invalid and always throw an error 3.
+
+Error 2 arises if the total number of encoded characters on the sequence (that
+is, the total size of the sequence not counting the ignorable characters) is
+not an exact multiple of four. This error can be returned only when decoding a
+final chunk.
+
+If this routine returns an error 2 or an error 3, then the sequence is invalid
+and it is not possible to continue with the decoding process. In any case,
+before processing another sequence it is always necessary to execute B64_INIT.
+
+
+* SEND_MODEM (#4048): Sends a command to the modem and obtains the reply
+                      (serial version only)
+Input:   Cy = 0 to send the command pointed by HL
+         Cy = 1 to send ATDT+the number stored in BUF_DIAL
+         HL = Address of the command in TPA (if Cy=0)
+         DE = Address where to store the reply in TPA
+              (0 if we are not interested in the reply)
+         A = Termination character to be used in the reply
+             (if DE<>0)
+Output:  A = Termination code:
+             0 if none of the other conditions apply
+             1 if the answer starts with OK
+             2 if the answer starts with ERROR
+             4 if the answer starts with the string stored in BUF_MODREP
+             8 if Cy=1 was passed but BUF_DIAL contains an empty string
+
+This routine is the only one of INL that allows interaction with the modem.
+It is tipically used in two scenarios:
+
+1) Connecting to the ISP before opening a PPP connection.
+
+In this case it is necessary to first establish the ISP phone number in the
+buffer BUF_DIAL of the INL data segment (and, if necessary, to establish the
+positive modem reply on BUF_MODREP), and then to execute this routine passing
+Cy=1 to it. The routine does not return until a reply is received from the
+modem.
+
+If this routine returns A=1 or A=4, then the connection was successful and it
+is possible to proceed to open the PPP connection; otherwise the connection
+could not be established. More precisely, if A=8 then no command will have
+been sent to the modem.
+
+2) Sending an initialization command to the modem, prior to establishing the
+connection.
+
+In this case the routine must be executed by passing to it Cy=0 and HL
+pointing to the modem command to be sent. As in the other case, the routine
+will not return until a modem reply is received. If the routine returns A=1,
+a successful execution of the command should be assumed.
+
+In both cases, it is possible to pass in DE the address of a buffer in TPA
+where the modem reply will be stored, in case we want to examine it (if it is
+not enough for us to know that it was "OK", "ERROR" or "CONNECT").
+
+WARNING: If there is no modem connected to the RS232 port, this routine will
+hang the computer.
+
+Note: This routine can detect whether the modem has the local echo feature
+enabled. In this case, the command itself will be filtered and not included
+in the reply.
+
+
+* PPP_OPEN (#404B): Opening a PPP connection (serial version only)
+Input:   -
+Output:  -
+
+This routine initiates a PPP connection open, assuming that the needed
+parameters of the INL data segment were previously appropriately set up
+(PPP_USER, PPP_PASSWORD and if necessary, the IP addresses as well). In case
+of ISP connections, it is necessary that the modem has established a physical
+connection already; the SEND_MODEM routine is used for this.
+
+The routine returns immediately, and the connection is established as a
+background task, controlled by the timer interrupt service routine. It is
+possible to check the connection state at any time by simply reading the
+PPP_STATE variable on the INL data segment (the connection will be completely
+established when this variable reaches a value of 4). It PPP_STATE returns to
+0 (connection closed), it means that an error occurred and the connection
+could not be completed. The error code can then be obtained from the variable
+PPP_CLCODE.
+
+WARNING: Never execute this routine when the connection is already opened or
+opening (that is, when PPP_STATE has any value other than zero). When INL.COM
+is used to open a connection, an error message is shown if the connection is
+already opened or opening; but the connection state check is done by INL.COM
+itself, not by the routine PPP_OPEN.
+
+
+* PPP_CLOSE (#404E): Closing a PPP connection (serial version only)
+Input:   -
+Output:  -
+
+This routine closes the PPP connection by sending a LCP termination packet to
+the peer, and then sets PPP_STATE to zero (for simplicity's sake, a
+deliberated violation of the PPP protocol is committed here: theorically a
+confirmation packet sent by the peer should be awaited for before actually
+considering the connection as closed). In ISP connections, no command will be
+sent to the modem, but it should disconnect in few seconds, because the ISP
+will close the physical link when receiving the terminat
+ion packet.
+
+This routine may be executed safely whatever the PPP connection state is,
+even if it is already closed.
+
+
+* SEND_ECHO (#4051): Sending an ICMP echo request packet (PING)
+Input:    HL, DE = IP address of the destination machine,
+                   with the format L.H.E.D.
+         A = TTL for the datagram
+         IX = ICMP identifier
+         IY = ICMP sequence number
+         BC = Data length, 0 to 548
+              (-1 to use the default size)
+Output:  Cy = 1 if error (there is no network connection)
+
+This routine sends an ICMP echo request (a PING) to the specified machine. It
+is possible to choose the size of the data area of the ICMP message, but not
+its contents; these will be always the byte sequence 0 1 2 ... 253 254 255 0 1
+2... appropriately truncated to match the specified size. If a size of -1 is
+indicated, then the value stored in the variable PING_SIZE of INL data segment
+will be used (the default size for outgoing PINGs).
+
+The identifier and the data number can help on matching requests and replies
+(an echo reply will always have these values identical to the ones of its
+associated echo request), but they may be ignored if necessary. The TTL value
+must be specified always; usually the value 255 should be used, to maximize
+the probability of the packet arriving to its destination.
+
+
+* RCV_ECHO (#4054): Obtaining the oldest ICMP echo reply (PING) received
+Input:   -
+Output: HL, DE = IP address of the packet's originator,
+                 with the format L.H.E.D.
+        A = TTL of the datagram
+        IX = ICMP identifier
+        IY = ICMP sequence number
+        BC = Data part length
+	Cy = 1 if error (there are no packets available)
+
+This routine is the counterpart of SEND_ECHO: it obtains the information
+associated to the header of the oldest echo reply packet received. It is not
+possible to obtain the contents of the data part of the received packets; only
+the TTL, ICMP identifier, ICMP sequence number and data part length will be
+recovered.
+
+INL can hold information of up to eight received packets; if new packets
+arrive when there are already eight packets enqueued, these new packets will
+be lost. Therefore, an application sending echo requests should obtain the
+replies in a reasonable time.
+
+This routine always returns the information associated to the oldest received
+(and not yet consummed) packet without checking this information, so it is the
+responsibility of the programmer to check that the IP address of the
+originator is actually the expected one.
+
+The following code shows a simple way of making INL to clear the received echo
+replies buffer; all applications that send and receive PINGs should do this to
+ensure that old packets forgot by any other application previously excecuted
+are not obtained by mistake:
+
+CLEAR_ECHO:
+call RCV_ECHO
+jr nc,CLEAR_ECHO
+
+
+* UDP_SEND (#4057): Sending an UDP packet
+Input:    HL, DE = IP address of the destination machine,
+                   with the format L.H.E.D.
+          IX = Local port (source)
+          IY = Remote port (destination)
+          BC = Address in TPA of the data to be sent
+          AF = Data length (0 to 548 bytes)
+Output:   Cy = 1 if error
+               (no network connection is available or BC>548 was specified)
+
+This routine sends the data block specified in BC and AF as an UDP packet to
+the machine whose IP address is passed in HL and DE, using the port numbers
+specified in IX and IY. The programmer can freely use any local port number
+except #FFFE, since this port is reserved for the built-in resolver.
+
+The easiest way of establishing the AF pair with the data length is to use the
+stack:
+
+LD BC,length
+PUSH BC
+POP AF
+LD BC,address
+...
+
+
+* UDP_RCV (#405A): Obtaining the oldest UDP packet received
+Input:   HL = TPA address where the data part will be stored
+              (0 if we are not interested in the data part)
+Output: HL, DE = IP address of the packet's originator,
+                 with the format L.H.E.D.
+        IX = Remote port (source)
+        IY = Local port (destination)
+        BC = Data length
+	Cy = 1 if error (there are no packets available)
+
+This routine is the counterpart of SEND_UDP: it obtains the information
+associated to the header, and the data part, of the oldest UDP packet
+received. If HL=0 is passed to it, only the header information will be
+recovered. The buffer for the data part in TPA should have a length of 548
+bytes, since it is the maximum size that the data part of a received UDP
+packet may have.
+
+INL can hold information of up to eight received packets; if new packets
+arrive when there are already eight packets enqueued, these new packets will
+be lost. Therefore, an application sending UDP packets and expecting replies
+should obtain the replies in a reasonable time.
+
+This routine always returns the information and data of the oldest received
+(and not yet consummed) packet without checking its header information, so it
+is the responsibility of the programmer to check that the source IP address
+and the ports of the packet are actually the expected ones.
+
+The following code shows a simple way of making INL to clear the received UDP
+packets buffer; all applications that send and receive UDP packets should do
+this to ensure that old packets forgot by any other application previously
+excecuted are not obtained by mistake:
+
+CLEAR_UDP:
+ld hl,0
+call UDP_RCV
+jr nc,CLEAR_UDP
+
+
+* DNS_Q (#405D): Performs a host name resolution query
+Input:   HL = Pointer in TPA to the host name to be resolved,
+              finished with a 0 character
+              (maximum length is 255 charácters)
+         A  = Flags, when set to 1 they instruct the resolver to:
+              bit 0: Only abort the query currently in progress,
+                     if there is any
+                     (the other flags and registers are then ignored)
+              bit 1: Do NOT query any DNS server
+                     (assume that the passed name is an IP address,
+                      and return an error if this is not true)
+              bit 2: If there is a query in progress already,
+                     do NOT abort it and return an error
+Output:  If error, Cy = 1 and A = error code:
+              1: There is no network connection
+              2: There is a query in progress already
+                 (only if A:1 was passed as 1)
+              3: The passed name is not a valid IP address
+                 (only if A:2 was passed as 1)
+              4: There are no DNS servers available
+         If success, Cy = 0 and A = result code:
+              0: The query is in progress
+                 (or it has been aborted, if A:0 was passed as 1)
+              1: The name represents an IP address
+         HL, DE: Resulting IP address with the format L.H.E.D
+                 (only if Cy=0 and A=1 are returned)
+
+This routine, together with its counterpart DNS_S explained later, allows to
+obtain the IP address associated to a given host name (for example
+"smtp.mailserver.com"); to achieve this, the DNS servers whose IP addresses
+have been previously configured (either manually or obtained in the PPP
+negotiation or by using DHCP) are queried. Strings that directly represent an
+IP address (for example "120.200.0.34") are also accepted by this routine,
+making then easy to develop programs that accept both host names and IP
+addresses as the connection parameter (for example the supplied PING client,
+whose execution syntax is: PING <host name>|<IP address>).
+
+After being called, the routine will finish its execution immediately, and the
+name resolution process will continue as a background task controlled by the
+timer interrupt service routine (unles A:0 is passed as 1; in this case, the
+only thing done is the abort of the query currently in progress if there is
+one). It is necessary then to excecute the routine DNS_S, explained later, to
+test whether the process has finished (in which case then resulting IP address
+or an error code will be returned) or it is still in progress.
+
+If there is already a query in progress when DNS_Q is executed, normally this
+query will be aborted in order to initiate the new one (the resolver of INL
+can handle only one query at a time). However, if A:2 is passed as 1 and there
+is a query in progress, then this query will not be aborted and DNS_Q will
+return an error.
+
+DNS_Q will firstly try to interpret the passed string as if it were the direct
+representation of an IP address. If this process has success, then the
+resulting IP address will be returned immediately without having to query any
+DNS server (however, the resulting IP address will be stored as well, so a
+subsequent call to DNS_S will return it); otherwise, the query process will be
+initiated. However, if A:1 is passed as 1 and the passed string does not
+represent an IP address, then no query will be initiated and DNS_Q will return
+an error.
+
+When querying the DNS servers, the primary server will be firstly queried; if
+this server is not available or does not reply, then the process will restart
+with the secondary server (an error will be returned if none of them is
+available, that is, if the IP address is 0.0.0.0 for both). The resolver of
+INL is recursive; that is, if the IP address of another DNS server is obtained
+instead of an answer, then the query process is restarted by using the new
+server, and so on until either a reply or an error code is received, or any of
+the servers in the chain does not reply (Note: INL decides that a server is
+not replying after sending the query packet five times; three seconds elapse
+between packet sendings). INL will abort the whole process if it takes more
+then one minute in total.
+
+Following is an example of code that resolves a host name. It assumes that the
+INL code segment is switched on page 1.
+
+	;* Performs the query
+
+	ld	hl,HOST_NAME
+	xor	a
+	call	DNS_Q
+	jp	c,ERROR_Q
+
+	;* Waits until either a result or an error is returned
+
+WAIT:	call    WAIT_INT	;See section 3.3, "Programming considerations"
+	xor	a
+	call	DNS_S
+	cp	1	;Process stills in progress
+	jr	z,WAIT
+	cp	3	;Error
+	jp	z,ERROR_S
+	;From here, A can only be equal to 2
+	ld	(IP_ADD),hl	;Stores the result
+	ld	(IP_ADD+2),de
+	...
+
+HOST_NAME:	db	"name.host.com",0
+IP_ADD:	ds	4
+
+Note that we never check whether HOST_NAME contains a host name or the direct
+representation of an IP address; we can obtain this information from the
+result returned by DNS_Q in A or from the result returned by DNS_S in B, but
+normally we will not be interested on it.
+
+
+* DNS_S (#4060): Obtains the host name resolution process state
+Input:   A  = Flags, when set to 1 they instruct the resolver to:
+              bit 0: Clear any existing result or error condition
+                     after the execution
+                     (except if there is a query in progress)
+Output:  A = Primary state code and B = Secondary state code:
+         A = 0: There is no query in progress,
+                nor any result nor error code available
+         A = 1: There is a query in progress
+                B=1: Now querying the primary DNS server
+                B=2: Now querying the secondary DNS server
+                B=3: Now querying another DNS server,
+                     whose address has been obtained instead of a result
+	 A = 2: Query complete, the resulting IP address is returned in
+		HL, DE with the format L.H.E.D
+                B=0: The name was not a direct representation of an IP address
+                B=1: The name was a direct representation of an IP address
+         A = 3: Error:
+                B=1-15: Error returned by the DNS server:
+                  1: Invalid query packet format
+                  2: DNS server failure
+                  3: The specified host name does not exist
+                  4: The DNS server does not support this kind of query
+                  5: Query refused
+                  6-15: Codes currenty undefined
+                B=16: Any of the DNS servers did not reply
+                B=17: Total one minute timeout expired
+                B=18: Query cancelled by the user
+                      (DNS_Q was executed with A:0 set to 1)
+                B=19: The network connection was lost during the process
+                B=20: The reply did not contain REPLY nor AUTHORITATIVE
+                B=21: The reply is truncated
+         HL, DE: Resulting IP address with the format L.H.E.D
+                 (only if A=2 is returned)
+
+This is the counterpart routine of DNS_Q: it allows to obtain the current
+state of the host name resolution process and, if it has been completed,
+returns the result (the searched IP address or an error code).
+
+The routine will return a primary state code in A, and a secondary state code
+with more detailed information in B; normally we will be interested on the
+primary code only (and on the resulting IP address when the process has
+success), except in case of error.
+
+If A:0 is passed as 1, DNS_S will also return the current state and the result
+of the query if there is one, but it will clear this result so subsequent
+calls to DNS_S will return A=0 (except if there is a query in progress; in
+this case, A:0 is ignored).
+
+Errors in the range 1 to 15 are returned by the DNS server and are defined in
+the specification of the protocol being used (RFC1035); errors from 16 onwards
+are generated by INL. The reception of an error with code 1 or 4 implies that
+the query packet had a wrong format, so they should never be received as long
+as there are no bugs in the code of INL. Errors 20 and 21 imply that it is not
+possible to resolve the name, but these errors are very rare and should never
+be received.
+
+In the explanation of the routine DNS_Q there is an example of code that uses
+DNS_Q and DNS_S to resolve a host name.
+
+
+* TCP_OPEN (#4063): Open a TCP connection
+Input:   A  = 0 for active connection, #FF for passive connection
+         HL, DE = IP address of the remote host, with the format L.H.E.D.
+                  (0.0.0.0 for unespecified remote socket)
+         IX = Remote port (ignored if the IP address is 0.0.0.0)
+         IY = Local port (#FFFF for using a random number
+                          between 16384 and 32767)
+         BC = User timeout value
+              1 to 1080: Value in seconds
+              0: Default value, 3 minutes
+              #FFFF: Infinite
+Output: If error, Cy = 1 and A = error code:
+              1: Too many connections opened
+              2: There is no network connection
+              3: The specified connection already exists
+              4: Active connection has been requested but
+                 0.0.0.0 has been specified as the remote IP address
+              5: Invalid user timeout value
+        If success, Cy = 0 and
+              A = Connection handle
+
+This routine opens a TCP connection to the remote socket specified in HL and
+DE (IP address) and IX (port), using the local socket specified in IY. You can
+specify #FFFF as the local port, in which case INL will choose a random port
+number in the range 16384 to 32767 using the system timer. If there are no
+errors, the routine will return a connection handle (a number between 0 and 3)
+that must be stored to subsequently interact with the connection by using the
+other TCP_xxx routines.
+
+If A=#FF, the connection will be opened in passive mode (it will enter the
+LISTEN state), waiting for an incoming connection request for our port number
+specified in IY from the host and port specified in HL, DE and IX.
+
+When opening a passive connection, it is possible to open it in "unespecified
+remote socket" mode, by passing 0.0.0.0 (HL=0, DE=0) as the remote IP address.
+In this mode, the connection will be established when a connection request
+arrives from any host using any remote port (the port number specified in IX
+is ignored); the only condition for the connection beign accepted is that the
+requested port must match the one specified in IY.
+
+INL can maintain up to four simultaneous TCP connections opened. If there are
+already four connections opened, this routine will return an error 1.
+
+A TCP connection is uniquely identified by its local socket (local IP address
+and port) and its remote socket (remote IP address and port). Therefore, it is
+not possible to open a connection in which the remote IP address and both
+ports are equal to the ones of an already existing connection; if you try it,
+you will obtain an error 3. If you let INL to randomly choose a local port
+number (by specifying IY=#FFFF), this error will never arise.
+
+The passive connections with unespecified remote socket are an exception to
+the rule mentioned above. It is possible to open more than one connection of
+this type even using the same local port.
+
+Although the TCP standard allows to transform a passive connection into an
+active one by opening it again, INL does not allow it; if you try it you will
+get an error 3. To transform a passive connection into an active one you must
+close it and then open it again.
+
+The "user timeout" is a timer that is activated when new data is sent to the
+connection, and is stopped when the acknowledgment (ACK) arrives for that
+data. If this timer expires, the host is considered to be unreachable and the
+connection is aborted. This timer is also applied to the connection initiation
+(that is, it is also the maximum time that can elapse until the acknowledgment
+for a sent SYN segment arrives). The specified value is interpreted as follows:
+
+- 1 to 1080: Value for the timer in seconds (1 second to 18 minutes).
+- 0: Use the default value for the timer. In this code version of INL this
+default value is 3 minutes, but it could change in future versions.
+- #FFFF: Infinite, data is retransmitted indefinitely until either the
+acknowledgment arrives, the connection is aborted or an RST segment arrives.
+
+Other values cause an error 5 to be returned.
+
+Note that when specifying a value of "infinite" for the user timeout, a call
+to TCP_CLOSE can take an arbitrary time for becoming effective, since FIN
+segments are not sent while there is still data for being (re)transmitted.
+However, calls to TCP_ABORT always take effect immediately.
+
+Note that it is not possible to send or receive data from a connection
+immediately after opening it with TCP_OPEN. It is necessary to wait until the
+connection progresses to the ESTABLISHED state before the data exchange is
+possible (the connection state can be obtained with the routine TCP_STATUS).
+
+
+* TCP_CLOSE (#4066): Close a TCP connection
+Input:   A  = Connection handle
+Output:  If error, Cy = 1 and A = error code:
+               1: Invalid connection handle
+               2: The connection is already closed
+         If success, Cy = 0 and A = 0
+
+This routine closes the specified connection. Error 2 is returned when the
+connection is in the CLOSED state; if it is closed, nothing is done but no
+error is returned.
+
+Note that, in accordance with the TCP protocol, closing a connection implies
+that it is not possible to send new data to it, but the other side can still
+sending new data (and we can still receiving it).
+
+Actually this routine does not immediately close the connection, but sets up a
+flag that indicates that it must be closed. When there is no data pending for
+transmission (neither new nor to retransmit), the close take effect and the
+corresponding FIN segment is sent. You can use the TCP_FLUSH routine to flush
+the outgoing data that has not been sent yet to the connection, before or
+after closing it (however, this routine has no effect on the retransmission
+queue).
+
+The connection does not reach the CLOSED state until both sides have exchanged
+a FIN segment, as the TCP protocol specifies. Therefore, if what you want is
+to immediately destroy the connection so it becomes available for further re-
+opening, you should use TCP_ABORT rather than TCP_CLOSE.
+
+
+* TCP_ABORT (#4069): Abort a TCP connection
+Input:   A  = Connection handle
+Output:  If error, Cy = 1 and A = error code:
+               1: Invalid connection handle
+               2: The connection is already closed
+         If success, Cy = 0 and A = 0
+
+This routine aborts the specified connection: sends a RST segment if
+appropriate, and then puts the connection on the CLOSED state, ready for being
+opened again. An error 2 is returned if the connection is in the CLOSED state
+already.
+
+
+* TCP_SEND (#406C): Send data to a TCP connection
+Input:   A  = Connection handle
+         HL = Address on TPA of the data to be sent
+         BC = Length of the data to be sent
+         Cy = 1 to send the data PUSHed
+Output:  If error, Cy = 1 and A = error code:
+               1: Invalid connection handle
+               2: The connection is closed
+               3: The connection state does not allow to send data
+                  (it is not the ESTABLISHED state nor the CLOSE-WAIT state)
+               4: Insufficient output buffer space to store the data
+         If success, Cy = 0 and A = 0
+
+This routine enqueues the data specified by HL and BC for being sent by the
+connection specified by A. The connection must be in the ESTABLISHED or in the
+CLOSE-WAIT state, otherwise an error 3 will be returned (although the TCP
+protocol allows data to be enqueued while the connection is initiating, INL
+does not allow it). In other words: it is not possible to send data while the
+connection is initiating; and it is not possible to send data when we have
+closed the connection (with TCP_CLOSE), but we can send data when only the
+remote host has closed it.
+
+Each TCP connection has one buffer for outgoing data assigned on the INL data
+segment; this routine enqueues the data in this buffer, where they stay until
+they are sent and an acknowledgment (ACK) is received for them. The size of
+this buffer is fixed to 1024 bytes, therefore it is not possible to enqueue an
+arbitrary large number of bytes, either in one single call to TCP_SEND or in
+several successive calls.
+
+More precisely, this routine will return an error 4 if BC is bigger than the
+free space available on the output buffer. To know in advance how many free
+space is available, use the TCP_STATUS routine; this value will never be
+greater than 1024 bytes.
+
+If Cy=1 is specified (PUSHed data), then data will be sent in the next timer
+interrupt (the oldest enqueued data is sent, not necessarily the data affected
+by a given execution of TCP_SEND). Enqueuing data as PUSHed implies that all
+the data in the output buffer is marked as PUSH, not only the data affected by
+this execution of TCP_SEND.
+
+Otherwise (there is no PUSH data), then data will be sent when one of the
+following occurs:
+
+- Enough data is cummulated in the output buffer so a maximum sized segment
+can be sent (according to the maximum size specified by the remote host in a
+MSS option during the connection initiation, or 512 if no such option was
+specified).
+- 0.5 seconds elapses since the oldest data were enqueued.
+
+Note that however the above stated, no new data will be sent if the remote
+host is not ready to receive it (if its receive window is zero), as the TCP
+protocol specifies.
+
+To maintain the code of INL the simplest possible and in order to save memory,
+INL only sends one data segment at a time. That is, once one data segment has
+been sent, no more segments are sent (except for retransmission) until the
+acknowledgment for the sent data is received.
+
+You can execute this routine with BC=0 and Cy=1. Then no new data will be
+enqueued, but all the already enqueued data will be marked as PUSH, so it will
+be sent immediately. Executing this routine with BC=0 and Cy=0 will have no
+effect but no error will be returned (unless the conditions for the errors 1
+to 3 met).
+
+INL does not support urgent data. It is not possible to specify that the data
+must be sent as urgent.
+
+The data that has been enqueued but has not been sent yet can be discared by
+calling the TCP_FLUSH routine.
+
+
+* TCP_RCV (#406F): Obtain incoming data from a TCP connection
+Input:   A  = Connection handle
+         DE = Address on TPA where to put the data
+         BC = Length of the data to be obtained
+Output:  BC = number of actual bytes that have been obtaind
+         Z  = 1 if BC = 0
+         If error, Cy = 1 and A = error code:
+               1: Invalid connection handle
+               2: The connection is closed
+         If success, Cy = 0 and A = 0
+
+This routine extracts and copies on the TPA address specified by DE the data
+received by the TCP connection specified by A, up to BC bytes. If there are no
+BC bytes available, then as much data as possible is extracted (all the
+available data); in any case, the number of bytes actually obtained is
+returned in BC.
+
+If there are no data available at all, then BC=0 and Z=1 is returned, but this
+is not considered an error. Also, no error is returned if it is not possible
+to have incoming data due to the connection state (for example the LISTEN
+state); simply no data is returned then. An error is returned only if the
+connection is in the CLOSED state.
+
+Each TCP connection has one 1024 byte buffer for incoming data assigned on the
+INL data segment. If data arrives that is not obtained with TCP_RCV by any
+application, this buffer will end up completely filled, so no new data can be
+received. However this is not considered an error, since this situation is
+controlled by the TCP flow control mechanisms (INL will announce a zero
+receive window in these cases).
+
+You can know in advance how many bytes can be obtained by calling the
+TCP_STATUS routines, however this is not mandatory as it was for TCP_SEND (as
+stated above, trying to extract more data than it is available is not an
+error). On the other hand, it is possible to specify a value greater than 1024
+for BC, but this makes no sense since there will never be more than 1024
+incoming bytes available.
+
+INL does not support urgent data, therefore it is not possible to know if the
+obtained data is either normal or urgent. Also, it is not possible to know if
+the PUSH flag was set for the obtained data.
+
+The values returned on BC and Z are always valid, even if an error is returned.
+
+
+* TCP_STATUS (#4072): Obtain the state of a TCP connection
+Input:   A  = Connection handle
+Output:  If error, Cy = 1 and A = error code:
+               1: Invalid connection handle
+         If success, Cy = 0 and other parameters as follows
+         If the connection is closed:
+             A = 0
+             B = Connection close reason
+         If the connection is not closed:
+             A  = Connection state
+             HL = Number of available incoming bytes
+             DE = Available free space in the output buffer
+             BC = Number of bytes in the retransmission queue
+             IX = Address of the TCB for the connection
+
+This routine returns the state and various information about the TCP
+connection specified by A. Unlike other TCP_xxx routines, this one does not
+return an error if the connection is closed.
+
+The connection state is returned in A, codified in the following way:
+
+0: CLOSED
+1: LISTEN
+2: SYN-SENT
+3: SYN-RECEIVED
+4: ESTABLISHED
+5: FIN-WAIT-1
+6: FIN-WAIT-2
+7: CLOSE-WAIT
+8: CLOSING
+9: LAST-ACK
+10: TIME-WAIT (not implemented)
+
+Note: The TIME-WAIT state is not implemented in this code version of INL; TCP
+connections go directly to the CLOSED state when they should go to TIME-WAIT.
+However this state could be implemented in future versions of INL.
+
+If the connections is CLOSED, the close reason is returned in B, codified in
+the following way:
+
+0: This connection has never been used since INL was installed
+1: The TCP_CLOSE method was called
+2: The TCP_ABORT method was called
+3: RST segment was received (the connection was refused or aborted by the
+remote host)
+4: User timeout expired
+5: Connection establishment timeout expired
+6: Network connection lost while the TCP connection was open
+7: ICMP "Destination unreachable" message received
+
+If the connections is not CLOSED, other registers return information as
+follows.
+
+HL returns the number of incoming bytes that can be obtained by calling the
+TCP_RCV routine. It is a value between 0 and 1024.
+
+DE returns the number of free bytes in the output data buffer; that is, the
+maximum number of bytes that can be enqueued by calling the TCP_SEND routine.
+It is a value between 0 and 1024.
+
+BC returns the number of bytes in the retransmission queue; that is, the
+number of bytes that have been sent but whose acknowledgment has not been
+received yet. It is a value between 0 and 536 (since INL only sends one data
+segment at a time) and does not inlcude the SYN and FIN flags.
+
+IX returns the address of the TCB (Transmission Control Block) associated to
+the connection. The TCB is a group of variables used by INL to control the
+connection state and the data sending and receiving processes; the TCB format
+is described in section 3.4. The address returned in IX is a page 2 address
+and refers to the INL data segment.
+
+
+* TCP_FLUSH (#4075): Flush the output buffer of a TCP connection
+Input:   A  = Connection handle
+Output:  If error, Cy = 1 and A = error code:
+               1: Invalid connection handle
+               2: The connection is closed
+         If success, Cy = 0 and A = 0
+
+This routine flushes the output buffer of a TCP connection, that is, erases
+the data that has been enqueued by TCP_SEND but has not been sent yet.
+
+This routine does not affect the data on the retransmission queue, which will
+continue being retransmitted until an acknowledgment for it arrives.
+
+
+* RAW_SEND (#4078): Send a raw datagram
+Input:   Cy=0 if an IP header must be added to the data block to be sent
+         Cy=1 it the data block is a complete datagram
+              (that is, it includes an IP header)
+         IX = TPA address of the data block to be sent
+         BC = Length of the data block to be sent
+	      (up to 556 bytes if Cy=0, up to 576 bytes if Cy=1)
+         L.H.E.D = Destination IP address (ignored if Cy=1)
+         A = Transport protocol (ignored if Cy=1)
+         IYh = ToS for the datagram (ignored if Cy=1)
+         IYl = TTL for the datagram (ignored if Cy=1)
+Output:  If error, Cy = 1 and A = error code:
+               1: No network connection
+               2: Invalid length (larger than 556 or 576)
+         If success, Cy = 0 and A = 0
+
+This routine allows sending a raw datagram, that is, sending direct IP data
+bypassing the TCP and UDP layers provided by INL. A complete datagram can be
+supplied, or you can let INL to compose the IP header. This routine is
+intended primarily for sending ICMP messages, but may be used to send
+datagrams with any other transport protocol.
+
+If Cy=0 is specified, then an IP header will be prepended to the passed data
+block, based on the parameters passed in HL, DE, A and IY; the resulting
+datagram will then be sent to the network. It is not possible to include IP
+options nor to specify the identifier field of the datagram when using this
+method.
+
+If Cy=1 is specified, INL will assume that the passed data block is a complete
+IP datagram (that is, it already includes an IP header) and will send it to
+the network without further processing. This method allows to include IP
+options in the datagram, as well as to establish the IP identifier to any
+desired value.
+
+If a complete datagram is passed, it is the responsibility of the application
+to compose a correct IP header (as specified in RFC791), including the
+checksum field (the CALC_CHKSUM routine provided by INL may be used to
+calculate it). If the IP header is wrong, the datagram will be sent anyway,
+but it will probably not arrive at its destination or be discarded by the
+received.
+
+When passing a complete datagram, if the value of the field that indicates the
+size of the datagram in the IP header does not match the real size of the data
+block passed, the former will be used to decide the amount of data to be sent.
+That is, if BC is the block size parameter passed to the routine and L is the
+datagram size as specified in the header of the datagram itself, then the
+following apply:
+
+- If L=0, nothing is sent at all.
+- If L<BC, then L bytes are sent; the remaining of the passed data block is
+discarded.
+- If L>BC, the whole data block is sent, and then random data is sent (the
+contents of the memory in that moment) until L bytes are sent in total.
+- If L>576, exactly 576 bytes are send (which may be random in part, per the
+previous point).
+
+Note: This routine is completely independent of RAW_CONTROL and RAW_RCV; raw
+datagrams can be sent at any time, regardless of the raw datagram capture
+state.
+
+
+* RAW_CONTROL (#407B): Control the capture of a raw datagram
+Input:   A = Required action:
+             0: Only obtain the capture state
+             1: Request a datagram capture
+             2: Cancel the datagram capture request
+         B = Transport protocol of the datagram to be captured
+             (used only if A=1)
+             0: Capture the first received datagram
+             #FF: Capture the first received datagram
+                  that is not TCP, UDP, an ICMP
+                  echo request/reply, or an ICMP
+                  "Destination unreachable" message
+             Otro: Capture the first received datagram
+                   that transports the specified protocol
+Output:  If error, Cy = 1 and A = error code:
+               1: A datagram capture has been requested
+                  but there is no network connection
+               2: Invalid required action
+         If success, Cy = 0 and other registers as follow
+         A = Capture state:
+             0: No datagram capture has been requested,
+                or the captured datagram has been retrieved
+             1: A datagram capture has been requested,
+                but no datagrams of the appropriate protocol have arrived
+             2: One datagram has been captured, it may be retrieved
+                by calling RAW_RCV
+         BC = Captured datagram size (only if A=2 is returned),
+              20 to 576 bytes
+         D = Transport protocol required (only if A=1 or A=2 is returned)
+
+This routine controls the process of capturing a raw datagram. The datagram
+capture mechanism is intended primarily for capturing ICMP messages, but it
+may be used to capture datagrams of any other transport protocol.
+
+The complete capture procedure is as follows:
+
+1) RAW_CONTROL is called, passing A=1 and the desired transport protocol code
+in B to it.
+2) RAW_CONTROL is repeatedly called passing A=0 to it, until it returns A=2
+(or A=0, this one meaning that the network connection has been lost).
+3) When obtaining A=2, the captured datagram is retrieved by calling RAW_RCV.
+
+If this routine is executed with A=2, the capture request is cancelled, and
+the captured datagram (if there is one) is discarded.
+
+When the capture of a raw datagram is requested, INL checks the transport
+protocol code of all the received datagrams. The first received datagram whose
+transport protocol matches the requested one (and whose checksum is correct)
+is stored, and can then be retrieved by calling the RAW_RCV routine. Only one
+datagram can be captured at the same time. The captured datagram is not
+further processed by INL (for example, if it is an UDP packet it is not
+enqueued in the queue for received UDP packets).
+
+There are two special values that can be specified as the desired transport
+protocol when performing the capture request. A value of zero indicates that
+the first incoming datagram must be captured, regardless of the protocol it
+transports. A value of #FF indicates that the first incoming datagram that is
+not TCP, UDP, an ICMP echo request/reply or an ICMP "Destination unreachable"
+message must be captured (that is, datagrams normally processed by INL are
+bypassed). Note that a value of 1 will cause the first received ICMP message to
+be captured, even if it is an echo request or reply.
+
+The datagram capture is not persisting: once one datagram has been captured,
+no more datagrams will be captured unless a new call to RAW_CONTROL with A=1
+is performed (regardless of whether the captured datagram is retrieved with
+RAW_RCV or not).
+
+If the network connection is lost, the capture process will pass to state 0
+automatically; the captured and not yet retrieved datagram, if there is one,
+will be lost.
+
+Performing a capture request implies the automatic cancellation of the
+previous request, if there is one; if there is a captured datagram, it will be
+lost.
+
+Note: To store the captured datagram, the buffer for the eigth received UDP
+packet is used; therefore, when a datagram capture is requested only seven UDP
+packets can be received. If there are eight UDP packets stored when the
+capture is requested, the eigth packet will be lost.
+
+
+* RAW_RCV (#407E): Retrieve the captured raw datagram
+Entrada:  HL = TPA destination address to copy the captured datagram
+Salida:   If error, Cy = 1 and A = error code:
+                1: No captured datagram is available
+          If success, Cy = 0 and other registers as follow
+          A = IP header length for the datagram
+          BC = Datagram length
+          DE = Length of the data part of the datagram
+               (that is, BC-A)
+          HL = Pointer to the start of the data part of the datagram
+               (that is, HL at input - A)
+
+This routine copies to TPA the datagram that has been captured after a
+datagram capture request has been made by calling RAW_CONTROL. To know in
+advance whether there is a captured datagram available or not, as well as its
+size, you can call RAW_CONTROL with A=0 (see the description of the
+RAW_CONTROL routine).
+
+The complete captured datagram is copied to the TPA address specified in HL,
+and the A, BC, DE and HL registers will contain various information about it.
+For a datagram not containing IP options, A=20 and DE=BC-20 are returned. In
+any case, HL will point to the start of the data part of the datagram (that
+is, it will point at the first byte after the IP header).
+
+After an execution of RAW_RCV that does not return an error, the raw datagram
+capture process state will revert to 0 (no capture is pending). To capture
+another datagram it is necessary to perform a new capture request with the
+RAW_CONTROL routine..
+
+
+* WAIT_INT (#4081): Wait until a timer interrupt arrives
+Input:   -
+Output:  Cy = 1 if it was necessary to wait
+         Cy = 0 if it was not necessary to wait
+
+This routine compares the value of the system timer (variable located at
+#FC9E) against the value that this variable had on the previous execution of
+the same routine. If these values differ, the routine will return immediately
+with Cy=0. If the values are equal, the routine will wait until the timer
+value changes, then it will return with Cy=1.
+
+In other words: between two calls to WAIT_INT, at least one timer interrupt
+arrives.
+
+The use of WAIT_INT or other similar routine becomes necessary when an
+application enters a loop in which other INL routines are executed in quick
+succession. For more details, see section 3.3.3, "Interrupts and wait times".
+
+
+* NETWORK_STATE (#4084): Obtain the network state
+Input:   -
+Output:  A = Network state:
+             0: Not available
+             1: Initializing
+             2: Available (IP datagrams can be transported)
+             3: Closing
+
+This routine returns the current network state based on a four-state
+abstraction that is always the same, regardless of the INL implementation that
+has been installed. Applications should use this routine to check if it is
+possible to send and receive IP datagrams (and therefore, UDP and TCP
+packets). The network can transport datagrams only when this routine returns
+A=2 (network available).
+
+Serial version: this routine will return 0 when variable PPP_STATE has a
+value of 0, will return 2 when PPP_STATE has a value of 4, and will return 1
+otherwise; it will never return 3.
+
+Ethernet version:
+
+The behavior of this routine is as follows (note that values 1 and 3 are
+never returned):
+
+- If the periodic check of the network connection is active (CHECK_NET
+variable is #FF), then the result of the last performed checking is returned
+(2 if the network is available, 0 otherwise).
+
+- If the periodic check of the network connection is not active (CHECK_NET
+variable is 0), then a checking is performed when this routine is executed
+(the Ethernet UNAPI routine ETH_GET_NETSTAT is used for that) and the result
+of the checking is returned (2 if the network is available, 0 otherwise).
+
+If the periodic check of the network connection is not active , INL will
+consider that the network is always available (that is, the "No network
+connection" error will never be returned by any routine of INL).
+
+
+* ENET_INFO (#4087): Obtains the Ethernet hardware address
+                     (Ethernet version only)
+Input:   -
+Output:  L-H-E-D-C-B = Ethernet hardware address
+
+Note: INL for ObsoNET returned the ObsoNET slot in register A; INL for
+Ethernet does not return any meaningful information in this register. To
+obtain the physical location of the Ethernet UNAPI implementation, use the
+standard discovery procedure as described in the MSX UNAPI specification.
+
+
+* ETH2ASCII (#408A): Converts a hardware address into an ASCII string
+                     (Ethernet version only)
+Input:   L-H-E-D-C-B = Hardware address to convert
+         IX = Address on TPA where to copy the generated string
+         A  = Flags that indicate the conversion format:
+              Bit 0: 0 to use upper case for hexadecimal letters
+                     1 to use lower case for hexadecimal letters
+              Bit 1: 0 to use "-" as two-digit group separator
+                     1 to use ":" as two-digit group separator
+Output:  -
+
+This routine converts the hardware address passed on HL, DE and BC into an
+ASCII string, which is copied to the TPA address specified in IX. For example,
+if HL=#2211, DE=#AA33 and BC=#CCBB are passed, the generated string is "11-22-
+33-AA-BB-CC" if A=0, and "11:22:33:aa:bb:cc" if A=3.
+
+The generated string has always a length of 17 characters, and no termination
+character is added to it.
+
+
+* ASCII2ETH (#408D): Obtains the hardware address represented
+                     by an ASCII string (Ethernet version only)
+Input:   HL = String address in TPA
+Output:  L-H-E-D-C-B = Resulting hardware adrress
+         Cy = 1 on error (invalid string format)
+
+This routine interprets the ASCII string whose address in TPA is passed in HL,
+and if it represents a valid hardware address, then Cy=0 and the resulting
+address in HL, DE and BC are returned; otherwise, Cy=1 is returned.
+
+The format of the string must be the same as generated by the ETH2ASCII
+routine: six two-hexadecimal digits groups separated by "-" or ":" characters.
+It is not necessary that the string have any special termination character.
+
+
+* MASK2BITS (#4090): Obtains the number of bits set to one in a subnet mask
+                     (Ethernet version only)
+Input:   L.H.E.D = Subnet mask
+Output:  A = Number of bits set to one
+
+This routine examinates the subnet mask passed in HL and DE, and returns in A
+the number of bits that it has set to one. The routine begins the examination
+from the most significant bit and stops when encountering the first bit set to
+zero; that is, if for example the mask 255.192.255.255 is passed, then it will
+return A=10.
+
+
+* BITS2MASK (#4093): Generates a subnet mask from the number
+                     of bits set to one (Ethernet version only)
+Input:   A = Number of bits set to one
+Output:  L.H.E.D = Subnet mask
+
+This routine generates a subnet mask from its number of bits set to one. For
+example, if A=17 is passed, it returns the mask 255.255.128.0.
+
+The number of bits passed must be a value between 0 and 32. Values higher than
+32 generate the mask 255.255.255.255.
+
+
+* ARP_ROUTE (#4096): Obtains the address and the capacity
+                     of the ARP and routing tables (Ethernet version only)
+Input:   -
+Output:  IX = ARP table address
+         IY = routing table address
+         B  = ARP table capacity
+         C  = routing table capacity
+
+This routine returns in IX and IY the addresses in the data segment of the ARP
+and routing tables, and in B and C their capacities (the maximum number of
+entries they can afford). The capacities are 32 ARP entries and 16 routing
+entries in this code version of INL, but they could change in future versions.
+
+The format of both tables is described in section 3.2.
+
+
+3.1.4. THE DATA SEGMENT
+
+Another important part of INL is the data segment. It consists of another RAM
+segment on the primary mapper, this time containing various variables and data
+buffers used by INL during its execution. More precisely, this segment
+consists of the following parts:
+
+- Configuration and state variables (about 64 bytes).
+- Variables and timers for internal use (about 64 bytes).
+- One 256 byte buffer for storing the host name that the resolver processes.
+- Eight 11 byte buffers to store information about the ICMP echo replies
+received.
+- Eight 10 byte buffers to store information about the UDP packets received.
+- Eight 556 byte buffers to store the incoming UDP packets.
+- One buffer for temporarily storing an incoming packet. For the serial
+version, this buffer is 582 bytes long (576 bytes for a maximum sized
+datagram, plus four bytes for the PPP header, plus two bytes for the
+trailing FCS). For the Ethernet version, this buffer is 598 bytes long (576
+bytes for a maximum sized datagram, plus 22 bytes for an Ethernet header of
+IEEE802.3 type).
+- One 582 or 598 byte buffer for temporarily storing an outgoing packet. This
+buffer and the previous one are used also by the INL routines that perform
+some process over user data stored in TPA (for example the MD5 hash
+calculation routine, or the routine for sending data to a TCP connection).
+- One 576 byte buffer for storing an outgoing datagram while its destination
+address is resolved by using ARP (Ethernet version only).
+- Four 160 byte (serial version) or 96 byte (Ethernet version) buffers to
+store the TCB of the TCP connections, plus another temporary buffer of the
+same size for storing the TCB currently being used (although the actual
+size of a TCB is smaller than 160 or 96 bytes).
+- Eight 1024 byte ring buffers, two per TCP connection; one is for incoming
+data and the other is for outgoing data and for retransmissions.
+
+In this section the configuration and state variables part will be explained
+with detail; it is the part of the data segment that may have interest for the
+programmer. Most of the variables of this part have an associated option in
+INL.COM that allows modifying them easily.
+
+To access the configuration and state variables you can use two methods, the
+indirect one and the direct one. The indirect method consists of using the
+GET_VAR, SET_VAR and COPY_DATA routines on the code segment, as explained in
+the previous section. To use the direct method, do the following:
+
+1) Make sure that the primary mapper is switched on page 2 (this is the
+default state for .COM programs).
+
+2) Switch the INL data segment on page 2 (obtain the segment number as
+exmplained in 3.1.1).
+
+3) Read or write the desired variables with LD instructions.
+
+4) Optionally, restore the previous slot/segment on page 2 (see section 3.3,
+"Programming considerations", below for a note about this).
+
+Of course, you can also access the variables by switching the data segment in
+any other page; but since the INL code always uses page 2 for this purpose, in
+the variables description the range #8000-#BFFF is used to specify their
+addresses.
+
+Following there is the detailed description of the configuration variables
+part; these variables may be modified by the programmer unless otherwise
+stated.
+
+
+The following variables exist in all versions of INL:
+
+* BUF_IPLOCAL (#8000): Local IP address.
+
+* BUF_IPDNS1 (#8004): IP address of the primary DNS server.
+
+* BUF_IPDNS2 (#8008): IP address of the secondary DNS server.
+
+* REPLYECHO (#800C): Flag to indicate whether the incoming ICMP echo requests
+(PINGs) will be replied or not. By default it is activated.
+
+* TTL (#800D): TTL for the outgoing datagrams. The default value is 64.
+
+* TOS (#800E): TOS for the outgoing datagrams. The default value is 0.
+
+* CHKVECT (#800F): Checksums calculation vector. Its behavior is explained in
+the User's Manual, in section 2.4.1. The default value is 31.
+
+* PING_SIZE (#8010): Default size for the data part of the outgoing ICMP echo
+requests (PINGs); it must be a two-byte number in the range 0 to 512. The
+default value is 64.
+
+
+The following variables are specific of the serial version:
+
+* BUF_DIAL (#8012): 16 byte buffer to store the ISP phone number. By default
+it is an empty string.
+
+* BUF_MODREP (#8022): 16 byte buffer to store the expected modem reply upon
+successful dialing. By default it is the string "CONNECT".
+
+* BUF_PPPUSER (#8032): 32 byte buffer to store the user name for the PPP
+authentication. By default it is an empty string.
+
+* BUF_PPPASSW (#8052): 32 byte buffer to store the password for the PPP
+authentication. By default it is an empty string.
+
+* BUF_IPREMOTE (#8072): Peer's IP address.
+
+* NEG_DNS (#8076): Flag to indicate whether the IP addresses of the DNS
+servers will be negotiated during the PPP connection establishment or not. By
+default it is activated.
+
+* USEPPPECHO (#8077): Flag to indicate whether PPP echo requests will be
+periodically sent to check the connection or not. By default it is activated.
+
+* PPP_STATE (#8078) - READ ONLY: Current state of the PPP connection, it may
+have one of these values:
+
+0: Closed
+1: Negotiating link (LCP)
+2: Authenticating (PAP or CHAP)
+3: Negotiating IP addresses (IPCP)
+4: Open (datagrams can be sent and received)
+
+The only transitions possible between states are: 0->1 (when executing
+PPP_OPEN), 1->2, 1->3, 2->3, 3->4 and 4->0 (when executing PPP_CLOSE). Again,
+for the sake of simplicity the PPP protocol specifications are deliberately
+violated here: the automaton should have more states and permit more
+transitions between them.
+
+* PPP_CLCODE (#8079) - READ ONLY: Cause of the last PPP connection close, it
+may have one of the following values:
+
+0: No PPP connection has been established since INL was installed
+1: Error when dialing the ISP number (the modem did not return "CONNECT" or
+equivalent)
+2: The user has closed the connection
+3: The peer has closed the connection with a LCP termination packet
+4: The peer has closed the connection with a IPCP termination packet
+5: Authentication failed
+6: Authentication required but with an unknown method (it is not PAP nor CHAP)
+7: Authentication required but PPP_USER is an empty string
+8: LCP negociation took more than one minute
+9: Authentication took more than one minute
+10: IPCP negociation took more than one minute
+11: Local IP address unknown by both us and the peer
+12: Remote IP address unknown by both us and the peer
+13: LCP "Code Reject" packet received
+14: LCP "Protocol Reject" packet received
+15: IPCP "Code Reject" packet received
+16: IPCP "Protocol Reject" packet received
+17: Too many PPP echo requests received without receiving a reply
+
+
+The following variables are specific of the Ethernet version:
+
+* OBSLOT (#8012): Formerly the ObsoNET slot, currently unused.
+
+* HWAD (#8013): Ethernet hardware address, six bytes.
+
+* SUBNET_MASK (#8019): Subnet mask.
+
+* DEFGW (#801D): Default gateway.
+
+* ARP_TOUT (#8021): Dynamic ARP entries lifetimes, in 1/60 seconds (four
+bytes). By default it is the value equivalent to five minutes.
+
+* ARP_TOUT_SECS (#8025): Dynamic ARP entries lifetimes, in seconds (four
+bytes). This variable and the previous one must be kept syncrhronized.
+
+* FRAME_TYPE (#8029): Flag that indicates the Ethernet frame type for outgoing
+packets, Ethernet II (0) or IEEE802.3 (#FF). By default it is 0.
+
+* CHECK_NET (#802A): Flag that indicates whether to perform automatic network
+connection checkings every ten seconds (#FF) or not (0). By default it is #FF.
+
+* DHCP_VECT (#802B): DHCP configuration vector (see the INL IP D command in
+the User's Guide); 16 bits, of which only six are used in this code version
+of INL. By default it is 0.
+
+* DHCP_VECT_O (#802D): Vector that indicates which parameters have actually
+been obtained by using DHCP. It is established when the DHCP automaton reaches
+the BOUND or the CONFIGURED state. READ ONLY.
+
+* DHCP_STATE (#802F): DHCP automaton state (READ ONLY):
+
+0: INIT
+1: SELECTING
+2: REQUESTING
+3: BOUND
+4: RENEWING
+5: REBINDING
+6: INFORMING
+7: CONFIGURED
+
+
+The storage format of these variables is as follows:
+
+- Two byte values are stored in the usual little-endian format.
+- The strings are stored with a 0 termination character.
+- IP addresses are stored in their natural order; for example 1.2.3.4 will be
+stored as DB 1,2,3,4. The default value for all the IP addresses is 0.0.0.0
+- Flags are 0 if deactivated and #FF if activated.
+- Four-byte numbers are stored in big-endian format (high byte first).
+
+Note: the default values for the variables are the values they have when INL
+is installed, or after executing INL D. There is not a routine in the code
+segment for initializing the variables to their default values; INL.COM does
+this task "manually", modifying each variable sepparately.
+
+
+3.2. ARP AND ROUTING TABLES FORMAT (ETHERNET VERSION ONLY)
+
+In this section the format of the ARP and routing tables used by INL is
+explained. The addresses and capacities of these tables can be obtained by
+using the ARP_ROUTE routine of the INL code segment, and the use that INL
+makes of them is explained in the User's Guide (see INL.COM commands INL ARP
+and INL ROU).
+
+An entry of the ARP table consists of 16 bytes, whose meaning is as follows:
+
++0:  Entry state (1 byte)
+     0: Unused
+     1: Static entry
+     2: Dinamic entry in use
+     3: Dinamic entry being resolved
++1:  Ethernet address (6 bytes)
+     Valid on entry states 1 and 2
++7:  IP address (4 bytes)
+     Valid on entry states 1, 2 and 3
++11: Entry expiration timer (4 bytes, 1/60 secs)
+     Valid on entry state 2
++15: Unused, always zero (1 byte)
+
+On state 3, the meaning of bytes 11 to 14 change as follows:
+
++11: Timer for sending the next ARP packet (1 byte, 1/60 secs)
++12: Number of ARP packets already sent (1 byte)
++13, +14: Unused, always zero
+
+Static entries must be created manually, by searching an empty entry and
+filling appropriately the Ethernet address, IP address and state entry fields;
+INL.COM does this when INL ARP A is executed. Entries are also manually
+deleted, by simply writing zero in the state field.
+
+Entries in resolution process are created when INL needs to learn the hardware
+address corresponding to a given IP address. Up to five requests, with a
+separation of two seconds between them, are sent. If a reply arrives, the
+entry becomes dynamic; otherwise it is deleted.
+
+Dynamic entries are created from the entries in resolution process, or
+directly when a non-requested ARP request or reply arrives, as specified in
+RFC826. When the remaining lifetime timer reaches the value zero, the entry is
+deleted. The timer is reset to its initial value if a request or reply arrives
+from the same IP address.
+
+When INL needs to create a new dynamic entry and the table is full, the
+dynamic entry in use whose remaining lifetime is smaller is searched, and it
+is overwritten with the new entry.
+
+Cuando INL necesita crear una entrada dinámica nueva estando la tabla llena,
+se busca la entrada dinámica en uso cuyo tiempo de vida restante sea inferior,
+y se sobreescribe dicha entrada con la entrada nueva.
+
+INL recognizes incoming UNARP packets (RFC1868): when the "Hardware address
+length" field of a received ARP reply packet has the value zero, the
+associated entry is deleted from the ARP table, if it exists.
+
+Regarding the routing table, the format of its entries (16 bytes each) is as
+follows:
+
++0:  Entry state (1 byte)
+     0: Unused
+     1: In use
++1:  Destination subnet IP address (4 bytes)
++5:  Destination subnet mask (4 bytes)
++9:  Router IP address (4 bytes)
++13 to +15: Unused, always zero (3 bytes)
+
+These entries must be created manually, searching for an empty entry and
+filling appropriately all fields; INL.COM does this when INL ROU A is
+executed. Entries are also manually deleted, by simply writing zero in the
+state field.
+
+
+3.3. PROGRAMMING CONSIDERATIONS
+
+In this section we discuss some points that are of interest for the
+programmers that use the routines provided by INL in their programs.
+
+
+3.3.1. WHAT IS TPA
+
+TPA (Transient Program Area) is the 64K RAM area visible for the MSX-DOS based
+programs when they start their execution (that is, before they perform any
+slot or segment switching).
+
+Some of the functions of INL perform data transfers between TPA and the data
+segment of INL, in order to exchange data with the calling application. In
+these cases, INL always considers that TPA equals to the default segments that
+build up this area; that is, primary mapper's segments 3, 2, 1 and 0 for the
+pages 0, 1, 2 and 3 respectively. Even if the application performs slot or
+segment switching on any page before executing the INL routines that access
+TPA, these functions will always access the mentioned segments.
+
+The segment number is decided according to the two higher bits of the
+associated TPA address: addresses in the range #0000-#3FFF refer to segment 3,
+addresses in the range #4000-#7FFF refer to segment 2, etc.
+
+The physical access to the segment performed by INL is not necessarily done
+through its associated page. Therefore, when using INL routines to which a TPA
+area is passed as the source or destination of a data transfer, an area that
+crosses a page boundary must never be used (for example, the area starting in
+#7F00 which has a length of 1024 bytes crosses the boundary between pages 1
+and 2).
+
+
+3.3.2. CALLS TO INL AND SEGMENT CHANGES
+
+Theorically, an application that make use of the INL routines could switch the
+INL code segment in page 1 at the beginning of its execution, and from that
+moment it could use the INL routines simply with CALL instructions (if the
+application does not need to use the TPA area associated to page 1) during all
+the life of the program.
+
+However, it is not possible to use this simple strategy due to the MSX-DOS
+behavior (observed, at least, in the Turbo-R ST):
+
+- DOS 1 restores the default TPA segments in all pages after a DOS funcion
+call (that is, after each CALL 5).
+
+- DOS 2 hangs the computer if the TPA default segments are not visible on all
+pages when the application finishes.
+
+Having this in mind, two possible strategies for using the INL routines from
+applications that are intended to be DOS 1 and DOS 2 compatible are the
+following ones:
+
+1) Before executing an INL routine, switch the INL code segment in page 1; and
+immediately after the execution, restore the TPA segment in the same page
+(with the last action we ensure that we can exit from the application without
+hanging the computer). This is the strategy used by the supplied ping client
+(source code in PING-E.ASC).
+
+2) Before executing an INL routine, switch the INL code segment in page 1, but
+do nothing special after the execution. In addition to this, at the beginning
+of the application, if DOS 2 is detected define a routine to be executed by
+DOS when the application is about to terminate (use the DOS function _DEFAB,
+#63, for this); this routine will simply restore the original TPA segments
+before the application termination, avoiding then the computer hang. This is
+the strategy used by the supplied TFTP client/server (source code in TFTP-
+E.ASC) and by the supplied TCP console (source code in TCPCON-E.ASC).
+
+The PING, TFTP and TCPCON programs use a macro for executing the INL routines
+by following the mentioned strategies, but it is also possible to use a
+subroutine for the same purpose, reducing then the size of the code if there
+are a lot of calls to INL routines.
+
+
+3.3.3. INTERRUPTS AND WAITING TIMES
+
+INL bases its functionning in the interrupts generated by the system timer at
+50 or 60 Hz: in each interrupt the INL interrupt service routine is executed,
+this routine updates internal timers and variables, obtains all the pending
+incoming data from the RS232 port (serial version) or gets one incoming
+packet from the network (Ethernet version), and sends the outgoing pending
+data (only DNS, TCP and PPP/ARP packets; UDP and PING packets are sent
+immediately when the user executes the corresponding sending routine).
+
+However, if the timer interrupt arrives when any INL user routine is being
+executed, the timer interrupt service routine will not be executed. This is to
+avoid conflicts between the use of the data buffers by the user routines and
+the use of the same buffers by the timer interrupt service routine (more
+precisely, the buffer for outgoing packets is also used by some of the
+routines that imply data transfer between TPA and the INL data segment, for
+example the routine that calculates the MD5 hash).
+
+For this reason, if an application needs to repeatedly execute an INL routine
+while waiting for any event (for example when waiting for the reply of a DNS
+query), it is advisable to insert some waiting code between the routine calls.
+This code should wait until a timer interrupt arrives, and only then, it could
+execute the desired INL routine. By doing this, we give the code of INL an
+opportunity to execute and to correctly perform the tasks it has pending.
+
+INL provides in its code segment the WAIT_INT routine for this purpose. This
+routine waits until a timer interrupt arrives, and then returns. Its code
+(simplified because the actual routine does more things to avoid waiting
+innecessarily and to save and retrieve the previous state) is as follows:
+
+TIME:	equ	#FC9E
+
+WAIT_INT:	ld	hl,(TIME)
+WT_LOOP:	ld	de,(TIME)
+	call	COMP	;COMP returns Z=1 if HL=DE
+	jr	nz,WT_LOOP
+	ret
+
+So a loop that waits for the reply of a DNS query could be for example as
+follows:
+
+	;Assume that DNS_Q has been executed already
+DNS_WAIT:	call	WAIT_INT
+	xor	a
+	call	DNS_S
+	cp	1
+	jr	z,DNS_WAIT
+	;Here we have the result or an error
+
+Every time WAIT_INT is called, also any DOS function should be executed, to
+give the system an opportunity for detecting if the user has pressed CTRL-C or
+CTRL-STOP.
+
+The WAIT_INT routine is described on section 3.1.3, "The code segment".
+
+
+3.3.4. HANDLING IP ADDRESSES
+
+All the INL routines that handle IP address accept or return those in the
+format L.H.E.D. That is, the address x.y.z.s is represented as HL=#yx, DE=#sz.
+
+This is done in this way to ease the storage of the IP addresses in memory
+with its natural order, that is, db x,y,z,s (as they are stored in the INL
+data segment), since the addresses can then be stored with just a couple of LD
+instructions. For example, to send a PING to the default gateway, and assuming
+that the INL segments are already switched on pages 1 and 2, it is enough to
+do:
+
+ld hl,(DEFGW)
+ld de,(DEFGW+2)
+;(set up other registers here)
+call SEND_ECHO
+
+
+3.4. FORMAT OF THE TCB
+
+For each TCP connection, INL maintains in its data segment a control area
+called TCB (Transmission Control Block). A TCB is a group of variables used by
+INL to control the state of the connection and the data sending and receiving
+processes. The address of the TCB for a given connection can be obtained with
+the TCP_STATUS routine.
+
+In this section the contents of a TCB is described: every variable, its
+position relative to the start of the TCB, its function and its size is
+mentioned. Unless otherwise stated, the following apply to all the variables:
+
+- Two byte values are stored in the MSX usual format (little-endian).
+- Sequence numbers (32-bit values) are stored with the format in which they
+traverse the network, big-endian. For example, #12345678 is stored as DB
+#12,#34,#56,#78.
+- Flags have two possible values: 0 when they are inactive and #FF when they
+are active.
+- Timers use units of 1/60 seconds.
+- Timers always decrement. When they have a value of 0, it means that either
+they are inactive, or they have expired (to distinguish among these two
+circumnstances, other variables must be checked, depending on the timer).
+
+The size of a TCB is currently 132 bytes (serial version) or 88 bytes
+(Ethernet version). This size can grow in future versions of INL, but it will
+never be larger than 256 bytes.
+
+The TCB format is provided for information purposes only. Applications should
+never modify the contents of a TCB manually.
+
+A TCB consists of the following variables:
+
++0: TCP_STATE (1). Connection state, codified in the same way as the value
+returned by the TCP_STATUS routine. When the state is 0 (CLOSED), the
+remaining of the TCB has no useful information, except for the LAST_CLOSE
+variable.
+
++1: REMOTE_IP (4). IP address of the remote host, stored in its natural order
+(db A,B,C,D for A.B.C.D). For connections in the LISTEN state with
+unespecified remote socket, this address is 0.0.0.0.
+
++5: REMOTE_PORT (2). Remote port number. Zero in LISTEN state with
+unespecified remote socket, regardless of the value specified when calling
+TCP_OPEN.
+
++7: LOCAL_PORT (2). Local port number.
+
++9: PASSIVE_OPEN (1). Flag that is active if the connection was opened in
+passive mode.
+
++10: SND_UNA (4). Oldest unacknowledged sequence number.
+
++14: SND_NXT (4). Next sequence number to be sent.
+
++18: SND_WND (2). Send window. The size of the new segments sent by INL is
+the minimum of this value, the value of MSS, the amount of data in the
+output buffer and 536.
+
++20: SND_WL1 (4). Sequence number used for the last window update.
+
++24: SND_WL2 (4). Acknowledgment number used for the last send window update.
+
++28: ISS (4). Initial send sequence number. In this code version of INL this
+number is always zero.
+
++32: RCV_NXT (4). Next sequence number expected to be received.
+
++36: IRS (4). Initial receive sequence number.
+
++40: USER_TOUT_V (2). User timeout initial value, specified by the user when
+opening the connection.
+
++42: USER_TOUT (2). User timeout current value.
+
++44: LAST_CLOSE (1). Connection close reason, codified in the same way as the
+value returned by the TCP_STATUS routine. Zero when the connection is not
+closed. This variable is the only one that contains useful information (apart
+from TCP_STATE) when the connection is closed.
+
++45: SEND_PUSH_PEND (2). Number of pending outgoing data that has been
+enqueued as PUSHed. +47: SEND_TOUT (2). Timer for sending non-PUSHed data. The
+data is sent when this timer expires or when MSS or more bytes are cummulated
+in the output buffer. It is always initialized to 0.5 seconds.
+
++49: SYN_SENT_FLAG (1). Flag that is active when a SYN segment has been sent
+but its acknowledgment has not been received yet.
+
++50: FIN_SENT_FLAG (1). Flag that is active when a FIN segment has been sent
+but its acknowledgment has not been received yet.
+
++51: RETX_SIZE (2). Retransmission queue length. The retransmission queue does
+not exist as an independent entity, but the sent data remains in the output
+buffer until the acknowledgment for it arrives.
+
++53: RTO_T (2). Timer used for data retransmission and for zero window
+probing. It is always initialized to three seconds in the first case, and to
+10 seconds in the second case.
+
++55: ACK_RCV_NUM (2). Number of new data bytes that have been received but for
+which an acknoledgment has not been sent yet.
+
++57: ACK_DELAY_T (1). Timer used for sending acknowledgments for the new data
+received. The acknowledgment is sent when this timer expires or when
+ACK_RCV_NUM reaches the value 256. This timer is alwais initialized to 0.1
+seconds.
+
++58: FIN_PENDING (1). Flag that is active when the user has requested the
+connection to be closed (by using the TCP_CLOSE routine) but the corresponding
+FIN segment has not been sent yet (because there is still data to be sent
+and/or retransmitted).
+
++59: LAST_WIN_SENT (2). Receive window announced in the last segment sent.
+When received data is extracted with TCP_RCV, the new window value to be
+announced is compared against the value of this variable. It they differ, an
+empty segment (containing ACK only) is sent to announce the new window value.
+
++61: MSS (2). Maximum segment size that the remote host can accept. This value
+is obtained from the MSS option of the SYN segments received; the default
+value if this option is not received is 512.
+
++63: ACK_PENDING (1). Flag that is active when an ACK segment is pending to be
+sent for reasons other than the recepit of new data (for example, for the
+recepit of an out-of-order segment).
+
+The following variables refer to the 1024 byte ring buffer used to store the
+incoming data. The buffer itself is located on the INL data segment.
+
++64: INBUF_USED (2). Used space.
+
++66: INBUF_FREE (2). Free space (the receive window announced is this value
+rounded down to a 128 byte multiple; when this value is smaller than 128, the
+real value is announced).
+
++68: INBUF_INPNT (2). Pointer for the next data insertion.
+
++70: INBUF_OUTPNT (2). Pointer for the next data extraction.
+
++72: INBUF_BUFADD (2). Start address of the buffer (in page 2).
+
++74: INBUF_ENDADD (2). Start address of the buffer plus buffer size.
+
+The following variables refer to the 1024 byte ring buffer used to store the
+incoming data. The buffer itself is located on the INL data segment. The first
+RETX_SIZE bytes are the retransmission queue, the remaining is new data not
+yet sent.
+
++76: OUTBUF_USED (2). Used space.
+
++78: OUTBUF_FREE (2). Free space.
+
++80: OUTBUF_INPNT (2). Pointer for the next data insertion.
+
++82: OUTBUF_OUTPNT (2). Pointer for the next data extraction.
+
++84: OUTBUF_BUFADD (2). Start address of the buffer (in page 2).
+
++86: OUTBUF_ENDADD (2). Start address of the buffer plus buffer size.
+
++88: VJ_OUT_HEADER (44). Header for the Van Jacobson compression, used with
+outgoing packets (serial version only).
+
+
+4. CHANGE LIST AND CONTACT
+
+4.1. CHANGE LIST (SERIAL VERSION)
+
+* Version 1.1.1, september 2007:
+
+- Corrected a bug that caused the computer to hang when a configuration file
+was read, either at installation time or using the INL F command.
+
+* Version 1.1.0, september 2007:
+
+- When an unknown negotiation method (other than PAP or CHAP) was proposed
+during the PPP connection negotiation, a LCP Configure NAK packet was sent
+proposing PAP and CHAP. This seems not to be the correct procedure (the Linux
+PPP daemon, which initially proposes the EAP protocol, treats the NAK packet
+as invalid and negotiation does not progress). Now a Configure Reject packet
+is sent instead.
+
+* Version 1.0.2:
+
+- Corrected a bug in the TCP_STATUS routine. It did not syncrhonize correctly
+with the code executed during the timer interrupt.
+
+- Corrected a bug in the installer. Now it is possible to use an INL.CFG file
+and to specify a command to be automatically executed after installation, at
+the same time.
+
+- Added support for ICMP "Destination unreachable" messages. When the packet
+causing such message is a TCP segment, the associated TCP connection is
+automatically closed.
+
+- Added a new code for the TCP connections close reason: ICMP "Destination
+unreachable" message received (see TCP_STATUS routine).
+
+
+4.2. CHANGE LIST (ETHERNET VERSION)
+
+* Version 1.1.1, september 2007:
+
+See the change list for the serial version.
+
+* Version 1.1.0, september 2007:
+
+- INL for Ethernet 1.1.0 is INL for ObsoNET 1.0.2 with the support for
+ObsoNET replaced by support for the Ethernet UNAPI. ObsoNET BIOS implements
+the Ethernet UNAPI starting at version 1.1.
+
+* Version 1.0.2:
+
+See the change list for the serial version.
+
+
+4.3. CONTACT INFORMATION
+
+To contact the author and obatin the latest version of INL, as well as ObsoNET
+related software and information about the MSX UNAPI standard:
+
+http://www.konamiman.com
+konamiman@konamiman.com
+
+Also, please visit the INL project portal at http://www.sourceforge.net.

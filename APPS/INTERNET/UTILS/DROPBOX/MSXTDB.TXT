@@ -1,0 +1,489 @@
+MSX trivial dropbox suite 1.1 User's Manual
+By Konamiman, 2/2014
+
+Application icon by SaveR (http://www.di-eyes.com/)
+
+
+  1. INTRODUCTION
+
+Dropbox (http://www.dropbox.com) is an online file storage service that offers both free and paid plans. At the time of this writing, there is one free plan that provides 2GB of storage space, and two paid plans that provide 50GB and 100GB.
+
+MSX trivial dropbox (MSXtdb) is a suite of applications that allow to manage, and to transfer files from/to, a Dropbox account from MSX computers.
+
+
+  2. SYSTEM REQUIREMENTS
+
+In order to use MSXtdb, you need:
+
+- A MSX2, MSX2+ or MSX Turbo-R computer.
+- Networking hardware (such as a RS232 card or an Ethernet card) and Internet connection (via normal modem, ADSL router, cable modem or similar)
+- A TCP/IP UNAPI implementation (such as InterNestor Lite 2.0 or later, or the one included in the DenYoNet card)
+- MSX-DOS v2.20 or later
+- At least 128K of mapped RAM (this is required by MSX-DOS 2, not by MSXtdb itself)
+- Access to a SSL wrapping service (see section 3 for details)
+- You will need to use a web browser on any device in order to grant MSXtdb access to your Dropbox account, this is a one-time operation (see section 5.2)
+
+MSXtdb programs are MSX-DOS .COM executable files, so you need to boot the computer in the DOS prompt to use them.
+
+
+  3. THE SSL WRAPPING SERVICE
+
+Starting at version 1.1, MSX trivial dropbox uses version 1 of the Dropbox API (version 0, now deprecated, was used previously). This API requires mandatory usage of SSL encryption for the commands and data transfer connections. There is currently no way to open a SSL connection with a MSX, therefore MSX trivial dropbox can't connect directly to the Dropbox server; instead, an intermediate SSL wrapping service must be used.
+
+A SSL wrapping service is an application that runs on a network-enabled computer and accepts regular (unencrypted) TCP connections to a certain port or ports. Upon an incoming connection is accepted, the service opens a SSL enabled (encrypted) connection to the desired server and redirects all the data from the client to the server and viceversa, encrypting the client data before sending it to the server and unencrypting the server data before sending it to the client.
+
+
+  +-----+                          +---------------+                          +--------------+
+  |     | >------------------------| . . . . . . . |------------------------> |              |
+  | MSX |        plain TCP         |               |   encrypted TCP (SSL)    |   Droopbox   |
+  |     | <------------------------| . . . . . . . |------------------------< |  API server  |
+  +-----+                          +---------------+                          +--------------+
+                                      SSL wrapper
+
+The URLs and ports of the SSL wrapping service used by the MSX trivial dropbox suite are specified via environment variables (see section 5.1 for details).
+
+
+   3.1. STUNNEL
+
+Stunnel is a free and easy to configure SSL wrapping service available for multiple platforms. When configured in client mode, it works perfectly with MSX trivial drobox.
+
+This sections explains how to configure stunnel on a Windows computer; configuration steps for other platforms should be similar, please refer to the stunnel documentation for details.
+
+   a. Download stunnel from http://www.stunnel.org
+
+   b. Install the application. All you need is the "Stunnel Core Files" component; leave or uncheck the other components as you wish.
+
+   c. Run stunnel via the "Stunnel GUI start" start menu option. You will get an error ("the server is down due to an error"), this is normal.
+
+   d. Select Configuration -> Edit stunnel.conf
+
+   e. Delete the whole contents of the file and paste the following:
+
+[dropbox-api]
+client = yes
+accept = 8000
+connect = api.dropbox.com:443
+
+[dropbox-api-content]
+client = yes
+accept = 8001
+connect = api-content.dropbox.com:443
+
+    f. Select Configuration -> Reload stunnel.conf. Once stunnel starts, it is ready to accept connections on ports 8000 and 8001 (these port numbers are just examples; you can use whatever ports you want, provided that they are available on your computer).
+
+    g. If necessary, configure the firewall on your computer to allow external connections to ports 8000 and 8001 (or to whatever ports you have configured).
+
+Installation and configuration need to be done only once. From that point, every time you want to use MSX trivial dropbox you need to ensure that the computer is switched on and that stunnel is running.
+
+Note: stunnel can be installed as a service as well. See the program's manual for details.
+
+
+  4. THE SUITE
+
+Due to memory constraints, MSXtdb is divided in a suite of three programs:
+
+- DBACC.COM: Account manager. Use it to generate a user authorization file for your Dropbox account (this is needed in order to perform any other operation with the MSXtdb suite), and to get quota information for an account.
+
+- DBFOPS.COM: File operations manager. Use it to perform any file related operation that do not involve a file transfer: get directory listings, copy and move files between directories on the Dropobox account, create new directories, and rename and delete files and directories.
+
+- DBFILE.COM: File transfer manager. Use it to transfer files between your MSX and your Dropbox account.
+
+A future version of the MSXtdb suite could include a directory syncrhonization utility as well.
+
+All three files must be on the same directory on disk, as they share a single user authorization file that each program searches in its own directory.
+
+The usage options of all three programs are explained through this document.
+
+
+  5. GETTING STARTED
+
+This section is a quick tutorial on how to perform a basic usage of MSXtdb. More details about the programs usage options are provided later.
+
+Boot your MSX, install a TCP/IP UNAPI implementation and follow these steps:
+
+
+  5.1. Configure the SSL wrapper environment variables
+
+There are two environment variables that the MSXtdb programs read to know how to reach the SSL wrapping service. Before using any of the programs, please execute the following in the MSX-DOS prompt:
+
+   set DROPBOX_API_URL = <wrapper URL>:8000
+   set DROPBOX_API_CONTENT_URL = <wrapper URL>:8001
+
+Change <wrapper URL> to the URL or IP address of the computer that is running the SSL wrapping service. Values 8000 and 8001 are the port numbers where incoming connections are accepted; if you have configured your SSL wrapping service (stunnel or any other) to use different ports, change them to the appropriate numbers.
+
+For your convenience, you can put these "set" statements in a .BAT file, or even in AUTOEXEC.BAT if you use MSXtdb often.
+
+  
+  5.2. Create a user authorization file (one-time operation)
+
+If you do not have a Dropbox account already, you need to open one by using a web browser. Version 1.0 of MSXtdb allowed to create an account from the MSX itself, but this option has been removed because version 1 of the Dropbox API does not allow it anymore.
+
+If you have already a Dropbox account, use DBACC to create a user authorization file that will be used for all the transactions between your MSX and the Dropbox service. Use the following command:
+
+  DBACC AUTH
+
+The program will establish communication with the Dropbox server and you will be presented with a URL. You must open a web browser on any device (the computer where the SSL wrapping service is running, any other computer, a mobile phone, a tablet... doesn't matter) and navigate to that URL. You will be asked to login to your Dropbox account and to grant MSX trivial dropbox acces to it.
+
+Once the browser confirms you that MSX trivial dropbox has been granted access to your Dropbox account, go back to your MSX and press any key. After a second communication with the Dropbox server, a file named DROPBOX.USR will be created in the same directory of DBACC.COM. Do not delete this file as it is needed for any further operation made by the MSXtdb suite.
+
+The tokens stored in the user authorization file do not expire under normal circumstances, so you should not need to perform this step again.
+
+
+  5.3. Check your account
+
+Execute the following to check that your account is accessible by MSXtdb:
+
+  DBACC INFO
+
+You should get something like this:
+
+  User Name:   James Burton Venom
+  User ID:     1234567890
+  Total quota: 2.0 Gbytes
+  Used quota:  1 Mbytes
+  User email:  james_burton@gradius.com
+
+Note: if you are curious, you can execute DBACC INFO RAW instead, and you will see the raw JSON data returned by the Dropbox server.
+
+
+  5.4. Create and upload a test file
+
+Type the following in the DOS prompt (press Enter at the end of each line):
+
+COPY CON TEST.TXT
+Hello world!
+
+Then press CTRL-Z. A file named TEST.TXT has been created.
+
+Upload the file to your Dropbox account with the following command (don't forget the "/" at the end):
+
+  DBFILE PUT TEST.TXT TEST/
+
+This will upload the file to the directory named "TEST" in your Dropbox account (the directory will be created automatically if it does not exist).
+
+
+  5.5. Ensure that the file has been correctly uploaded
+
+Execute the following:
+
+  DBFOPS DIR TEST
+
+This will retrieve the contents of the "TEST" directory in your Dropbox account. You should get something like this:
+
+  Directory contents of /TEST:
+
+  TEST.TXT    28-Jan-2011 15:34   14.0 bytes
+
+  14 bytes in 1 files
+  0 subdirectories
+
+
+  5.6. Rename the file
+
+Execute the following:
+
+  DBFOPS REN TEST/TEST.TXT TEST2.TXT
+
+Now if you repeat the previous step, you will see that indeed the name of the file has changed.
+
+
+  5.7. Download the file
+
+Finally, download the file again to your MSX. To achieve this, execute the following:
+
+  DBFILE GET TEST/TEST2.TXT
+
+Once you are done, execute "DIR TEST*.TXT" to check that you have both the original and the downloaded file, then execute "TYPE TEST2.TXT" to check that the file contents is effectively "Hello world!".
+
+
+...and that's pretty much it. Operating with MSXtdb consists mainly on using DBFILE to upload and download files, and using DBFOPS to check directory contents and to perform maintenance operations on the remote files and directories.
+
+
+  6. USING THE PROGRAMS
+
+This section explains the details of the DBFOPS and DBFILE programs usage. DBACC is not explained as all the relevant information about this program is already delivered in the "Getting Started" section above.
+
+All the MSXtdb suite programs terminate with an error code of 0 on success, or with 1 if any error occurs.
+
+Remember that you need to create a user authorization file with DBACC AUTH before performing any other operation with the MSXtdb suite programs.
+
+
+  6.1. DEALING WITH PATH NAMES
+
+MSX-DOS uses the old 8.3 file naming system inherited from MS-DOS, has a limit of 64 characters for paths, and knows little about character encodings and nothing about Unicode. These limitations are not present on Dropbox, so there is an impedance mismatch that has to be taken in account when file operations and transfers are performed with MSXtdb.
+
+When dealing with remote paths in any of the MSXtdb suite programs, please keep in mind the following:
+
+- When a remote path argument is required, you can either specify it directly or put it in a text file and specify the file name instead, preceded by the "file:" prefix.
+
+For example, assume that you have a text file named "PATH.TXT" containing the string "MSX/GAMES". Then you can execute "DBFOPS DIR FILE:PATH.TXT" as an equivalent to "DBFOPS DIR MSX/GAMES".
+
+- The maximum remote path length that the MSXtdb suite programs can handle is 256 characters. Note however that the MSX-DOS command line is limited to 127 characters, so you will need to use path files as explained above if you need to handle paths that are such long.
+
+- If you want to perform any operation on a file whose path contains non standard ASCII characters, you will need to put the path in a text file encoded in UTF8, then pass the file to DBFOPS or DBFILE using the "file:" syntax. You need to use an external tool (perhaps in another computer) to generate UTF8 encoded files, as the MSXtdb programs don't provide this functionality.
+
+- When specifying remote paths in the command line, if the path contains spaces you need to use the "*" character to represent spaces. For example: "DBFOPS DEL Getting*Started.pdf".
+
+Most of these limitations are not noticed when MSXtdb is used to store native MSX files, which are already in the 8.3 form and have usually only standard ASCII characters in the name.
+
+The following rules apply as well to path names:
+
+- Unless otherwise stated, paths are allowed but not required to have a preceding and/or a trailing slash ('/'). So for example "TEST" is the same as "/TEST/". The root directory in the Dropbox account is a special case, it is represented as "/".
+
+- MSX-DOS uses the backslash ('\') as path separator, while Dropbox uses the regular slash ('/'). However, for convenience you can use either type of slash on both local and remote paths on all the MSXtdb suite programs.
+
+- Both MSX-DOS and Dropbox treat file and directory names in a case insensitive way, so for example "DBFILE DIR TEST" is equivalent to "DBFILE DIR test". However, when creating new content (when copying or moving a file or directory with DBFOPS, or when uploading a file with DBFILE), the casing used when specifying the new content location is preserved and used when creating the new file or directory in the Dropbox account.
+
+
+  6.2. THE FILE OPERATIONS MANAGER
+
+DBFOPS.COM is the MSXtdb file operations manager. It allows the following operations:
+
+- Retrieve Dropbox directory contents listings
+- Create new directories on the Dropbox account
+- Rename files and directories on the Dropbox account
+- Delete files and directories on the Dropbox account
+- Copy and move files between directories on the Dropbox account
+
+The details about these operations are explained below.
+
+
+  6.2.1. RETRIEVING DIRECTORY LISTINGS
+
+The syntax for retrieving a Dropbox directory listing is as follows:
+
+  DBFOPS DIR <remote path> [nlen=<max names length>]
+             [show={files|dirs|all}] [format={full|simple|raw}]
+             [s[earch]=<search pattern>]
+
+If the remote path is a directory, then the contents of the directory is listed. If it is a file, then details about the file are displayed. It is not possible to use any type of wildcard to select which files are included in the list.
+
+The following optional arguments are available for the DIR command (they are ignored when the remote path refers to a file rather than a directory):
+
+  nlen=<max names length>
+
+Specifies the length of the names column in the returned directory listing; longer names will be truncated. The default value is 12 (enough for 8.3 names), and any value between 3 and 256 can be specified. This parameter is ignored when the listing format is not "full" (see below).
+
+  show=files, show=dirs, show=all
+
+Specifies that only files, only subdirectories, or both (default) will be included in the listing.
+
+  format=full
+
+Specifies that a detailed listing must be returned (this is the default option). The detailed listing contains the file name, last modification date and time, and size.
+
+Note: the last modification time will be displayed as the Dropbox server returns it, without any time zone adjustment. This may be corrected in a future version of the program.
+
+  format=simple
+
+Specifies that only the file names will be returned. Directory names will have a slash appended, to distinguish them from regular files.
+
+If you list only files, use the simple format, and redirect the output of the DIR command to a file (for example "DBFOPS DIR / SHOW=FILES FORMAT=SIMPLE > FILES.TXT"), you can use the generated file as the argument of the DBFILE GET command in order to retrieve a group of files at once. More details are provided later.
+
+  format=raw
+
+Specifies that the raw data received from the Dropbox server (in JSON format) will be displayed. Useful if you want to parse this data with any other program.
+
+NOTE: The DBFOPS DIR command creates a temporary file to store the data received from Dropbox before processing it. This file will be created in the directory pointed by the "TEMP" environment variable, or, if this variables does not exist, in the same directory where DBFOPS.COM is located. Please ensure that either of the two locations is writable and has a minimum of free space.
+
+  search=<pattern>
+  s=<pattern>
+
+Returns only the files whose name contains all of the parts specified in the search pattern; parts are separated by using the '*' character. The search is recursvie, that is, subdirectories of the specified path are scanned as well. The search is case-insensitive. Examples:
+
+     s=.dsk  -->  Returns only files with .DSK extension.
+     s=get*sta  -->  Matches the filenames containing "Getting Started"
+
+
+  6.2.2. CREATING A DIRECTORY
+
+The syntax for creating a new Dropbox directory is as follows:
+
+  DFFOPS MKDIR <new directory path>
+
+It is possible to create multiple nested directories in one single operation. For example you can do "DBFOPS MKDIR MSX/GAMES/ROMS" whithout having to create the MSX directory first, then the MSX/GAMES directory and finally the MSX/GAMES/ROMS directory (altough you could do it that way as well).
+
+Also, when creating new content (when copying or moving a file or directory, or when uploading a file with DBFILE) it is possible to specify a non existing directory as the destination for the new content without having to create the directory first. So you can for example execute "DBFOPS COPY GRADIUS.ROM MSX/GAMES/ROMS/" without having to create the "MSX/GAMES/ROMS" directory first.
+
+
+  6.2.3. RENAMING A FILE OR DIRECTORY
+
+The syntax for renaming a Dropbox file or directory is as follows:
+
+  DFFOPS REN <file path> <new name>
+
+The usual rules of remote paths apply to the "new name" parameter, but with one additional restriction: it cannot contain any slash (taht is, it must be a pure file name rather than a full path name). If you intend to move the file to a different directory, use the "MOVE" command instead (see below).
+
+
+  6.2.3. DELETING A FILE OR DIRECTORY
+
+The syntax for deleting a Dropbox file or directory is as follows:
+
+  DFFOPS DEL <file path>
+
+PLEASE NOTE: If you specify a directory, then all the directory contents (including recursively all the contained subdirectories) will be deleted as well. There is NO confirmation prompt unless you are trying to delete the root directory, so please be careful.
+
+
+  6.2.4. MOVING A FILE OR DIRECTORY
+
+The syntax for moving a Dropbox file or directory to another location within the same account is as follows:
+
+  DBFOPS MOVE <old path> <new path>
+
+The usual rules of remote paths apply to the "new path" parameter, but with one important difference: if the name ends with a slash ('/'), then it is considered to be a directory name, and the name of the original file (without the path information) is appended to the new path before sending the request to the Dropbox server. Otherwise, the "new path" parameter is considered to be the new full path for the file.
+
+For example, if you execute:
+
+  DBFOPS MOVE MSX/TEXTS/HELLO.TXT TEST/
+
+then the new complete file path will be "/TEST/HELLO.TXT". But if you execute:
+
+  DBFOPS MOVE MSX/TEXTS/HELLO.TXT TEST
+
+then the new complete file path will be "/TEST". Please be careful about this.
+
+Note that you can move directories (with its full contents) as well as single files with this command.
+
+
+  6.2.5. COPYING A FILE OR DIRECTORY
+
+The syntax for copying a Dropbox file or directory to another location within the same account is as follows:
+
+  DBFOPS COPY <old path> <new path>
+
+The same behavior and rules as in the case of the "MOVE" command apply, being the difference that of course the original file is kept untouched.
+
+
+  6.3. THE FILE TRANSFER MANAGER
+
+DBFILE.COM is the MSXtdb file transfer manager. It allows to transfer single files and groups of files between the MSX and the Dropbox account. The details about these operations are explained below.
+
+The BFDILE.COM program relies on file attributes for some of its behavior. You can manage file attributes with the MSX-DOS "ATTRIB" command, the syntax is "ATTRIB {+|-}{A|R|H} <file> [/H]".
+
+
+  6.3.1. DOWNLOADING SINGLE FILES
+
+The syntax for downloading a file from Dropbox to the MSX is as follows:
+
+  DBFILE GET <remote path> [<local path>] [ex[isting]={write|skip}]
+
+There are three options for the <local path> parameter:
+
+- Omit it. The file will be downloaded to the current local directory, and the file name will be taken from the remote path itself.
+
+  Example: assuming that the current local directory is "A:\ROMS", the command "DBFILE GET MSX/GAMES/GRADIUS.ROM" will download the file as "A:\ROMS\GRADIUS.ROM".
+
+- Specify an existing directory. The file will be downloaded to the specified local directory, and the file name will be taken from the remote path itself.
+
+  Example: assuming that the local directory "A:\GAMES" exists, the command "DBFILE GET MSX/GAMES/GRADIUS.ROM A:\GAMES" will download the file as "A:\GAMES\GRADIUS.ROM".
+
+- Specify a file name. The file will be downloaded to the specified local path with the specified name.
+
+  Example: "DBFILE GET MSX/GAMES/GRADIUS.ROM A:\GAMES\NEMESIS.ROM" will download the file as "A:\GAMES\NEMESIS.ROM".
+
+If there is already a file with the specified or calculated local name in the destination local directory, then the behavior depends on the specified "existing" (or simply "ex") parameter:
+
+- If "ex=write" is specified, then the existing file is overwritten with the contents of the Dropbox file (this is the default behavior).
+
+- If "ex=skip" is specified, then the file is skipped, that is, nothing is downloaded from Dropbox and the existing file is kept untouched; however this is not considered an error. This behavior is especially useful when downloading multiple files (see below).
+
+Note however, that if the local file already exists and has the read-only attribute set, then it will be skipped, regardless of the value of the "ex" parameter.
+
+NOTE: If you overwrite an exsiting local file that has the "hidden" attribute set, the newly created file will NOT have that attribute set. This applies to multiple file downloads as well (see below).
+
+
+  6.3.1. DOWNLOADING MULTIPLE FILES
+
+It is possible to download a group of files with one single DBFILE GET command execution. To achieve this, the remote paths of all the files to be dwonloaded must be put on a text file (one path per line), and the DBFILE GET command must be executed by using the "file:" syntax. 
+
+For example, assuming that the file "PATHS.TXT" exists and has the following contents:
+
+/GAMES/GRADIUS.ROM
+/GAMES/METLGEAR.COM
+/GAMES/ALESTE.DSK
+
+then executing "DBFILE GET FILE:PATHS.TXT" is equivalent to executing the following three commands:
+
+DBFILE GET /GAMES/GRADIUS.ROM
+DBFILE GET /GAMES/METLGEAR.COM
+DBFILE GET /GAMES/ALESTE.DSK
+
+When downloading multiple files, the <local path> parameter must either be omitted or refer to an existing directory. Otherwise, only the file specified in the first line of the paths file will be downloaded.
+
+If you are downloading a large amount of files and the process is interrupted halfway for some reason (such as a temporary network connection loss), then you can resume the transfer at the point where it was interrupted by using the "ex=skip" parameter. Note however that partial file downloads are not supported, therefore the file that was being transferred when the error occurred will be downloadaded again in its entirety.
+
+
+  6.3.2. DOWNLOADING ALL THE FILES ON ONE DIRECTORY
+
+It is possible to download all the files of a given Dropbox directory by using a combination of the DBFOPS DIR and DBFILE GET command. This is achieved by doing the following:
+
+- First, use DBFOPS to obtain the list of files on the Dropbox directory, in simple format; redirect the command output to a file:
+
+  DBFOPS DIR <remote path> SHOW=FILES FORMAT=SIMPLE > PATHS.TXT
+
+- Then, use DBFILE to download the files:
+
+  DBFILE GET FILE:PATHS.TXT
+
+Note that it is not possible to perform a recursive directory download with the current MSXtdb suite version.
+
+Also, remember that using the "ex=skip" parameter may be useful in this case.
+
+
+  6.3.3. UPLOADING SINGLE FILES
+
+The syntax for uploading a file from the MSX to Dropbox is as follows:
+
+  DBFILE PUT <local path> <remote path> [a[rchiveonly]={yes|no}]
+
+The <remote path> parameter works as the <new path> parameter of the DBFOPS MOVE/COPY commands: if the path ends with a slash ('/'), then it is considered to be a directory name, and the name of the local file (without the path information) is appended to the remote path before sending the request to the Dropbox server. Otherwise, the "remote path" parameter is considered to be the full remote path for the file.
+
+For example, if you execute:
+
+  DBFILE PUT A:\GAMES\GRADIUS.ROM MSX/GAMES/
+
+then the file will be uploaded as "/MSX/GAMES/GRADIUS.ROM". But if you execute:
+
+  DBFILE PUT A:\GAMES\GRADIUS.ROM MSX/GAMES
+
+then the file will be uploaded as "/MSX/GAMES", so be careful.
+
+The "archiveonly" (or just "a") parameter specifies wether the file will be uploaded or not depending on its "archive" attribute:
+
+- If "a=no" is specified, then the file will be uploaded regardless of the status of its "archive" attribute (this is the default behavior).
+
+- If "a=yes" is specified, then the file will be uploaded only if it has the "archive" flag set; otherwise it will be skipped (it will not be uploaded) but this will not be considered an error. After the file has been successfully uploaded, DBFILE will reset the "archive" attribute of the file, so ensure that the disk is not write protected when you use this option. This behavior is especially useful when uploading multiple files (see below).
+
+The "archive" attribute is set by MSX-DOS when a file is created or modified. You can also manually alter it by using the "ATTRIB" command.
+
+NOTE: You can't upload files that have the "hidden" attribute set (DBFILE will not find them). This applies to multiple file uploads as well (see below).
+
+
+  6.3.4. UPLOADING MULTILE FILES
+
+It is possible to upload multiple files with a single execution of the DBFILE PUT command, provided that all the files can be specified with a single path containing standard MSX-DOS wildcards ('*' and '?'). The syntax is the same as when uploading single files, but with one difference: the <remothe path> parameter must mandatorily specify a directory (that is, it must end with a slash).
+
+For example, the command:
+
+  DBFILE PUT A:\GAMES\*.ROM MSX/GAMES/
+
+will upload all the files with extension .ROM in the A:\GAMES local directory to the "/MSX/GAMES" directory in Dropbox.
+
+If you specify the "a=yes" parameter, then only the files having the "archive" attribute set will be uploaded; files not having the attribute set will be skipped even if they match the wildcard. This is especially useful when you use Dropbox to store a backup of your files and want to perform an incremental backup (so that only the files modified since the last backup are uploaded).
+
+Note that it is not possible to perform a recursive directory upload with the current MSXtdb suite version.
+
+
+  7. CHANGE HISTORY
+
+  7.1. v1.1
+
+- MSX trivial dropbox can't connect directly to the Dropbox servers anymore, a SSL wrapping service must be used (see section 3) whose URL must be configured in two environment variables (see section 5.1)
+- The one-time authorization process now requires access to a web browser (see section 5.2)
+- It is not possible to create a new Dropbox account using MSX trivial dropbox anymore (see section 5.2)
+- Added the "search" option to the DBFOPS DIR command (see section 6.2.1)
+
+
+  8. CONTACT INFORMATION
+
+You can contact the author via email (konamiman@konamiman.com) and Twitter (@konamiman). Also, you can obtain more amazing MSX software from the author's web site (http://www.konamiman.com).

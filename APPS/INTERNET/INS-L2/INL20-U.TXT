@@ -1,0 +1,1483 @@
+InterNestor Lite 2.0 User's manual
+Copyright (c) 2003-2010 by Konamiman
+------------------------------------
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 3 of the License, or (at your option) any later
+version. See http://www.gnu.org/licenses/
+
+
+1. INTRODUCTION
+
+1.1. WHAT IS INTERNESTOR LITE?
+
+InterNestor Lite (INL) is a TCP/IP stack for MSX2 computers with 128K RAM.
+There are two versions: INL for serial port, and INL for Ethernet.
+
+INL for serial (RS232) port allows Internet connection via ISP using a modem,
+as well as direct connection to another computer using a null-modem cable.
+This version uses PPP as the link layer protocol, and requires the Fossil
+driver (developed by Erik Mass) to be installed in order to work.
+
+INL for Ethernet allows communication with other machines in an Ethernet
+network, as well as Internet connection by means of an ADSL or cable router.
+An Ethernet UNAPI implementation is required by this version.
+
+Starting at version 2.0, INL is compatible with the TCP/IP UNAPI 
+specification. This means that internet applications targetting this 
+specification can be used when INL is installed.
+
+This manual is intended for end users. If you are a developer, you should 
+look at InterNestor Lite Developer's manual, available at www.konamiman.com.
+
+
+1.2. DIFFERENCES WITH INL 1.x
+
+Tihs section summarizes the main differences between INL 2.0 and INL 1.x from 
+the end user point of view.
+
+- INL 2.0 is compatible with the TCP/IP UNAPI specification, but it is not 
+compatible with the old INL 1.x API. This means that client applications 
+targetting INL 1.x can't be used with INL 2.0. The base INL 1.x applications 
+(PING client, TCP console, TFTP client/server and FTP client) have been 
+upgraded to TCP/IP UNAPI applications and can be downloaded at 
+www.konamiman.com.
+
+- In order to install INL 2.0, an UNAPI RAM helper must be available. A 
+standalone UNAPI RAM helper is provided with the INL installer, and can also 
+be downloaded separately from www.konamiman.com.
+
+- The INL downloadable package now contains only the INL installer and the 
+user's guide. Client applications, their source code, and the programmer's 
+guide, are available as separate downloads at www.konamiman.com.
+
+- (Ethernet version only) INL 1.x defaulted to manual configuration of IP 
+addresses; if automatic configuration via DHCP was required, it had to be 
+explicitly configured that way. INL 2.0 works the opposite way: it defaults 
+to automatic configuration, and explicit configuration is needed for manual 
+IP addresses setting (see the quick start guide for more details).
+
+
+1.3. OVERVIEW OF INTERNESTOR LITE ARCHITECTURE
+
+INL is a resident program: once installed, it works as a background task,
+coupled to the timer interrupt hook. Other programs may use the routines and
+variables exposed by INL in a similar way of how they use the BIOS routines
+and DOS functions, gaining then Internet access or local point-to-point/
+network access.
+
+For the serial version, Internet access is obtained by means of a standard
+modem and an account subscribed with any Internet Service Provider (ISP). For
+this reason, besides of the TCP/IP protocols it supports the PPP protocol,
+which is the link layer protocol used to establish connections with ISPs; and
+of course, INL can also send commands to the modem to dial the ISP's phone
+number.
+
+On the other hand, the serial version of INL may also be used to perform a
+direct point-to-point connection with another computer. A null-modem cable is
+required for this, and the other computer must also support PPP and TCP/IP
+(for example another MSX running INL, or a PC running Linux). In this case, a
+little of additional work is required before establishing the connection,
+since the IP addresses must be configured manually (when connecting via ISP,
+these addresses are obtained automatically).
+
+As for the Ethernet version, Internet access os obtained by means of an ADSL
+or cable router; connection to an Ethernet local network is also possible.
+The DHCP protocol is supported for obtaining the IP address and other
+parameters; of course, manual configuration is also possible, for connections
+to simple networks.
+
+The serial version uses the Fossil driver developed by Erik Maas for low
+level access to the serial port. The Ethernet version needs an Ethernet UNAPI
+implementation to be present for low level network access.
+
+INL consists of one single file, INL.COM, which allows installing/
+uninstalling INL (the resident code itself is also embedded into INL.COM),
+opening/closing PPP connections (serial version only), managing the ARP and
+routing tables (Ethernet version only), setting/obtaining various INL
+configuration parameters, obtain the state of the TCP connections, and
+resolving host names.
+
+INL installs itself in two RAM segments located always at the primary mapper:
+one for code and another one for data buffers and variables. There are more 
+details in the Programmer's manual.
+
+
+1.4. FEATURES AND LIMITATIONS
+
+INL has been designed to be fast and to use few memory. For this reason, it
+has some limitations:
+
+* General
+
+- ICMP is not supported, except for "Destination unreachable" messages and 
+echo
+messages(PINGs). The size of these messages may be choosen, but not its
+contents. On the other hand, the size of the replies received may be obtained,
+but not its contents.
+- Raw datagram sending and capturing is supported, but only one raw datagram
+can be captured at the same time.
+- Serial version: the maximum transmission rate is 9600 bauds for Z80, and
+19200 bauds for R800.
+- Serial version: the implementation of the PPP protocol is a simplified
+version of the complete specification; it should work well in normal
+circumstances. For example, a simplified automaton of only five states is
+used (closed, LCP negotiation, authentication, IPCP negotiation and opened).
+- Serial version: although the PPP standard states that incoming data packets
+up to 1500 bytes long must be accepted until a smaller size is negotiated,
+INL will always discard all the incoming packets that are larger than 582
+bytes.
+- Ethernet version: the ARP table is limited to 32 entries, and the routing
+table is limited to 16 entries.
+
+* IP
+
+- The maximum datagram size supported is 576 bytes.
+- IP fragmentation is not supported, nor it is the reassembly of incoming
+fragmented datagrams; received datagram fragments are aways ignored (except
+when sending and receiving raw datagrams).
+- It is not possible to include IP options in the outgoing datagrams; besides,
+the IP options of the received datagrams are always ignored (except when
+sending and receiving raw datagrams).
+- The loopback address (127.x.x.x) is not supported and INL cannot send
+datagrams to itself.
+
+* UDP
+
+- INL may open up to three UDP connections, each having buffer space assigned 
+to hold up to two packets of up to 556 bytes each. These packets must be 
+consumed by an application in a reasonable time; new packets arriving when 
+there are already two pending packets stored for the associated connection 
+will be lost.
+
+* TCP
+
+- Only four TCP connections can be opened simultaneously.
+- Each TCP connection has assigned a fixed-length buffer of 1024 bytes for
+outgoing data, and another buffer of the same size for incoming data.
+- The TIME-WAIT state does not exist. Connections enter directly the closed
+state when they should enter the TIME-WAIT state.
+- Only the TCP option MSS is recognized (but INL will send segments larger
+than 448 bytes). On connection initiation, a MSS=448 option is always sent.
+- It is not possible to send urgent data. Besides, the URG flag and the urgent
+data pointer of the received datagrams are always ignored.
+- It is possible to send data to a TCP connection only when it is in the
+ESTABLISHED state or in the CLOSE-WAIT state.
+- It is not possible to convert a passive connection into an active connection
+(neither by reopening it as active, nor by sending data to it).
+- The initial sending sequence number for new connections is always zero.
+- Only one data segment is sent at a time. That is, once a segment is sent, no
+more segments are sent (except retransmissions) until the acknowledgment for
+the sent segment is received, regardless of the transmission window.
+- The retransmission timeout is fixed to three seconds. The zero window
+probing interval is fixed to 10 seconds.
+- A simplified approach to the "SWS Avoidance" algorithm is used: the receive
+window announced is equal to the free space on the receive buffer, with the
+seven low order bits set to zero. That is, the announced receive window
+increases and decreases in steps of 128 bits. When the free space is smaller
+than 128 bytes, the real value is announced.
+- A simplified approach to the Nagle algorithm is used. If the outgoing data
+has the PUSH bit set, data is sent immediately. Otherwise, it is sent when
+enough bytes are available to send a maximum sized segment or when 0.5 seconds
+elapses since the older outgoing data was enqueued, whatever happens first.
+- The Slow Start/Congestion Avoidance algorithms have not been implemented,
+but an ACK segment is sent immediately when out-of-order segments are
+received, so if the peer's TCP module implements these algorithms, it will
+work correclty when interacting with INL.
+- The TCP Delayed ACK algorithm is implemented an ACK segment is sent when at
+least 256 bytes of new data have been received, or when 0.1 seconds elapses
+since the older unacknowledged new data arrived, whatever happens first.
+
+* DNS
+
+- Only translations from host names to IP addresses are possible.
+- Only one query can be performed at the same time.
+- When a query returns a list of servers instead of a reply (non recursive
+queries), only the first of them is queried, and if no reply is obtained then
+the query is considered to have failed.
+- Only UDP is used. Fallback to TCP when a truncated datagram is received is
+not supported.
+
+
+2. INTERNESTOR LITE - USER'S GUIDE
+
+2.1. REQUIREMENTS
+
+INL requires the following machine configuration to work:
+
+- MSX2, 2+ or Turbo-R computer.
+- MSX-DOS 1 and MSX-DOS 2 are supported (DOS 2 is recommended).
+- 128K of mapped RAM in the primary mapper. When using DOS 2, 256K are
+recommended, and there must be two free segments.
+- For the serial version: RS-232 interface, or ACCNET or any other hardware
+recognized by the Fossil driver. Also, modem and Internet access account
+subscribed with any ISP, or null-modem cable for direct connection to another
+computer.
+- For the Ethernet version: an Ethernet UNAPI implementation installed
+(usually provided by Ethernet hardware, for example the ObsoNET card). Also,
+connection to an Ethernet network, or Internet connection via ADSL or cable
+router.
+
+INL will work on computers with 128K RAM under DOS 2 only if other programs
+have not allocated any RAM segment. This implies that with such configuration
+it is not possible to use COMMAND 2.4x, to create RAM disk nor to install
+other resident programs.
+
+INL will not work on MSX Tubo-R with external memory mapper under DOS 1. If
+you have such configuration, to run INL you must either boot in DOS 2 mode
+(recommended) or to remove the external memory expansion.
+
+
+2.2. INCLUDED FILES
+
+The current INL distribution consists of the following files:
+
+- INL-SER.COM: INL installation, configuration and control program (serial
+version).
+
+- INL-ETH.COM: INL installation, configuration and control program (Ethernet
+version).
+
+- DRIVER.COM: Fossil driver for RS-232 port access, it must be installed
+prior to installing INL (for the serial version only).
+
+- INL20-U.TXT: INL User's guide (this file).
+
+The TCP/IP UNAPI base applications, as well as the programmer's guide, can be 
+downloaded at at www.konamiman.com.
+
+NOTE: In this document, the INL control program is referred generically as
+INL.COM. Actually, you must use either INL-SER.COM or INL-ETH.COM. You can
+rename the one you will use to INL.COM for convenience.
+
+
+2.3. QUICK START GUIDE
+
+In this section, the steps needed to install INL and leave it ready to use
+network applications are briefly explained. The usage options of INL.COM are
+fully explained in section 2.4.
+
+
+2.3.1. BOTH VERSIONS
+
+Before trying to install INL, ensure that an UNAPI RAM helper is installed. 
+You can use the standalone helper supplied with INL. To install it execute: 
+RAMHELPR I.
+
+
+2.3.2. SERIAL VERSION
+
+1) Install the Fossil driver, by simply executing DRIVER.COM; return to DOS
+with CALL SYSTEM
+
+2) Install INL by executing: INL I
+
+3) To open a connection to Internet, excute:
+
+INL PPP O /N:<number> /U:<user> /P:<password> /I
+
+where <number> is the ISP phone number, and <user> and <password> are the
+account data as provided to you by your ISP.
+
+Note: this step assumes that you are connecting to Internet via ISP using a
+modem. For direct null-modem cable connection, you do not need the /N
+parameter, and probably, you don't need the /U and /P parameters either.
+
+4) Once connected you can use programs that make use of INL to gain Internet
+access, for example PING.COM, TFTP.COM and TCPCON.COM, supplied with this
+distribution of INL.
+
+5) To close the Internet connection, execute:
+
+INL PPP C
+
+You can connect again at any time as explained in step 3.
+
+6) To uninstall INL, execute:
+
+INL U
+
+You can install INL again at any time as explained in step 2 (note that you 
+don't need to reinstall the UNAPI RAM helper).
+
+
+2.3.3. ETHERNET VERSION
+
+1) If the MSX will obtain the IP addresses automatically via DHCP (which is 
+the most common case when using an ADSL or cable router), skip this step and 
+go straight to step 2. Otherwise (if you need to manually configure the IP 
+addresses):
+
+Create, with any text editor, a configuration file named INL.CFG, and save
+it in the same directory as INL.COM. The contents of the file must be as 
+follows:
+
+ip d 0
+ip l <IP address of MSX>
+ip m <subnet mask>
+ip g <default gateway>
+ip p <primary DNS server>
+ip s <secondary DNS server>
+
+An example of manual configuration file:
+
+ip d 0
+ip l 192.168.0.2
+ip m 255.255.255.0
+ip g 192.168.0.1
+ip p 10.20.30.40
+ip s 50.60.70.80
+
+Note: under DOS 2, environment items can be used as an alternative to the
+configuration file. See the INL I command description in section 2.4 for more
+details.
+
+2) If necessary, install the Ethernet UNAPI implementation (usually, you will
+use Ethernet hardware card with the API implementation in ROM, so you do not
+need to install anything).
+
+3) Install INL by executing: INL I.
+
+4) Check that the network is active and that the configuration is correct by
+executing INL S. When using DHCP, the network will be operational when the
+automaton reaches the "BOUND" state.
+
+5) Now you can use programs that make use of INL to gain Internet access or to
+communicate with other computers on the network, for example PING.COM,
+TFTP.COM and TCPCON.COM, supplied with this distribution of INL.
+
+6) To uninstall INL, execute: INL U. You can install INL again at any time by
+returning to step 3 (note that you don't need to reinstall the UNAPI RAM 
+helper).
+
+
+2.4. INTERNESTOR LITE CONTROL PROGRAM
+
+INL.COM is the unified control program of InterNestor Lite. Using this program
+you can install/uninstall INL, check the Internet/network connection, manage
+the ARP and routing tables, and read/modify various INL parameters. The
+following is a summary of all the INL.COM usage options, they are explained
+with detail in the sections following.
+
+- General options:
+
+inl i [/s:<segment>] [<commands>]  -  Installs INL
+inl u [<commands>]  -  Uninstalls INL
+inl p  -  Pauses INL
+inl r  -  Resumes INL execution
+inl s  -  Shows the PPP/network connection status and the IP addresses in use
+inl v  -  Shows the value of all the INL configuration variables
+inl d  -  Restores INL configuration to default values
+inl o <value>  -  Sets the INL checksums calculation vector
+inl f [<filename>]  -  Reads a configuration file
+
+- PPP connection and modem options (serial version only):
+
+inl ppp m <command>  -	Sends a command to the modem
+inl ppp b <baud code> - Sets the RS232 transmission rate
+inl ppp n [<number>]  -  Sets the ISP phone number
+inl ppp r <reply>  -  Sets the positive reply for the modem
+inl ppp u [<name>]  -  Sets the PPP user name
+inl ppp p [<password>]	-  Sets the PPP password
+inl ppp o [/n:[<number>]] [/u:[<user>]] [/p:[<password>]]
+	  [/r:<modem reply>] [/i]  -   Opens a PPP connection
+inl ppp c  -  Closes the PPP connection
+inl ppp e 0|1  -  Activates or deactivates the PPP echo sending
+inl ppp v 0|1  -  Activates or deactivates the negotiation of the
+		  Van Jacobson compression
+
+- IP protocol options:
+
+inl ip i  -  Initializes all IP addresses to 0.0.0.0
+inl ip l <IP add.>  -  Sets the local IP address
+inl ip r <IP add.>  -  Sets the remote IP address (serial version only)
+inl ip m <IP add.>  -  Sets the subnet mask (Ethernet version only)
+inl ip g <IP add.>  -  Sets the default gateway IP address
+                       (Ehernet version only)
+inl ip p <IP add.>  -  Sets the primary DNS server IP address
+inl ip s <IP add.>  -  Sets the secondary DNS server IP address
+inl ip n 0|1  -  Activates or deactivates the negotiation of the DNS servers
+                 (serial version only)
+inl ip e 0|1  -  Activates or deactivates the automatic reply for PINGs
+inl ip t <value>  -  Establishes the TTL for outgoing datagrams
+inl ip o <value>  -  Establishes the TOS for outgoing datagrams
+inl ip d <value>  -  Establishes the DHCP configuration vector
+
+- Name resolution options
+
+inl dns r <host name>  -  Resolves a host name
+
+- TCP protocol options:
+
+inl tcp s [<connection>]  -  Shows the state of one single
+			     TCP connection or the state of all of them
+inl tcp c <connection>  -  Closes the specified connection
+inl tcp a <connection>  -  Aborts the specified connection
+
+- Ethernet layer options (Ehernet version only):
+
+inl eth h  -  Shows the Ethernet physical address
+inl eth f 0|1  -  Establishes the frame type to send,
+                  Ethernet II or IEEE802.3
+inl eth c 0|1  -  Activates o deactivates the automatic checking
+                  of the network connetion every ten seconds
+inl eth r  -  Resets the Ethernet hardware
+
+- ARP protocol options (Ehernet version only):
+
+inl arp t <valor>h|m|s  -
+              Establishes the lifetime of the dynamic ARP entries
+inl arp s  -  Show the contents of the ARP table
+inl arp c  -  Clears the whole ARP table
+inl arp a <IP add.> <physical add.>  -  Adds a static entry to the ARP table
+inl arp d <IP add.>  -  Erases an entry from the ARP table
+
+- Routing options (Ehernet version only):
+
+inl rou s  -  Show the contents of the routing table
+inl rou c  -  Clears the whole routing table
+inl rou a <net add.> <mask> <router add>  -
+              Adds an entry to the routing table
+inl rou d <net add.> <mask>  -  Erases an entry from the routing table
+
+
+2.4.1. GENERAL OPTIONS
+
+* InterNestor Lite installation
+
+inl i [/s:<segment>]
+
+Installs INL, leaving it ready for use. For the serial version, the Fossil
+driver must have been installed previously; for the Ethernet version, there
+must have an Ehternet UNAPI implementation installed in the system (usually,
+this is provided by Ethernet harwdare BIOS). If using DOS 2, two free
+segments are required in the primary mapper.
+
+For both versions, in order to install INL 2.0, an UNAPI RAM helper must be 
+available. A standalone UNAPI RAM helper is provided with the INL installer, 
+and can also be downloaded separately from www.konamiman.com.
+
+The optional parameter /s means that INL should be installed in the segments
+with numbers <seg> and <seg>+1. If not specified, when using DOS 1 the last
+two segments of the primary mapper will be used, and when using DOS 2 two
+segments will be allocated, also in the primary mapper. This option should be
+used only in case of conflicts with other resident programs, and only in DOS 
+1.
+
+In the serial version, the RS-232 transmission rate is established to 9600
+bauds when using MSX2/2+ or Turbo-R in Z80 mode; when using Turbo-R in R800
+mode, it is established to 19200 bauds. A Z80 supports up to 9600 bauds only,
+at higher speeds there is data loss.
+
+It is possible to automatize the INL configuration process at installation
+time, by using two mechanisms:
+
+1) Environment items (in DOS 2 only, and for the Ethernet version only).
+
+During the installation, the existence of some environment items associated to
+certain configuration parameters of INL will be checked. If these items are
+found, their values will be used to set up the parameters.
+
+The environment items recognized by INL and their associated parameters are:
+
+* INL_IP: IP address of MSX.
+* INL_MASK: Subnet mask.
+* INL_GW: Default gateway.
+* INL_DNS_P: Primary DNS server.
+* INL_DNS_S: Secondary DNS server.
+* INL_DHCP: DHCP configuration vector.
+
+For example, if the IP addresses are to be manually configured, the
+following line could be added to the AUTOEXEC.BAT file (or it could be
+executed manually before installing INL):
+
+SET INL_DHCP=0
+SET INL_IP=192.168.0.2
+SET INL_MASK=255.255.255.0
+etc.
+
+2) Configuration file.
+
+During the installation, the existence of a file named INL.CFG in the same
+directory as INL.COM will be checked, and if found, its contents will be used
+to configure INL exactly in the same way as the INL F command does. See the
+description of this command for more details.
+
+If both environment items and configuration file exist, both will apply. If
+they refer to the same parameter, the value indicated in the file is the one
+that applies.
+
+
+* InterNestor Lite uninstallation
+
+inl u
+
+Uninstalls INL, freeing the segments that were allocated if DOS 2 was used.
+[<command>] works as in the installation case (INL I).
+
+
+* Pause InterNestor Lite execution
+
+inl p
+
+This option decouples INL from the system's timer interrupt hook. What is
+achieved with this action is to pause INL, that is, its resident code is not
+executed 50/60 times per second so it does not perform any process. This may
+be useful when it is necessary to perform a long task (for example to copy
+some big files), since when INL is installed and active it slows down the
+computer.
+
+Note: on the Ethernet version, Ethernet hardware may continue capturing
+incoming packets while INL is paused, so its internal buffer may overflow
+and in this case no more packets will be captured.
+
+The normal execution of INL may be resumed with INL R, as it is explained 
+next.
+
+
+* Resume InterNestor Lite execution
+
+inl r
+
+This option couples again INL to the system's timer interrupt hook, so it
+reverts to the normal execution mode that was previously interrupted when
+pausing INL with INL P. It does nothing if INL is already active.
+
+
+* Information about the PPP/network connection and the IP addresses
+
+inl s
+
+For the serial version:
+
+This option shows information about the current PPP connection status, the
+reason of the last connection close, and the IP addresses established (local,
+remote and the ones of the DNS servers). It also tells if INL is active or
+paused.
+
+The information about the IP addresses is shown even if there is no opened
+PPP connection currently. In this case, this information refers to the IP
+addresses that were used in the last connection, or to the IP addresses that
+the user has established for being used in the next connection. See the
+description of the IP protocol related options for more details.
+
+For the Ethernet version:
+
+This option shows the following information:
+
+- State of INL (active or paused).
+- State of the network connection (ON or OFF).
+- IP addresses in use (address of MSX, subnet mask, default gateway and DNS
+servers addresses).
+- DHCP automaton state (only if any parameter is configured by using DHCP).
+
+If the automatic checking of the network state every ten seconds is switched
+off, then the state is checked when this command is executed. Otherwise,
+simply the result of the last performed checking is shown. See the INL ETH C
+command.
+
+The DHCP automaton state will be one of the following (see RFC2131 for more
+details):
+
+- INIT: Initial state, the configuration process will start immediately.
+- SELECTING: DHCP servers are being searched in the net.
+- REQUESTING: A DHCP server has been found in the net, and an IP address and
+the desired configuration parameters are being requested to him.
+- BOUND: The DHCP server has assigned an IP address to us and has given to us
+the required parameters. This is the "stable" state of the automaton.
+- RENEWING: Part of the lease time of the IP address has passed, and an
+extension of the lease is being requested to the DHCP server.
+- REBINDING: The DHCP server is not replying to the requests made to him in
+the RENEWING state, so the requests are now sent to the broadcast address
+(thus an alternative server is being searched).
+
+Note that it is possible that the server denies the IP address lease extension
+and that it instead assigns a new address to us. If this happens, all the
+opened TCP connections will be closed.
+
+If the IP address is manually configured and we are only intereseted in
+obtaining other parameters by using DHCP, the automaton will only pass by
+these two states, besides of INIT:
+
+- INFORMING: Similar to SELECTING, but now we simply inform about our IP
+address and request the other parameters.
+- CONFIGURED: The requested parameters have been obtained. This state is
+similar to BOUND, but contrarywise to BOUND, this state is permanent.
+
+Note that the DHCP server may not permit us to manually configure our IP
+address, and thus it may not accept the requests made to him in the INFORMING
+state.
+
+See the description of the INL IP D command for more information about the
+configuration process when using DHCP.
+
+
+* Information about INL configuration variables
+
+inl v
+
+This option shows information about the variables that govern the global
+functionning of INL in which regard to the PPP connection/Ethernet layer and 
+the IP protocol. There is an option of INL.COM asociated to each variable 
+that allows modifying it.
+
+
+* Restoring INL to its initial state
+
+inl d
+
+This option restores INL to its initial state, it is equivalent to
+uninstalling and reinstalling it. The actions it performs are:
+
+1) Resets the Ethernet hardware (Ethernet version only).
+
+2) Closes all the TCP and UDP connections and discards all the received and 
+ICMP packets. For the Ethernet version, empties the ARP and routing tables.
+
+3) Restores all the configuration parameters to their default values:
+
+Serial version:
+
+ISP phone number: Empty string
+Modem positive reply: CONNECT
+PPP user name: Empty string
+PPP password: Empty string
+Negotiate DNS servers IP addresses: Yes
+Periodically send PPP echo requests: Yes
+Negotiate the use of Van Jacobson compression: Yes
+
+Ethernet version:
+
+Send Ethernet frames with IEEE802.3 encapsulation: No
+Check the network connection state every ten seconds: Yes
+DHCP configuration vector: 63
+Dynamic ARP entries lifetime: 300 seconds (5 minutes)
+
+All versions:
+
+All the IP addresses: 0.0.0.0
+Automatically reply incoming PINGs (ICMP echo requests): Yes
+TTL for outgoing datagrams: 64
+TOS for outgoing datagrams: 0
+Default size for outgoing PINGs (data part): 64
+Checksums calculation vector: 31
+
+4) Reads and applies the environment item recognized during installation and
+the INL.CFG file, if they exist (see the INL I command for more details).
+
+Note for the serial version: do not use this function when there is an open
+connection, since all IP addresses will revert to 0.0.0.0 as well.
+
+
+* Establishing the checksums calculation vector
+
+inl o <vector>
+
+By modifying this value it is possible to force INL to accept as valid the
+incoming data packets without calculating one or more of the associated
+checksums. In this way some execution speed is gained, but there is the risk
+of accepting damaged packets as if they were correct. It may be useful when
+directly connecting two computers, since in this case the probability of
+receiving damaged packets is small.
+
+<vector> is a number in the range 0 to 30 that must be interpreted as a
+five bit vector. Each bit controls the calculation of a given checksum type:
+if it is one, the checksum is calculated for all the incoming packets; if it
+is zero, the checksum is not calculated, assuming that if it were calculated
+it would be valid.
+
+The <vector> bits are assigned as follows:
+
+Bit 0 (value 1): FCS of PPP frames (serial version only)
+Bit 1 (value 2): Checksum of IP datagrams header
+Bit 2 (value 4): Checksum of TCP segments
+Bit 3 (value 8): Checksum of UDP packets header
+Bit 4 (value 16): Checksum of ICMP messages
+
+For example, if you want only the TCP and UDP checksums to be calculated, use
+vector 4+8=12: INL O 12.
+
+Default value is 31, meaning that all checksums are calculated. Normally this
+is the value that should be used, unless you note speed problems in your
+computer.
+
+
+* Read a configuration file
+
+inl f [<filename>]
+
+This option allows executing multiple options with one single execution of
+INL.COM; the options to be executed are stored in a text file, whose path and
+name is passed as an argument. If no filename is specified, the file INL.CFG
+located at the same directory of INL.COM is used.
+
+The text file must contain the options to be executed, with the same syntax as
+if they were executed directly. For example, if you want to set the checksums
+calculation vector to 31, to disable the periodic network connection state
+checking (Ethernet version only), and to set the local IP address to 1.2.3.4,
+then the configuration  file contents should be as follows:
+
+o 31
+eth c 0
+ip l 1.2.3.4
+
+Blank lines and lines starting with a ";" or "#" character are ignored.
+
+It is not possible to nest configuration file reads (that is, you can't
+execute the "f" option from a configuration file). Also, you can't uninstall
+INL ("U" option) from a configuration file.
+
+
+2.4.2. MODEM AND PPP CONNECTION OPTIONS (SERIAL VERSION ONLY)
+
+* Send a command to the modem
+
+inl ppp m <command>
+
+This option sends the string <command> to the modem, waits the reply and
+shows it. It may be useful, for example, to silent the modem speaker before
+performing the connection (this is achieved with the command ATM0).
+
+
+* Establishing the RS-232 inteface transmission rate
+
+inl ppp b <bauds code>
+
+This option establishes the RS-232 interface transimission rate according to
+the specified <bauds code>:
+
+0 for 75 bauds
+1 for 300 bauds
+2 for 1200 bauds
+3 for 1200 bauds
+4 for 2400 bauds
+5 for 4800 bauds
+6 for 9600 bauds
+7 for 19200 bauds
+8 for 38400 bauds
+9 for 57600 bauds
+10 or 11 for 115200 bauds
+
+INL supports up to 19200 bauds for R800 and up to 9600 bauds for Z80, at
+higher speeds there is data loss. After INL installation the speed will have
+been established to the appropriate value according to the processor
+detected.
+
+
+* Establishing the ISP phone number
+
+inl ppp n [<number>]
+
+This option establishes the phone number that the modem will dial when
+opening a connection by executing INL PPP O. If <number> is an empty string,
+no dial will be performed, and the PPP connection will be attempted directly
+(assuming that at the other side there is another computer connected via null-
+modem cable).
+
+The maximum length for <number> is 15 characters. If a larger string is
+specified, only ther first 15 chracatres will be taken in account.
+
+
+* Establishing the positive modem reply
+
+inl ppp r <reply>
+
+This option establishes the starting part of the string that the modem will
+return after a sucessful dialing to the ISP while opening a connection with
+INL PPP O. INL.COM needs to know this string in order to decide whether to
+display an error, or to continue and attempt to open the PPP connection after
+the dialing process has finished, depending on the modem reply. In most
+modems this string is "CONNECT", and so this is the string that INL
+establishes by default.
+
+It is not necessary to specify the full reply, the first characters are
+enough. For example, modems normally reply with something like "CONNECT
+48000/V24BIS", but it is enough to specify "CONNECT".
+
+The maximum length for <reply> is 15 characters. If a larger string is
+specified, only ther first 15 characters will be taken in account. It is not
+possible to specify an empty string.
+
+
+* Establishing the PPP user name
+
+inl ppp u [<name>]
+
+This option establishes the PPP user name that will be used when a connection
+is opened by executing INL PPP O; in other words, the user name of the
+internet access account supplied by the ISP.
+
+If an empty string is specified, INL will abort the connection if
+authentication is required.
+
+The maximum length for <name> is 31 characters. If a larger string is
+specified, only ther first 31 characters will be taken in account.
+
+
+* Establishing the PPP password
+
+inl ppp p [<password>]
+
+This option establishes the PPP password that will be used when a connection
+is opened by executing INL PPP O; in other words, the password of the
+internet access account supplied by the ISP.
+
+The maximum length for <password> is 31 characters. If a larger string is
+specified, only ther first 31 characters will be taken in account.
+
+
+* Open a PPP connection
+
+inl ppp o [/n:[<number>]] [/u:[<user>]] [/p:[<password>]]
+	  [/r:<modem reply>] [/i]
+
+This option starts a PPP connection, either to Internet via ISP or to another
+machine using a null-modem cable.
+
+<number> is the ISP phone number that the modem will dial. If it is an empty
+string, no dial will be performed (that is, INL will assume that there is
+another computer at the other side, connected directly with a null-modem
+cable). The maximum length is 15 characters.
+
+<user> and <password> are the PPP authentication data that will be used (that
+is, the Internet account data supplied by the ISP). If <user> is not
+specified, INL.COM will abort the connection if authentication is required.
+The maximum length for both parameters is 31 characters.
+
+<modem reply> is the start of the string that the modem will return if a
+successful dialing to the ISP is achieved. In most modems this string is
+"CONNECT", which is the string that INL establishes by default, and it is not
+necessary to modify it. The maximum length is 15 characters.
+
+/I causes all the IP addresses (local, remote and the ones for the DNS
+servers) to be reset to 0.0.0.0, and the negotiation of the IP addresses of
+the DNS servers to be activated, all of this before initiating the
+connection. This is the most usual behavior, since usually we will connect
+via an ISP that will dinamically supply us all the IP addresses. However it
+is possible that we want to directly connect to other computer via null-modem
+cable and that we already know (or want to supply to the other computer) one
+or more of the IP addresses to use. In this case, we must first establish the
+desired addresses using any of the INL IP x commands, and then open the
+connection without specifying /I.
+
+If any of the parameters /N, /U, /P and/or /R is are not specified, then the
+value previously established with INL PPP N, INL PPP U, INL PPP P and/or INL
+PPP R, respectively, will be used. That is, the following execution sequences
+are equivalent:
+
+- Sequence 1:
+
+INL PPP N 12345
+INL PPP U kyoko
+INL PPP P jap0paya
+INL PPP O /R:OK
+
+- Sequence 2:
+
+INL PPP O /N:12345 /U:kyoko /P:jap0paya /R:OK
+
+Note that specifying a null value for a parameter is not the same that not
+specifying the parameter at all (/N alone means that no number will be
+dialed; not specifying /N means that the number previously specified with INL
+PPP N will be used).
+
+
+* Closing a PPP connection
+
+inl ppp c
+
+This option closes the Internet connection (or the connection to the other
+computer in case of direct connection); normally the modem will automatically
+disconnect from the ISP in few seconds. The IP addresses are not modified,
+nor are any of the INL parameters that were established before or during the
+connection.
+
+
+* Activation or deactivation of the automatic PPP echo
+
+inl ppp e 0|1
+
+INL cannot detect the physical drop of the connection (that is, the modem
+carrier loss or the sutdown or crash of the other computer in case of direct
+connection). For this reason it uses a connection checking mechanism provided
+by the PPP protocol, consisting on periodically sending echo packets to the
+ISP or to the other computer (note that they are PPP protocol level packets;
+do not confuse with PINGs, which are IP protocol level packets).
+
+INL has this feature activated by dafault, but it may be deactivated by
+executing INL PPP E 0, and activated again with INL PPP E 1. When activated,
+INL will send PPP echo packets to the other side every five seconds; if four
+consecutive packets are sent without receiving any reply, INL will assume
+that the connection is lost and will close it automatically.
+
+
+* Activation or deactivation of the Van Jacobson compression negotiation
+
+inl ppp v 0|1
+
+This option activates (1) or deactivates (0) the negotiation of the Van
+Jacobson compression for TCP/IP headers during the PPP connection
+establishment; if it is negotiated and the remote side supports this
+compression as well, then it will be used during all the connection lifetime.
+
+The Van Jacobson compression is specific of the point to point connections
+and allows to reduce the size of the TCP/IP headers, originally 40 bytes
+long, down to an average of five bytes. In exchange, additional processing is
+required for all the incoming and outgoing TCP segments.
+
+Changes in this option will have effect the next time a PPP connection is
+open; it is not possible to activate or deactivate the Van Jacobson
+compression for an already opened connection.
+
+
+2.4.3. IP PROTOCOL OPTIONS
+
+* IP addresses initialization
+
+inl ip i
+
+This option initializes (sets to 0.0.0.0) all the IP addresses. For the
+serial version, these are: local, remote and DNS servers. For the Ethernet
+version, these are: local, subnet mask, default gateway, and DNS servers.
+
+Serial version: by protocol specification, announcing an address of 0.0.0.0
+during the PPP negotiation means that we don't know the address of interest
+and that we request that the peer assign one for us (all the connections to
+ISPs work in this way).
+
+Ethernet version: this option must not be executed if one or more of these
+addresses are to be obtained by using DHCP (see INL IP D  command).
+
+
+* Establishing the local IP address
+
+inl ip l <IP address>
+
+This option establishes the local IP address (the address of the MSX itself)
+to the specified value.
+
+Serial version: using this option makes sense only with direct cable
+connections, and only if we know that the peer is unable of supplying us our
+IP address. If the peer supplies us an address during the connection
+establishment (this will always occur in ISP connections), this address will
+have preference over the address that we have established manually. Do not
+use this option when there is a connection opened.
+
+Ethernet version: this option must not be executed if the local address is to
+be obtained by using DHCP (see INL IP D command).
+
+
+* Establishing the remote IP address (serial version only)
+
+inl ip r <IP address>
+
+This option establishes the remote IP address (that is, the address of the
+other side of the connection) to the specified value. It must never be used
+when there is a connection opened.
+
+Using this option makes sense only with direct cable connections, and only if
+we know that the peer does not know its own IP address and we must supply one
+to him. If the peer announces us his own IP address during the connection
+establishment (this will always occur in ISP connections), this address will
+have preference over the address that we have established manually.
+
+
+* Establishing the subnet mask (Ethernet version only)
+
+inl ip m <mask>
+
+This option establishes the subnet mask (that is, the mask that will be
+applied to IP addresses to decide whether they are local or not) to the
+specified value. Must not be executed if this parameter is to be obtained by
+using DHCP (see INL IP D command).
+
+
+* Establishing the default gateway (Ethernet version only)
+
+inl ip g <IP address>
+
+This option establishes the default gateway address (that is, the address of
+the computer to which non local datagrams will be sent in absence of an
+appropriate entry in the routing table) to the specified value. Must not be
+executed if this parameter is to be obtained by using DHCP (see INL IP D
+command).
+
+
+* Establishing the IP address of the primary DNS server
+
+inl ip p <IP address>
+
+This option establishes the IP address of the primary DNS server, that is, the
+name server that the INL built-in resolver queries when a host name resolution
+is requested.
+
+Ethernet version: this option must not be executed if this parameter is to be
+obtained by using DHCP (see INL IP D command).
+
+Serial version:
+
+The logic behind this parameter is similar to the logic behind the IP L and
+IP R parameters (local and remote IP addresses): any address proposed by the
+peer during the connection establishment will have preference over the
+addresses manualy established by us before opening the connection. However
+there are two important differences:
+
+1) There is no problem on modifying the IP address of the DNS server once the
+PPP connection is opened.
+
+2) It is possible to deactivate the negotiation of this address by executing
+INL IP N 0 before opening the connection. In this case, the address that we
+assign by executing INL IP P will still be valid once the connection is
+opened (actually, we don't even give the peer an opportunity to propose an
+alternative address). This is true even when connecting via ISP.
+
+The use of INL IP N 0 followed by INL IP P <address> prior to opening the
+connection is useful when we want to use DNS servers other than the ones
+supplied by the ISP.
+
+Note: The /I parameter of INL PPP O not only establishes all the IP addresses
+to 0.0.0.0, but also activates the DNS addresses negotiation. Therefore, if
+you want to connect to an ISP without negotiating the DNS addresses you must
+use this execution sequence:
+
+INL IP I
+INL IP N 0
+INL PPP O /N:<number> /U:<user> /P:<password>
+
+
+* Establishing the IP address of the secondary DNS server
+
+inl ip s <IP address>
+
+This option works like INL IP P, but refers to the secondary DNS server
+address. The resolver of INL always queries the primary DNS server as the
+first try; only if this one does not reply, the query will be repeated using
+the secondary DNS server.
+
+
+* Activation or deactivation of the negotiation of the DNS servers
+  (serial version only)
+
+inl ip n 0|1
+
+This option activates or deactivates the negotiation of the IP addresses of
+the DNS servers for the future PPP connections. By default it is activated;
+it can be deactivated by executing INL IP N 0 and activated again with INL IP
+N 1. The /I option of INL PPP O activates this negotiation as well.
+
+Supressing the negotiation of the DNS servers may be useful when we want to
+use servers other than the ones supplied by the ISP. See the description of
+INL IP P above for more details.
+
+
+* Activation or deactivation of the automatic reply to PINGs
+
+inl ip e 0|1
+
+This option activates or deactivates the automatic sending of replies for all
+the ICMP echo requests (PINGs) received from any computer of Internet. By
+default it is activated; it can be deactivated by executing INL IP E 0 and
+activated again with INL IP E 1.
+
+
+* Establishing TTL for outgoing datagrams
+
+inl ip t <value>
+
+This option establishes the value of the TTL (Time To Live) field for all the
+outgoing datagrams; it must be a number in the range 1 to 255. The default
+value is 64 and in normal circumstances it should not be modified.
+
+
+* Establishing TOS for outgoing datagrams
+
+inl ip o <value>
+
+This option establishes the value of the TOS (Type Of Service) field for all
+the outgoing datagrams; it must be a number in the range 0 to 15. The default
+value is 0 and in normal circumstances it should not be modified.
+
+
+* Establishing the DHCP configuration vector
+  (Ethernet version only)
+
+inl ip d <vector>
+
+This option establishes the DHCP configuration vector, which is a value that
+indicates what configuration parameters will be obtained by using DHCP.
+
+<vector> is a number in the range 0 to 63 that must be interpreted as a six
+bit vector. Each bit controls the configuration of a given parameter: if it is
+one, the parameter will be tried to be obtained by using DHCP; if it is zero,
+the parameter must be configured manually.
+
+The <vector> bits are assigned as follows:
+
+Bit 0 (value 1): IP address of MSX
+Bit 1 (value 2): Subnet mask
+Bit 2 (value 4): Default gateway
+Bit 3 (value 8): DNS servers
+Bit 4 (value 16): Lifetime of dynamic ARP entries
+Bit 5 (value 32): Ethernet encapsulation type for outgoing frames
+                  (Ethernet II or IEEE802.3)
+
+For example, if you want only the local IP address, the subnet mask and the
+DNS servers addresses to be obtained by using DHCP, use vector 1+2+8=11: INL
+IP D 11. The most usual case is to either use value 0 (completely manual
+configuration) or value 63 (obtain everything by DHCP). The default value for
+the vector is 0.
+
+It is possible that the DHCP server do not provide us all the requested
+parameters. Parameters that are configured to be obtained by using DHCP but
+that are not supplied by the server are established to their default values:
+0.0.0.0 for the IP addresses, five minutes for the lifetime of dynamic ARP
+entries, and Ethernet II encapsulation for outgoing frames.
+
+It is recommended to execute this command at installation time only (see the
+INL I command). To switch from DHCP configuration to manual configuration, it
+is recommended to reinitialize INL (INL D command) instead of executing INL IP
+D 0.
+
+The behavior of the DHCP automaton will be different depending on the value of
+bit 0 of the vector. See INL S for more details.
+
+
+2.4.4. NAME RESOLUTION OPTIONS
+
+* Host name resolution
+
+inl dns r <host name>
+
+This option asks the INL built-in resolver to resolve the specified host name,
+and shows the resulting IP address if the query has success, or an error
+message otherwise. While the query is in progress it is possible to abort the
+process by pressing any key; this will cause the program to terminate
+immediately without displaying any result.
+
+
+2.4.5. TCP PROTOCOL OPTIONS
+
+* TCP connections state information
+
+inl tcp s [<connection>]
+
+This options shows information about the state of the specified connection (a
+number between 0 and 3), or about the state of all the connections if no
+connection number is given.
+
+If the connection does not exist (its state is CLOSED), the cause of the
+connection closing is shown or otherwise the fact that this connection has
+never been used is indicated. Otherwise, the TCP connection state, the local
+port and the remote IP address and port are shown.
+
+
+* TCP connection close
+
+inl tcp c <connection>
+
+This option closes the specified connection (a number between 0 and 3) via a
+standard TCP CLOSE call.
+
+The fact of closing a TCP connection does not imply that the connection will
+cease to exist immediately, since for this it is necessary that the other side
+of the connection close it as well. On the other hand, if there is still
+pending outgoing data not yet sent, the close request will not become
+effective until all the data has been sent. Therefore, if what you wish is to
+immediately destroy the connection so it becomes free immediately, you should
+abort the connection rather than closing it (see the TCP A option next).
+
+
+* TCP connection abort
+
+inl tcp a <connection>
+
+This option aborts the specified connection (a number between 0 and 3) via a
+standard TCP ABORT call. The connection reaches the CLOSED state immediately
+and it becomes available for further re-opening.
+
+
+2.4.6. ETHERNET LAYER OPTIONS (ETHERNET VERSION ONLY)
+
+* Obtaining the Ethernet hardware address
+
+inl eth h
+
+This option simply shows the Ethernet hardware address (also called pysical
+address, Ethernet address or MAC). The hardware address is unique  for each
+card, is assigned in the factory and cannot be changed.
+
+
+* Establishing the Ethernet frame type for outgoing packets
+
+inl eth f 0|1
+
+This option establishes the Ethernet encapsulation type to be used for the
+packets to be sent: Ethernet II (0) or IEEE802.3 (1). Must not be executed if
+this parameter is to be obtained by using DHCP (see INL IP D command).
+
+The default value (0, Ethernet II frames) must be left unmodified unless we
+know for sure that the other machines of the net work with the IEEE802.3.
+encapsulation only. INL recognizes and can process both frame types in the
+received packets.
+
+
+* Activation or deactivation of the periodic network connection check
+
+inl eth c 0|1
+
+This option activates (1) o deactivates (0) the periodic checking of the
+network connection status.
+
+If active, the Ethernet UNAPI routine for checking the physical network
+connection (this routine may send a test packet) is executed every ten
+seconds. If the test fails, then the network is considered to be unavailable
+and all the TCP connections are closed.
+
+The arrival of any packet resets the timer used for the checking, so the tests
+are performed only when there is no network traffic.
+
+If the checking is deactivated, INL will always assume that the network is
+available.
+
+
+* Reinitialization of the Ethernet hardware
+
+inl eth r
+
+This option resets the Ethernet hardware. It may be used after executing an
+application that directly uses the Ethernet UNAPI routines, if it is not
+sure in which state the application has left the hardware. In these cases it
+is not necessary to reset the whole INL (with the INL D command), and it is
+enough to use this command.
+
+
+2.4.7. ARP PROTOCOL OPTIONS (ETHERNET VERSION ONLY)
+
+* Establishing the lifetime of dynamic ARP entries
+
+inl arp t <time>h|m|s
+
+When INL wants to send a local datagram, it must learn which is the hardware
+address of the computer whose IP address is the destination of the datagram.
+For this purpose it uses the ARP protocol, and when the information has been
+obtained, INL stores the pair hardware address-IP address in a table for being
+used when later delivering other datagrams to the same IP address.
+
+The entries in the table have a given lifetime, and when it expires, the entry
+is erased; this is done in prevision of the fact that any machine may retire
+from the network or change its Ethernet card. This command allows to specify
+that lifetime, and must not be executed if this parameter is to be obtained by
+using DHCP (see INL IP D command).
+
+The lifetime can be indicated in three ways:
+
+- A number between 1 and 18, followed by "h", indicating hours.
+- A number between 1 and 1080, followed by "m", indicating minutes.
+- A number between 1 and 65535, followed by "s", indicating seconds.
+
+The default value is five minutes.
+
+
+* Showing the ARP table
+
+inl arp s
+
+This option shows the current contents of the ARP table. For each entry the IP
+address, the associated hardware address, and the entry type, static or
+dynamic (static entries are added with INL ARP A) are shown.
+
+
+* Clearing the ARP table
+
+inl arp c the ARP table
+
+This option erases the whole contents of the ARP table; the dynamic entries as
+well as the static entries are deleted.
+
+
+* Adding an entry to the ARP table
+
+inl arp a <IP address> <hardware address>
+
+This option adds the indicated IP address-hardware address pair to the ARP
+table. The entries added in this way are static, that is, their lifetime is
+infinite: they remain until they are explicitly deleted (with INL ARP C or INL
+ARP D) or until INL is reset or uninstalled (with INL D or INL U,
+respectively).
+
+If there is already an entry whose IP address equals the one specified in the
+command, then the entry is updated with the specified hardware address, and if
+the entry is dynamic it becomes static.
+
+The ARP table has room for 32 entries in this code version of INL, and up to
+30 can be static entries.
+
+
+* Erasing an entry from the ARP table
+
+inl arp d <IP address>
+
+This option erases from the ARP table the entry whose IP address equals the
+specified address. Static entries as well as dynamic entries can be deleted.
+
+
+2.4.8. ROUTING TABLE OPTIONS (ETHERNET VERSION ONLY)
+
+* Show the routing table
+
+inl rou s
+
+When INL wants to send a datagram, it first checks if the destination IP
+address corresponds to a computer attached to the same physical network of the
+MSX; this will happen if (IP of MSX) AND (subnet mask) = (destination IP) AND
+(subnet mask). In that case the datagram is sent directly, previously
+resolving the physical address by using ARP if necessary.
+
+Otherwise, the datagram must be sent to a router that will in turn resend the
+datagram to its destination. To know the address of the router, the routing
+table is examined; this table consists of terns net address-subnet mask-router
+address. If an entry is found for which (destination IP AND entry mask) =
+(entry net address AND entry mask) applies, then the datagram is sent to the
+router whose address appears in the entry (which must be in the same physical
+network), previously resolving its physical address by using ARP if necessary.
+
+If no appropriate entry is found in the routing table, then the datagram is
+sent to the default gateway (whose address can be established with INL IP G).
+
+This option shows the contents of the routing table. New entries can be added
+with INL ROU A, and existing entries can be deleted with INL ROU C and INL ROU
+D.
+
+
+* Clearing the routing table
+
+inl rou c
+
+This option erases the whole contents of the routing table. The default
+gateway address is not modified.
+
+
+* Adding an entry to the routing table
+
+inl rou a <network address> <subnet mask> <router IP address>
+
+This option adds the indicated IP network address-subnet mask-router IP
+address tern to the routing table. The entries remain until they are
+explicitly deleted (with INL ROU C or INL ROU D) or until INL is reset or
+uninstalled (with INL D or INL U, respectively).
+
+If there is already an entry whose pair network address-subnet mask matches
+the pair specified in the command, then the entry is updated with the
+specified router address.
+
+If more than one entry in the table is appropriate for a given outgoing
+datagram, then the information of the first entry found will be used. For
+example, if the following is executed:
+
+inl ip l 192.168.0.7
+inl ip m 255.255.255.0
+inl rou a 1.2.0.0 255.255.0.0 192.168.0.1
+inl rou a 1.2.0.0 255.255.255.0 192.68.0.2
+
+then a datagram destinated to 1.2.0.34 will be sent to touter 192.168.0.1.
+
+The routing table has room for 16 entries in this code version of INL.
+
+
+* Erasing an entry from the routing table
+
+inl rou d <network address> <subnet mask>
+
+This option erases from the routing table the entry whose IP network address-
+subnet mask pair matches the specified pair.
+
+
+3. BASE CLIENT APPLICATIONS
+
+INL 1.x was distributed together with some basic Internet applications, such 
+as a PING client or a FTP client.
+
+These applications have been upgraded to become TCP/IP UNAPI client 
+applications. Since they are not INL specific anymore, they are no longer 
+distributed together with INL, but are available as a separate download at 
+www.konamiman.com.
+
+
+4. CHANGE LIST AND CONTACT
+
+4.1. CHANGE LIST (SERIAL VERSION)
+
+* Version 2.0, may 2010:
+
+- INL is now a TCP/IP UNAPI implementation. The old INL 1.x API has been 
+removed.
+- UDP connections are now used to send and receive UDP packets (INL 1.x used 
+a single queue for all the incoming UDP pakcets).
+
+* Version 1.1.1, september 2007:
+
+- Corrected a bug that caused the computer to hang when a configuration file
+was read, either at installation time or using the INL F command.
+
+* Version 1.1.0, september 2007:
+
+- When an unknown negotiation method (other than PAP or CHAP) was proposed
+during the PPP connection negotiation, a LCP Configure NAK packet was sent
+proposing PAP and CHAP. This seems not to be the correct procedure (the Linux
+PPP daemon, which initially proposes the EAP protocol, treats the NAK packet
+as invalid and negotiation does not progress). Now a Configure Reject packet
+is sent instead.
+
+* Version 1.0.2:
+
+- Corrected a bug in the TCP_STATUS routine. It did not syncrhonize correctly
+with the code executed during the timer interrupt.
+
+- Corrected a bug in the installer. Now it is possible to use an INL.CFG file
+and to specify a command to be automatically executed after installation, at
+the same time.
+
+- Added support for ICMP "Destination unreachable" messages. When the packet
+causing such message is a TCP segment, the associated TCP connection is
+automatically closed.
+
+- Added a new code for the TCP connections close reason: ICMP "Destination
+unreachable" message received (see TCP_STATUS routine).
+
+
+4.2. CHANGE LIST (ETHERNET VERSION)
+
+* Version 2.0, may 2010:
+
+See the change list for the serial version, plus:
+
+- Default value for the DHCP vector is now 63, not 0. This means that once 
+installed, and with no further configuration, INL will try to obtain the IP 
+addresses via DHCP.
+
+* Version 1.1.1, september 2007:
+
+See the change list for the serial version.
+
+* Version 1.1.0, september 2007:
+
+- INL for Ethernet 1.1.0 is INL for ObsoNET 1.0.2 with the support for
+ObsoNET replaced by support for the Ethernet UNAPI. ObsoNET BIOS implements
+the Ethernet UNAPI starting at version 1.1.
+
+* Version 1.0.2:
+
+See the change list for the serial version.
+
+
+4.3. CONTACT INFORMATION
+
+To contact the author and obatin the latest version of INL, as well as ObsoNET
+related software and information about the MSX UNAPI standard:
+
+http://www.konamiman.com
+konamiman@konamiman.com
+
+Also, please visit the INL project portal at http://www.sourceforge.net.
+

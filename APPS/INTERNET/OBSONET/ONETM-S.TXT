@@ -1,0 +1,1037 @@
+
+
+Versi¢n 1.1                                                   N. Soriano
+                                                           Comunidad MSX
+                                                12 de Septiembre de 2007
+
+
+                    ObsoNET - Manual del Programador
+
+
+
+   ObsoNET Copyright (c) 2004
+   Daniel Berdugo Gonz lez (hardware), dberdugo1@yahoo.es
+   N‚stor Soriano Vilchez (software), konamiman@konamiman.com
+
+   MSX-DOS 2 adaptado a ObsoNET por Armando P‚rez Abad
+
+
+*** ATENCION ***
+
+   La cara FRONTAL de la tarjeta ObsoNET es la que contiene los LEDs, el
+   conector para el cable RJ45 y el logotipo "ObsoNET".
+
+
+Öndice
+
+   1.  Introducci¢n
+   2.  Requerimientos e instalaci¢n
+   3.  Caracter¡sticas de ObsoNET
+     3.1   Caracter¡sticas generales
+     3.2   Organizaci¢n de la memoria
+     3.3   Mapeo de la ROM
+     3.4   Detecci¢n de ObsoNET
+   4.  La BIOS de ObsoNET
+     4.1   Caracter¡sticas y uso
+     4.2   Rutinas de la BIOS
+     4.3   Integraci¢n de la BIOS con otros programas en ROM
+     4.4   Uso de la BIOS por programas residentes
+     4.5   Notas de la versi¢n 1.1. Compatibilidad con la UNAPI Ethernet.
+   Ap‚ndice A.  Formato de las tramas Ethernet
+   Ap‚ndice B.  C¢digo para la detecci¢n de ObsoNET
+   Ap‚ndice C.  Referencias
+   Direcci¢n del autor
+
+
+1.  Introducci¢n
+
+   ObsoNET es una tarjeta Ethernet 10BaseT con conector RJ45 para
+   ordenadores MSX.  Con ObsoNET es posible conectar cualquier ordenador
+   MSX a una red Ethernet, e incluso directamente a Internet por medio
+   de un router ADSL.
+
+   Este manual contiene informaci¢n de inter‚s para los programadores
+   que quieran desarrolar aplicaciones que hagan uso de ObsoNET a bajo
+   nivel (manipulaci¢n directa de tramas Ethernet y configuraci¢n de la
+   tarjeta).  Para trabajar a nivel de TCP/IP es necesario instalar
+   InterNestor Lite para ObsoNET; dicha aplicaci¢n tiene su propio
+   manual, por lo que no se tratar  aqu¡.
+
+   En cuanto a los usuarios en general, deben consultar directamente los
+   manuales de los programas de red que usar n.  S¢lo la Secci¢n 2 de
+   este manual ser  de cierto inter‚s para ellos.
+
+
+2.  Requerimientos e instalaci¢n
+
+   ObsoNET funciona en todos los ordenadores MSX, desde MSX1 hasta
+   Turbo-R.
+
+   Instalar ObsoNET es tan sencillo como:
+
+   1.  Insertar la tarjeta en cualquier slot libre del MSX.
+
+   2.  Enchufar un cable de par trenzado conectado a una red en el
+       conector RJ45 de la tarjeta.
+
+   3.  Encender el MSX.
+
+   Una vez que el MSX ha arrancado, ya es posible enviar y recibir
+   tramas Ethernet por medio de las rutinas de la BIOS de ObsoNET
+   (descrita en la Secci¢n 4).  ¨Quien dijo Plug & Play? :-)
+
+   Para usar TCP/IP, sin embargo, es necesario instalar InterNestor Lite
+   para ObsoNET; este programa requiere MSX2 con 128K de RAM mapeada.
+   Consultar el manual del propio InterNestor Lite para m s detalles.
+
+   Es posible conectar m s de una tarjeta ObsoNET simult neamente en un
+   MSX.  Las rutinas de la BIOS de una tarjeta dada actuar n sobre su
+   propio puerto Ethernet, sin entrar en conflicto con las dem s.  Sin
+   embargo, InterNestor Lite y las utilidades suministradas con ObsoNET
+   s¢lo funcionan sobre la primera de las tarjetas (la que tenga n£mero
+   de slot m s bajo).  Para efectivamente usar varias tarjetas
+   simult neamente es necesario desarrollar software espec¡fico.
+
+
+3.  Caracter¡sticas de ObsoNET
+
+3.1  Caracter¡sticas generales
+
+   ObsoNET consiste b sicamente en un controlador Ethernet RTL8019AS y
+   en una Flash ROM de 512K.  En la ROM se almacena una BIOS con rutinas
+   para enviar/recibir tramas Ethernet y para configurar la tarjeta; la
+   BIOS se describe en la Secci¢n 4.  Tambi‚n hay una EEPROM de 1K -no
+   modificable mediante software- que almacena la direcci¢n Ethernet de
+   la tarjeta.
+
+   El tama¤o de la BIOS es de aproximadamente 2K, y el resto de la ROM
+   queda libre para almacenar cualquier software.  Se dan m s detalles
+   en secciones posteriores.
+
+3.2  Organizaci¢n de la memoria
+
+   El espacio de memoria de ObsoNET est  organizado de la siguiente
+   forma:
+
+      #4000-#7FDF: Flash ROM
+      #7FE0-#7FFF: Registros del RTL8019AS
+      #BFE0-#BFFF: Registros del RTL8019AS (r‚plica de #7FE0-#7FFF)
+
+   El RTL8019AS se controla por medio de 32 registros que est n mapeados
+   en ObsoNET de la siguiente forma:
+
+      #7FE0 y #BFE0: Registro 0
+      #7FE1 y #BFE1: Registro 1
+      .
+      .
+      .
+      #7FFF y #BFFF: Registro 31
+
+   Para detalles sobre el funcionamiento de cada registro y del
+   RTL8019AS en general, consultar el manual del controlador en la web
+   de Realtek (ver Ap‚ndice C).  En condiciones normales, no obstante,
+   no es necesario manipular directamente estos registros; basta con
+   usar las rutinas de la BIOS (excepto para el mapeo de la ROM y para
+   buscar tarjetas ObsoNET en el sistema, como se detalla m s adelante).
+
+   NOTA: El RTL8019AS tiene en realidad cuatro bancos de 32 registros.
+   El banco visible se selecciona por medio de los bits 7 y 6 del
+   registro 0 (este registro es especial, es visible en todos los
+   bancos).  Este conocimiento es necesario para manipular el mapeo de
+   la ROM y para buscar tarjetas ObsoNET en el sistema.
+
+3.3  Mapeo de la ROM
+
+   El tama¤o de la Flash ROM es de 512K, pero por medio del espacio de
+   direcciones de ObsoNET s¢lo son visibles 16K simult neamente (en
+   realidad 16K-32 bytes, debido al espacio ocupado por los registros
+   del RTL8019AS).
+
+   La ROM se divide por tanto en 32 p ginas l¢gicas de 16K, numeradas de
+   0 a 31.  Para seleccionar (o consultar) la p gina visible es
+   necesario acceder a uno de los registros del RTL8019AS, en concreto
+   el registro BPAGE (registro 2 del banco 3).
+
+   As¡ pues, para seleccionar una p gina de la ROM es necesario hacer lo
+   siguiente:
+
+   1.  Escribir el valor #C0 en el registro 0 (selecci¢n del banco 3).
+
+   2.  Escribir el n£mero de p gina deseado en el registro BPAGE
+       (registro 2).
+
+   En c¢digo:
+
+           ld      a,#C0
+           ld      (#7FE0),a
+           ld      a,<p gina>
+           ld      (#7FE2),a
+
+   Si en vez de escribir en BPAGE lo leemos, obtendremos el n£mero de la
+   p gina actualmente conectada.
+
+   Para grabar la ROM se debe usar el programa ONETFRL.COM, suministrado
+   con ObsoNET y disponible en Internet (ver Ap‚ndice C).
+
+3.4  Detecci¢n de ObsoNET
+
+   Para comprobar si en un determinado slot hay una ObsoNET conectada,
+   se sigue el siguiente algoritmo:
+
+   1.  Se conecta el slot a comprobar en la p gina 1.
+
+   2.  Asumiendo que hay una ObsoNET conectada, se conecta el banco de
+       registros 0 (ver Secci¢n 3.2) y se leen los registros 8019ID0 y
+       8019ID1 (registros 10 y 11, respectivamente).  Los valores le¡dos
+       deben ser #50 y #70 respectivamente.  De lo contrario, el slot NO
+       contiene una ObsoNET.
+
+   3.  Se conecta el banco de registros 2 y se vuelven a leer los
+       registros 10 y 11.  Esta vez los valores le¡dos deben ser
+       DISTINTOS a los obtenidos en el paso anterior.  De no ser as¡, el
+       slot NO contiene una ObsoNET.
+
+       Llegados a este punto, ya sabemos que en el slot hay una ObsoNET.
+       Falta comprobar si tiene grabada la BIOS en la Flash ROM.
+
+   4.  Se conecta la p gina 0 de la ROM (ver Secci¢n 3.3) y se comprueba
+       si la posici¢n #7FD0 contiene la cadena "ObsoNET", con esa
+       combinaci¢n de may£sculas y min£sculas y terminada con un
+       car cter 0.  De ser as¡, la ObsoNET dispone de BIOS.
+
+
+   El ap‚ndice B contiene el c¢digo que implementa este algoritmo de
+   detecci¢n.
+
+
+4.  La BIOS de ObsoNET
+
+4.1  Caracter¡sticas y uso
+
+   ObsoNET, si est  bien configurada (ver (see Secci¢n 3.4)), tiene en
+   su ROM una BIOS con rutinas que permiten enviar y recibir tramas
+   Ethernet, as¡ como realizar tareas b sicas de configuraci¢n de la
+   tarjeta.  Si ObsoNET no tiene BIOS, ‚sta se puede grabar a partir del
+   fichero BIOS.ROM o BIOSDOS2.ROM y la utilidad ONETFRL.COM; estos
+   ficheros se proporcionan con ObsoNET y tambi‚n est n disponibles en
+   Internet (ver Ap‚ndice C).
+
+   Para usar la BIOS de ObsoNET se debe, en primer lugar, buscar la
+   ObsoNET y comprobar que tiene la BIOS grabada (ver Secci¢n 3.4); y a
+   continuaci¢n hacer lo siguiente:
+
+   1.  Conectar el slot de ObsoNET en la p gina 1:
+
+   ENASLT: equ     #0024
+
+           ld      a,<slot de ObsoNET>
+           ld      h,#40
+           call    ENASLT
+
+   2.  Seleccionar la p gina 0 de la ROM (ver Secci¢n 3.3):
+
+           ld      a,#C0
+           ld      (#7FE0),a
+           xor     a
+           ld      (#7FE2),a
+
+   3.  Llamar a la rutina o rutinas deseadas mediante instrucciones
+       CALL.
+
+   -- O bien --
+
+   1.  Seleccionar la p gina 0 de la ROM usando WRSLT (ver Secci¢n 3.3):
+
+   WRSLT:  equ     #0014
+
+           ld      a,<slot de ObsoNET>
+           ld      e,#C0
+           ld      hl,#7FE0
+           call    WRSLT
+           ld      a,<slot de ObsoNET>
+           ld      e,0
+           ld      hl,#7FE2
+           call    WRSLT
+
+   2.  Llamar a la rutina o rutinas deseadas con CALSLT:
+
+   CALSLT: equ     #001C
+
+           ld      iy,<slot de ObsoNET>*256
+           ld      ix,<direcci¢n de la rutina>
+           ld      ...     (establecer otros registros adecuadamente)
+           call    CALSLT
+
+   (Nota: ninguna de las rutinas de la BIOS de ObsoNET usa los rgistros
+   IX/IY como par metros de entrada ni salida)
+
+   Las rutinas de la BIOS usan exclusivamente la pila para el
+   almacenamiento de datos temporales, y no acceden a ninguna otra parte
+   de la RAM del sistema (excepto al enviar o recibir paquetes): la BIOS
+   no reduce la memoria disponible para el usuario ni usa direcciones
+   "ilegales" de la zona de trabajo del sistema.
+
+   En la secci¢n siguiente se describen todas las rutinas de la BIOS de
+   ObsoNET.
+
+4.2  Rutinas de la BIOS
+
+   Nota: todas las rutinas modifican todos los registros a no ser que se
+   indique lo contrario.
+
+   * ONET_RESET (#7FCD): Inicializa la tarjeta ObsoNET
+     Entrada: -
+     Salida:  -
+
+      Esta rutina, que es ejecutada autom ticamente cuando el ordenador
+      arranca, inicializa la tarjeta ObsoNET dej ndola lista para su
+      uso.  En concreto, realiza las siguientes tareas:
+
+      1.  Env¡a un comando RESET al controlador RTL8019AS.
+
+      2.  Cancela el env¡o de paquete en curso si lo hay.
+
+      3.  Inicializa los registros del RTL8019AS a sus valores
+          adecuados.
+
+      4.  Configura la recepci¢n para admitir paquetes broadcast y
+          rechazar paquetes multicast, con CRC err¢neo, o no dirigidos a
+          nosotros (excepto broadcast).
+
+      5.  Lee la direcci¢n hardware de la tarjeta desde la EEPROM y la
+          almacena en los registros PAR0 a PAR5.
+
+      6.  Configura la m scara multicast como todo unos.
+
+
+   * GET_VERS (#7FCA): Obtiene la versi¢n de la BIOS.
+     Entrada: -
+     Salida:  A = Versi¢n principal
+              B = Versi¢n secundaria
+              C = Revisi¢n
+     Preserva F, DE, HL
+
+      Esta rutina simplemente devuelve la versi¢n de la BIOS.  La
+      informaci¢n devuelta deber¡a mostrarse como "Versi¢n A.B.C".  La
+      versi¢n descrita en este manual es la 1.0.0.
+
+   * GET_HWAD (#7FC7): Obtiene la direcci¢n f¡sica de ObsoNET.
+     Entrada: -
+     Salida:  L-H-E-D-C-B = Direcci¢n f¡sica de ObsoNET
+     Preserva AF
+
+      Esta rutina devuelve la direcci¢n f¡sica (tambi‚n conocida como
+      direcci¢n hardware, direcci¢n ethernet o MAC) de ObsoNET.  Esta
+      informaci¢n se lee de los registros PAR0 a PAR5 del RTL8019AS,
+      registros que a su vez son establecidos en base al contenido de la
+      EEPROM por la rutina RTL_RESET.
+
+      La informaci¢n se devuelve en un formato que facilita su
+      almacenamiento en memoria en el orden correcto, por ejemplo:
+
+           call    GET_HWAD
+           ld      (HWAD),hl
+           ld      (HWAD+2),de
+           ld      (HWAD+4),bc
+           ...
+
+   HWAD:   ds      6
+
+
+   * GET_NETSTAT (#7FC4): Obtiene el estado de la conexi¢n a la red
+     Entrada: -
+     Salida:  A = 0 si no hay conexi¢n a la red
+                  1 si hay conexi¢n a la red
+
+      Esta rutina comprueba si ObsoNET est  f¡sicamente conectada a una
+      red activa, es decir, si es posible el env¡o y la recepci¢n de
+      paquetes.
+
+      Para realizar la comprobaci¢n se intenta enviar un paquete de
+      prueba (cuyas direcciones f¡sicas de env¡o y recepci¢n son
+      00-00-00-00-00-00), por lo que la ejecuci¢n de la rutina toma
+      cierto tiempo; por tanto, no es recomendable ejecutarla con
+      demasiada frecuencia.
+
+   * ONET_ONOFF (#7FC1): Activa o desactiva ObsoNET
+     Entrada: A = 0: Obtener el estado actual
+                  1: Activar la tarjeta
+                  2: Desactivar la tarjeta
+     Salida:  A = Estado de la tarjeta:
+                  1: Activada
+                  2: Desactivada
+     Preserva C, DE, HL
+
+      Esta rutina activa o desactiva el controlador RTL8019AS de
+      ObsoNET.  Mientras est‚ desactivado, se ignorar n todos los
+      paquetes recibidos.
+
+   * CONF_RX (#7FBE): Configuraci¢n de los par metros de recepci¢n
+     Entrada: A = Banderas que indican la configuraci¢n
+                  cuando est n establecidas:
+                  bit 7: S¢lo devolver la configuraci¢n actual
+                         (se ignoran las otras banderas)
+                  bit 4: Aceptar todos los paquetes recibidos, sea cual
+                         sea su direcci¢n de destino ("modo promiscuo")
+                  bit 3: Aceptar los paquetes recibidos cuya direcci¢n
+   		      de destino sea de multicast
+                  bit 2: Aceptar los paquetes recibidos cuya direcci¢n
+                         de destino sea la de broadcast (FF-FF-FF-FF-FF-FF)
+                  bit 1: Aceptar los paquetes recibidos cuya longitud
+                         sea inferior a 64 bytes
+     Salida:  A = Configuraci¢n actual
+   	       (igual que a la entrada excepto el bit 7)
+     Preserva BC, DE, HL
+
+      Cuando el controlador RTL8019AS detecta un paquete nuevo recibido
+      desde la red, examina la direcci¢n f¡sica de destino del paquete
+      para decidir si debe ser capturado (para ser recogido
+      posteriormente, ver la rutina GET_PACKET) o no.  Esta rutina
+      configura los tipos de direcciones que se considerar n v lidas
+      para realizar la captura:
+
+      *  Los paquetes cuya direcci¢n de destino coincida con la de la
+         tarjeta (seg£n los registros PAR0 a PAR5) siempre se capturan,
+         con independencia de la configuraci¢n de recepci¢n.
+
+      *  Si el bit 4 est  a 1 ("modo promiscuo"), se capturar n todos
+         los paquetes que viajen por la red, con independencia de su
+         direcci¢n de destino.  Este modo es £til para desarrollar
+         analizadores de red.
+
+      *  Si el bit 3 est  a 1, se capturar n los paquetes cuya direcci¢n
+         de destino sea de multicast, siempre que la m scara de
+         multicast lo permita (ver la rutina CONF_MCAST).
+
+      *  Si el bit 2 est  a 1, se capturar n los paquetes cuya direcci¢n
+         de destino sea la de broadcast (FF-FF-FF-FF-FF-FF); estos
+         paquetes est n dirigidos a todas las m quinas de la red y en
+         condiciones normales siempre deber¡an ser aceptados.
+
+      *  Si el bit 1 est  a 1, se capturar n los paquetes cuyo tama¤o
+         sea inferior a 64 bytes.  El est ndar Ethernet obliga a que
+         todos los paquetes que circulan por la red tengan un tama¤o
+         igual o superior a 64 bytes, aunque hay sistemas operativos que
+         env¡an paquetes menores.
+
+      La configuraci¢n por defecto (establecida por RTL_RESET) es
+      %00000110, es decir, se aceptan los paquetes de broadcast y los de
+      tama¤o inferior a 64 bytes, y se rechazan los de multicast; esta
+      configuraci¢n es la m s adecuada en circunstancias normales.
+
+   * CONF_MCAST (#7FBB): Configuraci¢n de la m scara de multicast
+     Entrada: Cy = 0 para obtener la m scara actual
+                   1 para establecer la m scara
+              HL = Direcci¢n para depositar la m scara si Cy=0;
+                   direcci¢n desde la que leer la m scara si Cy=1
+     Salida:  -
+
+      Esta rutina obtiene o establece la m scara de multicast, que
+      decide qu‚ direcciones de multicast se consideran v lidas como
+      direcci¢n de destino en los paquetes capturados (es necesario
+      adem s activar la recepci¢n de paquetes multicast; ver la
+      descripci¢n de la rutina CONF_RX).
+
+      La m scara de multicast consta de ocho bytes, que son tratados
+      como una tabla de 64 bits.  Cuando llega un paquete cuya direcci¢n
+      f¡sica de destino es de multicast (el bit m s bajo del primer byte
+      es uno), el RTL8019AS aplica a dicha direcci¢n una funci¢n hash
+      que da como resultado un n£mero de 6 bits.  Dicho n£mero se toma
+      como ¡ndice en la m scara de multicast: si el bit correspondiente
+      est  a uno, se captura el paquete, en caso contrario se descarta.
+
+      El valor por defecto de la m scara (establecido por RTL_RESET) es
+      de todo unos (ocho bytes #FF).
+
+   * GET_INSTAT (#7FB8): Obtiene datos del paquete m s antiguo recibido
+     Entrada: -
+     Salida:  A =  0: No hay paquetes capturados
+                   1: Hay paquetes capturados listos para ser recogidos
+              BC = Tama¤o del paquete capturado m s antiguo
+              HL = Bytes 12 (H) y 13 (L) del paquete capturado
+                   m s antiguo (longitud o Ether-Type)
+
+      Esta rutina comprueba si hay paquetes capturados en el b£fer
+      interno del RTL8019AS.  Si hay al menos uno, devolver  A=1, y en
+      HL y BC devolver  datos relativos al m s antiguo, que es el que se
+      obtendr  si se llama a GET_PACKET.
+
+      BC devuelve el tama¤o total del paquete (incluyendo la cabecera
+      Ethernet), mientras que HL devuelve los bytes 12 y 13 del paquete
+      capturado; esto permite distinguir el tipo de trama usada por el
+      paquete, Ethernet 2 o IEEE802.3, antes de obtenerlo (ver el
+      ap‚ndice A para m s detalles sobre los tipos de tramas Ethernet).
+
+      El tama¤o del b£fer usado para capturar paquetes es de 8K.  Si se
+      llena, no se capturar n nuevos paquetes, por lo que es conveniente
+      recoger los paquetes capturados (con GET_PACKET) regularmente.
+
+   * GET_PACKET (#7FB5): Obtiene el paquete recibido
+   		      m s antiguo capturado
+     Entrada: HL = Direcci¢n para depositar el paquete
+                   (0 para descartarlo)
+     Salida:  A  = 0 si se ha obtenido (o descartado) un paquete
+                   1 si no hab¡a paquetes pendientes
+              BC = Tama¤o del paquete obtenido
+
+      Esta rutina copia a la direcci¢n indicada por HL el paquete m s
+      antiguo recibido, y a continuaci¢n elimina dicho paquete del b£fer
+      de recepci¢n del RTL8019AS.  La direcci¢n pasada no puede ser una
+      direcci¢n de p gina 1 (#4000-#7FFF).
+
+      Si se especifica HL=0, el paquete se descarta: se borra del b£fer
+      pero no es copiado a memoria.
+
+      Para saber a priori si hay paquetes disponibles antes de intentar
+      obtenerlos, se puede usar la rutina GET_INSTAT.
+
+   * SEND_PACKET (#7FB2): Env¡a un paquete a la red
+     Entrada: HL = Direcci¢n del paquete a enviar
+              BC = Longitud del paquete a enviar (14 a 1514 bytes)
+              A  = 0: Ejecuci¢n s¡ncrona
+                      (esperar a que el env¡o finalice)
+                   1: Ejecuci¢n as¡ncrona
+                      (terminar inmediatamente tras iniciar el env¡o)
+     Salida:  En ejecuci¢n s¡ncrona:
+              A = 0: Paquete enviado con ‚xito
+                  1: Longitud del paquete inv lida
+                  3: Env¡o cancelado por p‚rdida de portadora
+                  4: Env¡o cancelado por excesivas colisiones
+              En ejecuci¢n as¡ncrona:
+              A = 0: El env¡o del paquete ha comenzado
+                  1: Longitud del paquete inv lida
+
+      Esta rutina env¡a (o inicia el env¡o de) el paquete almacenado en
+      la direcci¢n pasada en HL.  Dicha direcci¢n no puede ser de p gina
+      1 (#4000-#7FFF).
+
+      La longitud completa del paquete, incluyendo la cabecera Ethernet,
+      se debe pasar en BC, y debe ser un valor entre 14 y 1514.  Si el
+      valor es inferior a 64, se enviar n en realidad 64 bytes a la red:
+      el paquete seguido de datos aleatorios.
+
+      Si se selecciona ejecuci¢n s¡ncrona, la rutina esperar  a que el
+      env¡o del paquete finalice (o falle), y entonces devolver  el
+      c¢digo de terminaci¢n apropiado en A.  En cambio, si se selecciona
+      ejecuci¢n as¡ncrona, la rutina ordenar  al RTL8019AS que inicie el
+      env¡o del paquete, tras lo cual finalizar  inmediatamente; para
+      obtener el estado de la transmisi¢n (en curso, terminada con ‚xito
+      o fallida) se debe usar la rutina SEND_STATUS.
+
+      N¢tese que si ya hay un env¡o en curso cuando se ejecuta
+      SEND_PACKET, la rutina esperar  a que dicho env¡o finalice antes
+      de comenzar el env¡o nuevo.  Esto ocurre siempre, con
+      independencia de que se pida transmisi¢n s¡ncrona o as¡ncrona.
+
+   * SEND_STATUS (#7FAF): Obtiene el estado de la transmisi¢n
+   		       de un paquete
+     Entrada: -
+     Salida:  A = 0: No se han enviado paquetes
+                     desde la £ltima ejecuci¢n de RTL_RESET
+                  1: Paquete envi ndose
+                  2: Paquete enviado con ‚xito
+                  3: Env¡o cancelado por p‚rdida de portadora
+                  4: Env¡o cancelado por excesivas colisiones
+     Preserva C, DE, HL
+
+      Esta rutina devuelve el estado del £ltimo env¡o realizado mediante
+      la rutina SEND_PACKET.  El estado devuelto es siempre v lido, con
+      independencia de que la transmisi¢n fuera s¡ncrona o as¡ncrona;
+      por ejemplo, si una ejecuci¢n s¡ncrona de SEND_PACKET devuelve
+      A=0, esta rutina devolver  A=2.
+
+      La informaci¢n obtenida no se borra: ejecuciones sucesivas de esta
+      rutina siempre devolver n el mismo valor mientras no vuelva a
+      ejecutarse SEND_PACKET (o RTL_RESET).
+
+4.3  Integraci¢n de la BIOS con otros programas en ROM
+
+   La BIOS de ObsoNET tiene un tama¤o de £nicamente 2K (en la versi¢n
+   actual), por lo que el resto de la ROM (de 512K de tama¤o total)
+   puede usarse para almacenar otros programas (por ejemplo, el MSX-DOS
+   2 adaptado que se suministra con ObsoNET).  En esta secci¢n se
+   explica c¢mo integrar la BIOS de ObsoNET con otros programas que se
+   graben en la Flash ROM de ObsoNET.
+
+   La BIOS de ObsoNET se distribuye en tres ficheros:
+
+   o  BIOS.ROM (16K): La BIOS m s espacio en blanco de relleno y una
+      cabecera ROM, lista para ser grabada en la memoria Flash mediante
+      ONETFRL.COM.
+
+   o  BIOSDOS2.ROM (64K): La BIOS m s una versi¢n adaptada a ObsoNET de
+      MSX-DOS 2, tambi‚n lista para ser grabada en la memoria Flash
+      mediante ONETFRL.COM.  Esta es la ROM que ObsoNET lleva grabada
+      "de f brica".
+
+   o  BIOS.DAT (2048 bytes): La BIOS sola.
+
+   Este £ltimo fichero, BIOS.DAT, es el que nos interesa para integrar
+   la BIOS con otros programas.  La integraci¢n consiste simplemente en
+   la inclusi¢n del contenido de BIOS.DAT en el fichero .ROM que
+   contiene el c¢digo a grabar, de forma que se cumplan las dos
+   siguientes condiciones:
+
+   1.  El contenido de BIOS.DAT debe aparecer en la posici¢n #3800 del
+       fichero .ROM a grabar (asumiendo que la primera posici¢n es la
+       0).  Es decir, una vez grabada la ROM, la BIOS debe ser visible
+       en la direcci¢n #7800 del slot de ObsoNET cuando se selecciona la
+       p gina 0 de la ROM.
+
+   2.  El c¢digo de inicializaci¢n de la ROM debe efectuar una llamada a
+       la direcci¢n #7800.  Si la ROM no tiene c¢digo de inicializaci¢n,
+       se debe poner el valor #7800 en la direcci¢n INIT de la cabecera
+       ROM (posici¢n 2 del fichero, direcci¢n #4002 en el slot).
+
+   Por ejemplo, sup¢ngase que se desea grabar un programa de tama¤o
+   inferior a 14K junto con la BIOS.  Entonces deber¡a hacerse lo
+   siguiente:
+
+   1.  Generar el fichero PROGRAM.DAT, que contenga el programa m s
+       relleno al final hasta completar 14K (14336 bytes).  El c¢digo
+       del programa deber¡a tener esta estructura:
+
+           org     #4000
+
+           db      #41,#42 ;Cabecera ROM
+           dw      INIT
+           ds      12      ;O bien punteros a comandos CALL, etc
+
+   INIT:   call    #7800   ;Obligatorio
+           ...  (inicializaci¢n propia del programa)
+           ret
+
+           ...  (resto del programa)
+
+   CODE_END:
+           ds      #7800-CODE_END  ;Relleno hasta 14K
+
+        O bien, si el programa no tiene c¢digo propio de inicializaci¢n:
+
+           org     #4000
+
+           db      #41,#42 ;Cabecera ROM
+           dw      #7800
+           ds      12      ;O bien punteros a comandos CALL, etc
+
+           ...  (programa)
+
+   CODE_END:
+           ds      #7800-CODE_END  ;Relleno hasta 14K
+
+   2.  Concatenar PROGRAM.DAT con BIOS.DAT para generar el fichero ROM a
+       grabar; por ejemplo, desde el int‚rprete de comandos de DOS 2:
+
+       CONCAT /B PROGRAM.DAT BIOS.DAT PROGRAM.ROM
+
+       El fichero resultante PROGRAM.ROM, de 16K, ya se puede grabar en
+       la ROM de ObsoNET mediante la utilidad ONETFRL.COM.
+
+   Si el programa a grabar es mayor de 14K, se debe generar otro
+   fichero, PROGRAM2.DAT, que contendr  el c¢digo y/o los datos que
+   ser n visibles a partir de la p gina 1 de la ROM.  El tama¤o de este
+   fichero puede ser de hasta 496K, y en esta ocasi¢n, para generar el
+   fichero ROM definitivo se har¡a:
+
+   CONCAT /B PROGRAM.DAT BIOS.DAT PROGRAM2.DAT PROGRAM.ROM
+
+4.4  Uso de la BIOS por programas residentes
+
+   Las rutinas de la BIOS de ObsoNET no se han dise¤ado para ser
+   reentrantes.  Es decir, si cuando se est  ejecutando una rutina de la
+   BIOS se produce una interrupci¢n, resultado de la cual se ejecuta
+   c¢digo que a su vez realiza llamadas a la misma (o a otra) rutina de
+   la BIOS, el comportamiento de las rutinas (y por tanto de la propia
+   ObsoNET) ser  probablemente err¢neo.  Un ejemplo de programa que usa
+   la BIOS desde c¢digo asociado a la interrupci¢n del reloj es
+   InterNestor Lite.
+
+   Por tanto, al desarrollar programas normales (que no se ejecuten
+   desde una interrupci¢n) que hagan uso de la BIOS de ObsoNET hay dos
+   opciones para hacer frente a esta limitaci¢n:
+
+   1.  Avisar en la documentaci¢n del programa de que para su correcta
+       ejecuci¢n no puede haber instalado ning£n programa residente que
+       haga uso de la BIOS de ObsoNET.
+
+   2.  En el caso de InterNestor Lite, no es necesario desinstalarlo: si
+       se pausa (mediante INL P), no se ejecutar  el c¢digo asociado a
+       la interrupci¢n del reloj (tambi‚n es posible pausar InterNestor
+       Lite mediante c¢digo, ver el manual de dicho programa para m s
+       detalles).
+
+   3.  Deshabilitar las interrupciones (DI) antes de cada llamada a una
+       rutina de la BIOS de ObsoNET, y si es necesario volver a
+       habilitarlas (EI) despu‚s.
+
+   En cuanto a los programas residentes que ejecuten rutinas de la BIOS
+   de ObsoNET desde c¢digo disparado por una interrupci¢n, tambi‚n
+   deber¡an indicar esta circunstancia en su documentaci¢n.
+
+4.5. Notas de la versi¢n 1.1. Compatibilidad con la UNAPI Ethernet.
+
+   Desde la versi¢n 1.1, la BIOS de ObsoNET es compatible con la
+   especificaci¢n Ethernet UNAPI.  El nombre de implementaci¢n UNAPI es
+   "ObsoNET" (sin las comillas), y no hay rutinas especif¡cas de la
+   implementaci¢n.
+
+   La rutina ETH_GET_NETSTAT invoca a GET_NETSTAT, la cual env¡a un
+   paquete de prueba para comprobar la conectividad de red; por tanto,
+   no deber¡a ser ejecutada muy a menudo.  Las rutinas ETH_GET_FRAME y
+   ETH_SEND_FRAME invocan a GET_PACKET y SEND_PACKET, respectivamente;
+   estas rutinas no aceptarn una direcci¢n de p gina 1 (#4000-#7FFF)
+   como origen o destino para las tramas.
+
+   N¢tese que el tama¤o del fichero BIOS.DAT ha cambiado de 1536 bytes
+   en la versi¢n 1.0 a 2048 bytes en la versi¢n 1.1.  Adem s, la
+   posici¢n de fichero de BIOS.DAT al integrarlo con otro programa en
+   una ROM ha cambiado de #3A00 a #3800; y la direcci¢n de
+   inicializaci¢n que debe ser llamada ha cambiado de #7A00 to #7800.
+   V‚ase la Secci¢n 4.3.
+
+   La especificaci¢n Ethernet UNAPI est  disponible en
+   http://www.konamiman.com.
+
+
+Ap‚ndice A.  Formato de las tramas Ethernet
+
+   En este ap‚ndice se describe el formato de las tramas Ethernet.  Esta
+   informaci¢n se proporciona £nicamente como referencia y no es
+   exhaustiva.  Se puede hallar informaci¢n m s detallada en Internet.
+
+   Hay dos tipos de tramas Ethernet: el tipo Ethernet II y el tipo
+   IEEE802.3 con extensi¢n SNAP (tipo IEEE para abreviar).
+
+   El formato Ethernet II es como sigue (cada l¡nea son 32 bits):
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                 Direcci¢n Ethernet de destino                 |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |   Dir. Eth. destino (cont.)   |       Dir. Eth. fuente        |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |           Direcci¢n Ethernet fuente (continuaci¢n)            |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |          Ether-Type           |                               |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               |
+      .                                                               .
+      .                      Datos del paquete                        .
+      .                                                               .
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   El formato de la trama IEEE es como sigue:
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                 Direcci¢n Ethernet de destino                 |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |   Dir. Eth. destino (cont.)   |       Dir. Eth. fuente        |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |           Direcci¢n Ethernet fuente (continuaci¢n)            |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |           Longitud            |      170      |      170      |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |       3       |       0       |       0       |       0       |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |          Ether-Type           |                               |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               |
+      .                                                               .
+      .                      Datos del paquete                        .
+      .                                                               .
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+   Las direcciones Ethernet, de seis bytes de longitud, son £nicas para
+   cada tarjeta y se asignan en tiempo de fabricaci¢n.  La direcci¢n
+   compuesta por todo unos (seis bytes #FF) es especial: se trata de la
+   direcci¢n de broadcast, y cuando aparece en el campo de direcci¢n de
+   destino indica que el paquete est  destinado a todas las m quinas
+   conectadas a la red, en vez de a una m quina concreta.
+
+   Las direcciones Ethernet normales tienen el bit m s bajo del primer
+   byte puesto a cero.  Cuando est  a uno, se trata de una direcci¢n de
+   multicast (paquete dirigido a un grupo de ordenadores).
+
+   El tama¤o m¡nimo de una trama Ethernet (incluyendo todas las
+   cabeceras) es de 64 bytes.  El tama¤o m ximo es de 1514 bytes.
+
+   El campo "Longitud" de las tramas IEEE cuenta a partir del primer
+   byte 170.  Es decir, es igual a la longitud de la parte de datos, m s
+   ocho.
+
+   El campo "Ether-Type" indica el tipo de paquete transportado en la
+   parte de datos.  Los dos tipos m s com£nmente usados son:
+
+      #0800: Datagrama IP
+      #0806: Paquete ARP
+
+   Ambos tipos de trama, Ethernet II e IEEE, pueden coexistir en una
+   misma red.  Para saber de qu‚ tipo es una trama recibida, se debe
+   consultar el contenido del n£mero de 16 bits de las posiciones 12 y
+   13 de la trama:
+
+   o  Si el n£mero es menor o igual a 1500, se trata de una trama IEEE
+      (el n£mero expresa longitud).
+
+   o  Si el n£mero es mayor que 1500, se trata de una trama Ethernet II
+      (el n£mero expresa Ether-Type).  Todos los c¢digos Ether-Type son
+      mayores que 1500.
+
+   A la hora de enviar paquetes, se deben enviar en tramas de tipo
+   Ethernet II a no ser que se sepa que las m quinas de la red trabajan
+   £nicamente con el formato IEEE.
+
+   N¢tese que los campos Longitud y Ether-Type se almacenan en formato
+   Big-Endian, es decir con el byte alto primero; al contrario de lo que
+   hace el MSX, que almacena los n£meros de 16 bits en Little-Endian,
+   con el byte bajo primero.  Por tanto, para obtener el
+   Ether-Type/Longitud en HL no se podr¡a hacer lo siguiente:
+
+           ld      hl,(PAQUETE+12) ;­­­ INCORRECTO !!!
+
+   En su lugar habr¡a que hacer:
+
+           ld      a,(PAQUETE+12)
+           ld      h,a
+           ld      a,(PAQUETE+13)
+           ld      l,a
+
+   O bien:
+
+           ld      hl,(PAQUETE+12)
+           ld      a,h
+           ld      h,l
+           ld      l,a
+
+   O bien:
+
+           ld      ix,PAQUETE
+           ld      h,(ix+12)
+           ld      l,(ix+13)
+
+
+Ap‚ndice B.  C¢digo para la detecci¢n de ObsoNET
+
+   En este ap‚ndice se muestra una rutina que comprueba todos los slots
+   del sistema en busca de una ObsoNET.
+
+   La rutina consta principalmente de tres subrutinas:
+
+   o  NEXTSLOT devuelve, cada vez que es llamada, el siguiente n£mero de
+      slot disponible en el sistema.
+
+   o  CHKOBSO comprueba si hay una ObsoNET en el slot conectado en la
+      p gina 1, mediante el test de los registros descrito en la Secci¢n
+      3.4.
+
+   o  CHKBIOS comprueba si la ObsoNET conectada en la p gina 1 tiene una
+      BIOS.
+
+
+   	;SRCHOBSO - Rutina de b£squeda de ObsoNET
+   	;           por N‚stor Soriano
+   	;ObsoNET (c) 2004
+   	;por Daniel Berdugo (hardware) y N‚stor Soriano (software)
+   	;
+   	;Entrada: -
+   	;Salida:  A  = Slot de ObsoNET (#FF si no se encuentra)
+   	;         Cy = 1 si la ObsoNET tiene BIOS
+   	;         Slot de ObsoNET conectado en p gina 1
+   	;         (si no se encuentra,
+   	;          £ltimo slot disponible conectado)
+
+   ENASLT:
+   	equ     #0024
+
+   SRCHOBSO:
+   	ld      a,#FF        ;Inicializa la rutina NEXTSLOT
+   	ld      (NEXTSL),a
+
+   SRCHLOOP:
+   	call	NEXTSLOT	;Obtiene siguiente slot disponible...
+   	cp	#FF	;(si no quedan slots, terminar)
+   	ret	z
+
+   	push	af
+   	ld	h,#40	;...y lo conecta.
+   	call	ENASLT
+   	pop	af
+
+   	ld	c,a
+   	call	CHKOBNET	;Comprueba si hay ObsoNET...
+   	jr	nc,SRCHLOOP	;...y si no, pasa al siguiente slot.
+
+   	call	CHKBIOS	;Comprueba si hay BIOS y termina.
+   	ld	a,c
+   	ret
+
+
+   ;--- Comprobaci¢n de la presencia de una ObsoNET en la p gina 1.
+   ;    Entrada:  -
+   ;    Salida:   Cy = 1 si en la p gina 1 hay una ObsoNET, 0 si no
+   ;    Modifica: AF, B
+
+   CHKOBNET:
+   	ld	a,(#7FE0)       ;Guarda valor para restaurarlo
+   	ld	b,a             ;si no hay una ObsoNET
+
+   	xor     a       	;Conecta banco de registros 0
+   	ld	(#7FE0),a
+
+   	ld	a,(#7FEA)	;Lee registros 10 y 11 (8019ID0/1),
+   	cp	#50	        ;deben devolver #50 y #70 resp.
+   	jr	nz,NO_OBNET
+   	ld	a,(#7FEB)
+   	cp	#70
+   	jr	nz,NO_OBNET
+
+   	ld	a,#80   	;Conecta banco de registros 2
+   	ld	(#7FE0),a
+
+   	ld	a,(#7FEA)	;Lee registros 10 y 11 (no usados,
+   	cp	#50	        ;NO deben devolver #50 y #70)
+   	scf
+   	ret     nz
+   	ld	a,(#7FEB)
+   	cp	#70
+   	scf
+   	ret	nz
+
+   NO_OBNET:
+   	ld	a,b             ;No hay ObsoNET: restaura contenido
+   	ld	(#7FE0),a	;de #7FE0 por si es RAM
+   	or	a
+   	ret
+
+
+   ;--- Comprobaci¢n de la presencia de BIOS en la ObsoNET de p gina 1.
+   ;    Entrada:  -
+   ;    Salida:   Cy = 1 si hay BIOS, 0 si no
+   ;    Modifica: AF, HL, DE
+
+   CHKBIOS:
+           ld      a,#C0           ;Conecta p gina 0 de la ROM
+           ld      (#7FE0),a
+           xor     a
+           ld      (#7FE2),a
+
+           ld      hl,#7FD0
+           ld      de,OBSTRING
+
+   CHKBLOOP:       ;Bucle de comparaci¢n de cadenas
+           ld      a,(de)
+           cp      (hl)
+           scf
+           ccf
+           ret     nz
+
+           or      a
+           scf
+           ret     z
+
+           inc     hl
+           inc     de
+           jr      CHKBLOOP
+
+   OBSTRING:
+           db      "ObsoNET",0
+
+
+   ;--- Subrutina NEXTSLOT:
+   ;    Devuelve en A el siguiente slot disponible
+   ;    cada vez que es llamada.
+   ;    Cuando ya no quedan slots devuelve #FF.
+   ;    Para incializarla hay que escribir #FF en NEXTSL.
+   ;    Modifica: AF, BC, HL
+
+   EXPTBL:
+   	equ	#FCC1
+
+   NEXTSLOT:
+   	ld	a,(NEXTSL)
+   	cp	#FF
+   	jr	nz,NXTSL1
+   	ld	a,(EXPTBL)      ;Primer slot
+   	and	%10000000
+   	ld	(NEXTSL),a
+   	ret
+
+   NXTSL1:
+   	ld	a,(NEXTSL)
+   	cp	%10001111
+   	jr	z,NOMORESL      ;No hay m s slots?
+   	cp	%00000011
+   	jr	z,NOMORESL
+   	bit	7,a
+   	jr	nz,SLTEXP
+
+   SLTSIMP:
+   	and	%00000011       ;Slot simple
+   	inc	a
+   	ld	c,a
+   	ld	b,0
+   	ld	hl,EXPTBL
+   	add	hl,bc
+   	ld	a,(hl)
+   	and	%10000000
+   	or	c
+   	ld	(NEXTSL),a
+   	ret
+
+   SLTEXP:
+   	ld	c,a              ;Slot expandido
+   	and	%00001100
+   	cp	%00001100
+   	ld	a,c
+   	jr	z,SLTSIMP
+   	add	%00000100
+   	ld	(NEXTSL),a
+   	ret
+
+   NOMORESLT:
+   	ld	a,#FF
+   	ret
+
+   NEXTSL:
+   	db	#FF             ;Ultimo slot devuelto
+
+
+Ap‚ndice C.  Referencias
+
+   En este ap‚ndice se muestran algunas direcciones de inter‚s en
+   Internet.
+
+   * P gina de Konamiman: http://www.konamiman.com/msx/obsonet-s.html
+
+   Esta p gina contiene informaci¢n sobre ObsoNET, as¡ como las £ltimas
+   versiones de la BIOS y del software asociado (incluyendo InterNestor
+   Lite para Ethernet) disponibles para descarga.
+
+   * P gina de Realtek: http://www.realtek.co.tw
+
+   P gina de los fabricantes del controlador Ethernet RTL8019AS, en el
+   que se basa ObsoNET.
+
+   * The RFC Editor: http://www.rfc-editor.org
+
+   Esta p gina contiene todos los RFC (Request for Comments) existentes.
+   Los RFC son documentos que describen y especifican, entre otras
+   cosas, los protocolos usados por las aplicaciones de Internet
+   (protocolos TCP/IP y los basados en ‚stos: Telnet, FTP, SMTP, POP3,
+   HTTP, IRC...)
+
+   * The MSX Resource Center: http://www.msx.org
+
+   P gina de noticias y recursos relacionados con el MSX.  Si alguien
+   desarrolla una aplicaci¢n para ser usada con ObsoNET y/o con
+   InterNestor Lite, probablemente se anunciar  aqu¡.  :-)
+
+
+Direcci¢n del autor
+
+   N‚stor Soriano Vilchez
+
+   EMail: konamiman@konamiman.com
+   URI:   http://www.konamiman.com

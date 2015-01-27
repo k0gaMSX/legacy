@@ -1,0 +1,4066 @@
+InterNestor Suite 1.0 - By Nestor Soriano (Konami Man), 12-2002
+---------------------------------------------------------------
+
+
+0. TABLE OF CONTENTS
+
+This manual is divided in the following sections; for using (not programming) 
+InterNestor Suite you only need to read sections 1 to 3:
+
+1. WHAT IS THIS?
+1.1. WHAT'S NEW FROM INTERNESTOR SUITE BETA 5?
+2. INSTALLING AND CONNECTING
+2.1. INSTALLING INTERNESTOR SUITE
+2.2. ESTABLISHING AN INTERNET CONNECTION (MANUALLY)
+2.3. AUTOMATIZING THE INTERNET CONNECTION ESTABLISHMENT
+2.4. USING THE SAMPLE PROGRAMS
+2.5. READING EMAIL USING TELNEST/TCPCON
+2.6. WRITING EMAIL USING TELNEST/TCPCON
+3. FILES
+4. THE INTERNESTOR SUITE STRUCTURE
+4.1. RESIDENT NATURE
+4.2. MODULARITY
+4.3. MODULES COMMUNICATION
+4.4. THE IMPORTANCE OF NESTORMAN
+4.5. STRUCTURE OF A INS MODULE
+5. THE INS MODULES
+5.1. NestorFOSSIL
+5.1.1. NestorFOSSIL: MODULE OPERATION
+5.1.2. NestorFOSSIL: THE JUMP TABLE
+5.1.3. NestorFOSSIL: THE VARIABLES ZONE
+5.1.4. NestorFOSSIL: FORMAT OF THE ENQUEUED DATA
+5.2. NestorPPP
+5.2.1. NestorPPP: MODULE OPERATION
+5.2.2. NestorPPP: THE JUMP TABLE
+5.2.3. NestorPPP: THE CONFIGURATION CONSTANTS ZONE
+5.2.4. NestorPPP: THE VARIABLES ZONE
+5.2.5. NestorPPP: FORMAT OF THE ENQUEUED DATA
+5.3. NestorIP
+5.3.1. NestorIP: MODULE OPERATION
+5.3.2. NestorIP: THE JUMP TABLE
+5.3.3. NestorIP: THE CONFIGURATION CONSTANTS ZONE
+5.3.4. NestorIP: THE VARIABLES ZONE
+5.3.5. NestorIP: FORMAT OF THE ENQUEUED DATA
+5.4. NestorTCP
+5.4.1. NestorTCP: MODULE OPERATION
+5.4.2. NestorTCP: THE JUMP TABLE
+5.4.3. NestorTCP: THE CONFIGURATION CONSTANTS ZONE
+5.4.4. NestorTCP: THE VARIABLES ZONE
+5.4.5. NestorTCP: TCB FORMAT
+6. WHAT AM I ASKING FOR
+
+
+1. WHAT IS THIS?
+
+InterNestor Suite is a resident program, plus a set of utilities, which allow 
+Internet connection with MSX computers. Through this manual, the abbreviation 
+INS will be used meaning InterNestor Suite.
+
+This document explains how to use InterNestor Suite 1.0 (how to install, how 
+to open a connection to the internet and how to use the provided applicatin 
+programs ). Also, it provides enough technical info to understand how INS is 
+structured, to access all the routines and variables of INS, to send and 
+receive IP datagrams, and to establish and manage TCP connections. The source 
+code of the ping and TCP console programs are supplied as examples of simple 
+programs using INS.
+
+Please note that for using INS you will need:
+
+- MSX2 computer or higher.
+- MSX-DOS version 2.20 or higher.
+- At least 256K of mapped RAM, but it is better if you have more.
+- RS232 (or ACCNET) and a modem (although null-modem connections to other 
+computers are also possible).
+
+INS depends greatly on another resident program, NestorMan, to work. If you 
+are planning to develop any application based on INS, you must read not only 
+this manual, but also the NestorMan manual, especially the stuff about the 
+lists mechanism. Please be sure of using version 1.21 or higher of NestorMan 
+(version 1.22 was released together with INS beta 4).
+
+InterNestor Suite 1.0 consists on a physical medium (RS232 port) access 
+module, a link layer module using PPP, an IP module, and a TCP module; plus a 
+set of application programs for controlling INS itself and for managing 
+higher level protocols (currently, telnet and FTP clients are distributed 
+with INS 1.0).
+
+Through this manual, references to various RFCs (documents containing the 
+official specifications of the various protocols used on the internet, 
+amongst others) are made. All the existing RFCs are available at 
+http://www.rfc-editor.org.
+
+
+1.1. WHAT'S NEW FROM INTERNESTOR SUITE BETA 5?
+
+The following things have changed from INS beta 5 to INS 1.0:
+
+- NestorFossil has not suffered changes, but its version number has been 
+upgraded to 1.0.
+
+- The routine for obtaining IP addresses on NestorPPP still returning the 
+addresses in registers HL and DE, but now in the format L.H.E.D., instead of 
+H.L.D.E. as in previous versions. This way it is much easier to store the 
+address in memory in the correct order (LD (ADDRESS),HL:LD (ADDRESS+2),DE is 
+enough).
+
+- NestorIP has the following changes:
+
+1) Added a new option for the pseudo-header of outgoing datagrams: the UDP 
+ports option. If this option is specified, NestorIP assumes that the outgoing 
+datagram is an UDP datagram, and prepends an UDP header to the data, 
+including the correct checksum. This way, there is no need for manually 
+generating the UDP header as in previos versions.
+
+2) Added a new routine for obtaining incoming UDP datagrams. With this 
+routine, the desired source IP address, source UDP port and/or destination 
+UDP port may be specified, and only the packets having matching parameters 
+will be retrieved.
+
+3) The maximum total size for fragmented datagrams once reassembled is now 
+2K, not the negotiated MRU.
+
+4) The module code has been adapted to the new data return format of the 
+NestorPPP routine for obtaining the IP addresses.
+
+- NestorTCP has not suffered changes, except that the code has been adapted 
+to the new data return format of the NestorPPP routine for obtaining the IP 
+addresses.
+
+The associated application programs have not suffered signifiant changes. 
+Some of them have been upgraded to version 1.0, and some other remain with 
+the old 0.x version number, as they have not changed at all.
+
+
+2. INSTALLING AND CONNECTING
+
+This section explains how to install InterNestor Suite and how to open a 
+connection to the internet. The supplied application programs NPING.COM, 
+NRESOLV.COM, TELNEST.COM and NFTP.COM, may be used for some testing and even 
+for doing interisting things such as read/send e-mail, connect to telnet 
+servers (with limitations, more details later), or even download software 
+from FTP servers (I have downloaded already more than 1MB of MSX games from 
+funet using INS!). If you want technical information in order to custom your 
+internet connection, to send/receive your own IP datagrams, or to open and 
+manage your own TCP connections, refer to section 4 onwards.
+
+
+2.1. INSTALLING INTERNESTOR SUITE
+
+To install InterNestor Suite, follow these steps:
+
+1) Install Fossil driver (DRIVER.COM), it is necessary to send and receive 
+data from the RS232 interface.
+
+2) Install NestorMan. Make sure you have version 1.21 or higher (version 1.22 
+was released together with INS beta 4; please use this new version).
+
+3) Install and initialize the modules which compose INS, this is achieved by 
+executing:
+
+INSINS I NFOSSIL NPPP NIP NTCP
+
+Note that four free segments are needed, all four in the same mapper slot.
+
+INSINS.COM has more options; executing it without parameters more information 
+is shown.
+
+4) After installing INS, you must force DOS to obtain the free disk space on 
+any drive (for example via a simple DIR command), otherwise INS won't work. I 
+don't know the reason of this strange failure, suggestions will be welcome.
+
+
+2.2. ESTABLISHING AN INTERNET CONNECTION (MANUALLY)
+
+To manually establish an internet connection, follow these steps (how to 
+automatize this process is discussed in the next section):
+
+1) First, you may want to alter some configuration values of the PPP and IP 
+modules. For example you may want to disable DNS negotiation, and/or manually 
+specify the DNS addresses; you may want to disable the PPP echo messages 
+sending, or specify the authentication method to use... (section 5 explains 
+the available configuration constants for each module)
+
+PPPC.COM allows to easily do this. Just write a text file with the 
+configuration constants you want to modify and their values (see file 
+SAMPLE.CFG for guidance), and execute:
+
+PPPC F:filename R
+
+You can however ignore this step, and the effect is simply that the default 
+values for all configuration constants will be used. See section 5 and file 
+SAMPLE.CFG for more details.
+
+2) If connection is not null-modem, dial your ISP number. This can be done in 
+the "old way", that is, using ECHOCOM.COM as in the previous betas:
+
+ECHOCOM ATDTnumber, or: ECHOCOM ATDPnumber for pulse dialing
+
+However probably you will prefer to use the new program supplied with INS 
+starting at beta 4, NDIAL.COM. This program dials the desired number and 
+waits until either the connection is successfully completed, or an error is 
+returned by the modem. It also allows sending configuration commands to the 
+modem before dialing.
+
+To use NDIAL.COM, just execute:
+
+NDIAL number
+
+The program has more options. Executing it without parameters it will show 
+detailed usage information.
+
+3) Once the modem has detected carrier (if using ECHOCOM.COM), or after NDIAL 
+finishes and prints the success string "CONNECT" (or any other, see below), 
+open the PPP connection. This may be done by two ways:
+
+PPPC O user password
+
+In this way, PPPC.COM program will finish immediately, and connection 
+establishment will be performed as background task (you can always check 
+connection status with PPPC S). The other way is:
+
+PPPC V user password
+
+This is the verbose mode: program will not finish immediately, but 
+information will be shown until connection is either completed or it fails.
+
+Note that you can specify the username and password in a configuration file 
+instead of directly spcifying it when connecting. See file SAMPLE.CFG for 
+more details.
+
+It is possible that your modem uses any string other than "CONNECT" to notify 
+a successful connection (for example "CARRY"). If it is the case, you can 
+tell NDIAL.COM (if program version is 0.2 or higher) what is the string to 
+expect by using the environment variable NDIAL_CONNECT (for example, SET 
+NDIAL_CONNECT=CARRY). If this variable is not set up at all, "CONNECT" is 
+assumed.
+
+4) Once connection is established, apparently nothing has changed, but the 
+InterNestor Suite is running in background, and datagrams may be exchanged 
+with the internet while the connection remains open. See section 2.4 for 
+information about the supplied sample programs.
+
+After connection establishment it is recommended to reduce the buffer size 
+assigned for TCP connections (that is, the maximum advertised window), which 
+defaults to 16100 bytes. Otherwise, data packets may arrive too fast, at a 
+rate that the MSX can't afford, so a lot of data loss will happen and 
+retransmissions will reduce dramatically the connection performance. After 
+some testing I have discovered that a very good combination is to use a MRU 
+of 576 bytes (use option "MRU 580" on a configuration file for this; see 
+point 1 of this section) and a buffer size of 1500 bytes (execute "TCPC B 
+1500" for this). You may of course experiment with other values.
+
+5) To close the connection, execute:
+
+PPPC C
+
+The modem should disconnect in few seconds. By the way, PPPC also shows 
+information when executed without parameters.
+
+Note that you can always obtain the current connection status (online or not) 
+by executing PPPC S, and you can obtain the local IP address and the 
+negotiated (or manually configured) DNS addresses with PPPC I.
+
+
+2.3. AUTOMATIZING THE INTERNET CONNECTION ESTABLISHMENT
+
+This section discusses how to create a BAT/BTM file in order to automatize 
+the internet connection establishment, so all the steps explained in the 
+previos section are executed with the single BAT/BTM file execution. Through 
+the following examples, the existence of a configuration file named 
+CONFIG.CFG is assumed. Also, the phone number 12345678 is assumed to be your 
+ISP's number; modify these values to match yours.
+
+If you have COMMAND2.COM 2.4x (developped by Fokke Post), make the following 
+.BTM file, name it for example INET.BTM:
+
+set inserror=
+set inserrorp=
+pppc f:config r
+if not .%inserrorp%=. then goto ~end
+ndial 12345678
+if not .%inserrorp%=. then goto ~end
+pppc v username password
+if not .%inserrorp%=. then goto ~end
+tcpc b 1500
+~end
+
+Then to connect to internet, just execute "INET" after having 
+installed INS. The line "tcpc b 1500" is optional; see a discussion about 
+this on point 4 of section 2.3.
+
+Environment variables INSERROR and INSERRORP are set up by PPPC.COM and 
+NDIAL.COM when an error occurs and the connection establishment can't 
+continue (containing an error message and the name of the program which 
+caused the error, respectively). This allows the use of the "if not..." lines 
+of the BTM file in order to abort the sequence if this is the case.
+
+If you don't have COMMAND2.COM 2.4x, you must use instead this simplified 
+version, name it for example INET.BAT:
+
+set inserror=
+set inserrorp=
+pppc f:config r
+ndial 12345678
+pppc v username password
+tcpc b 1500
+
+Variables INSERROR and INSERRORP have another effect if a feature named 
+"error checking" is enabled: if these exist (they have any value) when 
+NDIAL.COM or PPPC.COM are executed, these programs will do nothing apart from 
+printing the error condition. Thus, if NDIAL.COM returns an error when 
+executed via the previos INET.BAT file, the "PPPC V..." command following it 
+will be executed, but it will do nothing (the same if "PPPC F..." returns an 
+error).
+
+To enable the error checking feature for both NDIAL.COM and PPPC.COM, just 
+set up the environment variable USE_INSERROR with any value (for example SET 
+USE_INSERROR=konamiman). Versions 0.3 of NPPP.COM and 0.1 of NDIAL.COM do not 
+check this variable and always assume that the error checking feature is 
+enabled, so be sure to use newer versions of these programs.
+
+Of course, you can specify the username and password in CONFIG.CFG and then 
+open the connection with a simple "PPPC V" instead of "PPPC V user pasword". 
+Also, you can supress the "PPPC F..." line if you don't want to alter any of 
+the existing default values for the configuration constants.
+
+
+2.4. USING THE SAMPLE PROGRAMS
+
+Four simple programs are supplied which allows to test the connection: a 
+ping, a resolver, a TCP console (a simplified telnet client) and a FTP 
+client. To use the ping execute:
+
+NPING <host name>|<IP address>
+
+The IP module comes with a built-in resolver, which is used by the 
+application programs. This means that it is not necessary to directly specify 
+the host's IP address: you can directly use host names. For example: "NPING 
+www.konamiman.com". The ping program will send ICMP echo packets to the 
+specified address, and will print a message when (if) the reply is received.
+
+The resolver program NRESOLV asks to a DNS (Domain Name Server) for 
+information about a domain name (usually just the equivalent IP address) via 
+UDP, and prints it on the screen when (if) this information arrives. To use 
+the resolver execute:
+
+NRESOLV <domain name> [<options>]
+
+For example: "NRESOLV www.upc.es" should return that the IP address is 
+147.83.20.85. To know what are the <options>, just execute the program 
+without parameters. For more information about DNS system, read RFC 1034 and 
+1035.
+
+Since the IP module has its own integrated resolver, and this resolver is 
+used by the application programs, you will normally have no need to use 
+NRESOLV.COM. However, the built-in resolver is only capable of converting 
+host names to IP addresses. A DNS can actually be asked for more detailed 
+information about a given host; if you want such information, you need to use 
+NRESOLV.COM.
+
+The first "really useful" internet application supplied is TelNestor 
+(TELNEST.COM), a simple telnet client with the following features:
+
+- Telnet options SUPRESS-GA, EOR, ECHO and BINARY requests received from the 
+other side are always accepted (both DO and WILL). Other options are treated 
+as unknown and thus rejected.
+- The other side may be requested manually to send echo.
+- Local translation of single CR and LF characters into a CR-LF sequence is 
+possible.
+- Data may be typed in single character mode, or in full line mode with 
+edition facilities (this is however just a matter of local configuration, no 
+options are negotiated fot his).
+
+To use TelNestor execute:
+
+TELNEST <host name>|<IP address> [<remote port>] [P]
+
+where the remote port is 23 if not specified (local port used is always 23), 
+and P causes the TCP connection to be opened in passive mode (useful when 
+connecting two machines directly via null-modem cable). Press F1 when 
+connected to access to the options screen.
+
+Although the telnet client is usually preferable, the old "TCP Console" 
+application TCPCON.COM (which just sends the data typed by user to the TCP 
+connection, and prints to the screen the data received, without any care for 
+telnet options/commands or end of line conversions) is still available in 
+this version, as well as its source code for study. TCPCON.COM still working 
+fine when accessing to POP3 and SMTP servers (where usually no telnet options 
+are negotiated), and it has an advantage: screen data output is faster than 
+in TelNestor, since no processing is performed in the incoming data to check 
+for telnet sequences or options.
+
+Don't forget to take a look at the source code of NPING and TCPCON, supplied 
+with the programs themselves, as samples of how to develop application 
+programs using INS.
+
+The other "useful" application is the FTP client, FTPestor; it is very 
+similar to the analog default clients available on Windows and Linux 
+platforms. You can execute NFTP without parameters, or specifying a FTP 
+server to connect:
+
+NFTP [<host name>|<IP address> [<remote port>]]
+
+There is a lot of commands available on FTPestor, you can obtain a list and 
+descriptions of them by typing "HELP" or "?" at the "ftp>" prompt at any 
+time. The most common commands are:
+
+* OPEN [<host name>|<IP address> [<remote port>]]
+* CLOSE
+
+to open/close a connection to a FTP server;
+
+* CD <path>
+* DIR [<mask>]
+
+to navigate through the remote filesystem and get a list of the available 
+files;
+
+* TYPE I
+
+to set the binary transfer mode (default is ASCII mode), use it when 
+transferring non-text files;
+
+* GET/MGET <filespec>
+* PUT/MPUT <filespec>
+
+to receive or send one or multiple files.
+
+Try "nftp ftp.funet.fi", once connected and authenticated do "cd pub/msx" and 
+enjoy.
+
+
+2.5. READING EMAIL USING TELNEST/TCPCON
+
+This section explains how to use TELNEST or TCPCON to read (NOT to store on 
+disk) e-mail messages by directly typing POP3 commands. This is probably the 
+most useful thing you can do with INS currently (besides of writing e-mail, 
+of course; this is explained in the next section).
+
+- First, connect to your POP3 server using TELNEST/TCPCON and specifying port 
+110:
+
+TELNEST/TCPCON your.pop3.server 110
+
+- Wait for the connection establishment and for an initial welcome message 
+received from the server, for example "+OK Connected to pop3.server"
+
+- Write your account name:
+
+USER your_account_name
+
+- Wait for another "+OK..." message and then write the password:
+
+PASS your_password
+
+and wait for another "+OK..." message.
+
+- To know the status of your mail account, use any of the following commands:
+
+STAT  --> will show the number of available messages
+
+LIST  --> will show the size of each message
+
+- To read a particular message, write:
+
+RETR number
+
+and wait for the complete message to appear on the screen. You can of course 
+use CTRL-S to pause the scroll. The end of the message is marked by a line 
+containing only a period, "."
+
+- To delete a particular message, write:
+
+DELE number
+
+- And finally, to close the POP3 session:
+
+QUIT
+
+Then the POP3 server will close the connection (or you can manually close it 
+by pressing ESC or CTRL-ESC, of course).
+
+Of course, don't expect to get anything readable if the messages contain MIME 
+parts, or if they are coded in HTML.
+
+
+2.6. WRITING EMAIL USING TELNEST/TCPCON
+
+Besides of reading e-mails, you can write them via TELNEST or TCPCON. Follow 
+these steps:
+
+- Connect to your SMTP server using TELNEST/TCPCON and specifying port 25:
+
+TELNEST/TCPCON your.smtp.server 25
+
+- Wait for the connection establishment and for an initial welcome message 
+received from the server, for example "250 Connected to smtp.server"
+
+- Write the following initialization command and wait for reply:
+
+HELO InterNestorSuite
+
+(you can actually write anything you want after HELO, it is supposed to be 
+the name of the computer)
+
+- To start sending a message, write the following commands and wait for a 
+"250..." type reply for each one:
+
+MAIL FROM:you@yourserver.com
+RCPT TO:destination@anyserver.com
+DATA
+
+- Write the body of the message, and specify its end by writing a line 
+containing just a period, "." (unless otherwise stated in the response 
+received after typing "DATA"). Unless you want your message to be anonymous, 
+you should write the following at the start of the message:
+
+From: Your name <you@yourserver.com>
+To: Destination name <destination@anyserver.com>
+Subject: The message's subject here
+
+Note that te "From..." and "To:..." lines may be needed depending on the 
+destination server (for example, they are needed when sending messages to 
+msx@stack.nl)
+
+Also, note that you can send a message to multiple destinations by just 
+repeating the "RCPT TO:..." line for each one.
+
+- Repeat these steps (starting with the "MAIL FROM:...") for each message you 
+want to send. To finish, just execute:
+
+QUIT
+
+Then the SMTP server will close the connection (or you can manually close it 
+by pressing ESC or CTRL-ESC, of course).
+
+
+3. FILES
+
+Below is a list of the files which compose InterNestor Suite 1.0, together 
+with their version numbers:
+
+ECHOCOM.COM: Sends an string to the serial port. It may be used to make the 
+modem to dial the ISP number, but it is better to use NDIAL.COM for this 
+purpose. (It is not needed for null-modem connections, of course). Version 
+0.1.
+
+NDIAL.COM: Modem dialer. After dialing the ISP number, it waits for a reply 
+(either success or error) from the modem, then finishes. Version 0.2.
+
+INSINS.COM: InterNestor Suite modules installer. It allows also to uninstall 
+them, as well as to pause INS (inhibits the modules' timer interrupt service 
+routines execution). Version 0.3.
+
+NFOSSIL.INM: Level 1 module for phyisical medium access (RS232 port), 
+requires Fossil driver. Version 1.0.
+
+NPPP.INM: Level 2 module for PPP connections. Version 1.0.
+
+NIP.INM: Level 3 module, or in other words, IP module. Contains also a 
+resolver. Version 1.0.
+
+NTCP.INM: Level 4 module, it is a TCP module. Version 1.0.
+
+DRIVER.COM: Fossil driver for RS-232 access.
+
+SAMPLE.CFG: Sample configuration program for using with PPPC.COM with F 
+option.
+
+PPPC.COM: PPP connection control program. Allows to open a connection, to 
+close it, to show the current state, to show the negotiated IP addresses, and 
+to configure PPP and IP parameters using a configuration file. Version 0.4.
+
+TCPC.COM: TCP control program. Allows to see information about open TCP 
+connections, to manually open/close/abort them, and to configure the TCP 
+receive buffer size. Version 0.1.
+
+NPING.COM: Simple PING program. Echo packets must be sent manually, pressing 
+ENTER. Version 1.0.
+
+NRESOLV.COM: Simple resolver program: allows to access name servers (DNS) to 
+get information about a given host name; use it to obtain detailed host's 
+information (the built-in resolver of the IP module is only capable of 
+converting host names to IP addresses). Version 1.0.
+
+TELNEST.COM: TelNestor, a simple telnet client. Version 1.0. Use it to 
+connect to telnet, SMTP or POP3 servers; TCPCON may be used as well.
+
+TCPCON.COM: TCP console, or in other words, simplified telnet client. Use it 
+to connect to telnet, SMTP or POP3 servers. Note that it does not negotiate 
+any telnet option. Version 1.0.
+
+NFTP.COM: FTPestor, a complete FTP client. Version 1.1. 
+
+NPING.ASC: The source code of NPING.COM, in ASCII format; it has been created 
+with Compass. It is intended to be an example of how to use InterNestor Suite 
+from an application program (how to send direct IP datagrams).
+
+TCPCON.ASC: The source code of TCPCON.COM, in ASCII format; it has been 
+created with Compass. It is intended to be an example of how to use 
+InterNestor Suite from an application program (how to establish TCP 
+connections).
+
+INSMANUA.TXT: This text.
+
+Please check that you have tghe specified version of the mentioned files, 
+otherwise INS will not work properly. To check the version number of .INM 
+files, just TYPE them; for .COM files, just execute them without parameters.
+
+Note that NestorMan 1.21 or higher is needed to use INS, but it is not 
+distributed with INS (version 1.22 was released together with INS beta 4). 
+You can obtain it at http://msx.konamiman.com.
+
+
+4. THE INTERNESTOR SUITE STRUCTURE
+
+This section explains how InterNestor Suite is structured and how it works in 
+general terms. More detailed information about standarized routines, 
+variables, etc. is presented in further sections.
+
+
+4.1. RESIDENT NATURE
+
+First of all, as you probably have already noted: INS is a resident program. 
+This means that once installed, apparently nothing changes in the system, but 
+INS is alive and silently waiting a request for opening a connection; when 
+this is done, it works in background receiving incoming data from and sending 
+outgoing data to the internet. The way of receiving and sending data is of 
+course standarized and explained in this manual, so transient application 
+programs based on internet may be developped.
+
+
+4.2. MODULARITY
+
+INS consists on four code modules, each one corresponding (more or less) to 
+one level in the OSI architecture, and each one occupying a separate RAM 
+segment when installed (all segments on the same mapper slot). Each module is 
+stored in disk in a separate file with a standarized header that actually 
+identifies the file as an INS module; the INS installation program, 
+INSINS.COM, needs the names of all the module files to be installed as input 
+parameters, as seen in section 2. The module files have extension INM 
+(InterNestor Module).
+
+The four modules names and behavior are as follows:
+
+- Level 1 module, or physical medium access module. This module is 
+responsible for accepting frames of data from the level 2 module, and 
+sending them, byte per byte and without any further modification, to the 
+physical medium (usually the RS232 interface). It also reads bytes of data 
+from the physical medium and sends them to the level 2 module, when this 
+module requests it.
+
+- Level 2 module, or link layer module. It converts the read bytes from level 
+1 module into link layer frames, checks that the frame is correclty 
+formatted, removes the link layer header, and either sends the resulting 
+datagram to the level 3 module or discards it if it is invalid. It also reads 
+datagrams from the level 3 module, wraps them into a link layer header, and 
+sends the resulting frames to the level 1 module. And also, this module is 
+the responsible for opening a connection to the internet (tipically via ISP) 
+and close it at the user request. The level 2 module supplied with INS is a 
+PPP module, but other modules such Ethernet modules could be developped.
+
+- Level 3 module, or network layer module. This is always an IP module. It 
+gets incoming datagrams from level 2 module, checks that they are correclty 
+formatted (header checksum, destination address, etc), reassembles them if 
+they are fragmented, and either passes them to the level 4 module or discards 
+them, generating an outgoing ICMP error message if necessary. It also gets 
+packets of data from level 4 module, wraps them into an IP header, and sends 
+them to the level 2 module (intentional datagram fragmentation is not 
+implemented). Of course, it processes some special ICMP messages (for example 
+the echo requests) in a special way.
+
+Starting at version 0.3, the IP module contains also a built-in resolver, 
+capable of converting host names into IP addresses via DNS queries (it has 
+port &H3434 associated).
+
+- Level 4 module, or transport layer module. This will be usually a TCP 
+module. It gets incoming datagrams from level 3 module, unwraps the IP header 
+obtaining then a level 4 segment, and processes the data (in short, this 
+process consists on queueing the obtained data until an application program 
+asks for it). It also obtains data from the application program, wraps it 
+into level 4 module segments and sends them to level 3 module. And of course, 
+it incorporates support for opening and managing sockets and connections.
+
+
+4.3. MODULES COMMUNICATION
+
+It has been stated before that each module resides on a separate RAM module 
+once installed. These modules need of course to interact and communicate 
+between them and with the application programs. This interaction is done by 
+using three mechanisms:
+
+1) A set of standarized routines for each module. These routines are mainly 
+for (de)initializing the module and for interchange some important 
+information, for example the state of the connection to the internet, the 
+local IP address, or the pointers to the queues used for exchange packets of 
+data; also, connections to the internet are opened and closed via these 
+routines. These routines may be easily called by using the inter-segment 
+calling routines supplied by DOS (remember that all modules reside in 
+segments of the same mapper slot).
+
+2) A set of constants and variables, also standarized for each module, which 
+make possible to control and/or to keep track of some connection parameters 
+(typical examples: the MRU/MTU, and the subnet mask). Usually, constants are 
+intended to be set up by the user before opening a connection, and allows to 
+configure the connection parameters; and variables are dinamically used and 
+modified by INS code itself, so the user is supposed to only read them, or to 
+just ignore them. Again, these cons/vars may be easily accessed using the 
+inter-segment data read/write routines supplied by DOS.
+
+3) Perhaps the most important one: a set of queues for exchanging packets of 
+data. Simplifying, the mechanism is usually as follows: a level L module gets 
+an incoming packet from the level L-1 module output queue, processes it, and 
+if it is valid, unwraps the level L header and sends the resulting packet to 
+the level L+1 input queue. After this is done, it gets a packet from the 
+level L+1 module output queue, wraps it into a level L header, and sens the 
+resulting packet to the level L-1 input queue. This process is continuously 
+repeated for each module. Of course this is just a simplified view, the exact 
+behavior depends on each module (for example level 1 module reads data in a 
+per-byte basis from the physical medium, and level 4 module obtains data 
+directly from an application program).
+
+
+4.4. THE IMPORTANCE OF NESTORMAN
+
+It has also been stated before that InterNestor Suite depends greatly on 
+NestorMan to work. This dependance is entailed in three points:
+
+1) NestorMan is the responsible for reserving the four segments for the INS 
+modules at the installation time. It also returns information of where the 
+modules have been installed (the slot and segment numbers); all of this is 
+done by using functions 30 to 32. Please refer to NestorMan manual for more 
+information on these functions.
+
+2) NestorMan is also responsible for giving INS the capability of working in 
+background. This is achieved by including, in the page 3 part of NestorMan, a 
+piece of code attached to the timer interrupt hook, which in each timer 
+interrupt (at 50 or 60Hz) switches the level 1 module segment on page 2 and 
+calls its timer interrupt service routine (the counterpart routines for the 
+other modules are called in cascade: level L module timer interrupt routine 
+is obligated to call the L+1 module counterpart routine as the last action to 
+be performed before returning; of course, level 4 module must not do it).
+
+3) Last but not least: as you probably have guessed already, the "queues" for 
+exchanging packets of data mentioned before are nothing but NestorMan lists 
+(a list becomes a queue by just following this convention: items are put in 
+the list always after the last item, and the first list item is always the 
+one which is extracted). Each module is responsible for creating one or more 
+queues at the initialization time to exchange data with the other modules 
+(and to destroy them at deinitialization time); and in the other hand, each 
+module must ask to the other modules the pointers to the queues they have 
+created. The way of asking for this information is the use of an standarized 
+routine that every module has.
+
+This is why you must read NestorMan manual together with this manual if you 
+plan to develop application programs based on INS; actually it is enough if 
+you know how to manage the lists mechanism, but you are envisioned to read 
+the complete manual at least once.
+
+Remember that at least version 1.21 of NestorMan is required for INS to work 
+(version 1.22 was released together with INS beta 4). NestorMan can be 
+obtained at http://msx.konamiman.com.
+
+
+4.5. STRUCTURE OF A INS MODULE
+
+An INS module file has always the following structure:
+
+---------------------
+|      Header	    |
+---------------------
+|    Jump table     |
+---------------------
+| Routines pointed  |
+| by the jump table |
+---------------------
+| Interrupt service |
+|      routine	    |
+---------------------
+|     Auxiliary     |
+|     routines	    |
+---------------------
+|     Constants     |
+---------------------
+| Default values of |
+|     constants     |
+---------------------
+|     Variables     |
+---------------------
+|  Buffers & unused | <-- Space not included in the module file, but
+|	space	    |	  generated on the module segment once installed
+---------------------
+
+When installing INS, each module is separately installed. The installation 
+consists on the following process:
+
+- Switch the module segment in page 2 (first of all, four segments have been 
+reserved by using NestorMan function 30; the numbers for these segments can 
+be obtained by using NestorMan function 32).
+- Copy the whole module file except the header in the segment, starting at 
+address &H8003 (addresses &H8000 to &H8002 contains information about the 
+segment itself, to be used by the module code: slot number, physical segment 
+number and logical segment number, in this order, as explained in NestorMan 
+manual).
+- Call the initialization routine of the module, placed in the top of the 
+jump table, at address &H8003 (this routine may return an error, in which 
+case the whole INS installation is aborted).
+
+The meaning of each part of the module is self-descriptive by its name, or 
+has been already explained. About the format of the header, it is as follows:
+
+- 256 bytes of a text describing the module. This allows the user to identify 
+the module by just TYPEing the module file; control characters for line 
+change may be used. The text must be finished with a &H1A (EOF) character, 
+and the remaining space till 256 bytes must be padded with zeros.
+
+- An identifier text string of 32 characters, with the name of the module. 
+This string will be printed out by INSINS.COM when installing INS. This must 
+be always a 32 characters string; the remaining space must be padded with 
+spaces (ASCII 32). Control characters must not be used.
+
+- A string identifying the file as an INS module. This string is always the 8 
+byte long "INESUITE".
+
+- Three bytes with the version number. For example 1,2,3 for version 1.2.3. 
+Currently these bytes are 0,2,0 meaning version 0.2.
+
+- One byte with the level of the module (1 to 4).
+
+- The remaining space till 512 bytes (212 bytes currently) must be padded 
+with zeros, it is space reserved for future expansion of the header.
+
+And about the routines on the jump table, there are two types: the ones which 
+are an absolute requirement for every module, and the ones which are 
+module-dependant. More detailed information in the next sections.
+
+
+5. THE INS MODULES
+
+In this section the modules which compose InterNestor Suite 1.0 will be 
+described with detail. The jump table, the variables and constants, and the 
+queues used, will be listed and explained.
+
+There are four routines of the modules' jump table which are mandatory for 
+all modules, regardless of their level number or behavior: initialization, 
+deinitialization, interrupt service routine, and obtaining the pointers of 
+the queues created by the module. These will be explained only in section 
+5.1.2.
+
+
+5.1. NestorFOSSIL
+
+INS uses the Fossil driver developped by Erik Maas to access the RS-232 
+interface. The Fossil driver is itself a resident program independent of INS; 
+therefore, the level 1 module NestorFOSSIL is actually only a bridge between 
+the Fossil driver and the level 2 module.
+
+Normally, interaction with this module is intended to be performed only by 
+the level 2 module, not by the user.
+
+
+5.1.1. NestorFOSSIL: MODULE OPERATION
+
+The behavior of NestorFOSSIL is quite simple: in every timer interrupt, a 
+level 2 frame is extracted from the level 2 output queue and sent, byte per 
+byte and without any modification, to the RS232 interface. If the data output 
+becomes temporarily unavailable (if the Fossil internal buffer becomes full), 
+the code gives out sending data and returns; the remaining data of the frame 
+will be sent in the next interrupt. About incoming data, it is read byte per 
+byte at level 2 request only (not during the interrupt service code 
+execution).
+
+Starting at version 0.3 of this module, incoming data is not read directly 
+from the Fossil internal buffer when the level 2 module requests it, but a 
+ring buffer is used instead: in every timer interrupt routine, NestorFossil 
+empties the Fossil buffer and stores all the data in an internal buffer (with 
+a size of about 12K, that is, the reamining space available in NestorFossil 
+segment after the module code). When data is requested from level 2 module, 
+it is extracted from this internal buffer. This mechanism reduces data loss 
+when data arrives at a too high rate.
+
+
+5.1.2. NestorFOSSIL: THE JUMP TABLE
+
+This section explains in detail the routines of the jump table for the 
+NestorFossil module. To access these routines, first obtain the slot and 
+segment number where the module resides using NestorMan function 32, then 
+convert the logical segment number into a physical segment number using 
+NestorMan function 3, and then switch the segment in page 2 and call the 
+desired routine (or alternatively, use the DOS inter-segment call routines).
+
+
+* &H8003 - FOS_INIT: Initialization
+
+This is a mandatory routine for all modules of any level or type. It is 
+executed when INS is installed, and it allocates all the resources needed for 
+its operation (usually, the queues are created, the DOS mapper support 
+routines are obtained, and the segment numbers for the upper and lower level 
+modules are asked).
+
+The routine must return Cy=0 after a successful initialization, or Cy=1 if 
+any error occurred (a typical error occurs when there is not enough memory to 
+create the queues; or in the case of NestorFOSSIL, when the Fossil driver is 
+not installed). If Cy=1 is returned, HL must be returned with a pointer to an 
+string explaining the error (a page 2 address); the string must be finished 
+with the characters sequence 13,10,"$".
+
+Note that this initialization routine MUST NOT call to any routine of any 
+other module, since when a module is asked to initalize itself, it cannot 
+assume that the other modules are already initialized. So any needed 
+initialization call to the other modules (for example for asking for the 
+pointers of their queues) must be performed during the first execution of the 
+timer interrupt service routine.
+
+
+* &H8006 - FOS_DEINIT: Deinitialization
+
+This is a mandatory routine for all modules of any level or type. It is 
+executed when INS is about to be uninstalled, and it frees all the resources 
+previously allocated for the module, except for the RAM segment where the 
+module itself resides (usually, simply the created queues are destroyed).
+
+
+* &H8009 - FOS_INT: Interrupt service routine entry point
+
+This is a mandatory routine for all modules of any level or type. It is 
+called by the NestorMan page 3 code in each timer interrupt after switching 
+the module segment in page 2, and what it does depends on each module. It is 
+not intended to be called by other modules or by the user.
+
+It is mandatory for all modules except the level 4 module to call the 
+counterpart interrupt service routine of the immediately upper level module 
+before returning. In this way, all the interrupt service routines are called 
+in cascade (the page 3 code of NestorMan only calls the routine of level 1 
+module).
+
+In the case of the level 1 module, this routine also switches the NestorMan 
+segment on page 1, thus direct calling of NestorMan functions is possible 
+from all modules, gaining then some speed. Of course, the original slot and 
+segment is restored before returning.
+
+
+* &H800C: FOS_QUEUES: Information about the queues
+
+This is a mandatory routine for all modules of any level or type, but it does 
+not work exactly in the same way for all modules. Another module (or a user 
+program) calls this routine to ask for the pointer(s) of the queue(s) created 
+by this module (the queues are created during the initialization process); 
+this information is needed in order to exchange packets of data between 
+modules, or with an application program.
+
+There are always one or more queues "amongst" two modules in order to 
+exchange incoming and outgoing packets of data. But which of the two modules 
+is the responsible for creating these queues? This question has been solved 
+by arbitrarily distributing the queues "ownership" through the modules, so 
+each module is responsible for creating the queue(s) it "owns", and must ask 
+to the other modules the pointers to the other queues it needs to use.
+
+Of course, a module may create as much queues as he wants for internal use, 
+and needs not to provide their pointers with this routine (internal queues 
+are not considered "owned queues").
+
+In the case of NestorFOSSIL, it only owns one queue, named OUT_QUEUE. This is 
+the queue where the level 2 module must enqueue the outgoing frames, so 
+NestorFOSSIL will collect them and send them byte per byte to the RS232 port.
+
+The input and output parameters for this routine on NestorFossil module are:
+
+Input:	A = Queue to ask the pointer:
+	    0: OUT_QUEUE
+Output: On success:
+	    Cy=0
+	    A-HL = Pointer to the queue (segment-address)
+	On error (unknown queue asked):
+	    Cy=1
+
+
+* &H800F: FOS_CHK: Information about the availability of the physical medium
+
+Input:	-
+Output: Cy=0 if physical medium is not available
+	Cy=1 if physical medium is available
+
+This routine informs about the availability of the RS232 port (that is, 
+wheter it is ready to exchange data through it or not). Usually it should 
+indicate that the modem is connected to the ISP.
+
+If there are no ways to know if the physical medium is ready or not, it must 
+return Cy=1 (available) always; this is not a big problem, since level 2 
+module probably has (PPP module has) a mechanism to automatically close the 
+connection when no reply is received to "keep-alive" packets which are 
+periodically sent.
+
+Current version of the Fossil driver has this problem: there is no way to ask 
+it for the availability of the RS232 port. Therefore, current version of 
+NestorFossil returns always Cy=1.
+
+
+* &H8012 - FOS_OPEN: Ask for opening the physical medium
+
+This routine (which has no input nor output parameters) is for asking the 
+RS232 port to open for data exchange. Since there is not any equivalent 
+routine in the Fossil driver, it makes not much sense to have such 
+routine here, but anyway it is put here for preventing further expansion of 
+the driver. Level 2 module must always call this routine before opening a 
+connection.
+
+What this routine actually does is to search for a string of data statring at 
+address DIAL_COMMAND in the variables area, finished with 0 and with a 
+maximum length of 256 bytes, and to send it byte per byte to the RS232 port. 
+Since normally there is just a 0 byte in DIAL_COMMAND, this routine does 
+actually nothing.
+
+
+* &H8015 - FOS_CLOSE: Ask for closing the physical medium
+
+This routine (which has no input nor output parameters) is for asking the 
+RS232 port to close, so no more data exchange is possible. Since there is not 
+any equivalent routine in the Fossil driver (and as said before, the RS232 
+port will be always "virtually open" in the current NestorFossil version), it 
+makes not much sense to have such routine here, but anyway it is put here for 
+preventing further expansion of the driver. Level 2 module must always call 
+this routine after closing a connection.
+
+What this routine actually does is to search for a string of data statring at 
+address HANG_COMMAND in the variables area, finished with 0 and with a 
+maximum length of 256 bytes, and to send it byte per byte to the RS232 port. 
+Since normally there is just a 0 byte in HANG_COMMAND, this routine does 
+actually nothing.
+
+
+* &H8018 - FOS_OUT_RDY: Ask for data output ready
+
+Input:	-
+Outpuy: Cy=0 if data output not ready
+	Cy=1 if data output ready
+
+This routine is for asking if data can be send to RS232 port for output. Cy=1 
+will be returned if the RS232 port is open and the Fossil internal buffer is 
+not full.
+
+
+* &H801B - FOS_IN_RDY: Ask for data input ready
+
+Input:	-
+Outpuy: Cy=0 if data input not ready
+	Cy=1 if data input ready
+
+This routine is for asking if there is incoming data available from the RS232 
+port. Cy=1 will be returned if the module's ring buffer is not empty.
+
+
+* &H801E - FOS_BYTE_IN: Data input
+
+Input:	-
+Output: A = Data byte
+
+This routine reads an incoming byte from the RS232 port through an internal 
+ring buffer, as explained before.
+
+
+* &H8021 - FOS_BYTE_OUT: Data output
+
+Input:	A = Data byte
+Output: -
+
+This routine sends a byte to the RS232 port. Normally it is not used, since 
+as explained, the data is sent to the level 1 module via packets inserted in 
+OUT_QUEUE.
+
+
+* &H8024 - FOS_TABLES: Information about the variables location
+
+This routine is normally used to ask for the location of the current 
+constants, the default constants or the variables (see the other sections 
+5.x.2); however, in the case of NestorFossil, there are only variables.
+
+Input:	A = Information to obtain:
+	    0: Location of variables
+Output: On success:
+	    Cy=0
+	    HL=Location of variables zone
+	    BC=Length of variables zone
+	On error (unknown value of A on input):
+	    Cy=1
+
+
+5.1.3. NestorFOSSIL: THE VARIABLES ZONE
+
+In this section, the variables of the variables zone are listed and 
+explained. Their addresses are indicated as an offset from the address 
+returned by the routine FOS_TABLES. Note that these variables are for 
+internal use and not intended to be modified by the user, except for 
+DIAL_COMMAND and HANG_COMMAND. The size of the variable in bytes is indicated 
+together with its name. All the 2 byte data is stored in little-endian order.
+
++0: PAQ_PEND (1). Flag set to #FF when there is the remaining of a packet, 
+pending from the previous interrupt, to send to RS232 port.
+
++1: PAQ_PNT (2). Pointer to the remaining part of the packet to send (if 
+PAQ_PEND=#FF).
+
++3: PAQ_CNT (2). Number of remaining bytes to send (if PAQ_PEND=#FF).
+
++5: UPPER_SEG (1). Physical segment number of the level 2 module, asked at 
+inialization time.
+
++6: FOSSIL_OK (1). Flag set to #FF when the Fossil driver is initialized, and 
+returned to 0 when it is deinitialized.
+
++7: NMAN_SEG (1). Physical segment number where NestorMan resides.
+
++8: NMAN_SLOT (1). Slot number of the NestorMan segment.
+
++9: WORK_BACKUP (4). For internal use.
+
++13: DIAL_COMMAND (257). Command to set to the RS232 port when it is asked to 
+open, finished with 0. By default it starts with a 0 byte, so nothing is 
+sent.
+
++270: HANG_COMMAND (257). Command to set to the RS232 port when it is asked 
+to close, finished with 0. By default it starts with a 0 byte, so nothing is 
+sent.
+
+
+5.1.4. NestorFOSSIL: FORMAT OF THE ENQUEUED DATA
+
+In this section, the format of the packets enqueued in the queues owned by 
+this module is explained.
+
+
+* OUT_QUEUE
+
+Since NestorFossil just extracts packets from this queue and sends them byte 
+per byte to the RS232 port, no special format is required for the packets 
+sent to this queue.
+
+However, when the level 2 module is PPP, the packets enqueued here will be 
+IP, IPCP, LCP, PAP or CHAP frames with HDLC-like encapsulation, as explained 
+in RFC 1661, 1662 and 1994.
+
+
+5.2. NestorPPP
+
+The level 2 module supplied with INS is a complete PPP module with all the 
+features described in RFC 1661, 1662, 1994, 1877, 1321 and 1332, including: 
+LCP automaton with all the options negotiation (except Van Jacobson 
+compression and quality protocol) implemented and user-configurable; IPCP 
+automaton with DNS negotiation; authentication via PAP or CHAP; automatic 
+reply of LCP echo requests; periodical send of LCP echo requests and 
+automatic disconnection if they are not replied; automatic disconnection if a 
+loop-back condition is detected via magic number; and HDLC-like 
+encapsulation.
+
+Normally, interaction with this module in the form of packets exchange is 
+intended to be performed only by the level 1 and 3 modules, not by the user. 
+But the user can (and it is expected that normally will) modify the 
+configuraton constants part of the module before opening a connection, in 
+order to custom the connection (usually, at least the user name and password 
+for authentication will be set up).
+
+You should take a look the mentioned RFCs (at least 1661 and 1662) if you 
+want to understand some of the concepts mentioned in this section (such 
+LCP/IPCP automatons, configuration constants, timers and counters, etc).
+
+
+5.2.1. NestorPPP: MODULE OPERATION
+
+The NestorPPP module code is quite big, since the implementation of a 
+complete PPP module is not trivial. First, a complete LCP/IPCP automaton is 
+implemented (luckily, the same code can be used for both of the automatons) 
+including automatic correction of rejected configuration parameters. Also, 
+code for HDLC encapsulation and de-encapsulation is included (with control 
+characters mapping when necessary). CHAP authentication needs of course a MD5 
+message-digest algorithm implementation. And finally, code for automatically 
+replying the LCP echo requests and for periodically sending LCP echo requests 
+to test the connection is needed.
+
+NestorPPP converts the incoming data bytes (read from level 1 module) into 
+PPP frames by detecting the start and the end flags of an HDLC frame and 
+collecting all the data sent amongst them. To prevent the computer to be hung 
+if too many data is sent before the frame end flag, the number of bytes that 
+can be collected in one single interrupt service routine execution is limited 
+to a certain user-configurable value. If this value is reached, the data 
+collection is stopped and the remaining of the frame is collected in the next 
+interrupt. If the frame size exceeds the maximum allowed frame size, it is 
+discarded.
+
+
+5.2.2. NestorPPP: THE JUMP TABLE
+
+This section explains in detail the routines of the jump table for the 
+NestorPPP module. Refer to section 5.1.2. for a discussion about how to 
+access to these routines.
+
+Note that if a different level 2 module is developped (for example an 
+Ethernet module), it must contain the ten first routines of this jump table 
+(PPP_INIT to PPP_MXU) in the same addresses and with the same input and 
+output parameters, in order to make it usable by the existing NestorIP 
+module. If the "peer IP address" is not defined in such new module, the value 
+returned must be 0.0.0.0.
+
+
+* &H8003 - PPP_INIT: Initialization
+
+This is a mandatory routine for all modules of any level or type. Refer to 
+section 5.1.2. for a description of this routine.
+
+
+* &H8006 - PPP_DEINIT: Deinitialization
+
+This is a mandatory routine for all modules of any level or type. Refer to 
+section 5.1.2. for a description of this routine.
+
+
+* &H8009 - PPP_INT: Interrupt service routine entry point
+
+This is a mandatory routine for all modules of any level or type. Refer to 
+section 5.1.2. for a description of this routine.
+
+
+* &H800C - PPP_QUEUES: Information about the queues
+
+This is a mandatory routine for all modules of any level or type. Refer to 
+section 5.1.2. for a description of this routine.
+
+In the case of NestorPPP, it only owns one queue, named IP_OUT_QUEUE. This is 
+the queue where the level 3 module must enqueue the outgoing IP datagrams; 
+NestorPPP converts them into HDLC-like frames and sends them to the level 1 
+queue OUT_QUEUE.
+
+The input and output parameters for this routine on NestorPPP module are:
+
+Input:	A = Queue to ask the pointer:
+	    0: IP_OUT_QUEUE
+Output: On success:
+	    Cy=0
+	    A-HL = Pointer to the queue (segment-address)
+	On error (unknown queue asked):
+	    Cy=1
+
+
+* &H800F - PPP_CHK: Ask if there is an open connection
+
+Input:	-
+Output: Cy=0 and A=0 if there is no open connection
+	Cy=1 and A=1 if there is an open connection
+
+A connection is open when the physical medium is available and a complete PPP 
+negotiation (LCP, IPCP and authentication) has been successfully completed. 
+To request a connection open, use the routine PPP_OPEN. It is expected that 
+the user will set up appropriately the constants before opening a connection 
+(at least the user name and password).
+
+
+* &H8012 - PPP_OPEN: Open a connection
+
+Input:	-
+Output: -
+
+This routine requests the PPP module to initiate a negotiation in order to 
+open a connection. The routine FOS_OPEN of the level 1 module is called, but 
+this will normally do nothing, and it is expected that before trying to open 
+a PPP connection, a successful dial-up modem connection to the ISP has been 
+performed with an external program (except for null-modem connections).
+
+Note that an open request made when a connection is already open (or opening) 
+will be ignored. To re-open a connection, you must first close it.
+
+
+* &H8015 - PPP_CLOSE: Close a connection
+
+Input:	-
+Output: -
+
+This routine request the PPP module to close the connection currently opened. 
+In the case of a modem connection, the modem automatically disconnects after 
+the exchange of a few LCP termination packets. The routine FOS_CLOSE of the 
+level 1 module is called, but it will normally do nothing.
+
+
+* &H8018 - PPP_IPS: Ask for the IP addresses
+
+Input:	A = IP address to ask:
+	    0: Our IP address
+	    1: The peer's IP address
+	    2: Primary DNS IP address
+	    3: Secondary DNS IP address
+Output: On success:
+	    Cy=0
+	    HL-DE = Requested IP address, in the format L.H.E.D
+	On error (invalid value of A on input):
+	    Cy=1
+
+This routine returns information about the IP address negotiated via IPCP 
+when the connection was open. Note that it is also possible to statically 
+configure these addresses and to not negotiate them, although it will not be 
+the normal case (see the constants section).
+
+Note that in the beta versions of NestorPPP, this routine returned the 
+address in the format H.L.D.E. With the new format, L.H.D.E., it is easier to 
+store the retrieved address in memory in the correct order; it is enough with 
+LD (ADDRESS),HL followed by LD (ADDRESS+2),DE.
+
+
+* &H801B - PPP_VJ: Ask if the Van Jacobson compression is available
+
+Input:	-
+Output: Cy=0 if Van Jacobson compression is not allowed
+	Cy=1 if Van Jacobson compression is allowed
+
+This routine is for possible future expansion of NestorPPP, currently returns 
+always Cy=0.
+
+
+* &H801E - PPP_MXU: Ask for MRU and MTU
+
+Input:	-
+Output: HL = MTU
+	DE = MRU
+
+This routine returns the currently negotiated values of MTU (Maximum Transmit 
+Unit, or maximum packet size to send) and MRU (Maximum Receive Unit, or 
+maximum packet size to receive). Default value for both is 1500 bytes, as 
+stated in the PPP protocol specification. The absolute maximum packet size 
+that INS can handle is 2048 bytes.
+
+
+* &H8021 - PPP_TABLES: Ask for the constants, variables or buffers location
+
+Input:	A = Table to ask for location:
+	    0: Current constants
+	    1: Dafault values for constants
+	    2: Variables
+	    3: Buffers for Terminate/Authentication packets text
+	    4: Buffers for user name and password
+Output: On success:
+	    Cy=0
+	    HL = Start address of the required table
+	    BC = Length of the required table
+	On error (invalid value of A on input):
+	    Cy=1
+
+The current constants are configuration values used by NestorPPP when opening 
+a connection. Unless modified by the user, they have all their assigned 
+default value when a connection is about to be opened (they are reset to 
+their default values when a connection is closed and when module is 
+initialized). A table with all the default values is available for the user 
+in order to help in developping a configuration program.
+
+The variables are dinamically used and modified by the PPP itself when 
+managing a connection, and the user is expected to only read these variables, 
+or to just ignore them.
+
+The buffers for Terminate/Authentication store the text returned with the 
+last received LCP/IPCP Termination Request packet, and PAP/CHAP 
+authentication success/failure packets, to explain the reason of sending the 
+packet or to just send some information to the user. The address returned in 
+HL is a pointer to a (BC=)256*3 byte buffer containing:
+
++0: Text of the last received LCP Termination Requetst packet
++256: Text of the last received IPCP Termination Request packet
++512: Text of the last received PAP/CHAP Authentication Success/Failure 
+packet
+
+All the texts are finished with a 0 byte, and their lengths may be obtained 
+by reading the variables LCP_MSG_LEN, IPCP_MSG_LEN and XAP_MSG_LEN (see 
+variables section). The PPP control program PPPC.COM shows these texts when 
+opening a connection or when status information is requested.
+
+The buffer for user name and password must be filled out by the user before 
+opening a connection if he knows that authentication will be requested. The 
+address returned in HL is as pointer to a (BC=)256*2 buffer containing:
+
++0: User name
++256: Password
+
+These texts must be finished with a 0 byte, and the user must also set up the 
+constants USER_LEN and PASSWORD_LEN (see constants section).
+
+
+* &H8024 - PPP_NETSTAT: Returns the current connection status
+
+Input:	-
+Output: A = State of the current connection:
+	    0: LCP is closed (no user open request was received yet, or the
+	       LCP automaton is running and negotiating link parameters)
+	    1: LCP is opened, but authentication has not been completed
+	       yet or has been rejected, and IPCP is closed
+	    2: LCP is opened and authentication has been completed
+	       or was not requested, but IPCP is closed (the IPCP automaton
+	       is running and negotiating IP parameters)
+	    3: LCP and IPCP are opened (so connection is opened)
+
+This routine provides information about the current connection status in a 
+somehow more detailed way than PPP_CHK. The connection is really opened 
+(PPP_CHK returns Cy=1) only when PPP_NETSTAT returns A=3. Before the user 
+requests a connection open, PPP_NETSTAT returns always A=0.
+
+To know the actual status of the authentication process, read variable 
+AUTH_STATUS (see variables section).
+
+
+5.2.3. NestorPPP: THE CONFIGURATION CONSTANTS ZONE
+
+This section lists and explains the NestorPPP configuration constants. Their 
+addresses are indicated as an offset from the value returned by PPP_TABLES 
+when executed with A=0 at input, and their size in bytes is indicated 
+together with their name. Unless otherwise stated, all 2-byte variables are 
+stored in little-endian order, the IP addresses are stored in big-endian (for 
+example 1,2,3,4 for 1.2.3.4), and the timer values are expressed in units of 
+1/50 seconds.
+
+The user is expected to appropriately modify these constants, in order to 
+custom the connection, before opening it (at least the user name and 
+password). To help in developping a configuration program, a table with the 
+default values of the constants is available and its address returned when 
+executing PPP_TABLES with A=1. The user may for example copy this default 
+values table over the current values table, and then modify only the values 
+he wants.
+
+Note that apart from the user name and password, the default values of all 
+constants are usually suitable for normal PPP connections, and are not likely 
+to have to be modified for a correct operation.
+
+
++0: MRU (2)
+Default value: 1500+4
+This is the Maximum Receive Unit to be negotiated (the maximum packet size we 
+want to receive), stored with an excess of 4 for easier processing of 
+received HDLC frames. It may be automatically modified if the peer considers 
+it is too small and proposes us a bigger value via a Configure Nak packet, 
+but never over the absolute maximum packet size supported by INS, which is 
+2048 bytes. This constant should never be set up with a value under 576+4.
+
+Note that in the case of receiving fragmented IP datagrams, MRU value is the 
+maximum allowed size for the final reassembled datagram, and not only for the 
+received fragments.
+
++2: ESC_I_TAB (32)
+Default value: all 0
+This is an expanded version of the table to be negotiated with the 
+"Async-Map" option on LCP configuration packets (the control characters we 
+want to be received escaped). If the user wants to negotiate a character map 
+other than all zeros, it must set up the reduced version of the table, 
+ESC_I_TABR, which is the one actually negotiated, before opening the 
+connection; this expanded version is automatically generated after the 
+negotiation, and is for a faster process of incoming packets. In this 
+expanded table, one byte is assigned for each control character, being #FF 
+for the characters to be escaped and 0 for the rest; the first byte is for 
+character 0, the last byte is for character 31.
+
++34: ESC_I_TABR (4)
+Default value: all 0
+This is the table to be negotiated with the "Async-Map" option on LCP 
+configuration packets (the control characters we want to be received 
+escaped). Each bit corresponds to one control character, being the MSB of 
+byte 0 for character 0 and the LSB of byte 3 for character 31.
+
++38: AUTH_POLICY (1)
+Default value: 3
+This constant indicates to the PPP how to act when an authentication request 
+is received from the peer. It may have one of the following values:
+
+0: Refuse to authenticate (the peer will then probably close the connection)
+#C0: Accept to authenticate via PAP only
+#C2: Accept to authenticate via CHAP only
+3: Accept to authenticate via PAP or CHAP
+
++39: MAGIC_O_NEG (1)
+Default value: #FF
+Flag to indicate if a local magic number will be negotiated (#FF) or not (0).
+
++40: ADDCMP_O_NEG (1)
+Default value: #FF
+Flag to indicate if the address and control field compression on outgoing 
+frames will be accepted for negotiation (#FF) or not (0).
+
++41: PROTCMP_O_NEG (1)
+Default value: #FF
+Flag to indicate if protocol field compression on outgoing frames will be 
+accepted for negotiation (#FF) or not (0).
+
++42: ADDCMP_I_NEG (1)
+Default value: #FF
+Flag to indicate if the address and control field compression on incoming 
+frames will be negotiated (#FF) or not (0).
+
++43: PROTCMP_I_NEG (1)
+Default value: #FF
+Flag to indicate if the protocol control field compression on incoming frames 
+will be negotiated (#FF) or not (0).
+
++44: MIN_MTU (2)
+Default value: 576
+Minimum acceptable value for the MRU negotiated by the peer. If it tries to 
+negotiate a smaller value, MIN_MTU will be proposed via a Configure Nak 
+packet.
+
++46: LOOPBACK_MAX (1)
+Default value: 3
+Number of packets to be received with a magic number identical to ours, in 
+order to decide that we are in a loop-back condition and thus close the 
+connection.
+
++47: MAX_BADBYTES (2)
+Default value: 100
+Maximum nuber of bytes corresponding to invalid frames that may be collected 
+in one interrupt.
+
++49: RST_TIMER_V (2)
+Default value: 170 (3 seconds)
+Restart Timer initial value for the LCP automaton.
+
++51: TOTAL_TIMER_V (2)
+Default value: 3000 (1 minute)
+This is the initial value for the total timer. This timer is started when a 
+connection open request is made, and is stopped when the connection reaches 
+the opened status (when PPP_NETSTAT returns 3). If it expires, the connection 
+is automatically closed.
+
++53: MAX_TERMINATE_V (1)
+Default value: 2
+Initial value of Max-Terminate counter for LCP automaton.
+
++54: MAX_CONFIGURE_V (1)
+Default value: 10
+Initial value of Max-Configure counter for LCP automaton.
+
++55: MAX_FAILURE_V (1)
+Default value: 5
+Initial value of Max-Failure counter for LCP automaton.
+
++56: PAPREQ_TIMER_V (1)
+Default value: 50 (1 second)
+Interval for sending PAP authentication messages until a reply (success or 
+failure) is received. When the variable PAPREQ_TIMER reaches this value, a 
+PAP authentication message is sent and the variable reset.
+
++57: ECHO_TIMER_V (2)
+Default value: 250 (5 seconds)
+Interval for sending LCP echo requests to the peer (if 0, echoes are never 
+sent). If ECHO_CLOSE_V echoes are sent without receiving a reply, the 
+connection is automatically closed. When the variable ECHO_TIMER reaches this 
+value, a LCP echo request is sent and the variable is reset.
+
++59: NEG_DNS_PRIM (1)
+Default value: #FF
+Flag to indicate if the IP address of primary DNS stored in DNS_PRIM will be 
+negotiated (#FF) or not (0, this means static configuration).
+
++60: NEG_DNS_SEC (1)
+Default value: #FF
+Flag to indicate if the IP address of secondary DNS stored in DNS_PRIM will 
+be negotiated (#FF) or not (0, this means static configuration).
+
++61: AUTO_CLOSE_AUTH (1)
+Default value: 0
+Flag to indicate if the connection must be automatically closed when 
+authentication fails (#FF) or not (0).
+
++62: AUTO_CLOSE_TERM (1)
+Default value: #FF
+Flag to indicate if the connection must be automatically closed when a 
+Terminate Request packet is received (#FF) or not (0).
+
++63: IP_LOCAL (4)
+Default value: all 0
+Local IP address to be negotiated via IPCP. Usually the default value 0.0.0.0 
+will be used, meaning "I don't have any IP address, so give me one"; then, 
+once an IP address is obtained, it is placed here.
+
++67: IP_REMOTE (4)
+Default value: all 0
+IP address of the remote peer, obtained via IPCP negotiation.
+
++71: DNS_PRIM (4)
+Default value: all 0
+Primary DNS IP address to be negotiated via IPCP. Usually the default value 
+0.0.0.0 will be used, meaning "I don't know the IP address of any DNS, so 
+tell me one"; then, once an IP address is obtained, it is placed here.
+
++75: DNS_SEC (4)
+Default value: all 0
+Secondary DNS IP address to be negotiated via IPCP. Usually the default value 
+0.0.0.0 will be used, meaning "I don't know the IP address of any DNS, so 
+tell me one"; then, once an IP address is obtained, it is placed here.
+
++79: USER_LEN (1)
+Default value: 0
+Length of the user name placed at USER buffer. User must set up USER and 
+PASSWORD buffers, as well as USER_LEN and PASSWORD_LEN constants, before 
+opening a connection if he knows that authentication will be requested. The 
+address for the USER and PASSWORD buffers may be obtained by calling the
+PPP_TABLES routine.
+
++80: PASSWORD_LEN (1)
+Default value: 0
+Length of the password placed at PASSWORD buffer. User must set up USER and 
+PASSWORD buffers, as well as USER_LEN and PASSWORD_LEN constants, before 
+opening a connection if he knows that authentication will be requested. The 
+address for the USER and PASSWORD buffers may be obtained by calling the
+PPP_TABLES routine.
+
++81: PASSIVE_OPEN (1)
+Default value: 0 on PPP-A.INM, #FF on PPP-P.INM
+This is a flag indicating if LCP must perform passive open (#FF) or not (0). 
+The "passive open" is an exclusive feature of NestorPPP and it is not 
+documented in RFC 1661, but it sees to work quite well: it consists on 
+waiting for an incoming Configure Request packet to arrive before sending the 
+own counterpart packets, instead of sending these packets as soon as the 
+automaton has received an "Up" and an "Open" event as stated in the RFC. When 
+using passive open, you can open the PPP connection even when the modem 
+dial-up has not been completed yet (try to do the same with an active open 
+and see the result).
+
++82: INT_PERIOD_V (1)
+Default value: 1
+This is an experimental constant, please never modify its value.
+
++83: ECHO_CLOSE_V (1)
+Default value: 3
+Number of unreplied LCP echo requests to send before automatically close the 
+connection. LCP echo request are sent at intervals indicated by ECHO_CNT_V.
+
+
+5.2.4. NestorPPP: THE VARIABLES ZONE
+
+In this section, the variables of the variables zone are listed and 
+explained. Their addresses are indicated as an offset from the value returned 
+by PPP_TABLES when executed with A=2 at input, and their size in bytes is 
+indicated together with their name. Unless otherwise stated, all 2-byte 
+variables are stored in little-endian order, the IP addresses are stored in 
+big-endian (for example 1,2,3,4 for 1.2.3.4), and the timer values are 
+expressed in units of 1/50 seconds (active timers are increased in each timer 
+interrupt). Note that these variables are for internal use and not intended 
+to be modified by the user.
+
+Except two or three cases, there are no meaningful "default values" for these 
+variables, and they are all set to zero when a connection is opened.
+
+
++0: MTU (2)
+This us the Maximum Transmission Unit, that is, the maximum packet size 
+accepted by the peer. It is stored with an excess of 4 for easier processing 
+of sent HDLC frames.
+
+As a special case, a default value is provided for this variable, to prevent 
+the case in which this option is not negotiated. This value is 1500+4, as 
+stated in the PPP protocol specification, and is automatically set up when a 
+connection open is requested.
+
++2: ESC_O_TAB (32)
+This is an expanded version of the table which the peer will negotiate with 
+the "Async-Map" option on LCP configuration packets (the control characters 
+we must send escaped). This expanded version is automatically generated after 
+the negotiation, and is for a faster process of incoming packets. In this 
+expanded table, one byte is assigned for each control character, being #FF 
+for the characters to be escaped and 0 for the rest; the first byte is for 
+character 0, the last byte is for character 31.
+
+As a special case, a default value is provided for this variable, to prevent 
+the case in which this option is not negotiated. This value is all bytes to 
+#FF, as stated in the PPP protocol specification, and is automatically set up 
+when a connection open is requested.
+
++34: ESC_O_TABR (4)
+This is the table which the peer will negotiate with the "Async-Map" option 
+on LCP configuration packets (the control characters we must to be send 
+escaped). Each bit corresponds to one control character, being the MSB of 
+byte 0 for character 0 and the LSB of byte 3 for character 31.
+
+As a special case, a default value is provided for this variable, to prevent 
+the case in which this option is not negotiated. This value is all bytes to 
+#FF, as stated in the PPP protocol specification, and is automatically set up 
+when a connection open is requested.
+
++38: AUTH_STATUS (1)
+Current status of the authentication process. It may have one of the 
+following values:
+
+0: Authentication not requested (yet)
+1: Authentication requested (CHAP)
+2: Authentication ACK received (authentication succeeded)
+3: Authentication NACK received (authentication failed)
+
+In the case of authenticating via PAP, state 0 will jump directly to state 2 
+or 3. If no authentication is requested at all, status will be 0 during all 
+the connection.
+
++39: AUTH_PROTO (1)
+Currently negotiated authentication protocol. It may have one of the 
+following values:
+
+0: No authentication protocol has been negotiated (yet)
+#C0: PAP
+#C2: CHAP
+
++40: LQR_I and LQR_O (2)
+Reserved for possible future expansion of NestorPPP (quality protocol 
+negotiation).
+
++42: MAGIC_LOCAL (4)
+Local magic number. If not negotiated, it is all zeros.
+
++46: MAGIC_REM (4)
+Remote magic number. If not negotiated, it is all zeros.
+
++50: MAGIC_I (1)
+Flag to indicate if the peer has sent a magic number and it has been accepted 
+(#FF) or not (0).
+
++51: MAGIC_O (1)
+Flag to indicate if we have generated a local magic number and sent it with 
+any Configure Request packet (#FF) or not (0).
+
++52: ADDCMP_O (1)
+Flag to indicate if the address and control field compression for outgoing 
+datagrams has been negotiated and accepted (#FF) or not (0).
+
++53: PROTCMP_O (1)
+Flag to indicate if the protocol field compression for outgoing datagrams has 
+been negotiated and accepted (#FF) or not (0).
+
++54: ADDCMP_I (1)
+Flag to indicate if the address and control field compression for incoming 
+datagrams has been negotiated and accepted (#FF) or not (0).
+
++55: PROTCMP_I (1)
+Flag to indicate if the protocol field compression for incoming datagrams has 
+been negotiated and accepted (#FF) or not (0).
+
++56: IP_OK (1)
+Flag to indicate if the IP addresses have already been negotiated (#FF) or 
+not (0).
+
++57: LCP_MSG_LEN (1)
+Length of the text appended to the last received LCP Terminate Request 
+packet. The text is copied into a buffer whose address can be obtained by 
+calling the routine PPP_TABLES.
+
++58: IPCP_MSG_LEN (1)
+Length of the text appended to the last received IPCP Terminate Request 
+packet. The text is copied into a buffer whose address can be obtained by 
+calling the routine PPP_TABLES.
+
++59: XAP_MSG_LEN (1)
+Length of the text appended to the last received PAP/CHAP Authentication 
+Success/Failure packet. The text is copied into a buffer whose address can be 
+obtained by calling the routine PPP_TABLES. Variable AUTH_STATUS contains the 
+information about the authentication process result (succeeded or failed).
+
++60: AUTOM_STATE (1)
+Current state of the last used automaton (the same code is used for the LCP 
+and the IPCP automatons), 0 to 9 as explained in RFC 1661.
+
++61: LCP_AUTOM_STATE (1)
+Current state of the LCP automaton, 0 to 9 as explained in RFC 1661.
+
++62: IPCP_AUTOM_STATE (1)
+Current state of the IPCP automaton, 0 to 9 as explained in RFC 1661.
+
++63: LAYER_STAT (1)
+Flag to indicate if the connection is established (#FF) or not (0). Actually, 
+the routine PPP_CHK just reads this value. It is #FF only when PPP_NETSTAT 
+returns a value of 3.
+
++64: LOOPBACK_CNT (1)
+Counter of received packets with a magic number equal to ours. If this value 
+reaches LOOPBACK_MAX, the connection is automatically closed.
+
++65: CLOSE_ERROR (1)
+Cause of the last connection close. It may have one of the following values:
+
+0: Connection is actually currently opened
+1: User close request
+2: Authentication failed
+3: Loop-back condition detected
+4: Total timer expired
+5: Termination Request packet received
+6: Too many unreplied LCP echo packets sent
+
++66: TIMER_ON (1)
+This flag is currently unused.
+
++67: Various internal queues pointers (3 bytes each one):
+- LCP_IN_QUEUE: Queue for incoming LCP packets
+- IPCP_IN_QUEUE: Queue for incoming IPCP packets
+- IP_OUT_QUEUE: Queue for outgoing IP packets (this pointer can be obtained 
+by using the PPP_QUEUES routine)
+- CHAP_IN_QUEUE: Queue for incoming CHAP packets
+- LQR_IN_QUEUE: Reserved for possible future expansion of NestorPPP
+
++82: IP_IN_QUEUE (3)
+Pointer to the queue for incoming IP datagrams. This queue is owned by level 
+3 module and must be asked in the first interrupt service routine execution.
+
++85: OUT_QUEUE (3)
+Pointer to the queue for outgoing packets. This queue is owned by level 1 
+module and must be asked in the first interrupt service routine execution.
+
++88: Identification numbers for the LCP/IPCP packets to be sent (1 byte each 
+one), they are increased every time a packet is sent:
+
+- LCP_ID_CR: for Configure Request
+- LCP_ID_TR: for Terminate Request
+- LCP_ID_TA: for Terminate Ack
+- LCP_ID_CX: for Code Reject
+- LCP_ID_PX: for Protocol Reject
+- LCP_ID_ER: for Echo Request
+- LCP_ID_DR: for Discard Request
+- LCP_ID_PAP: for PAP packets
+
++96: OPENED (1)
+Flag set to #FF when a connection open is requested, set to 0 when a 
+connection close is requested or when connection is automatically closed. 
+Actually, PPP_OPEN and PPP_CLOSE routines just set or reset this variable.
+
++97: LAST_UPDOWN (1)
+State of the level 1 layer (#FF if available, 0 if not) in the previous 
+interrupt.
+
++98: LAST_OPCLOSE (1)
+State of the OPENED variable in the previous interrupt.
+
++99: LAST_NETSTAT (1)
+Value returned by routine PPP_NETSTAT in the previous interrupt.
+
++100: RST_TIMER (2)
+Current value of the Restart Timer for LCP/IPCP.
+
++102: RST_COUNT (1)
+Current value of the Restart Counter for LCP/IPCP.
+
++103: TOTAL_TIMER (2)
+Current value of the total timer (see TOTAL_TIMER_V constant description).
+
++105: TOTAL_TIMER_ON (1)
+Flag to indicate if the total timer is running (#FF) or not (0).
+
++106: FAIL_CNT (1)
+Counts the Configure Nak packets sent. If this variable reaches the 
+MAX_FAIL_CNT_V value (see constants), further outgoing Configure Nak packets 
+are converted into Configure Reject packets. This variable is reset to 0 when 
+a Configure Ack is sent, when a connection open request is made and when 
+PPP_NETSTAT routine does not return 3 but it returned 3 in the previous 
+interrupt.
+
++107: PAPREQ_TIMER (1)
+Current value of the PAP authentication message automatic send timer (see 
+PAPREQ_TIMER_V constant).
+
++108: ECHO_TIMER (2)
+Current value of the LCP echo request automatic send timer (see ECHO_TIMER_V 
+constant).
+
++110: AUTOM_IS_IPCP (1)
+Flag set to #FF when the automaton is about to run in IPCP mode, and reset to 
+the default value of 0 (LCP mode) after the automaton execution.
+
++111: These 1-byte flags are for notifying the IPCP automaton that various 
+events are pending (when #FF):
+
+- UP_FOR_IPCP: An UP event is pending.
+- DOWN_FOR_IPCP: A DOWN event is pending.
+- OPEN_FOR_IPCP: An OPEN event is pending.
+- CLOSE_FOR_IPCP: A CLOSE event is pending.
+
+Events "Up", "Down", "Open" and "Close" of the IPCP automaton are 
+automatically triggered by certain LCP automaton events (see RFC 1661).
+
++115: IPCP_TERM_RCV (1)
+Flag to indicate that a IPCP Terminate Request has arrived (when #FF). The 
+variable is reset to 0 when a connection open is requested.
+
++116: LCP_TERM_RCV (1)
+Flag to indicate that a LCP Terminate Request has arrived (when #FF). The 
+variable is reset to 0 when a connection open is requested.
+
++117: UPPER_SEG (1)
+Physical segment number of the level 3 module, asked at initialization time.
+
++118: LOWER_SEG (1)
+Physical segment number of the level 1 module, asked at initialization time.
+
++119: INT_PERIOD (1)
+Experimental variable, ignore it.
+
++120: CUR_PASSIVE_OPEN (1)
+Flag used to manage passive connection openings.
+
++121: ECHO_CLOSE (1)
+Unreplied LCP echo requests sent; this variable is reset to 0 when a LCP echo 
+reply is received. If this variable reaches the value of the constant 
+ECHO_CLOSE_V, the connection is automatically closed.
+
+
+5.2.5. NestorPPP: FORMAT OF THE ENQUEUED DATA
+
+In this section, the format of the packets enqueued in the queues owned by 
+this module is explained.
+
+
+* IP_OUT_QUEUE
+
+The packets enqueued here must be IP datagrams preceeded by two bytes that 
+must be 0 and #21. That is:
+
+---------------
+|   #00,#21   |
+---------------
+|  IP header  |
+---------------
+|	      |
+|    Data     |
+|	      |
+---------------
+
+The initial &H0021 value identifies the packet as a standard IP datagram, 
+according to the PPP protocol specification (see RFC 1661). If further 
+versions of NestorPPP and NestorIP have support for Van Jacobson compression, 
+this initial value will be different for the compressed datagrams.
+
+
+5.3. NestorIP
+
+The level 3 module supplied with InterNestor Suite is NestorIP. It is an 
+almost complete IP module compliant with RFC 791, 1122, 950 and 815, 
+including subnetting suppport via ICMP messages, automatic reply of incoming 
+ICMP echo requests, automatic send of ICMP "destination unreachable for 
+protocol" messages when necessary, recognition of 127.x.x.x as loopback IP 
+addresses, and automatic reassembly of fragmented incoming datagrams (ICMP 
+"reassembly timeout expired" messages are sent when necessary). Version 0.3 
+and higher incorporates also a RFC 1035 compliant resolver capable of convert 
+host names into IP addresses via DNS queries (with UDP port &H3434 
+associated). The features not supported by NestorIP are:
+
+- All features related to gateways: routing tables, first hop selection for 
+outgoing datagrams, local multihoming, etc. NestorIP is for using the MSX as 
+a single-address host only.
+- IP options processing. Received options are passed without any modification 
+nor processing to the upper level module or to the application program, 
+together with the other header parameters and the datagram data; conversely, 
+the upper module/application program may specify IP options for an outgoing 
+datagram, but they will simply be appended to the datagram header without any 
+processing.
+- Intentional datagram fragmentation. Outgoing datagrams larger than the 
+negotiated MTU (or larger than the INS absoulte maximum packet size, 2048 
+bytes) will just be silently discarded.
+
+Future versions of NestorIP may include any of these missing features, but it 
+is not an immediate target.
+
+
+5.3.1. NestorIP: MODULE OPERATION
+
+NestorIP accepts packets of data from the upper level module or from an 
+application program, wraps them into an IP header and sends them to the level 
+2 module. Conversely, it accepts incoming datagrams from the level 2 module, 
+checks that the header is correct and the transported protocol supported, and 
+either enqueues the datagrams appropriately for the upper level module or for 
+the application program, or generates ICMP error messages, or simply discards 
+the datagrams. It will be explained soon what it means that "a protocol is 
+supported".
+
+The packets of data to be converted into IP datagrams and sent to the 
+internet must be enqueued in a queue named PROT_OUT_QUEUE, owned by NestorIP, 
+preceeded by a pseudo-header. This pseudo-header, as will be explained in 
+section 5.3.5., must include at least the detination IP address and the 
+transported protocol number, and may optionally include the other header 
+parameters: Type Of Service byte, Time To Live byte, Don't Fragment bit, and 
+IP options; default values are used for the parameters not specified. If the 
+destination address is 127.x.x.x, this address will be changed into the local 
+IP address and the resulting datagram will be enqueued as if it were an 
+incoming datagram. If the destination address is not class A, B or C, the 
+datagram is silently discarded.
+
+Incoming datagrams are enqueued by the level 2 module into a queue named 
+IP_IN_QUEUE, owned by NestorIP. These datagrams are extracted and the header 
+correction verified (IP version must be 4; IP addresses must be class A, B or 
+C; checksum must be correct; and destination address must be our address, or 
+a valid broadcast for our (sub)net as explained in RFC 950). If any of these 
+conditions is not met, the datagram is silently discarded.
+
+Once an incoming datagram header's correction is verified, it is time to 
+enqueue the datagram into an appropriate queue for being consumed by the 
+upper level module or by the application program. NestorMan maintains a set 
+of owned queues, at least one and at most 254, for each one of the possible 
+values for the number of the transported protocol (these queues are referred 
+as "protocols input queues"). The input queue for protocol number 1 (ICMP) is 
+automatically created when NestorIP is initialized, but the other input 
+queues must be created (and may be destroyed) by the user or by the upper 
+level module when necessary, using a special NestorIP routine accessible via 
+the jump table (usually only the queues for protocol 17 -UDP- and for 
+protocol 6 -TCP- will be created). A protocol is said to be "supported" by 
+NestorIP when there is an input queue for it.
+
+So after an incoming datagram's header has been certified for correction, its 
+transported protocol number is examined. If the protocol is supported, the 
+datagram is enqueued in the input queue for that protocol; otherwise, an ICMP 
+error message "destination unreachable for protocol" is returned to the 
+datagram's originator (except if the incoming datagram had a broadcast 
+destination address). Application program/upper module is normally expected 
+to look for incoming datagrams in the input queues it has created, and to 
+destroy these queues when they are no longer needed (although normally an 
+upper level module will never destroy the input queues it has created until 
+it is uninstalled).
+
+Processing of incoming ICMP messages is special. They are not just enqueued 
+in the input queue for protocol 1, but the following process is followed:
+
+- If the message is "Mask request" or "Mask reply", the subnetting 
+information is updated, or a reply message is sent, or nothin happens at all, 
+depending of the current connection status and subnetting configuration (see 
+the constants and variables section).
+- If the message is "Echo request", an "Echo reply" message is sent in 
+response, unless the IGNORE_ECHO flag is set (see constants section).
+- If it is an error message (Destination unreachable, Redirect, Source 
+quench, Time exceeded, or Parameter problem), it is enqueued in the input 
+queue for the protocol of the original IP datagram which triggered the error. 
+If such protocol is not supported, the ICMP message is just discarded.
+- If it is a query message (Echo reply, Information, or Timestamp), it is 
+enqueued in the input queue for protocol 1.
+- Finally, if it is an ICMP message of unknown type (not any of the mentioned 
+above), it is just ignored.
+
+Of course, neither the application programs nor the other modules are allowed 
+to destroy the input queue for protocol 1 under any circumstance.
+
+DNS packets are also an exception to the general packet management policy. 
+When an incoming datagram is detected to be UDP, its destination port is 
+examined. If it is &H3434 (the resolver port), then it is enqueued in 
+DNS_IN_QUEUE, a special queue for the resolver (it is considered an internal 
+queue so its address cannot be obtained via IP_QUEUES). Otherwise, it is 
+enqueued in the UDP queue if it exists; that is, it is treated as an ordinary 
+datagram.
+
+You should take a look at the mentioned RFCs if you want to understand some 
+of the concepts mentioned in this section (such the TOS or TTL bytes, 
+datagram fragmentation, subnetting, etc).
+
+
+5.3.2. NestorIP: THE JUMP TABLE
+
+This section explains in detail the routines of the jump table for the 
+NestorIP module. Refer to section 5.1.2. for a discussion about how to access 
+to these routines.
+
+Note that unlike the level 2 module, NestorIP has no routines for opening, 
+closing and checking a connection. This is because the connection management 
+is only responsibility of the level 2 module; the user willing to check if 
+the MSX is online or to open/close a connection must ask it to the level 2 
+module, not to NestorIP.
+
+
+* &H8003 - IP_INIT: Initialization
+
+This is a mandatory routine for all modules of any level or type. Refer to 
+section 5.1.2. for a description of this routine.
+
+
+* &H8006 - IP_DEINIT: Deinitialization
+
+This is a mandatory routine for all modules of any level or type. Refer to 
+section 5.1.2. for a description of this routine.
+
+
+* &H8009 - IP_INT: Interrupt service routine entry point
+
+This is a mandatory routine for all modules of any level or type. Refer to 
+section 5.1.2. for a description of this routine.
+
+
+* &H800C - IP_QUEUES: Information about the queues
+
+This is a mandatory routine for all modules of any level or type. Refer to 
+section 5.1.2. for a description of this routine.
+
+In the case of NestorIP, it owns at least three and at most 256 queues, these 
+queues are:
+
+- IP_IN_QUEUE: The queue where the level 2 module must put the incoming 
+datagrams.
+
+- PROT_OUT_QUEUE: The queue where the level 4 module or the application 
+program must put the outgoing data packets, preceeded by a pseudo-header (see 
+section 5.3.5).
+
+- At least one and at most 254 protocol input queues where NestorIP puts the 
+incoming datagrams, once its header has been checked, in order to make them 
+available for the level 4 module or for the user. There is one input queue 
+for each transported protocol number, which may exist or not (and therefore 
+the protocol is supported or not). The queue for protocol 1 (ICMP) always 
+exists, while the other queues must be created using the routine 
+IP_CREATE_PROT for the protocols desired to be supported.
+
+The input and output parameters for this routine are:
+
+Input:	A = Queue to obtain information about:
+	    0: IP_IN_QUEUE
+	    255: PROT_OUT_QUEUE
+	    Other value: Input queue for the specified protocol
+Output: A-HL = Pointer of the queue
+	       (0-0 when there is no input queue for the specified protocol)
+	IX = Address where the queue pointer is stored in the
+	     NestorIP segment (or where it will be stored if the queue
+	     is created)
+
+Note that it is not possible to create input queues for protocols 0 and 255. 
+However these are reserved numbers with no protocol associated, according to 
+RFC 1700.
+
+
+* &H800F-&H801D: Reserved for future expansion, these addresses just RETurn 
+when called.
+
+
+* &H8021 - IP_TABLES: Ask for the constants, variables or queue pointers 
+location
+
+Input:	A = Table to ask for location:
+	    0: Current constants
+	    1: Dafault values for constants
+	    2: Variables
+	    3: Table with the queue pointers
+Output: On success:
+	    Cy=0
+	    HL = Start address of the required table
+	    BC = Length of the required table
+	On error (invalid value of A on input):
+	    Cy=1
+
+The current constants are configuration values used by NestorIP when a 
+connection is opened by the level 2 module, and when doing initialization 
+processes such the subnet mask configuration. Unless modified by the user, 
+they have all their assigned default value when a connection is about to be 
+opened (they are reset to their default values when a connection is closed 
+and when module is initialized). A table with all the default values is 
+available for the user in order to help in developping a configuration 
+program.
+
+The variables are dinamically used and modified by the IP itself when 
+managing a connection, and the user is expected to only read these variables, 
+or to just ignore them.
+
+The value returned when A=3 at input is the address of a 256*3 bytes buffer 
+on the NestorIP segment, where the pointers for the existing input queues are 
+stored, three bytes per queue (segment-address; 0-0 is stored when the queue 
+does not exist). So the queue pointer for protocol P is stored in the base 
+address returned + an offset of 3*P. Protocol number 0 is actually used for 
+IP_IN_QUEUE, and protocol number 255 is used for PROT_OUT_QUEUE.
+
+
+* &H8024 - IP_CREATE_PROT: Creates an input queue for the specified protocol
+
+Input:	A = Protocol number
+Output: Cy = 0 on success
+	Cy = 1 on error (specified protocol was 0 or 255, or there is not
+			 enough memory for creating the queue)
+
+This routine creates an input queue for the specified protocol, so the 
+protocol is from that moment supported by NestorIP. If the queue already 
+exists, it is destroyed and a new one created again. Only the input queue for 
+protocol number 1 (ICMP) is created at initialization process, the queues for 
+other protocols must be created by using this routine when necessary. This 
+routine is normally intended to be executed by the level 4 module at 
+initialization time.
+
+
+* &H8027 - IP_DESTROY_PROT: Destroys the input queue for
+			    the specified protocol
+
+Input:	A = Protocol number
+Output: -
+
+This routine destroys the input queue for the specified protocol and sets a 
+value of 0-0 in its assigned place on the queue pointers table; if the queue 
+does not actually exist, it does nothing and no error is returned. This 
+routine is normally intended to be executed by a level 4 module at 
+deinitialization time.
+
+Do NEVER specify a protocol number of 0, 1 or 255 when executing this 
+routine, or InterNestor Suite will become unusable immediately and you will 
+need to uninstall it and reinstall it again (and of course, you will lose 
+your connection).
+
+
+* &H802A - IP_DNS_Q: Performs a DNS query or parses an IP address string
+
+Input:	HL = Pointer to a string representing a server name or an IP address
+	     - The string must be stored in a TPA segment
+	     - The string must finish with any of these characters:
+	       0 (null)
+	       9 (tab)
+	       10 (LF)
+	       13 (CR)
+	       26 (EOF)
+	       32 (space)
+	A  = Various flags, when set, they instruct the resolver to:
+	     bit 0: Only abort the query in progress, if any
+		    (ignores the rest of registers and flags)
+	     bit 1: Do NOT query any DNS; assume that the string
+		    represents a valid IP address, and if this is not true,
+		    return an error
+	     bit 2: If another query is in progress, do NOT abort it
+		    and return an error instead
+	     bit 3: Do NOT ignore registers D and E
+	     bit 4: Do NOT ignore register BC
+	     bits 5-7: Unused, must be zero
+	D  = Retransmission timeout for query datagrams, in seconds
+	     (ignored if bit 3 of A is not set)
+	     If ignored, or if its value is 0, the value of
+	     the configuration constant DNS_TOUT_V is used
+	E  = Maximum datagram retransmissions before assuming
+	     that a given DNS is unavailable
+	     (ignored if bit 3 of A is not set)
+	     If ignored, or if its value is 0, the value of
+	     the configuration constant DNS_RETRY_V is used
+	BC = Global timeout for the complete operation, in seconds
+	     (ignored if bit 4 of A is not set)
+	     If ignored, or if its value is 0, the value of
+	     the configuration constant DNS_TTOUT_V is used
+	     The maximum value is 1300
+
+Output: - On success, Cy=0 and:
+	A  = 0: OK, query in progress; or
+		OK, query aborted (if bit 0 of A was set on input)
+	     1: OK, the string represented a valid IP address;
+		it has been parsed and the result is returned in HL:DE
+	HL, DE: IP address (only if Cy=0 and A=1), in the format L.H.E.D
+	- On error, Cy=1 and:
+	A  = 1: No internet connection currently
+	     2: Another query is in progress and has not been aborted
+		(only if bit 2 of A is set at input)
+	     3: Not a valid IP address, and no DNS query is performed
+		(only if bit 1 of A is set at input)
+	     4: No DNS addresses available, cannot perform query
+	     5: Excessive value of BC at input (maximum is 1300 seconds)
+		(only if bit 4 of A is set at input)
+
+This is the routine for asking the built-in resolver to convert a host name 
+(for example "smtp.mailserver.com") into its associated IP address, via RFC 
+1035 compliant DNS queries; the IP addresses of the DNS servers are asked to 
+the level 2 module. It also accepts strings directly representing IP 
+addresses (for example "120.200.0.34"), so it is easy to develop application 
+programs which accept an input parameter of type "<host name>|<IP address>", 
+without having to worry about the actual type of the string supplied.
+
+When called, it will first check if a previous query is still in progress, 
+and will normally abort it in order to start the new one (the resolver cannot 
+handle more than one query at a time); however if bit 2 of A is set at input, 
+any previous query in progress will not be aborted, and an error will be 
+returned.
+
+The passed string will first be assumed to be a direct representation of an 
+IP address (that is, "number.number.number.number", where each number is in 
+the range 0-255), and with this in mind, it will be parsed. If it was indeed 
+a valid IP address, its numeric values will be returned immediately in 
+registers HL and DE, in the form L.H.E.D (so doing just LD (IP_ADD),HL and LD 
+(IP_ADD+2),DE you will have the address stored in IP_ADD in the correct 
+big-endian order); the resulting IP address will also be stored so a 
+subsequent call to IP_DNS_S will return it (see the IP_DNS_S routine 
+description). Otherwise (not a valid IP string), a DNS query will be 
+performed (unless bit 1 of A was set; in this case, an "Invalid IP address" 
+error is returned).
+
+The primary and secondary DNS servers addresses are asked to the level 2 
+module. If none of them are available (if 0.0.0.0 is returned for both), a 
+"No DNS servers available" error is returned. Otherwise, the current status 
+is set to be "query in progress", and the primary DNS is queried (if not 
+available, the secondary one).
+
+After a query is made, a reply is awaited for an interval equal to the 
+"Retransmission timeout". If this timeout expires, the query is sent again, 
+and the "Retry counter" is decreased. If the retry counter reaches zero, and 
+the queried DNS server was the primary one, the operation is repeated with 
+the secondary one. If no secondary DNS server is available, or if it was it 
+already the one who was being queried, the query is aborted with a "Unable to 
+get reply from DNS" error.
+
+Normally, a reply from the DNS server will contain the answer to our query 
+(or a "Name error" if the server name does not exist). However, it may happen 
+that the DNS server does not support recursive queries; in this case, the IP 
+address of another DNS server being "more close" to the desired information 
+is returned instead. The resolver will then start again the query, this time 
+using the new DNS address obtained. This new DNS may at his turn return the 
+answer, or the pointer to another DNS; and so forth. The process is repeated 
+until either an answer/error is returned, any of the DNS servers does not 
+give a reply, or the global timeout expires (the "Global timeout" is a timer 
+which is started when the first query datagram is sent, and specifies the 
+maximum time the complete operation is allowed to consume). Once a valid 
+reply containing the desired IP address is received, the obtained IP will be 
+stored so a subsequent call to IP_DNS_S will return it (see the IP_DNS_S 
+routine description).
+
+The values of "Retransmission timeout", "Retry counter" and "Global timeout" 
+are normally taken from configuration constants DNS_TOUT_V, DNS_RETRY_V and 
+DNS_TTOUT_V, respectively (whose default values are 250 -5 seconds-, 3 and 
+3000 -60 seconds-). Different values may be specified for a particular query: 
+just set up the A register flags and the D, E and/or BC registers 
+appropriately, as described in the routine interface. The dafault values are 
+however suitable for the most usual cases.
+
+After having read until here, it may seem that performing a DNS query is a 
+complex task and many parameters must be configured; but actually, in the 
+most common cases the process is reduced to these simple two steps:
+
+- Call IP_DNS_Q with HL pointing to your server name and A=0. If Cy=1 is 
+returned, jump to an error management routine.
+- Call IP_DNS_S repeatedly until it returns a primary status code other than 
+1. If it returns 3, jump to an error management routine. If it returns 2, use 
+the IP address returned in HL and DE (see the IP_DNS_S routine description).
+
+Translated to code, this may be implemented in the following way. Suppose you 
+want to convert HOST_NAME to an IP address and store it in IP_ADD. Assuming 
+that you have the IP module segment switched on page 2, you can execute this:
+
+IP_DNS_Q: equ #802A
+IP_DNS_S: equ #802D
+
+	ld	hl,HOST_NAME
+	xor	a
+	call	IP_DNS_Q
+	jp	c,ERROR
+
+WAIT:	halt	;Optional
+	xor	a
+	call	IP_DNS_S
+	cp	1
+	jr	z,WAIT
+	cp	3
+	jp	z,ERROR
+	ld	(IP_ADD),hl	;This stores the address in the correct
+	ld	(IP_ADD+2),de	;big-endian order
+	...
+
+HOST_NAME:	db	"any.server.name",0
+IP_ADD:	ds	4
+
+It is actually the resolver who does the "hard work", and normally you will 
+have no need to configure the retry counter and the timers, so executing 
+IP_DNS_Q with A=0 and HL=server name will be enough. Also, note that in this 
+example, you never know if HOST_NAME contains actually a host name or a 
+direct IP address specification; you may however distinguish the two cases if 
+you want (see the IP_DNS_Q and IP_DNS_S routines interfaces specifications).
+
+Note the HALT instruction at the start of the waiting loop. InterNestor Suite 
+is interrupt driven (its code is executed each time a timer interrupt 
+happens, 50 or 60 times per second). This means that if a DNS reply (or 
+error) is not available at a given time, it is impossible that it be 
+available before the next interrupt happens. Hence, if the main program has 
+nothing to do while waiting for a DNS answer, it is a good idea to stop it 
+until the next timer interrupt happens (this is achieved by using HALT).
+
+As said before, the primary and secondary DNS addresses for the queries are 
+asked to the level 2 module. If you want to specify different DNS servers, 
+you must configure the level 2 module in order to modify the DNS settings. 
+This may be done with PPPC.COM using the F option. For example, the following 
+file SETDNS.BAT will configure the DNSs passed in the command line as "SETDNS 
+x.x.x.x y.y.y.y":
+
+echo DNS_PRIM %1>TEMP.CFG
+echo DNS_SEC %2>>TEMP.CFG
+PPPC F:TEMP
+del TEMP.CFG
+
+Of course you can customize this BAT file to only set up one DNS address, or 
+to set up fixed addresses instead of reading them from the command line. See 
+the file SAMPLE.CFG and execute PPPC.COM without parameters for more details 
+about the use of configuration files.
+
+
+* &H802D - IP_DNS_S: Get DNS query status/result
+
+Input:	A  = Various flags, when set, they instruct the resolver to:
+	     bit 0: After returning, clear the current status;
+		    that is, set primary and secondary status codes to 0
+		    (ignored if a query is in progress)
+	     bits 1-7: Unused, must be zero
+
+Output: A  = Current DNS status primary code:
+	     0: No DNS query has been performed yet,
+		or a previous query result/error has been cleared
+	     1: A DNS query is in progress
+	     2: A DNS query/IP string parsing finished successfully,
+		the result is returned in HL:DE
+	     3: An error occurred, the query was aborted
+	B  = Current DNS status secondary code:
+	     - If A=0, B=0 always
+	     - If A=1:
+	       B=1: Currently querying the primary DNS server
+	       B=2: Currently querying the secondary DNS server
+	       B=3: Currently querying another DNS server,
+		    whose address has been returned instead of
+		    a direct answer to the query
+	     - If A=2:
+	       B=0: The string given in the query represented
+		    a server name, so a DNS query was made
+	       B=1: The string given in the query represented
+		    an IP address, so it was just parsed
+	     - If A=3, B contains the error code:
+	       1: Query format error (should never occur)
+	       2: Server failure
+	       3: Name error
+	       4: Query type not implemented (should never occur)
+	       5: Query refused
+	       6-15: Undefined DNS errors
+	       16: Unable to get a reply from the queried DNS
+		   (too many datagrams sent without reply)
+	       17: Global operation timeout expired
+	       18: Query aborted by the user
+		   (by calling IP_DNS_Q with A=1)
+	       19: Internet connection lost
+	       20: The DNS replied, but the reply did not contain
+		   neither an answer nor a pointer to another DNS
+	       21: The received reply is truncated (should rarely occur)
+	HL, DE: IP address (only if A=2), in the format L.H.E.D
+
+This routine returns the status of a previous DNS query performed with 
+IP_DNS_Q; and when the query has finished successfully, it returns the result 
+in HL, DE registers.
+
+A primary status code is returned in register A, telling about the main 
+status of the resolver. 0 means that no query has been performed since INS 
+has been installed, or that a previous query result has been cleared (by 
+executing this routine with A=1 at input). 1 means that a query is in 
+progress (that is, a DNS server was queried and a reply is awaited). 2 means 
+that the query finished successfully (or that the passed string was a direct 
+IP address representation so it was just parsed), and the result is returned 
+in HL and DE in a format that makes it easy to store it in memory (see the 
+sample code on IP_DNS_Q description). Finally, 3 means that an error occurred 
+which caused the query to be aborted.
+
+Another "secondary" status code is returned in register B, containing more 
+details about the current resolver status. Normally you will be interested in 
+this code only when A=3, because this code will then be an error code. Errors 
+in the range 1-15 are returned by the DNS server and are defined in the DNS 
+protocol specification (see RFC 1035); currently, only errors in the range 
+1-5 are defined. Errors with code 16 and higher are generated by the resolver 
+itself.
+
+Normally, this routine should be repeatedly called after a query is performed 
+using IP_DNS_S, until receiving either a "success" or "error" primary code (2 
+and 3, respectively). See the sample code on the IP_DNS_Q description for 
+more details.
+
+Note that errors 1 and 4 menas that the query packet format is invalid, so 
+they should never occur as long as there are no bugs in the resolver. Error 
+21, although possible, is very rare; it is due to the fact the DNS packets 
+are limited in size to 512 bytes, and happens when the reply needs more 
+space.
+
+
+* &H8030 - IP_GET_UDP: Obtain an incoming UDP datagram
+
+Input:	A  = Various flags, when set, they instruct NestorIP to:
+	     bit 0: Do not check for matching source port
+	     bit 1: Do not check for matching destination port
+	     bit 2: Do not check for matching source IP address
+	IX = Source port (ignored if bit 0 of A is set)
+	IY = Destination port (ignored if bit 1 of A is set)
+	HL-DE = Source IP address, in the format L.H.E.D
+		(ignored if bit 2 of A is set)
+	BC = Address where to extract the datagram (must refer to TPA)
+
+Output: - On success:
+	  Cy=0, A=0
+	  BC = Total length of the extracted datagram (including headers)
+	- On error, Cy=1 and:
+	  A = 1: No incoming UDP datagrams available
+	  A = 2: There is no queue for incoming UDP datagrams
+
+This routine is new for NestorIP 1.0. It allows to obtain the oldest 
+available incoming UDP datagram to the address specified in the BC register 
+(which refers to TPA). A source IP address, source UDP port and/or 
+destination UDP port may be specified so only the datagrams with matching 
+parameters will be taken in account, and the rest will be ignored.
+
+For example, if A=4, the UDP ports of the incoming UDP datagrams will be 
+compared against the values passed in registers IX and IY, and the older 
+matching datagram will be returned; the source IP address will be ignored. If 
+A=3, only the source IP address will be examined, and the ports will be 
+ignored. And if A=7, simply the older available datagram will be returned, 
+regardless of its ports and source IP address.
+
+Of course you can still using the "old method", instead of this routine, for 
+retrieving datagrams: ask NestorIP for the descriptor of the queue for the 
+incoming UDP datagrams (using the IP_QUEUES routine), and then use the 
+NestorMan functions for extracting the datagrams from the queue. But then you 
+can't select matching UDP ports nor source IP addrees (it is equivalent to 
+using IP_GET_UDP with A=7 at input).
+
+While this routine is being executed, the interrupt service routine of 
+NestorIP is partially disabled to avoid concurrency problems, so it does not 
+check for incoming datagrams of any type. Therefore, if you repeatedly call 
+this routine in a loop while waiting for a valid datagram, it is a good idea 
+to place a HALT instruction after each call, so NestorIP has always the 
+opportunity of executing its full interrupt service routine.
+
+Note that prior to using this routine, you need to create the queue for 
+incoming UDP datagrams with the IP_CREATE_PROT routine. Otherwise, an error 2 
+will always be returned.
+
+The format of the extracted datagram will be the same as how it is stored in 
+the queue: Size of the IP header (1 byte) + IP header + UDP header (8 bytes) 
++ Data. All these fields are included in the size returned in BC register.
+
+
+5.3.3. NestorIP: THE CONFIGURATION CONSTANTS ZONE
+
+This section lists and explains the NestorIP configuration constants. Their 
+addresses are indicated as an offset from the value returned by IP_TABLES 
+when executed with A=0 at input, and their size in bytes is indicated 
+together with their name. Unless otherwise stated, all 2-byte variables are 
+stored in little-endian order, the IP addresses are stored in big-endian (for 
+example 1,2,3,4 for 1.2.3.4), and the timer values are expressed in units of 
+1/50 seconds.
+
+The user is expected to appropriately modify these constants, in order to 
+custom the connection, before opening it (remember that it is actually the 
+level 2 module the responsible for opening a connection). To help in 
+developping a configuration program, a table with the default values of the 
+constants is available and its address returned when executing IP_TABLES 
+with A=1. The user may for example copy this default values table over the 
+current values table, and then modify only the values he wants.
+
+Note that apart from a possible static configuration of the subnet mask, the 
+default values of all constants are normally suitable for normal connections, 
+and are not likely to have to be modified for a correct operation.
+
+
++0: MASK_METHOD (1)
+Default value: 0
+Indicates how to obtain the subnet mask: static configuration/no subnet use 
+at all (0) or use of ICMP "Mask request/reply" mesages (1).
+
++1: NET_MASK (4)
+Default value: 0.0.0.0
+Network mask, it is calculated from the class of the local IP address 
+(255.0.0.0 for class A, 255.255.0.0 for class B, 255.255.255.0 for class C) 
+once this address is learned after a connection open.
+
++5: SUBNET_MASK (4)
+Default value: 0.0.0.0
+Subnet mask. If MASK_METHOD is 0, the value set up by the user is kept. If 
+MASK_METHOD is 1, this constant is filled out when an ICMP "Mask reply" 
+message is received.
+
+Note that the mask is stored WITHOUT including the network mask portion. For 
+example if the local IP address is a class A address, and the subnet mask is 
+255.240.0.0, then the value stored here will be 0.240.0.0. However, in the 
+case of static configuration the user may place here the complete mask 
+(net+subnet), and it will be automatically corrected when the connection is 
+opened and the local IP address learned (and therefore the network mask 
+calculated).
+
++9: ZERO_IP_VALID (1)
+Default value: 0
+Flag to indicate if the addresses 0.0.0.0 or 0,<host> will be considered as 
+valid addresses when being the IP source address of an incoming IP datagram 
+(#FF) or not (0). An address is considered to be 0,<host> if it is 0.x.x.x.
+
++10: MASK_REP_AUTH (1)
+Default value: 0
+Flag to indicate if this computer is authorized to send ICMP "Mask reply" 
+messages in response to incoming "Mask request" messages (#FF) or not (0).
+
++11: MASK_REQ_NUM (1)
+Default value: 10
+Number of "Mask request" messages to send after a connection is open, if 
+MASK_METHOD=1. After sending this number of messages without receiving a 
+reply, NestorIP will give out in obtaining the subnet mask and will use only 
+the network mask.
+
++12: MASK_REQ_INT (2)
+Default value: 150 (3 seconds)
+Interval for sending "Mask request" messages after a connection is open, if 
+MASK_METHOD=1. The messages will be sent until a reply is received, or until 
+MASK_REQ_NUM messages are sent.
+
++14: FRAG_TIMEOUT (2)
+Default value: 3000 (1 minute)
+Fragmented datagrams reassembly timeout. If a time of FRAG_TIMEOUT is elapsed 
+after the receipt of the first fragment of a datagram and the datagram is not 
+complete yet, the incomplete datagram is discarded and an ICMP "Reassembly 
+timeout" message is sent to the originator of the fragmented datagram.
+
++16: TTL_DEFAULT (1)
+Default value: 64
+Time To Live value to be used on all the outgoing IP datagrams unless a 
+different value is indicated in the pseudo-header (see section 5.3.5).
+
++17: IGNORE_ECHO (1)
+Default value: 0
+Flag to indicate if the received ICMP "Echo request" messages must be replied 
+(0) or ignored (#FF).
+
++18: DNS_TOUT_V (2)
+Default value: 250
+This is the default value value for the retransmission timeout used by the 
+resolver; this value may be overrided when performing the query (see IP_DNS_Q 
+routine specification on section 5.3.2). It indicates how many time the 
+resolver will wait for a reply after sending a DNS query datagram. If this 
+counter expires, the datagram is retransmitted and the retry counter (see 
+DNS_RETRY_V) is decreased.
+
++20: DNS_TTOUT_V (2)
+Default value: 3000
+This is the default value for the global timeout used by the resolver; this 
+value may be overrided when performing the query (see IP_DNS_Q routine 
+specification on section 5.3.2). This counter starts when the query is 
+performed, and if it expires, the whole process is aborted regardless of its 
+current status (that is, no matter which DNS is being queryed or which is the 
+value of the retransmission timer and the retry counter).
+
++22: DNS_RETRY_V (1)
+Default value: 3
+This is the default value for the retry counter used by the resolver; this 
+value may be overrided when performing the query (see IP_DNS_Q routine 
+specification on section 5.3.2). This counter is decreased every time a 
+datagram is sent to a particular DNS (the first time and the 
+retransmissions); if it reaches zero, the DNS is considered to be 
+unavailable, the counter is initialized to its initial value, and either the 
+query passes to the secondary DNS (if it was the primary one who was being 
+queryed) or the process is aborted.
+
+
+5.3.4. NestorIP: THE VARIABLES ZONE
+
+In this section, the variables of the variables zone are listed and 
+explained. Their addresses are indicated as an offset from the value returned 
+by IP_TABLES when executed with A=2 at input, and their size in bytes is 
+indicated together with their name. Unless otherwise stated, all 2-byte 
+variables are stored in little-endian order, the IP addresses are stored in 
+big-endian (for example 1,2,3,4 for 1.2.3.4), and the timer values are 
+expressed in units of 1/50 seconds (active timers are increased in each timer 
+interrupt). Note that these variables are for internal use and not intended 
+to be modified by the user.
+
+There are no meaningful "default values" for these variables, and they are 
+all set to zero when a connection is opened.
+
+
++0: IP_LOCAL (4)
+This is the local IP address, asked to the level 2 module when a connection 
+open is detected.
+
++4: IP_LOCAL_NET (4)
+This is the network part of the local IP address, calculated when this 
+address is learned. For example, for a network mask of 255.255.0.0 and a 
+local IP address of 22.33.44.55, this variable will be 22.33.0.0.
+
++8: IP_LOCAL_SUB (4)
+This is the subnet part of the local IP address, calculated when this address 
+is learned and the subnet mask obtained. For example, for a subnet mask of 
+0.0.255.0 and a local IP address of 22.33.44.55, this variable will be 
+0.0.44.0.
+
++12: MASK_STATUS (1)
+Current status of the subnet mask (used only if MASK_METHOD=1):
+0: Not set yet
+1: Set with the information of an arrived "Mask reply" message
+
++13: MASK_REP_SENT (1)
+Flag to indicate that an automatic "Mask reply" message has been sent (when 
+#FF). This message is sent when a connection open is detected, but only if 
+the computer is authorized to do it (if the constant MASK_REP_AUTH is set) 
+and if MASK_METHOD=1.
+
++14: MASK_REQ_SENT (1)
+Number of "Mask request" messages already sent. A maximum of MASK_REQ_NUM 
+(see constants) messages will be send when MASK_METHOD=1 at intervals of 
+MASK_REQ_INT when the connection is open; if no reply message is received, 
+NestorIP will give up in obtaining the subnet mask.
+
++15: MASK_REQ_TIMER (2)
+Current value of the timer for sending "Mask request" messages. When this 
+timer reaches the value of MASK_REQ_INT, it is reset to zero, a "Mask 
+request" message is sent, and MASK_REQ_SENT is increased. (All of this only 
+when MASK_METHOD=1.)
+
++17: MASK_TIMEOUTED (1)
+Flag to indicate that MASK_REQ_NUM messages "Mask request" have been already 
+sent without receiving any reply (when #FF).
+
++18: LOWER_STATUS (1)
+Connection status information returned by the level 2 module in the previous 
+interrupt (#FF: Connection open, 0: Connection closed).
+
++19: MTU (2)
+Maximum Transmit Unit (maximum datagram size allowed to be sent), asked to 
+the level 2 module when a connection open is detected.
+
++21: MRU (2)
+Maximum Receive Unit (maximum datagram size allowed to be received), asked to 
+the level 2 module when a connection open is detected.
+
+Note that in the case of receiving fragmented IP datagrams, MRU value is the 
+maximum allowed size for the final reassembled datagram, and not only for the 
+received fragments.
+
++23: LAST_P_TSIZE (2)
+Total size of the last received datagram.
+
++25: LAST_P_HSIZE (2)
+Header size of the last received datagram.
+
++27: LAST_P_DSIZE (2)
+Data area size of the last received datagram.
+
++29: LAST_P_PSIZE (2)
+Total size of the last outgoing datagram processed (pseudoheader+data).
+
++31: OPTIONS_LEN (2)
+Total length of the IP options area of the last outgoing datagram processed.
+
++33: PUT_P_DPNT (2)
+Temporary pointer to the user data area of an outgoing datagram, used when 
+composing the final datagram.
+
++35: CUR_FRAG (1)
+Current fragmented datagram being processed (order number in the fragmented 
+datagrams queue).
+
++36: CUR_FRAG_FLAG (1)
+Flags returned by NestorMan function 29 when the last fragmented datagram was 
+extracted from the fragmentation queue (used to know if it was the last 
+datagram in the queue).
+
++37: Variables used to reassemble a datagram using the Clark algorithm (see 
+RFC 815), 2 bytes each one:
+
+FRAG_FIRST
+FRAG_LAST
+HOLE_FIRST
+HOLE_LAST
+HOLE_PREV
+HOLE_NEXT
+
++49: FRAG_LEN (2)
+Last processed datagram fragment length.
+
++51: PAQ_IS_BROAD (1)
+Flag to indicate if the datagram being processed is a link layer or IP 
+broadcast (#FF) or not (0).
+
++52: NUM_FRAG_PEND (1)
+Number of fragmented datagrams awaiting for reassembly.
+
++53: FRAG_TABLE (514)
+Reassembly timers for each of the datagrams awaiting for reassembly (2 bytes 
+each one). These timers are started when the first fragment arrives, and if 
+they reach the value FRAG_TIMEOUT (see constants) before being completely 
+reassembled, the datagram is discarded and an ICMP "Fragmentation timeout 
+expired" is sent to the originator of the datagram.
+
++567: Variables used for DNS queries:
+
+DNS_PRIM (4): Primary DNS IP address
+DNS_SEC (4): Secondary DNS IP address
+DNS_STAT_P (1): Current primary status code
+DNS_STAT_S (1): Current secondary status code
+DNS_TOUT (2): Retransmission timeout timer
+DNS_TTOUT (2): Global timeout timer
+DNS_RETRY (1): Retry counter
+DNS_TOUT_NOW (2): Current initial value for DNS_TOUT
+DNS_TTOUT_NOW (2): Current initial value for DNS_TTOUT
+DNS_RETRY_NOW (1): Current initial value for DNS_RETRY
+DNS_RESULT (4): Stores the result of the query
+DNS_P_SIZE (2): Size of the UDP datagram to be sent to the DNS server
+ANCOUNT (2): Number of entries in the answer section
+	     of the received DNS datagram
+ARCOUNT (2): Number of entries in the authoritative section
+	     of the received DNS datagram
+NSCOUNT (2): Number of entries in the additional section
+	     of the received DNS datagram
+
++599: IP_IDENTIF (2)
+Identifier for the next datagram to be sent. It is increased every time a 
+datagram is sent.
+
++601: UDP_IDENTIF (2)
+Identifier for the next DNS datagram to be sent (it is a DNS-specific 
+identifier, independent of the IP header identifier). It is increased every 
+time a DNS datagram is sent.
+
++603: UPPER_SEG (1)
+Physical segment number of the level 4 module, asked at initialization time.
+
++604: LOWER_SEG (1)
+Physical segment number of the level 1 module, asked at initialization time.
+
++605: FRAG_QUEUE (3)
+Pointer to the fragmentation queue, this queue is created at initialization 
+time.
+
++608: IP_OUT_QUEUE (3)
+Pointer to the queue IP_OUT_QUEUE, the queue where the outgoing datagrams are 
+put; asked to the level 2 module in the first timer interrupt.
+
++611: DNS_IN_QUEUE (3)
+Pointer to the queue where the DNS replies will be stored. This queue is 
+created at initialization time, and used by the resolver.
+
+
+5.3.5. NestorIP: FORMAT OF THE ENQUEUED DATA
+
+In this section, the format of the packets enqueued in the queues owned by 
+this module is explained.
+
+
+* IP_IN_QUEUE
+
+This is the queue where the incoming datagrams are put by the level 2 module.
+
+The packets enqueued here must be IP datagrams preceeded by two bytes that 
+must be either 0 and #21, or 0 and #20. That is:
+
+---------------
+| #00,#20/#21 |
+---------------
+|  IP header  |
+---------------
+|	      |
+|    Data     |
+|	      |
+---------------
+
+The initial &H0021 value identifies the packet as a standard IP datagram, 
+according to the PPP protocol specification (see RFC 1661). If further 
+versions of NestorPPP and NestorIP have support for Van Jacobson compression, 
+this initial value will be different for the compressed datagrams.
+
+Bit 0 of the second byte of this inital value must be set to 0 when the 
+datagram is received as a link layer broadcast (then &H0020), otherwise left 
+to 1 (then &H0021). There is no possible ambiguity even if different initial 
+values are used in the future, since these values will always be originarily 
+odd (see RFC 1661).
+
+Note that when the level 2 module is NestorPPP, this initial value will be 
+always &H0021, since no link layer broadcasts are defined for PPP.
+
+
+* PROT_OUT_QUEUE
+
+This is the queue where the data packets to be converted into IP datagrams 
+are put by the user or by the level 4 module.
+
+The ideal goal for NestorIP would be to accept raw data packets at this 
+queue, and to compose then an IP header using only internal information (this 
+would be the easier way for the user/upper level module). However some 
+information must be supplied with the data packets: at least the IP 
+destination address and the transported protocol number; and optionally, also 
+the TOS byte, the TTL byte, the DF byte, and IP options. But the user/upper 
+level module should never to have to compose an IP header itself, as this is 
+a task for the IP module.
+
+To solve this, a simple pseudo-header to be appended to the data packet is 
+defined. This pseudo-header is composed by the destination address, the 
+transported protocol number, and optionally the rest of the IP header data 
+(except the identification field, which is automatically inserted by the IP 
+module and increased for each new datagram sent). So the packet format to be 
+put in this queue is as follows:
+
+--------------------
+|  IP destination  |
+|     address	   |
+--------------------
+|     Protocol	   |
+--------------------
+|      Other	   |
+|    parameters    |
+--------------------
+|   0 (one byte)   |
+--------------------
+|		   |
+|	Data	   |
+|		   |
+--------------------
+
+The pseudo-header is composed by all the packet fields except the "Data" 
+field. The protocol field will usually be 1 (ICMP), 17 (UDP) or 6 (TCP). The 
+"other parameters" are zero or more of the following, concatenated in any 
+order (all fields are of 1 byte unless otherwise stated):
+
+- Type Of Service byte (default: 0)
+
+---------------
+|      1      |
+---------------
+|  TOS byte   |
+---------------
+
+- Don't Fragment bit (default: 0)
+
+----------------
+| 2 + DF (0/1) | (in other words: 2 for DF=0, 3 for DF=1)
+----------------
+
+- Time To Live byte (default: value of TTL_DEFAULT constant)
+
+---------------
+|      4      |
+---------------
+|  TTL byte   |
+---------------
+
+- IP Options (default: no options)
+
+------------------
+|	5	 |
+------------------
+| Options length |
+------------------
+|		 |
+|   IP Options	 |
+|		 |
+------------------
+
+The "Options length" field contains the size of the "IP Options" field. It is 
+not necessary that the "IP options" field length be an integer multiple of
+4 bytes; padding 0 bytes ("End of options" option) will be automatically 
+added at the end of the options in the final datagram if necessary. Also, it 
+is not necessary to add an "End of options" byte after the last option.
+
+- Source IP address (default: our local IP address)
+
+---------------
+|      6      |
+---------------
+|    Source   | (4 bytes field)
+|  IP address |
+---------------
+
+NOTE: A 0 byte must be always placed immediately before the data field of the 
+packet, even if there are no "other parameters" specifications. Also, 
+remember that the IP options will be appended at the end of the generated IP 
+header without any further processing from NestorIP (except for the append of 
+padding 0 bytes when necessary).
+
+- UDP ports (default: no UDP header is appended)
+
+---------------
+|      7      |
+---------------
+|    Source   | (2 bytes field, little-endian)
+|   UDP port  |
+---------------
+| Destination | (2 bytes field, little-endian)
+|   UDP port  |
+---------------
+
+This option is new for NestorIP 1.0. If it is included in the pseudo-header, 
+an UDP header with the specified ports and with a correct UDP checksum 
+calculated will be prepended to the data part before the IP header is 
+computed and prepended to it as well.
+
+Note that if you use this option, you do not need to manually create an UDP 
+header for your outgoing UDP packets, but you still need to 1) create the 
+queue for incoming UDP packets if you expect a reply from the remote host; 
+and 2) specify the UDP protocol number (17) in the pseudo-header. For 
+example, the following pseudo-header is for an UDP datagram with destination 
+address 10.20.30.40, UDP source port #1234 and UDP destination port #ABCD:
+
+db	10,20,30,40  ;Destination IP address
+db	17   ;UDP protocol number
+db	7    ;UDP ports follow
+dw	#1234	;Source port
+dw	#ABCD	;Destination port
+db	0	;End of pseudo-header
+
+
+* Protocols input queues
+
+These are the queues where the valid incoming datagrams are put for being 
+consumed by the upper level module or by the user; there is one queue for 
+each protocol and these queues must be explictly created, as explained in 
+previous sections.
+
+The IP protocol specification states that together with the datagram data, 
+varios parameters of the header must be passed to the datagram consumer. So 
+in this case, and since the only way to "pass" something to the datagram 
+consumer is the use of these queues, the best solution seems to be to pass 
+the whole datagram, and the user/upper level module must extract then the 
+header information he needs (or to just ignore the whole header if the header 
+information is not needed at all).
+
+The format of the packets enqueued here is then as follows:
+
+--------------------
+| IP header length |
+--------------------
+|    IP header	   |
+--------------------
+|		   |
+|	Data	   |
+|		   |
+--------------------
+
+The "IP header length" field is one byte indicating the length in bytes of 
+the IP header (or in other words, the offset address of the data field). It 
+is the same information stored in the four lower bits of the first byte of 
+the header (IHL field), but this time expressed in units of bytes and not in 
+32 bit words.
+
+Usually, datagram consumers will not need to use the header information but 
+to focus on the data field only; a fast way to obtain the data field starting 
+address of a datagram extracted to address BUFFER is to calculate 
+BUFFER+PEEK(BUFFER)+1.
+
+
+5.4. NestorTCP
+
+The fourth InterNestor Suite module is a TCP module. Although not 100% 
+complete, it has most of the features described on RFC 793, 1122, 2581, and 
+2988. It can handle up to 8 connections simultaneosly; can open passive 
+connections, with either the remote socket specified or not; incorporates the 
+slow start/congestion avoidance, fast retransmit/fast recovery, Nagle, and 
+SWS avoidance (this one from module version 0.2) algorithms; uses clock 
+driven ISS selection; has an echo server implemented on port 7; uses proper 
+retransmission timeout calculation (fully tested from module version 0.3); 
+and uses zero window probing. About TCP options, only the SMSS option is 
+recognized.
+
+The features not currently included on NestorTCP are:
+
+- Management of IP options and incoming ICMP messages (they are all ignored). 
+Also, outgoing ICMP messages are never generated.
+- Keep-alive packets are never sent.
+
+Some of these missing features may be added to future versions of NestorTCP.
+
+There was an important missing feature on NestorTCP 0.1: although data could 
+be send as "pushed" and "urgent", these flags were set only the first time 
+the data was sent; that is, if the data had to be retransmitted, then it did 
+not have these flags set. This feature was added on version 0.2.
+
+If you don't know much about TCP connections, or you don't know what terms 
+such "pushed/urgent data" or "ISS" stand for (as well as other terms which 
+will appear in next sections), take a look at the mentioned RFCs, at least 
+RFC 793.
+
+
+5.4.1. NestorTCP: MODULE OPERATION
+
+NestorTCP philosohpy is somewhat different from the rest of the modules.
+
+While the other modules basically accept datagrams from the lower level 
+module, performs some processing on them and then enqueue them again so the 
+higher level module can get the processed datagrams, NestorTCP converts the 
+per-datagram basis received data on a per-byte basis stream of data to be 
+consumed by the application program which created the TCP connection; this 
+application obtains the data in a similar way of how a disk file is read, 
+that is, a certain amount of bytes are requested to the TCP connection via a 
+"read" routine call (internally this "stream" of data is actually handled via 
+queues of data packets, but this is invisible to the application program, 
+which see all the data bytes as if they were stored contiguously). The same 
+applies of course, in the reverse direction, to outgoing data.
+
+Besides of this, while the other modules have a "configuration constants" 
+area and a "variables" area, NestorTCP has also a TCB (Transmission Control 
+Block) for each opened connection, containing various configuration and 
+status information for the connection. The address of the TCB for a given 
+connection may of course be obtained via the TCP_TABLES routine, accessible 
+via jump table (see next section).
+
+The way of obtaining received data (or sending new data) from/to the other 
+modules can be summarized as saying to the module "give me the address of a 
+queue from where I can obtain (or where I can put) a packet of data". With 
+TCP, however, the program willing to obtain data from a host must first open 
+a TCP connection to it, and then say to the TCP module "give me X bytes from 
+connection C and put them in address A" or "send to connection C the X bytes 
+of data I have put on address A"; as you can see, this is much like reading 
+and writing disk files.
+
+And finally, contrarywise to the other modules, NestorTCP has no "owned 
+queues". It has of course some queues (three per connection) for internal 
+management of the data; but as said before, these queues are hidden to the 
+application programs, which just see a continuous stream of data on each 
+connection.
+
+What does not change with regard to the other modules is the fact that on 
+each timer interrupt only one incoming data packet is fetched and only one 
+outgoing packet is sent. If there are more than one open connections, only 
+one has permission to send data; this permission passes from one connection 
+to another in a circular way (0 -> 1 -> ... -> 7 -> 0).
+
+Again, please refer to RFC 793 for more details about the TCP protocol.
+
+
+5.4.2. NestorTCP: THE JUMP TABLE
+
+This section explains in detail the routines of the jump table for the 
+NestorIP module. Refer to section 5.1.2. for a discussion about how to access 
+to these routines. Also, see section 5.2.2 for a note about opening and 
+closing internet connections.
+
+
+* &H8003 - TCP_INIT: Initialization
+
+This is a mandatory routine for all modules of any level or type. Refer to 
+section 5.1.2. for a description of this routine.
+
+
+* &H8006 - TCP_DEINIT: Deinitialization
+
+This is a mandatory routine for all modules of any level or type. Refer to 
+section 5.1.2. for a description of this routine.
+
+
+* &H8009 - TCP_INT: Interrupt service routine entry point
+
+This is a mandatory routine for all modules of any level or type. Refer to 
+section 5.1.2. for a description of this routine.
+
+
+* &H800C - TCP_QUEUES: Information about the queues
+
+This is a mandatory routine for all modules of any level or type. Refer to 
+section 5.1.2. for a description of this routine.
+
+In the case of NestorTCP, it has no owned queues. Therefore, TCP_QUEUES is 
+actually a dummy routine which always returns Cy=1 (error).
+
+
+* &H800F-&H801D: Reserved for future expansion, these addresses just RETurn 
+when called.
+
+
+* &H801E - TCP_TABLES: Ask for the constants, variables or TCBs 
+location
+
+Input:	A = Table to ask for location:
+	    0: Current constants
+	    1: Dafault values for constants
+	    2: Variables
+	    3: Temporary TCB
+	    4+N: TCB for connection N (0 to 7)
+
+Output: On success:
+	    Cy=0
+	    HL = Start address of the required table
+	    BC = Length of the required table
+	On error (invalid value of A on input):
+	    Cy=1
+
+The current constants are common configuration values used by NestorTCP for 
+all TCP connections. Unless modified by the user, they have all their 
+assigned default value when a connection to the internet is about to be 
+opened (they are reset to their default values when a internet connection is 
+closed and when the module is initialized). A table with all the default 
+values is available for the user in order to help in developping a 
+configuration program.
+
+The variables are dinamically used and modified by NestorTCP itself while 
+managing TCP connections, and the user is expected to only read these 
+variables, or to just ignore them. As well as the constants, these variables 
+are common (that is, independent of the TCP connections).
+
+The TCB (Transmission Control Block) is a set of constants and variables 
+which are TCP connection dependant; in other words, each connection has his 
+own TCB. The TCB is created when a connection is open, and destroyed when the 
+connection ends.
+
+The "temporary TCB" is a temporary placeholder where NestorTCP places the TCP 
+of the connection which is about to be managed; when this is done, the data 
+is copied back to its original location. It is not likely to be useful for 
+the application programs, but anyway its address can be obtained.
+
+
+* &H8021 - TCP_OPEN: Open a TCP connection
+
+Input:  HL = Pointer to pseudo-TCB containing connection parameters
+             - Pseudo-TCB must be stored on a TPA segment
+             - See the routine description below for the format of pseudo-TCB
+
+Output: - On success: Cy=0 and A = Connection number
+        - On error: Cy=1 and A = Error code:
+          1: Too many (8) opened connections already
+          2: No internet connection currently
+          3: Connection already exists (same local and remote socket)
+             and is not in the LISTEN state
+          4: The given pseudo-TCB states for an active connection,
+	     but the remote socket is unspecified
+	     (IP is 0.0.0.0 and port is 0)
+
+This is the routine for opening a TCP connection. The returned connection 
+number must be stored so it can be passed to subsequent calls to SEND, RCV, 
+CLOSE, ABORT, STATUS and FLUSH routines for managing the connection. 
+NestorTCP can handle up to 8 TCP connections simultaneously.
+
+A "pseudo-TCB" is a structure containing the local and remote sockets which 
+will determine the connection (a socket is a pair IP address + TCP port; 
+actually, only the local port may be specified as the "local socket", since 
+the local IP is fixed), and optionally, other configuration parameters for 
+it. The format of pseudo-TCB is as follows:
+
+------------------
+|                |
+|   Remote IP    | (4 bytes, big endian)
+|                |
+-----------------|
+|  Remote port   | (2 bytes, little endian)
+------------------
+|  Local port    | (idem, &HFFFF for automatic port selection)
+------------------
+| Active/Passive | (0 for active connection, #FF for passive)
+------------------
+|                |
+|Other parameters| (Optional, see below)
+|                |
+------------------
+|       0        | (One byte)
+------------------
+
+Ports must be stored in little endian order, that is, the normal format of 
+MSX data -for example LD (PORT),hl-. If &HFFFF is specified as the local 
+port, NestorTCP will automatically select one; every time a TCP connection is 
+opened with automatic port number selection request, a different number is 
+selected, starting at 1024 and increasing (if it arrives to &HFFFE, it 
+returns back to 1024). When manually specifying the port number, any number 
+in the range 0-&HFFFE may be used.
+
+A TCP connection may be opened in "passive mode". This means that INS will 
+not try to initiate the connection, but instead will wait for the remote host 
+to take the initiative (that is, it will enter in the LISTEN state). If 
+opened as passive, a connection may be opened with unespecified socket, by 
+specifying both 0.0.0.0 as the remote IP address and 0 as the remote port. 
+This will cause that an incoming connection initiation request for the 
+specified local socket will be accepted regardless of the IP and port of the 
+host trying to initiate the connection.
+
+Normally, trying to open a connection when it already exists (that is, 
+another connection with the specified local and remote sockets was previously 
+opened), an error with code 3 will be returned. There are however two 
+exceptions to this rule, compliant with the TCP protocol specification:
+
+- More that one passive connection can be opened for the same local socket if 
+the remote socket is unespecified.
+- If a normal passive connection (with the remote socket specified) is in the 
+LISTEN state, it is possible to open it again as active. The connection will 
+then initiate the TCP negotiation and pass from LISTEN to SYN-SENT state, as 
+if it were a new active connection.
+
+Error 3 will be returned also if a normal passive connection in the LISTEN 
+state is attempted to be re-opened, but again as passive.
+
+"Other parameters" are zero or more concatenated configuration items, and 
+allow to set up various connection parameters which are otherwise set to 
+their associated default values. A configuration item consists of an initial 
+code byte indicating the parameter to be set up, followed by the desired 
+value for that parameter.
+
+Below is the list of the available configuration items. Except where 
+otherwise stated, the parameter value is a little-endian word (2 byte value). 
+Refer to section 5.4.5 for the meaning of each parameter.
+
+- 1 + USER_TOUT_V. Default is 15000 (5 minutes). 0 means that no user timeout 
+is defined.
+- 2 + TOS byte to be used on outgoing IP datagrams (1 byte). Default is 0.
+- 3 + RETX_EX_MAX. Default is 9000 (3 minutes).
+- 4 + RETX_EX_SMAX. Default is 15000 (5 minutes).
+- 5 + RCV_BUF. Default is the value of DEF_RCV_BUF (16100 if not modified).
+- 6 + ACK_DELAY_MAX (1 byte). Default is 25 (0.5 seconds).
+- 7 + ACK_RCV_MAX. By default (or if 0 is specified) the value 2*SMSS is 
+used.
+- 8 + RTO_MAX. Default is 3000 (1 minute). 0 means that there is no maximum 
+value for RTO.
+- 9 + RMSS. By default (or if 0 is specified) the value MRU-40 is used.
+- 10 + NAGLE_ON (1 byte that may be 0 or #FF). Default is #FF.
+- 11 + MSL_T. Default is 2400 (2 minutes). This is the time the connection 
+will remain in TIME-WAIT state (if it reaches this state) before being 
+closed.
+
+The "Other parameters" section must be finished with a zero byte. If no 
+"Other parameters" section is present at all, place anyway a zero byte after 
+the "Active/Passive" flag. If an unknown code byte is found in the "Other 
+parameters" section, the remaining configuration items are ignored.
+
+Note that option 11 has been added on version 0.2 of NestorTCP. It is useful 
+for programs which open and close TCP connections in fast succession, for 
+example a FTP client sending or retrieving a lot of small files; it may 
+happen that at a given time, all 8 available connections are in TIME-WAIT 
+state so no new ones can be opened. Specifying a very short MSL_T time and 
+always letting NestorTCP to automatically select the port number (so the 
+TIME-WAIT state itself is not needed at all since port numbers will never be 
+reused) is a solution for the problem.
+
+Below is an example of a pseudo-TCB. It assumes a local port of 1234, a 
+remote IP of 10.20.30.40 and a remote port of 5678. Connection is desired to 
+be active. Also, we want to set up RETX_EX_MAX to 10000 and ACK_DELAY_MAX to 
+11. The resulting pseudo-TCB is then:
+
+db	10,20,30,40	;Remote IP
+dw	5678	;Remote port
+dw	1234	;Local port
+db	0	;Active connection
+db	3	;Set up RETX_EX_MAX...
+dw	10000	;...to 10000
+db	6,11	;Set up ACK_DELAY_MAX to 11
+db	0	;pseudo-TCB end
+
+Note that all word values are little-endian.
+
+
+* &H8024 - TCP_CLOSE: Close a TCP connection
+
+Input:  A  = Connection number
+
+Output: - On success: Cy=0
+        - On error: Cy=1 and A = Error code:
+	  1: The specified connection does not exist
+	  2: The connection is already closing
+
+This is the routine for closing a TCP connection. Note that being compliant 
+with the TCP protocol specification, "closing" a connection does not cause to 
+immediately finish it, but only to tell the remote host that we have no more 
+data to send. The remote host may still sending data, and the connection will 
+finish only when he also closes the connection.
+
+To immediately finish a TCP connection regardless of the remote host's 
+status, use TCP_ABORT routine instead.
+
+
+* &H8027 - TCP_ABORT: Abort a TCP connection
+
+Input:  A  = Connection number
+
+Output: - On success: Cy=0
+        - On error: Cy=1 and A = Error code:
+	  1: The specified connection does not exist
+
+This is the routine for aborting a TCP connection. A "reset" segment will be 
+sent to the remote host, the TCB for the connection will be destroyed, and 
+the connection will be finished immediately.
+
+For a "less agressive" way of finishing a connection, use TCP_CLOSE routine 
+instead.
+
+
+* &H802A - TCP_SEND: Send data to a TCP connection
+
+Input:  A  = Connection number
+	HL = Address of the data to be sent
+	     (must be stored in a TPA segment)
+	BC = Length of the data
+	D  = Flags, when set, they instruct NestorTCP to:
+	     bit 0: Send the data as PUSHed
+	     bit 1: Send the data as URGent
+
+Output: - On success: Cy=0
+        - On error: Cy=1 and A = Error code:
+	  1: The specified connection does not exist
+	  2: Connection exists and is in the LISTEN state,
+	     but the remote socket is unespecified
+	  3: Connection is closing
+	  4: Not enough free memory to enqueue the data
+
+This is the routine for sending data to a TCP connection. The starting 
+address and the length of the data block must be specified; sending data to a 
+TCP connection is similar to the action of writing data into a disk file.
+
+The data will not be sent immediately, but enqueued into a NestorTCP internal 
+queue until enough data is available to send a complete data segment (or a 
+wait timeout expires). If the "PUSHed data" flag is set, this algorithm is 
+overriden and data is sent immediately (remember however that this 
+"immediately" assertion is relative; NestorTCP will only send one packet of 
+data on each timer interrupt). 
+
+The data may be also marked as "URGent". Urgent data is supposed to be 
+treated by the receiver more quickly than normal data; this normally depends 
+on the protocol used on top of TCP.
+
+Compliant with the TCP protocol specification, data may be sent to a TCP 
+connection which is in the LISTEN state. In that case, the connection passes 
+to the active mode and starts the connection negotiation. This is however not 
+possible if the remote socket is unespecified; if data is sent to such 
+passive connection, an error with code 2 is returned.
+
+Also, as explained in the TCP_CLOSE routine description, closing a TCP 
+connection does not immediately finish it, but it is only an indication for 
+the remote host telling that we will not send more data. Therefore, trying to 
+send data to a connection which is closing will cause an error with code 3 to 
+be returned.
+
+There is a bug on NestorTCP regarding the PUSH and URG bits on outgoing data. 
+Refer to section 5.4 for more details.
+
+
+* &H802D - TCP_RCV: Receive data from a TCP connection
+
+Input:  A  = Connection number
+	HL = Destination address for the data
+	     (must refer to a TPA segment)
+	BC = Length of the data
+	D  = Flags, when set, they instruct NestorTCP to:
+	     bit 0: Do NOT perform partial reading
+		(that is, if not enough data is available to satisfy the
+		 request, do not get data at all and return an error instead)
+
+Output: - On error: Cy=1 and A = Error code:
+	  1: The specified connection does not exist
+	  2: Connection is not ESTABLISHED yet
+	  3: Connection is closing
+	     (only if bit 0 of D is set and there is not enough data
+	      available to satisfy the request)
+	  4: Not enough data available to satisfy the request
+	     (only if bit 0 of D is set at input)
+	  5: No incoming data available
+	- On success: Cy=0 and
+	  A  = Various flags:
+	       bit 0: There is a block of urgent data
+		      at the start of the received data
+	  BC = Total number of bytes actually get (including urgent)
+	  HL = Size of the initial urgent data block
+	       (0 if bit 0 of A is not set)
+
+This is the routine for reading data from a TCP connection. The destination 
+address and the number of bytes to read must be specified; reading data from 
+a TCP connection is similar to the action of reading data from a disk file.
+
+Usually, if there is not enough available data to satisfy the request but 
+there is some data available after all, then as much data as possible is 
+read. This feature may however be disabled by setting the "no partial 
+readings" flag at input; in this case, not having enough data to satisfy the 
+request will cause an error with code 4 to be returned. Note that if no data 
+is available at all, an error 5 will be always returned, regardless of the 
+flag.
+
+An application program could want to enter on a loop waiting for a certain 
+amount of data to be available before retrieving it, with for example the 
+following code:
+
+WAIT:	ld	a,(CONNECTION)
+	ld	hl,ADDRESS
+	ld	bc,SIZE
+	ld	d,1
+	call	TCP_RCV
+	jp	nc,DATA_OK
+	cp	4
+	jr	z,WAIT
+	jp	RCV_ERROR
+
+However if the remote host closes the connection when some (but not enough) 
+incoming data is available, the previous code would cause an infinite loop, 
+since by closing the connection the remote host is saying that he will not 
+send any more data. To solve this problem (and make the previuos code safely 
+usable), the error with code 3 was added. It means "there is not enough data 
+available to satisfy your request, but additional new data will never arrive 
+because the remote host has closed the connection so it will not send more 
+data". The solution then is to repeat the RCV call but with D=0 in order to 
+get the remaining available data.
+
+The "not established yet" error means that the specified connection was 
+actually requested to be opened, but it has not reached yet a state (the 
+ESTABLISHED estate) in which data can be exchanged with the remote host (the 
+initial connection negotiations still in progress).
+
+If there is urgent data amongst the received data (if bit 0 of A is set at 
+output), then the urgent data block is always placed at the start, before the 
+"normal" block. HL states then the size of the urgent data block, and BC 
+states the total size of the block. In other words: size of the urgent block 
+is HL, and size of the "normal" block placed after the urgent block is BC-HL.
+
+
+* &H8030 - TCP_STATUS: Return information about a TCP connection
+
+Input:  A  = Connection number
+
+Output: - On error: Cy=1 and A = Error code:
+	  1: The specified connection does not exist
+	- On success: Cy=0 and
+	  A  = Current connection state (see routine description)
+	  B  = Various information flags, when set, they mean that:
+	       bit 0: There is incoming data available (of any type)
+	       bit 1: There is urgent incoming data available
+	       bit 3: There is outgoing data pending (of any type)
+	       bit 4: There is URGent outgoing data pending
+	       bit 5: There is PUSHed outgoing data pending
+	       bit 6: There is data in the retransmission queue
+	       bit 7: Unused, always zero
+	  HL = Pointer to connection's TCB
+
+This routine returns various information about a TCP connection. The 
+"connection state" encodes in a number one of the following values (see RFC 
+793 if you want to know what they mean):
+
+1: LISTEN
+2: SYN-SENT
+3: SYN-RECEIVED
+4: ESTABLISHED
+5: FIN-WAIT-1
+6: FIN-WAIT-2
+7: CLOSE-WAIT
+8: CLOSING
+9: LAST-ACK
+10: TIME-WAIT
+
+About the flags: bit 0 and 1 inform that there is available incoming data 
+that can be retrieved by using the TCP_RCV routine. Bits 3, 4 and 5 inform 
+that there is data that has been enqueued for output using the TCP_SEND 
+routine, but which has not been sent to the TCP connection yet (as explained 
+in the TCP_SEND routine description, outgoing data is not send immediately). 
+And finally, bit 6 informs that there is data which has already be sent but 
+whose reception has not been acknowledged yet by the remote host. There is no 
+way to know if the incoming data was either PUSHed by the sender or not.
+
+HL returns a pointer to the connection's TCB on the NestorTCP segment (this 
+address can be obtained also with the TCP_TABLES routine). The TCB contains 
+varios configuration and status information about the connection; see section 
+5.4.5 for more details.
+
+
+* &H8033 - TCP_FLUSH_OUT: Flush outgoing data of a TCP connection
+
+Input:  A  = Connection number
+
+Output: - On success: Cy=0
+        - On error: Cy=1 and A = Error code:
+	  1: The specified connection does not exist
+
+This routine will flush all the data which has been enqueued for output using 
+the TCP_SEND routine but which has not been sent yet to the connection, so 
+this data will never be sent. Note that this will not affect the already sent 
+but not yet acknowledged data which is stored in the retransmission queue.
+
+
+5.4.3. NestorTCP: THE CONFIGURATION CONSTANTS ZONE
+
+This section lists and explains the NestorTCP configuration constants which 
+are not TCP connection dependant. Their addresses are indicated as an offset 
+from the value returned by TCP_TABLES when executed with A=0 at input, and 
+their size in bytes is indicated together with their name. Unless otherwise 
+stated, all 2-byte constants are stored in little-endian order, the IP 
+addresses are stored in big-endian (for example 1,2,3,4 for 1.2.3.4), and the 
+timer values are expressed in units of 1/50 seconds.
+
+The user is expected to appropriately modify these constants before opening 
+an internet connection (or even after having opened it); the constants revert 
+to their default values when the internet connection is lost. To help in 
+developping a configuration program, a table with the default values of the 
+constants is available and its address returned when executing TCP_TABLES 
+with A=1. The user may for example copy this default values table over the 
+current values table, and then modify only the values he wants.
+
+Currently only two configuration constants are defined:
+
++0: DEF_RCV_BUF (2)
+Default value: 16100
+This is the value that will be set up on the TCB constant RCV_BUF when a TCP 
+connection is open unless otherwise specified on the pseudo-TCB (see the 
+TCP_OPEN routine description on previos section). It indicates the declared 
+size of the receive buffer for that connection; that is, the maximum amount 
+of incoming data that NestorRCP can hold waiting for the application program 
+to consume it. This value is used when computing the receive window to be 
+advertised to the remote host; for example, for a buffer size of 15000, and 
+if 5000 bytes were received but not yet consumed, a receive window of 10000 
+will be advertised. This value may be set up using TCPC.COM.
+
++2: ECHO_SERVER (1)
+Default value: #FF
+This is a flag indicating (when #FF) that port 7 will act as an echo server; 
+that is, if a connection is opened to that port, all incoming data will 
+immediately be sent back to the sender. This feature may be useful for 
+testing and debugging. This value may be set up using TCPC.COM.
+
+
+5.4.4. NestorTCP: THE VARIABLES ZONE
+
+In this section, the variables of the variables zone (containing variables 
+that are not TCP connection dependant) are listed and explained. Their 
+addresses are indicated as an offset from the value returned by TCP_TABLES 
+when executed with A=2 at input, and their size in bytes is indicated 
+together with their name. Unless otherwise stated, all 2-byte variables are 
+stored in little-endian order, the IP addresses are stored in big-endian (for 
+example 1,2,3,4 for 1.2.3.4), and the timer values are expressed in units of 
+1/50 seconds (active timers are increased in each timer interrupt). Note that 
+these variables are for internal use and not intended to be modified by the 
+user.
+
++0: DEINITING (1)
+This variable is set to #FF when NestorTCP is about to be uninstalled.
+
++1: LOCAL_IP (4)
+Local IP address, it is asked to the IP module at initialization time.
+
++5: NUM_CON (1)
+Number of TCP connections currently opened.
+
++6: CUR_CON (1)
+Connection currently being handled by NestorTCP (the one whose TCB is copied 
+into the temporary TCB). NestorTCP handles all the existing connections on 
+each timer interrupt.
+
++7: LOWER_STATUS (1)
+Status of the internet connection returned by the level 2 module in the 
+previous timer interrupt.
+
++8: SEG_PENDING (1)
+Flag indicating if there is a partially composed outgoing segment on the 
+output buffer.
+
++9: SEG_PEND_TSIZE (2)
+Total size of the partially composed segment on the output buffer.
+
++11: SEG_PEND_HSIZE (1)
+TCP header size of the partially composed segment on the output buffer.
+
++12: SEG_PEND_DSIZE (2)
+Data part size of the partially composed segment on the output buffer.
+
++14: SEG_PEND_CON (1)
+Connection number to which the partially composed segment on the output 
+buffer belongs.
+
++15: SEG_DLEN (2)
+Data part size of the last received segment.
+
++17: SEG_HLEN (1)
+Header size of the last received segment.
+
++18: SEG_TLEN (2)
+Total size of the last received segment.
+
++20: SEG_WND (2)
+Window size advertised in the last received segment.
+
++22: SEG_SEQ (4)
+Sequence number of the last received segment.
+
++26: SEG_ACK (4)
+Acknowledge number of the last received segment.
+
++30: SEG_UP (2)
+Urgent pointer of the last received segment.
+
++32: LAST_LOC_PORT (2)
+Last number used for automatic port selection when opening a connection with 
+a local port number of &HFFFF. Its initial value when INS is installed is 
+1023.
+
++34: MRU (2)
+Maximum Receive Unit (asked to the level 2 module at initialization time).
+
++36: MTU (2)
+Maximum Transmit Unit (asked to the level 2 module at initialization time).
+
++38: Pointers to the queues owned by NestorIP (3 bytes each one):
+IP_OUT_QUEUE
+TCP_IN_QUEUE
+UDP_IN_QUEUE
+
++47: IP_SEG (1)
+Segment number of the IP module.
+
++48: LV2_SEG (1)
+Segment number of the level 2 module.
+
++49: LAST_USED_CON (1)
+Connection allowed to send a datagram on the previous interrupt (only one 
+connection is allowed to send data on each interrupt; the permission pass 
+from one connection to another in a circular way).
+
++50: LAST_USED_TCB (2)
+Pointer to the TCB whose connection number is stored in LAST_USED_TCB.
+
++52: INT_LEVEL (1)
+Current execution level allowed for the interrupt driven part of NestorTCP. 
+This variable is used to avoid concurrence problems when NestorTCP interrupts 
+itself (this happens when any of the routines of the jump table is being 
+executed when the timer interrupt arrives):
+0: Can be executed completely, that is, it can update timers and send/receive 
+   data (normal mode)
+1: Can update timers but not send/receive data (when executing SEND, RCV, 
+   STATUS or FLUSH)
+2: Cannot be executed (when executing OPEN, CLOSE or ABORT)
+
++53: PREV_CON (1)
+Connection whose TCB was on the temporary TCB when the current timer 
+interrupt arrived.
+
++54: Temporary variables used to manage sequence numbers (4 bytes each one).
+TEMP_SEQ
+TEMP_SEQ2
+TEMP_SEQ3
+TEMP_SEQ4
+
++70: INT4_STEP (1)
+Flag used when processing an incoming data segment.
+
++71: ECHO_NOW (1)
+Flag set to #FF when processing data addressed to the echo server.
+
++72: ISS_T (2)
+Timer used for the ISS selection.
+
++74: LOADING_CON (1)
+Flag set to #FF when a connection is being loaded (used to avoid concurrence 
+problems). This variable was added on version 0.2 of NestorTCP.
+
+
+5.4.5. NestorTCP: TCB FORMAT
+
+This section explains the contents of the TCB (Transmission Control Block). A 
+TCB is a block of constants of variables which are used by NestorTCP to 
+manage each connection; a different TCB is created for each connection which 
+is opened. The starting address of the TCB for a given connection may be 
+obtained with either the routine TCP_TABLES or with TCP_STATUS, both in the 
+jump table (see section 5.4.2 for details).
+
+Unless otherwise stated, all 2-byte variables are stored in little-endian 
+order, the IP addresses are stored in big-endian (for example 1,2,3,4 for 
+1.2.3.4) as well as the sequence numbers, and the timer values are expressed 
+in units of 1/50 seconds (active timers are increased in each timer 
+interrupt). Configurable values and mere variables are mixed together; some 
+of these parameters have default values that can be overriden when the TCP 
+connection is opened, by specifying the desired values on the pseudo-TCB (see 
+TCP_OPEN routine description).
+
++0: CUR_STATE (1)
+Current TCP state of the connection, coded as one of these values (same as 
+the value returned by TCP_STATUS):
+
+0: CLOSED (this actually means that this connection does not exists, so this 
+TCB is currently not being used)
+1: LISTEN
+2: SYN-SENT
+3: SYN-RECEIVED
+4: ESTABLISHED
+5: FIN-WAIT-1
+6: FIN-WAIT-2
+7: CLOSE-WAIT
+8: CLOSING
+9: LAST-ACK
+10: TIME-WAIT
+
++1: REMOTE_IP (4)
+IP address of the remote host (first part of the remote socket).
+
++5: REMOTE_PORT (2)
+TCP port of the remote host (second part of the remote socket). It is stored 
+in big-endian order.
+
++7: LOCAL_PORT (2)
+Local TCP port used by NestorTCP for this connection (second part of the 
+local socket, the first part is the local IP). It is stored in big-endian 
+order.
+
++9: PASSIVE_OPEN (1)
+Flag indicating if the connection was opened as active (0) or as passive 
+(#FF).
+
++10: SND_UNA (4)
+First sequence number of sent data not acknowledged.
+
++14: SND_NXT (4)
+Next sequence number to send.
+
++18: SND_WND (2)
+Send window (advertised by the remote host).
+
++20: MAX_SNDW (4)
+The highest value of the send window advertised by the remote host.
+
++24: CWND (2)
+Congestion window.
+
++26: SSTHRESH (2)
+Slow start threshold.
+
++28: CONG_AVO (1)
+Flag indicating if either the slow start (0) or the congestion avoidance 
+(#FF) algorithm is being used.
+
++29: SS_CA_NEWACK (2)
+Number of new ACKed bytes.
+
++31: DUP_ACKS (1)
+Number of duplicate ACKs received.
+
++32: FLIGHT_SIZE (2)
+Number of bytes sent but not yet acknowledged.
+
++34: IDLE_T (2)
+Idle connection timer.
+
++36: Currently unused (10)
+
++46: SND_WL1 (4)
+Senquence number used for the last window update.
+
++50: SND_WL2 (4)
+ACK number used for the last window update.
+
++54: ISS (4)
+Initial Send Sequence Number.
+
++58: RCV_NXT (4)
+Next receive sequence number expected to be received.
+
++62: RCV_WND (4)
+Receive window advertised to the remote host.
+
++66: USABLE_W (4)
+Usable window.
+
++70: RCV_URG (1)
+Flag indicating (when #FF) that there is urgent data amongst the received 
+data.
+
++71: RCV_URG_LAST (4)
+Last sequence number of the pending outgoing urgent data.
+
++75: IRS (4)
+Initial Receive Sequence Number advertised by the remote host.
+
++79: SMSS (2)
+Maximum send segment size, advertised by the remote host.
+
++81: SMSS2 (2)
+The value 2*SMSS.
+
++83: EFF_SMSS (2)
+Effective SMSS.
+
++85: RMSS (2)
+Maximum receive segment size.
+
++87: Currently unused (2)
+
++89: RETX_EX_T (2)
+Excessive retransmissions timer.
+
++91: RETX_EX_MAX (2)
+Maximum allowed value for RETX_EX_T (if this value is reached, connection is 
+aborted).
+
++93: RETX_EX_MAX (2)
+Maximum allowed value for RETX_EX_T when a SYN segment has been sent (if this 
+value is reached, connection is aborted).
+
++95: USER_TOUT_V (2)
+Maximum allowed value for USER_TOUT_T (if this value is reached, connection 
+is aborted).
+
++97: USER_TOUT_T (2)
+User timeout counter; it is reset to zero every time new data is 
+acknowledged.
+
++99: SEND_TOS (1)
+Type Of Service byte to be used on the outgoing IP datagrams containing data 
+segments.
+
++100: Currently unused (2)
+
++102: SEND_PUSH (1)
+Flag indicating (when #FF) that there is PUSHed data amongst the pending 
+outgoing data.
+
++103: SEND_PUSH_LAST (4)
+Last sequence number of the pending outgoing pushed data.
+
++107: SEND_URG (1)
+Flag indicating (when #FF) that there is URGent data amongst the pending 
+outgoing data.
+
++108: SEND_URG_LAST (4)
+Last sequence number of the pending outgoing urgent data.
+
++112: RCV_BUF (2)
+Declared receive buffer size.
+
++114: RCV_BUF2 (2)
+The value RCV_BUF/2.
+
++116: OVERR_TOUT_V (1)
+Initial value for OVERR_T
+
++117: OVERR_T (1)
+"Override timeout" for pushed data: if this timer expires, pushed data is 
+sent even if there is not enough data to fill a complete segment.
+
++118: SYN_SENT_FLAG (1)
+Flag indicating (when #FF) that a SYN segment has been sent but not yet 
+acknowledged.
+
++119: SYN_SENT_SEQ (4)
+Sequence number of the SYN segment sent.
+
++123: FIN_SENT_FLAG (1)
+Flag indicating (when #FF) that a FIN segment has been sent but not yet 
+acknowledged.
+
++124: FIN_SENT_SEQ (4)
+Sequence number of the FIN segment sent.
+
++128: Retransmission queue pointer, first sequence number, last sequence 
+number, and size.
+RETX_QUEUE (3)
+RETX_FIRST (4)
+RETX_LAST (4)
+RETX_SIZE (4)
+
++143: Input queue pointer, first sequence number, last sequence number, and 
+size.
+DATA_IN_QUEUE (3)
+DATA_IN_FIRST (4)
+DATA_IN_LAST (4)
+DATA_IN_SIZE (4)
+
++158: Output queue pointer, first sequence number, last sequence number, and 
+size.
+DATA_OUT_QUEUE (3)
+DATA_OUT_FIRST (4)
+DATA_OUT_LAST (4)
+DATA_OUT_SIZE (4)
+
++173: ACK_DELAY_MAX (1)
+Maximum value for ACK_DELAY_T.
+
++174: ACK_RCV_MAX (2)
+Number of new incoming data bytes we wait for before sending an ACK.
+
++176: ACK_DELAYED (1)
+Flag indicating (when #FF) that an outgoing ACK is pending but delayed.
+
++177: ACK_RCV_NUM (2)
+Number of new incoming data bytes not yet acknowledged.
+
++179: ACK_DELAY_T (1)
+ACK delay timer; if it reaches ACK_DELAY_MAX, an ACK is sent even if 
+ACK_RCV_NUM is lower than ACK_RCV_MAX.
+
++180: RTO (2)
+Retransmission timeout value (the initial value is 150, that is 3 seconds).
+
++182: RTO_T (2)
+Retransmission timer.
+
++184: RTO_RUN (1)
+Flag indicating (when #FF) that RTO_T is running.
+
++185: RTT_M_T (2)
+Timer that trigges a RTT measuere when it expires.
+
++187: RTT (2)
+Last measured RTT (Round Trip Time).
+
++189: RTT_M_ON (1)
+Variable for controlling the RTT measure:
+0: No need to measure RTT currently
+1: RTT must be measured the next time a segment is sent
+2: A RTT measure is in progress
+
++190: RTT_M_CUR (2)
+Timer used to measure RTT.
+
++192: RTT_M_SEQ (4)
+Sequence number whose RTT is being measured.
+
++196: SRTT (2)
+Smoothed RTT to calculate RTO.
+
++198: RTTVAR (2)
+RTT variance.
+
++200: RTO_MAX (2)
+Maximum value for RTO.
+
++202: NAGLE_ON (1)
+Flag indicating (when #FF) that the Nagle algorithm is being used.
+
++203: CLOSE_PENDING (1)
+Flag indicating (when #FF) that a connection close request was made, but 
+there is outgoing data not yet sent.
+
++204: RETX_PEND (1)
+Flag indicating (when #FF) that there is data pending to be retransmitted in 
+the next interrupt in which we have permission to send data.
+
++205: MSL_T (2)
+Maximum Segment Lifetime counter for the TIME-WAIT state.
+
++207: RWND_UPD_FLAG (1)
+Flag indicating (when #FF) that the receive window has been updated and 
+therefore an ACK must be sent.
+
++208: UPWND_PEND (1)
+Flag indicating (when #FF) that the receive window must be updated (set when 
+new data arrived or when old incoming data is retrieved with TCP_RCV).
+
++209: MSL_T_CUR (2)
+Period of time the connection will remain in TIME-WAIT state before being 
+closed (if the connection actually reaches this state). It may be specified 
+when opening the connection. Default is 2400 (2 minutes).
+
++211: LAST_RETX_PUSH (4)
+Last sequence number sent with the PSH bit set. Used to determine if a 
+retransmitted data packet must have this bit set.
+
++215: LAST_RETX_URG (4)
+Last sequence number sent with the UEG bit set. Used to determine if a 
+retransmitted data packet must have this bit set (and to calculate then the 
+value of the URG field).
+
++219: PROBE_ZW_V (2)
++221: PROBE_ZW_T (2)
+Initial value and current value of the timer used for zero window probing.
+
++223: LAST_RCVD_ACK (4)
+Last sequence number acknowledged by the other side. Used to detect duplicate 
+segments.
+
++227: FAST_RECOV_FLAG (1)
+Flag indicating (when #FF) that the "fast recovery" algorythm is being used.
+
++228: LAST_USED_RTO (2)
+Last value used for the RTO timer.
+
+Variables MSL_T_CUR to LAST_RETX_URG were added on version 0.2 of NestorTCP. 
+Variables starting at PROBE_ZW_V where added on version 0.3.
+
+
+6. WHAT AM I ASKING FOR
+
+Mainly betatesting, that is, test InterNestor Suite and inform me about if 
+either it works or nor, if it has strange behaviors, etc. This is the 
+definitive version of InterNestor Suite, and I will not release further 
+version unless someone reports me any bug. On the other hand, it would be 
+very nice if now someone decides to develop some Internet applications. I 
+have no time for programming all the applications which would make MSX 
+computers to really be present on the internet (for example a web browser, or 
+a complete e-mail client).
+
+About existing prblems on INS, there are two which I could not solve yet, and 
+I would like to know if someone else has also these problems:
+
+1) Active connection (not setting the PASSIVE_OPEN flag via configuration 
+file) does not work if connection is opened immediately after the modem 
+detects the carrier (when CD led ligths up), that is, when MSX is actually 
+the one who first sends configuration packets: MSX and ISP then exchange 
+configuration packets in an infinite loop, until ISP gives up and closes 
+connection.
+
+However this problem is now not very important, since it does not appear when 
+NDIAL.COM is used to connect to the ISP in the way explained in sections 2.2 
+and 2.3 (in the interval between NDIAL.COM finishes and PPPC.COM is executed 
+to open the connection, there is more than enough time for remote 
+configuration packets to arrive to the MSX).
+
+2) After INS is installed, MSX can't detect the incoming packets until a DIR 
+is made from DOS and the free space on disk appears. I'm completely 
+astounished by this error.
+
+I also would like to know if connection is completed successfully with 
+various ISPs, what are the messages shown in verbose mode, etc. And now that 
+a telnet client is available, please use it to connect to your favorites 
+telnet, SMTP and POP3 servers and tell me the your experiences!
+
+And finally: INS slows down the computer, and I want to know your opinion 
+about this speed loss: it is reasonable, it is too big, or how it is? Mainly 
+for MSX2/2+ users.
+
+You can find me at: konamiman@konamiman.com, my web page is: 
+http://msx.konamiman.com. Thank you a lot.
+
+

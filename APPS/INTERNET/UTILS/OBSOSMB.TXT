@@ -1,0 +1,191 @@
+ObsoSMB 1.0 - SMB server for MSX
+By Konamiman, 4/2011
+http://www.konamiman.com
+konamiman@konamiman.com
+
+
+  1. What is this?
+
+SMB (Server Msssage Block) is the network protocol used by Microsoft Windows operating systems to share resources such as disk foldersS and printers. ObsoSMB is a SMB server that allows your MSX to share its disk drives, so when your MSX has a network card and runs ObsoSMB, computers running Windows can see and manipulate the contents of the MSX disk drives. You can use it to transfer files between your MSX and your PC, and to perform maintenance operations such as file rename/delete/attribute change. You can even open and edit your MSX files from your PC (always wanted to edit your AUTOEXEC.BAT from Notepad? Now you can).
+
+ObsoSMB has been tested with the following clients:
+
+- Windows XP Home SP3
+- Windows XP Professional SP3
+- Windows Vista Business SP2
+- Windows Server 2008 R2 Standard
+- Windows 7 Home Premium
+- Windows 7 Ultimate 64 bits
+
+
+  2. How to start the server?
+
+First of all, create an environment item named "TIMEZONE" with a value with the format "[+|-]hh:mm", where "hh" represents hours (from 00 to 12) and "mm" represents minutes (from 00 to 59). For example: "SET TIMEZONE=+01:00". The value sohuld represent the same time zone configured in the clients. If this environment item is not set, the file modification times shown in the clients will not match the actual values stored in the corresponding MSX directory entries.
+
+Now, make sure you have a TCP/IP UNAPI implementation running in your MSX, then start the server from the MSX-DOS prompt:
+
+  OBSOSMB <drives to share>
+
+For example, if you want to share drives A:, B: and C:
+
+  OBSOSMB ABC
+
+Instead of a drive list you can use the keyword "all", this will share all the drives available in the system.
+
+If you add the parameter "mode=ro" to the command line, the drives will be shared in read-only mode (that is, you will not be able to create, delete, rename or otherwise modify the files on the MSX from the clients).
+
+
+  3. How do I see the shared drives?
+
+ObsoSMB exposes a network share for each shared drive, the name of the share is the drive letter itself. You can access the share from the windows client by using the following syntax: "\\<MSX IP address>\<drive letter>". For example "\\192.168.0.100\a" assuming that your MSX has the IP address 192.168.0.100 and is sharing drive A:.
+
+To see a list of the shared drives, open a MS-DOS command prompt and execute the following:
+
+  NET VIEW \\<MSX IP address>
+
+You can also open a regular explorer window and type "\\<MSX IP address>" in the location bar, but this does not always work (you may wait forever to get a response or you may get an error message).
+
+
+  4. How do I access the shared drives?
+
+Contents of the shared drives can be accessed in two ways: directly, or by first mapping the share to a network drive.
+
+To try the direct access, open a MS-DOS command prompt and execute the following:
+
+  DIR \\<MSX IP address>\<drive>
+
+or open a regular explorer window and type "\\<MSX IP address>\drive" in the location bar.
+
+In order to map the shared drive to a Windows drive, open a MS-DOS command prompt and execute the following:
+
+  NET USE X: \\<MSX IP address>\<drive>
+
+or right click on "My computer" and select "Connect to a network share".
+
+To cancel the network drive assignation, execute the following from a MS-DOS command prompt:
+
+  NET USE X: /DELETE
+
+or right click the drive letter in Windows explorer and select "Disconnect".
+
+Once you are connected to a shared drive, you can use the MSX drive as if it were a regular Windows drive. So you can:
+
+- Copy/move files between MSX and PC, or between different locations on the MSX itself.
+- Create, delete, rename, open files and directories.
+- View and change file attributes.
+- Check the drive size and free space (you need to map the share to a Windows drive for this).
+
+
+  5. Server limits
+
+ObsoSMB has the following usage limits:
+
+- Authentication not implemented. Any user name and password supplied by the client will be accepted.
+- Up to 8 simultaneous client connections.
+- Up to 8 simultaneous drive connections per client connection.
+- Up to 8 simultaneous file opens per drive connection.
+- Up to 8 simultaneous file searches per drive connection.
+
+Note however that ObsoSMB will run out of memory much before you reach all these limits. So don't expect that you will be able to open 8 client connections, each with 8 drive connections, and each with 8 open files.
+
+
+  6. Known issues
+
+- I'm sorry but ObsoSMB does not work with Samba clients. I tried, but I had problems which I could not solve. Maybe in a future version.
+
+- As mentioned above, typing "\\<MSX IP address>" in the location bar of a window to see a list of the shared drives will not always work. In particular, it seems to never work on Windows XP.
+
+- Sometimes you can get strange errors when navigating folders or opening files from a explorer window, such as:
+  - "Directory does not exist"
+  - "Invalid parameter"
+  - "Remote procedure call failed"
+
+If this happens, sometimes it is enough trying to retry the operation. Other times you will need to close and reopen the window, or to cancel the network drive assignation and reassign it again.
+
+Transferring files between the MSX and the Windows client seems to work fine, though.
+
+- If you try to delete a file that can't be deleted (because it has the read-only attribute set, the drive is write protected, or the server is started in read-only mode), no error will be thrown and the file will disappear from file list in the window. However the file will not have been deleted, and you will see it again if you refresh the file list.
+
+- If you try to create a new directory from an explorer window, Windows will give the directory the name "New folder", which is illegal in MSX-DOS due to the space, and the operation will fail. Instead, use the MD command from a MS-DOS command prompt; or create the directory in your Windows desktop, rename it, then move it to the shared drive window.
+
+
+  7. ObsoSMB internals
+
+  7.1. Commands implemented
+
+ObsoSMB is based in the MS-CIFS specification. However, it is not a comprehensive implementation of the specification; rather, it has been developed "on the fly", looking at the TCP frames used by Windows clients and implementing the SMB commands needed to make it work. Therefore, when compared with the MS-CIFS specification there are both unimplemented mandatory commands (which I didn't implement because I have no way to test them) and implemented deprecated commands (which are still used by modern Windows clients).
+
+ObsoSMB implements the following SMB commands:
+
+SMB_COM_NEGOTIATE
+SMB_COM_SESSION_SETUP_ANDX
+SMB_COM_TREE_CONNECT_ANDX
+SMB_COM_TREE_DISCONNECT
+SMB_COM_OPEN_ANDX
+SMB_COM_WRITE (*)
+SMB_COM_READ_ANDX
+SMB_COM_CLOSE
+SMB_COM_TRANSACTION
+SMB_COM_TRANSACTION2
+SMB_COM_QUERY_INFORMATION (*)
+SMB_COM_FIND_CLOSE2
+SMB_COM_QUERY_INFORMATION2 (*)
+SMB_COM_CREATE_DIRECTORY (*)
+SMB_COM_DELETE_DIRECTORY
+SMB_COM_RENAME
+SMB_COM_DELETE
+SMB_COM_SET_INFORMATION (*)
+SMB_COM_ECHO
+SMB_COM_QUERY_INFORMATION_DISK (*)
+
+Commands marked with (*) are marked as deprecated in the MS-CIFS specification, but are implemented because modern versions of Windows still use them.
+
+The only SMB_COM_TRANSACTION subcommands implemented are TRANS_WAIT_NMPIPE (which does nothing) and TRANS_TRANSACT_NMPIPE (used for the RPC emulation).
+
+The SMB_COM_TRANSACTION2 subcommands implemented are:
+
+TRANS2_QUERY_FS_INFORMATION
+TRANS2_FIND_FIRST2
+TRANS2_FIND_NEXT2
+TRANS2_QUERY_PATH_INFORMATION
+
+The TRANS2_QUERY_FS_INFORMATION information levels supported are:
+
+SMB_QUERY_FS_ATTRIBUTE_INFO
+SMB_INFO_VOLUME
+SMB_INFO_ALLOCATION
+
+The TRANS2_FIND_* information levels supported are:
+
+SMB_INFO_STANDARD
+SMB_FIND_FILE_FULL_DIRECTORY_INFO
+SMB_FIND_FILE_BOTH_DIRECTORY_INFO
+
+The only information level supported for TRANS2_QUERY_PATH_INFORMATION is SMB_QUERY_FILE_BASIC_INFO.
+
+The following commands are NOT implemented altough they are part of the MS-CIFS specification and are not deprecated:
+
+SMB_COM_LOCKING_ANDX
+SMB_COM_FLUSH
+SMB_COM_WRITE_ANDX
+SMB_COM_TRANSACTION_SECONDARY
+SMB_COM_TRANSACTION2_SECONDARY
+SMB_COM_LOGOFF_ANDX
+
+Also, SMB_COM_NT_* commands are not supported.
+
+
+  7.2. RPC emulation
+
+ObsoSMB partially emulates the Windows RPC mechanism so that clients can retrieve the shares list. Only the SRVSVC pipe is emulated, and only for the NetShareEnum and NetSrvGetInfo operations.
+
+The RPC emulation has been implemented mostly by trial and error. It works but may require rework if future versions of Windows behave differently.
+
+
+  7.3. Others
+
+- No security mechanisms have been implemented whatsoever. No authentication (any credentials provided by clients will be accepted), no signing, no encryption, etc.
+
+- Unicode is not supported. If you try to access files which have non-standard ASCII characters you will get funny results.
+
+- Locking mechanism is not implemented. Don't try to modify the same file from two computers at the same time if the file is valuable for you.

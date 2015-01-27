@@ -1,0 +1,4188 @@
+InterNestor Lite 1.1.1
+Copyright (c) 2003-2007 por Konamiman
+-------------------------------------
+
+Este programa es software libre: puedes redistribuirlo y/o modificarlo bajo
+los tÇrminos de la Licencia P£blica General GNU publicada por la Fundaci¢n
+para el Software Libre, ya sea la versi¢n 3 de la Licencia, o (a tu elecci¢n)
+cualquier versi¢n posterior. Ver http://www.gnu.org/licenses/
+
+ObsoNET Copyright (c) 2004
+por Daniel Berdugo (hardware) y NÇstor Soriano (software)
+
+
+1. INTRODUCCI‡N
+
+1.1. ®QUê ES INTERNESTOR LITE?
+
+InterNestor Lite (INL) es una pila TCP/IP para ordenadores MSX2 con 128K RAM.
+Existen dos versiones: INL para puerto serie, e INL para Ethernet.
+
+INL para puerto serie (RS232) permite la conexi¢n a Internet por medio de un
+ISP usando un modem, as° como la conexi¢n directa a otro ordenador por medio
+de un cable null-modem. Esta versi¢n usa PPP como protocolo de nivel de
+enlace, y requiere la instalaci¢n previa del driver Fossil (desarrollado por
+Erik Maas).
+
+INL para Ethernet permite la comunicaci¢n con otras m†quinas en una red
+Ethernet, as° como la conexi¢n a Internet por medio de un router ADSL o de
+conexi¢n por cable. Esta versi¢n requiere la presencia de un API compatible
+con la especificaci¢n UNAPI de Ethernet.
+
+INL para Ethernet es compatible con INL para RS232 a nivel IP, por lo que las
+aplicaciones de red normalmente no necesitan saber que versi¢n est† instalada.
+Sin embargo, ambas versiones difieren en cuanto a funcionalidad de bajo nivel
+(por ejemplo, la versi¢n serie maneja comandos de modem e implementa el
+protocolo PPP, mientras que la versi¢n Ethernet implementa los protocolos
+DHCP y ARP). Se proporciona una funci¢n que informa sobre la versi¢n de INL
+que est† instalada, para ser usada por las aplicaciones que lo necesiten (ver
+secci¢n 3.1.3).
+
+Este manual se divide en tres partes: Introducci¢n, donde se enumeran las
+caracter°sticas generales de INL; Gu°a del usuario, donde se explica c¢mo
+instalar y configurar INL, as° como las opciones de uso de las aplicaciones
+inclu°das; y Gu°a del programador, £til para aquellos que quieran desarrollar
+aplicaciones con acceso a Internet basadas en INL.
+
+(Nota para los usuarios de ObsoNET: INL para Ethernet reemplaza a INL para
+tarjetas ObsoNET, ofreciendo el mismo nivel de funcionalidad; INL para
+ObsoNET est† ahora discontinuado. La BIOS de ObsoNET es compatible con la
+UNAPI Ethernet desde la versi¢n 1.1, por tanto los usuarios de ObsoNET
+pueden usar esta versi¢n de INL con una simple actualizaci¢n de la BIOS de
+la tarjeta.)
+
+
+1.2. ARQUITECTURA GENERAL DE INTERNESTOR LITE
+
+INL es un programa residente: una vez instalado, act£a como tarea de fondo
+acoplada al gancho de la interrupci¢n del reloj. Otros programas pueden hacer
+uso de las rutinas y variables expuestas por INL de forma similar a como usan
+rutinas de la BIOS o funciones del sistema operativo, consiguiendo as° acceso
+a Internet (o bien, comunicaci¢n punto a punto o acceso a red local).
+
+INL para puerto serie permite conectar un MSX a Internet mediante una cuenta
+de acceso contratada con cualquier proveedor de acceso a Internet (ISP)
+usando un modem normal. Por este motivo, adem†s de los protocolos TCP/IP
+tambiÇn soporta PPP, que es el protocolo de nivel de enlace usado para
+establecer conexiones con ISPs; y por supuesto, INL tambiÇn puede enviar
+comandos al modem para marcar el n£mero de telÇfono del ISP.
+
+Por otra parte, INL tambiÇn puede ser usado para realizar una conexi¢n
+directa con otro equipo. Para ello se necesita un cable null-modem, y que el
+otro equipo tambiÇn soporte PPP y TCP/IP (por ejemplo otro MSX con INL,
+o un PC con Linux). En este caso es necesario un poco de trabajo adicional
+antes de la conexi¢n, ya que las direcciones IP a usar deben ser configuradas
+manualmente (en el caso de la conexi¢n mediante ISP, las direcciones IP se
+obtienen autom†ticamente).
+
+INL para Ethernet permite conectar un MSX a Internet mediante un router de
+ADSL o de cable, por lo cual soporta el protocolo DHCP para la obtenci¢n de
+la direcci¢n IP y de otros par†metros. Por supuesto tambiÇn es posible la
+configuraci¢n manual, para conexiones a redes Ethernet simples.
+
+INL para puerto serie se basa en el driver Fossil de Erik Maas para el acceso
+de bajo nivel al puerto RS232. INL para Ethernet se basa en las rutinas de
+la UNAPI Ethernet para acceder a la red a bajo nivel.
+
+INL consiste en un £nico fichero, INL.COM, que permite instalar/desinstalar
+INL (el propio c¢digo residente que se instala tambiÇn est† incrustado en
+INL.COM), abrir/cerrar conexiones PPP (s¢lo la versi¢n serie), gestionar las
+tablas ARP y de enrutamiento (s¢lo la versi¢n Ethernet), consultar/establecer
+diversos par†metros de INL, consultar el estado de las conexiones TCP, y
+resolver un nombre de host (obtener su direcci¢n IP).
+
+INL se instala en dos segmentos de RAM del mapeador primario: uno para c¢digo
+y otro para variables y b£feres de datos; y tambiÇn reserva una zona de 256
+bytes en TPA. Todo esto se detalla en la Gu°a del Programador.
+
+
+1.3. CARACTER÷STICAS Y L÷MITES
+
+INL est† pensado para ser r†pido y ocupar poca memoria. Por esta raz¢n
+presenta una serie de limitaciones:
+
+* Generales
+
+- No soporta ICMP, excepto los mensajes "Destino inaccesible" y el env°o y
+recepci¢n de mensajes de eco (PINGs). Se puede elegir el tama§o de estos
+paquetes cuando se env°an, pero no su contenido. An†logamente, se puede
+consultar el tama§o de las respuestas recibidas pero no su contenido.
+- Soporta el env°o y la captura de datagramas en bruto, pero con este
+procedimiento s¢lo puede capturar un datagrama a la vez.
+- Versi¢n serie: la implementaci¢n del protocolo PPP es una simplificaci¢n de
+la especificaci¢n completa, que deber°a funcionar en circunstancias normales.
+Por ejemplo, se usa un aut¢mata simplificado de s¢lo cinco estados (cerrado,
+negociaci¢n LCP, autentificaci¢n, negociaci¢n IPCP y abierto).
+- Versi¢n serie: aunque el est†ndar PPP dicta que se deben aceptar paquetes
+de datos de hasta 1500 bytes de longitud mientras no se haya negociado un
+tama§o menor, INL siempre descartar† los paquetes mayores de 582 bytes que
+reciba.
+- Versi¢n Ethernet: la tabla ARP est† limitada a 32 entradas, y la tabla de
+enrutamiento est† limitada a 16 entradas.
+
+* IP
+
+- El tama§o m†ximo de datagrama soportado es 576 bytes.
+- No soporta fragmentaci¢n IP ni reensamblaje de datagramas fragmentados
+recibidos; los fragmentos de datagrama recibidos siempre se ignoran (excepto
+al enviar y recibir datagramas en bruto).
+- No es posible incluir opciones IP en los datagramas salientes; adem†s, las
+opciones IP de los datagramas entrantes siempre se ignoran (excepto al enviar
+y recibir datagramas en bruto).
+- INL no soporta la direcci¢n de loopback (127.x.x.x) ni puede enviarse
+datagramas a s° mismo.
+
+* UDP
+
+- INL puede almacenar un m†ximo de ocho paquetes UDP recibidos de hasta 556
+bytes cada uno. Estos paquetes deben ser consumidos por alguna aplicaci¢n en
+un tiempo razonable; los paquetes nuevos que llegan cuando ya hay ocho
+almacenados se pierden. Lo mismo ocurre con los paquetes de respuesta de eco
+ICMP.
+
+* TCP
+
+- S¢lo se pueden abrir cuatro conexiones TCP simult†neamente.
+- Cada conexi¢n dispone de un b£fer fijo de 1024 bytes para almacenar datos
+salientes, y de otro del mismo tama§o para almacenar datos entrantes.
+- No existe el estado TIME-WAIT. Las conexiones se cierran directamente cuando
+deber°an entrar en dicho estado.
+- S¢lo se reconoce la opci¢n TCP MSS (aunque INL nunca enviar† segmentos
+mayores de 448 bytes). Se env°a siempre una opci¢n TCP MSS=448 al iniciar una
+conexi¢n.
+- No es posible enviar datos urgentes. Adem†s, el bit URG y el puntero a datos
+urgentes de los segmentos recibidos siempre se ignoran.
+- S¢lo es posible enviar datos a una conexi¢n TCP cuando est† en el estado
+ESTABLISHED o CLOSE-WAIT.
+- No es posible convertir una conexi¢n pasiva en activa (ya sea reabriÇndola
+como activa o envi†ndole datos).
+- El n£mero de secuencia inicial de env°o para las conexiones nuevas es
+siempre cero.
+- S¢lo se env°a un segmento de datos a la vez. Es decir, una vez que se ha
+enviado un segmento, no se env°an m†s (excepto retransmisiones) hasta que se
+recibe un reconocimiento para los datos de dicho segmento, con independencia
+del valor de la ventana de transmisi¢n.
+- El intervalo entre retransmisiones de datos est† fijado en tres segundos. El
+intervalo entre comprobaciones de ventana cero est† fijado en 10 segundos.
+- Se usa una aproximaci¢n simplificada del algoritmo "SWS Avoidance": el
+tama§o de ventana anunciado es igual al espacio libre en el b£fer de
+recepci¢n, con los siete bits bajos puestos a cero. Es decir, la ventana de
+recepci¢n anunciada se incrementa y decrementa en pasos de 128 bytes. Cuando
+el espacio libre es inferior a 128 bytes, se anuncia el valor real.
+- Se usa una aproximaci¢n simplificada del algoritmo de Nagle. Si los datos a
+enviar tienen el bit PUSH establecido, se env°an inmediatamente. En caso
+contrario, se env°an cuando se acumulan suficientes bytes como para enviar un
+segmento de tama§o m†ximo completo o cuando pasan 0.5 segundos desde que se
+encolaron los primeros datos pendientes de env°o, lo que ocurra antes.
+- No se han implementado los algoritmos Slow Start/Congestion Avoidance, pero
+se env°a un segmento ACK inmediatamente cuando se reciben segmentos con n£mero
+de secuencia inesperado, de forma que si el m¢dulo TCP del otro extremo
+implementa dichos algoritmos podr† funcionar correctamente cuando interact£e
+con INL.
+- Se implementa el mecanismo de reconocimientos retardados ("Delayed ACK")
+para TCP: se env°a un segmento ACK cuando se acumulan 256 bytes nuevos
+recibidos o cuando pasan 0.1 segundos desde que llegaron los primeros datos
+nuevos, lo que ocurra antes.
+
+* DNS
+
+- S¢lo es posible convertir nombres de host en direcciones IP.
+- S¢lo es posible realizar una consulta a la vez.
+- Cuando una consulta devuelve una lista de servidores en vez de una respuesta
+(consultas no recursivas), s¢lo se consulta al primero de ellos, y si Çste no
+responde se considera que la consulta ha falado.
+- S¢lo se usa UDP. El paso a TCP al recibir un datagrama truncado no est†
+soportado.
+
+
+2. INTERNESTOR LITE - GUIA DEL USUARIO
+
+2.1. REQUISITOS
+
+INL requiere la siguiente configuraci¢n para funcionar:
+
+- Ordenador MSX2, 2+ o Turbo-R.
+- Soporta tanto MSX-DOS 1 como MSX-DOS 2 (se recomienda DOS 2).
+- 128K de memoria RAM en el mapeador primario. En caso de usar DOS 2, se
+recomiendan 256K y es necesario que haya dos segmentos libres.
+- Versi¢n serie: interfaz RS-232, o bien ACCNET o cualquier otro hardware
+reconocido por el driver Fossil. TambiÇn, modem y cuenta de acceso para la
+conexi¢n a internet v°a ISP, o bien cable null-modem para la conexi¢n
+directa a otro ordenador.
+- Versi¢n Ethernet: una implementaci¢n de la UNAPI Ethernet (normalmente
+proporcionada por el hardware de Ethernet, por ejemplo una tarjeta ObsoNET).
+TambiÇn, conexi¢n a una red Ethernet, o bien conexi¢n a Internet por medio de
+un router de ADSL o de cable.
+
+INL funcionar† en ordenadores con 128K RAM bajo DOS 2 a condici¢n de que
+ning£n otro programa haya reservado ning£n segmento de RAM. Esto implica que
+con dicha configuraci¢n no es posible usar COMMAND 2.4x, crear RAM disk ni
+usar otros programas residentes.
+
+INL no funciona en MSX Turbo-R con ampliaci¢n de memoria externa bajo DOS 1.
+Si tienes esa configuraci¢n, para usar INL deber†s arrancar en modo DOS 2
+(recomendado) o quitar la ampliaci¢n de memoria.
+
+
+2.2. FICHEROS INCLUIDOS
+
+La distribuci¢n actual de INL consta de los siguientes ficheros:
+
+- INL-SER.COM: Programa de instalaci¢n, configuraci¢n y control de INL
+(versi¢n serie).
+
+- INL-ETH.COM: Programa de instalaci¢n, configuraci¢n y control de INL
+(versi¢n Ethernet).
+
+- DRIVER.COM: Driver Fossil para acceso al puerto RS232, es necesario
+instalarlo antes de instalar INL (s¢lo para la versi¢n serie).
+
+- INL11-S.TXT: Gu°a del usuario y del programador de INL, es espa§ol.
+
+- INL11-E.TXT: Gu°a del usuario y del programador de INL, es inglÇs.
+
+- PING.COM: Cliente sencillo de PING.
+
+- TFTP.COM: Cliente y servidor de TFTP.
+
+- TCPCON.COM: C¢nsola TCP (cliente de Telnet simplificado).
+
+- TELNET.COM: Cliente de Telnet.
+
+- PING-S.ASC: C¢digo fuente de PING.COM, comentado en espa§ol.
+
+- PING-E.ASC: C¢digo fuente de PING.COM, comentado en inglÇs.
+
+- TFTP-S.ASC: C¢digo fuente de TFTP.COM, comentado en espa§ol.
+
+- TFTP-E.ASC: C¢digo fuente de TFTP.COM, comentado en inglÇs.
+
+- TCPCON-S.ASC: C¢digo fuente de TCPCON.COM, comentado en espa§ol.
+
+- TCPCON-E.ASC: C¢digo fuente de TCPCON.COM, comentado en inglÇs.
+
+NOTA: En este documento, el programa de control de INL es mencionado de forma
+genÇrica como INL.COM. En realidad, es necesario usar o bien INL-SER.COM o
+bien INL-ETH.COM. El ejecutable a usar puede ser renombrado a INL.COM para
+mayor comodidad.
+
+
+2.3. GUIA DE INICIO RµPIDO
+
+En esta secci¢n se describen de forma breve los pasos necesarios para
+instalar INL y dejarlo listo para el uso de aplicaciones de red. Las opciones
+de uso del programa INL.COM se describen con detalle en la secci¢n 2.4.
+
+NOTA: Instalaciones y desinstalaciones sucesivas de INL pueden causar que
+aparezca el error "Not enough memory" al intentar ejecutar cualquier programa.
+Si eso ocurre, basta salir al BASIC (comando BASIC) y volver al DOS (comando
+CALL SYSTEM) para solucionar el problema.
+
+
+2.3.1. VERSI‡N SERIE
+
+1) Instala el driver Fossil, simplemente ejecutando DRIVER.COM; vuelve al DOS
+con CALL SYSTEM
+
+2) Instala INL ejecutando: INL I
+
+3) Para abrir una conexi¢n a Internet, ejecuta:
+
+INL PPP O /N:<numero> /U:<usuario> /P:<contrase§a> /I
+
+donde <numero> es el n£mero de telÇfono de tu ISP, y <usuario> y <contrase§a>
+son los datos da la cuenta de acceso que te proporcion¢ tu ISP.
+
+Nota: este paso asume que est†s conectando a Internet por medio de un ISP
+usando un modem. Para conexiones directas mediante cable null-modem, no es
+necesario el par†metro /N, y probablemente tampoco ser†n necesarios los
+par†metros /U ni /P.
+
+4) Una vez conectado puedes usar programas que hagan uso de INL para acceder
+a Internet, por ejemplo los programas PING.COM, TFTP.COM y TCPCON.COM,
+incluidos en la distribuci¢n de INL.
+
+5) Para cerrar la conexi¢n a Internet, ejecuta:
+
+INL PPP C
+
+Puedes volver a conectar cuando quieras como se ha explicado en el paso 3.
+
+6) Para desinstalar INL, ejecuta:
+
+INL U
+
+Puedes volver a instalar INL cuando quieras como se ha explicado en el paso 2.
+
+
+2.3.2. VERSI‡N ETHERNET
+
+1) Crea con cualquier editor de textos un fichero de configuraci¢n llamado
+INL.CFG y gr†balo en el mismo directorio de INL.COM.
+
+En caso de configuraci¢n por DHCP (lo cual es lo usual al usar un router de
+ADSL o de cable), el contenido del fichero ha de ser simplemente esta l°nea:
+
+ip d 63
+
+En caso de configuraci¢n manual, el contenido del fichero ha de ser el
+siguiente:
+
+ip l <direcci¢n IP del MSX>
+ip m <m†scara de subred>
+ip g <router predeterminado>
+ip p <servidor DNS primario>
+ip s <servidor DNS secundario>
+
+Un ejemplo de fichero de configuraci¢n manual:
+
+ip l 192.168.0.2
+ip m 255.255.255.0
+ip g 192.168.0.1
+ip p 10.20.30.40
+ip s 50.60.70.80
+
+Nota: bajo DOS 2 se pueden usar variables de entorno como alternativa al
+fichero de configuraci¢n. Ver la descripci¢n del comando INL I en la secci¢n
+2.4 para m†s detalles.
+
+2) Si es necesario, instala la implementaci¢n de la UNAPI Ethernet (el caso
+m†s com£n es usar una tarjeta Ethernet que incorpore dicha implementaci¢n en
+ROM, por lo que no es necesario instalar nada).
+
+3) Instala INL ejecutando: INL I.
+
+4) Comprueba que la red est† activa y que la configuraci¢n es correcta
+ejecutando INL S. En caso de usar DHCP, la red estar† operativa cuando el
+aut¢mata alcance el estado "BOUND".
+
+5) Ahora puedes usar programas que hagan uso de INL para acceder a Internet o
+para comunicarte con los otros ordenadores de la red, por ejemplo los
+programas PING.COM, TFTP.COM y TCPCON.COM, incluidos en la distribuci¢n de INL.
+
+6) Para desinstalar INL, ejecuta: INL U. Puedes volver a instalar INL cuando
+quieras volviendo al paso 3.
+
+
+2.4. EL PROGRAMA DE CONTROL DE INTERNESTOR LITE
+
+INL.COM es el programa de control unificado de InterNestor Lite. Con este
+programa puedes instalar/desinstalar INL, comprobar la conexi¢n a Internet/red
+local, gestionar las tablas ARP y de enrutamiento, y consultar/modificar
+diversos par†metros de INL.
+
+La siguiente es una lista resumida de todas las opciones de uso de INL.COM,
+m†s adelante se explican con detalle todas ellas (secci¢n 2.4.1).
+
+- Opciones generales:
+
+inl i [/s:<segmento>] [<comandos>]  -  Instala INL
+inl u [<comandos>]  -  Desinstala INL
+inl p  -  Pausa INL
+inl r  -  Reanuda la ejecuci¢n de INL
+inl s  -  Muestra el estado de la conexi¢n de red y las direcciones IP en uso
+inl v  -  Muestra el valor de las variables de configuraci¢n de INL
+inl d  -  Restablece la configuraci¢n de INL a los valores por defecto
+inl o <valor>  -  Establece el vector de c†lculo de checksums de INL
+inl f [<fichero>]  -  Lee un fichero de configuraci¢n
+
+- Opciones de modem y conexi¢n PPP (s¢lo versi¢n serie):
+
+inl ppp m <comando>  -	Env°a un comando al modem
+inl ppp b <codigo baudios> - Establece la velocidad de transmisi¢n del RS232
+inl ppp n [<numero>]  -  Establece el n£mero de telÇfono del ISP
+inl ppp r <respuesta>  -  Establece la respuesta positiva del modem
+inl ppp u [<nombre>]  -  Establece el nombre de usuario PPP
+inl ppp p [<contrase§a>]	-  Establece la contrase§a PPP
+inl ppp o [/n:[<numero>]] [/u:[<usuario>]] [/p:[<contrase§a>]]
+	  [/r:<resp. modem>] [/i]  -   Abre una conexion PPP
+inl ppp c  -  Cierra la conexi¢n PPP
+inl ppp e 0|1  -  Activa o desactiva el env°o de ecos PPP
+inl ppp v 0|1  -  Activa o desactiva la negociacion de la
+		  compresi¢n Van Jacobson
+
+- Opciones del protocolo IP:
+
+inl ip i  -  Inicializa todas las direcciones IP a 0.0.0.0
+inl ip l <dir. IP>  -  Establece la direcci¢n IP local
+inl ip r <dir. IP>  -  Establece la direcci¢n IP remota
+                       (s¢lo versi¢n serie)
+inl ip m <dir. IP>  -  Establece la m†scara de subred (s¢lo versi¢n Ethernet)
+inl ip g <dir. IP>  -  Establece la direcci¢n IP de la puerta de
+                       enlace predeterminada (s¢lo versi¢n Ethernet)
+inl ip p <dir. IP>  -  Establece la direcci¢n IP del servidor DNS primario
+inl ip s <dir. IP>  -  Establece la direcci¢n IP del servidor DNS secundario
+inl ip n 0|1  -  Activa o desactiva la negociaci¢n de los servidores DNS
+                 (s¢lo versi¢n serie)
+inl ip e 0|1  -  Activa o desactiva la respuesta autom†tica a PINGs
+inl ip t <valor>  -  Establece el TTL de los datagramas salientes
+inl ip o <valor>  -  Establece el TOS de los datagramas salientes
+inl ip z <valor>  -  Establece el tama§o por defecto de los PINGs salientes
+inl ip d <valor>  -  Establece el vector de configuraci¢n DHCP
+
+- Opciones para la resoluci¢n de nombres:
+
+inl dns r <nombre host>  -  Resuelve un nombre de host
+
+- Opciones para el protocolo TCP:
+
+inl tcp s [<conexi¢n>]  -  Muestra el estado de una conexi¢n TCP o de todas
+inl tcp c <conexi¢n>  -  Cierra la conexi¢n especificada
+inl tcp a <conexi¢n>  -  Aborta la conexi¢n especificada
+
+- Opciones de la capa Ethernet (s¢lo versi¢n Ethernet):
+
+inl eth h  -  Muestra la direcci¢n f°sica Ethernet
+inl eth f 0|1  -  Establece el tipo de trama a enviar,
+                  Ethernet II o IEEE802.3
+inl eth c 0|1  -  Activa o desactiva la comprobaci¢n autom†tica de la
+                  conexi¢n a la red cada diez segundos
+inl eth r  -  Reinicia el hardware Ethernet
+
+- Opciones del protocolo ARP (s¢lo versi¢n Ethernet):
+
+inl arp t <valor>h|m|s  -
+              Establece el tiempo de vida de las entradas ARP din†micas
+inl arp s  -  Muestra el contenido de la tabla ARP
+inl arp c  -  Borra completamente la tabla ARP
+inl arp a <dir. IP> <dir. f°sica>  -  A§ade una entrada est†tica a la tabla
+inl arp d <dir. IP>  -  Borra una entrada de la tabla ARP
+
+- Opciones de enrutamiento (s¢lo versi¢n Ethernet):
+
+inl rou s  -  Muestra el contenido de la tabla de enrutamiento
+inl rou c  -  Borra completamente la tabla de enrutamiento
+inl rou a <dir. red> <m†scara> <dir. router> -
+              A§ade una entrada a la tabla de enrutamiento
+inl rou d <dir. red> <m†scara>  -
+              Borra una entrada de la tabla de enrutamiento
+
+
+2.4.1. OPCIONES GENERALES
+
+* Instalaci¢n de InterNestor Lite
+
+inl i [/s:<segmento>] [<comandos>]
+
+Instala INL, dej†ndolo listo para su uso. Para la versi¢n serie, el driver
+Fossil debe haber sido instalado previamente; para la versi¢n Ethernet, debe
+haber una implementaci¢n de la UNAPI Ethernet instalada (normalmente
+proporcionada por la BIOS del hardware de Ethernet usado). En caso de usarse
+DOS 2 debe haber dos segmentos libres en el mapeador primario.
+
+El par†metro opcional /s indica que INL debe ser instalado en los segmentos
+<seg> y <seg>+1. Si no se especifica, en caso de usar DOS 1 se usar†n los dos
+£ltimos segmentos del mapeador primario, y en caso de usar DOS 2 se reservar†n
+dos segmentos, tambiÇn en el mapeador primario. Esta opci¢n s¢lo deber°a
+usarse en caso de conflictos con otros programas residentes y s¢lo en DOS 1.
+
+El par†metro opcional [<comando>] indica el comando DOS a ejecutar tras la
+instalaci¢n de INL. S¢lo funciona en DOS 2. En caso de usar COMMAND 2.4x, se
+pueden especificar varios comandos, separados con "&".
+
+En la versi¢n serie, la velocidad de transmisi¢n del RS232 se establece a
+9600 baudios si usas un MSX2/2+, o un Turbo-R en modo Z80; si usas un Turbo-
+R en modo R800, se establece a 19200 baudios. Un Z80 s¢lo soporta hasta 9600
+baudios, a m†s velocidad hay pÇrdidas de datos.
+
+Es posible automatizar el proceso de configuraci¢n de INL durante la
+instalaci¢n, por medio de dos mecanismos:
+
+1) Variables de entorno (s¢lo en DOS 2, y s¢lo en la versi¢n Ethernet).
+
+Durante la instalaci¢n se comprobar† la existencia de una serie de variables
+de entorno asociados a determinados par†metros de configuraci¢n de INL. Si se
+encuentran dichas variables, se usar†n sus valores para establecer los
+par†metros.
+
+Las variables de entorno reconocidas por INL y sus par†metros asociados son:
+
+* INL_IP: Direcci¢n IP del MSX.
+* INL_MASK: M†scara de subred.
+* INL_GW: Router predeterminado.
+* INL_DNS_P: Servidor DNS primario.
+* INL_DNS_S: Servidor DNS secundario.
+* INL_DHCP: Vector de configuraci¢n DHCP.
+
+Por ejemplo, si se van a configurar las direcciones IP por medio de DHCP, se
+podr°a incluir en el archivo AUTOEXEC.BAT la siguiente l°nea (o ejecutar el
+comando manualmente antes de instalar INL):
+
+SET INL_DHCP=63
+
+O bien, para configuraci¢n manual:
+
+SET INL_IP=192.168.0.2
+SET INL_MASK=255.255.255.0
+etc.
+
+2) Fichero de configuraci¢n.
+
+Durante la instalaci¢n se comprobar† la existencia de un fichero llamado
+INL.CFG en el mismo directorio de INL.COM, y si existe, se usar† su contenido
+para configurar INL exactamente de la misma forma en que lo hace el comando
+INL F. Ver la descripci¢n de dicho comando para m†s detalles.
+
+Si existen tanto variables de entorno como fichero de configuraci¢n, se
+aplican ambos. Si hacen referencia al mismo par†metro, el valor indicado en el
+fichero es el que se aplica.
+
+NOTA: Para la versi¢n Ethernet, es necesario configurar INL de alguna manera,
+bien autom†ticamente por medio de uno de los dos mecanismos explicados, bien
+manualmente tras la instalaci¢n. En caso contrario, INL se quedar† con todas
+las direcciones IP iguales a 0.0.0.0 y no funcionar†.
+
+
+* Desinstalaci¢n de InterNestor Lite
+
+inl u [<comando>]
+
+Desinstala INL, liberando los segmentos reservados en caso de usar DOS 2.
+[<comando>] funciona como en el caso de la instalaci¢n (INL I).
+
+NOTA: Instalaciones y desinstalaciones sucesivas de INL pueden causar que
+aparezca el error "Not enough memory" al intentar ejecutar cualquier programa.
+Si eso ocurre, basta salir al BASIC (comando BASIC) y volver al DOS (comando
+CALL SYSTEM) para solucionar el problema.
+
+
+* Pausa de la ejecuci¢n de InterNestor Lite
+
+inl p
+
+Esta opci¢n desconecta INL del gancho de la interrupci¢n del reloj del
+sistema. Lo que se consigue con ello es pausar INL, es decir, impedir que
+realice ning£n proceso (no se ejecuta su c¢digo residente 50/60 veces por
+segundo). Esto puede ser £til cuando se necesita realizar alguna acci¢n de
+larga duraci¢n (por ejemplo copiar un conjunto de ficheros grandes), pues
+cuando INL est† instalado y activo ralentiza el funcionamiento global del
+ordenador.
+
+Al usar la versi¢n Ethernet, hay que tener en cuenta que el hardware de
+Ethernet seguir† capturando los paquetes de datos que lleguen mientras INL
+estÇ pausado, por lo que su b£fer interno puede desbordarse y en ese caso
+no se capturar†n m†s paquetes.
+
+Se puede reanudar la ejecuci¢n de INL con INL R, como se explica a
+continuaci¢n.
+
+
+* Reanudaci¢n de la ejecuci¢n de InterNestor Lite
+
+inl r
+
+Esta opci¢n vuelve a conectar INL al gancho de la interrupci¢n del reloj del
+sistema, restaurando as° el modo normal de funcionamiento que hab°a sido
+interrumpido previamente al pausar INL con INL P. No hace nada si INL ya est†
+activo.
+
+
+* Informaci¢n sobre el estado de la conexi¢n de red y sobre las direcciones IP
+
+inl s
+
+Para la versi¢n serie:
+
+Esta opci¢n muestra informaci¢n sobre el estado de la conexi¢n PPP, la causa
+del cierre de la £ltima conexi¢n PPP abierta y las direcciones IP
+establecidas (local, remota y de los servidores DNS). TambiÇn indica si INL
+se encuentra activo o pausado.
+
+La informaci¢n sobre las direcciones IP se muestra aunque no haya ninguna
+conexi¢n abierta. En tal caso, dicha informaci¢n se refiere a las direcciones
+IP que fueron usadas en la £ltima conexi¢n, o bien a las direcciones IP que
+han sido establecidas por el usuario para ser usadas en la pr¢xima conexi¢n.
+Ver la descripci¢n de las opciones referentes al protocolo IP para m†s
+detalles.
+
+Para la versi¢n Ethernet:
+
+Esta opci¢n muestra la siguiente informaci¢n:
+
+- Estado de INL (activo o pausado).
+- Estado de la conexi¢n de red (ON u OFF).
+- Direcciones IP en uso (direcci¢n del MSX, m†scara de subred, router
+predeterminado y direcciones de los servidores DNS).
+- Estado del aut¢mata DHCP (s¢lo si se configura alg£n par†metro mediante
+DHCP).
+
+Si la comprobaci¢n autom†tica del estado de la conexi¢n de red cada diez
+segundos est† desactivada, dicho estado se comprueba en el momento de ejecutar
+el comando. En caso contrario, simplemente se muestra el resultado de la
+£ltima comprobaci¢n llevada a cabo. Ver el comando INL ETH C.
+
+El estado del aut¢mata DHCP ser† uno de los siguientes (ver RFC2131 para m†s
+detalles):
+
+- INIT: Estado inicial, el proceso de configuraci¢n comenzar† inmediatamente.
+- SELECTING: Se est†n buscando servidores DHCP en la red.
+- REQUESTING: Se ha encontrado un servidor DHCP en la red y se le est†n
+pidiendo una direcci¢n IP y los par†metros de configuraci¢n deseados.
+- BOUND: El servidor DHCP ya nos ha asignado una direcci¢n IP y nos ha dado
+los par†metros requeridos. Este es el estado "estable" del aut¢mata.
+- RENEWING: Ha pasado parte del periodo por el que se nos ha asignado la
+direcci¢n IP, y se est† pidiendo al servidor DHCP que extienda dicho periodo.
+- REBINDING: El servidor DHCP no responde a las peticiones que se le han
+enviado en estado RENEWING, as° que ahora las peticiones se env°an a la
+direcci¢n de broadcast (se busca as° un servidor alternativo).
+
+N¢tese que es posible que el servidor deniegue la extensi¢n del periodo de
+asignaci¢n de la direcci¢n IP y asigne una nueva. En ese caso se cerrar†n
+todas las conexiones TCP abiertas.
+
+En el caso de que la direcci¢n IP se haya configurado manualmente y s¢lo
+estemos interesados en obtener otros par†metros mediante DHCP, el aut¢mata
+pasar† £nicamente por estos dos estados adem†s de INIT:
+
+- INFORMING: Similar a SELECTING, pero ahora simplemente informamos de cu†l es
+nuestra direcci¢n IP y pedimos el resto de los par†metros.
+- CONFIGURED: Se han obtenido los par†metros requeridos. Este estado es
+similar a BOUND, pero a diferencia de aquÇl, es permanente.
+
+N¢tese que el servidor DHCP puede no permitir que configuremos nuestra
+direcci¢n IP manualmente, y por tanto no aceptar las peticiones enviadas en el
+estado INFORMING.
+
+Ver la descripci¢n del comando INL IP D para m†s informaci¢n sobre la
+configuraci¢n mediante DHCP.
+
+
+* Informaci¢n sobre las variables de configuraci¢n de INL
+
+inl v
+
+Esta opci¢n muestra informaci¢n sobre las diversas variables que gobiernan el
+funcionamiento global de INL en lo referente a la conexi¢n PPP/capa Ethernet
+y al protocolo  IP. Estas variables se listan en la secci¢n 3.1.4; para cada
+una de ellas existe una opci¢n de INL.COM que permite su modificaci¢n.
+
+
+* Restablecimiento de INL a sus estado inicial
+
+inl d
+
+Esta opci¢n restablece INL a su estado inicial, siendo equivalente a
+desinstalarlo y volver a instalarlo. Las acciones que realiza son:
+
+1) Reinicia el hardware de Ethernet (s¢lo version Ethernet).
+
+2) Cierra todas las conexiones TCP y descarta todos los paquetes UDP e ICMP
+recibidos. En la versi¢n Ethernet, borra completamente las tablas ARP y de
+enrutamiento.
+
+3) Establece todos los par†metros de configuraci¢n a sus valores por defecto:
+
+Versi¢n serie:
+
+N£mero de telÇfono del ISP: Cadena vac°a
+Respuesta positiva del modem: CONNECT
+Nombre de usuario PPP: Cadena vac°a
+Contrase§a PPP: Cadena vac°a
+Negociar las direcciones IP de los servidores DNS: S°
+Enviar peri¢dicamente peticiones de eco PPP: S°
+Negociar compresi¢n de Van Jacobson: S°
+
+Versi¢n Ethernet:
+
+Enviar tramas Ethernet con encapsulado IEEE802.3: No
+Comprobar el estado de la conexi¢n a la red cada diez segundos: S°
+Vector de configuraci¢n DHCP: 0
+Tiempo de vida de las entradas ARP din†micas: 300 segundos (5 minutos)
+
+Todas las versiones:
+
+Todas las direcciones IP: 0.0.0.0
+Responder PINGs (peticiones de eco ICMP) entrantes: S°
+TTL para los datagramas salientes: 64
+TOS para los datagramas salientes: 0
+Vector de c†lculo de checksums: 31
+Tama§o por defecto de los PINGs salientes (parte de datos): 64
+
+4) Lee y aplica las variables de entorno reconocidas durante la instalaci¢n y
+el fichero INL.CFG, si existen (ver el comando INL I para m†s detalles).
+
+Nota para la versi¢n serie: no se debe llamar a esta funci¢n cuando hay una
+conexi¢n abierta, ya que todas las direcciones IP tambiÇn se restablecen a
+0.0.0.0.
+
+
+* Establecimiento del vector de c†lculo de checksums
+
+inl o <vector>
+
+Mediante la modificaci¢n de este valor es posible indicar a INL que dÇ por
+buenos los paquetes entrantes sin calcular uno o m†s de los checksums
+asociados. De esta forma se gana velocidad de ejecuci¢n a riesgo de dar por
+buenos paquetes defectuosos. Puede ser £til cuando se conectan dos ordenadores
+directamente, ya que en tal caso el riesgo de que lleguen paquetes err¢neos es
+casi nulo.
+
+<vector> es un n£mero par entre 0 y 31 que debe interpretarse como un vector
+de cuatro bits. Cada bit gobierna el c†lculo de un determinado tipo de
+checksum: si est† a uno, ese checksum se calcula para todos los paquetes
+entrantes; si est† a cero, ese checksum nunca se calcula, asumiendo que de
+calcularlo ser°a correcto.
+
+Los bits de <vector> est†n asignados como sigue:
+
+Bit 0 (valor 1): FCS de las tramas PPP (s¢lo versi¢n serie)
+Bit 1 (valor 2): Checksum de la cabecera de los datagramas IP
+Bit 2 (valor 4): Checksum de los segmentos TCP
+Bit 3 (valor 8): Checksum de la cabecera de los paquetes UDP
+Bit 4 (valor 16): Checksum de los mensajes ICMP
+
+Por ejemplo, si s¢lo quisiÇramos que fueran calculdos los checksums para TCP y
+UDP, usar°amos el vector 4+8=12: INL O 12.
+
+El valor por defecto es 31, es decir que se calculan todos los checksums. En
+general deber°a dejarse as°, a no ser que se noten problemas de velocidad en
+el ordenador.
+
+
+* Lectura de un fichero de configuraci¢n
+
+inl f [<fichero>]
+
+Esta opci¢n permite ejecutar m£ltiples opciones de INL.COM con una sola
+ejecuci¢n del mismo; las opciones a ejecutar se almacenan en un fichero de
+texto, cuya ruta y nombre se pasan como argumento. Si no se pasa nombre de
+fichero, se usa el fichero INL.CFG situado en el mismo directorio que INL.COM.
+
+El fichero de texto debe contener las opciones a ejecutar, con la misma
+sintaxis que se usar°a en caso de ejecutarlas directamente. Por ejemplo, si se
+quiere establecer el vector de c†lculo de checksums en 31, desactivar la
+comprobaci¢n peri¢dica del estado de la red (s¢lo en la versi¢n Ethernet) y
+establecer la direcci¢n IP local en 1.2.3.4, el contenido del fichero de
+configuraci¢n deber°a ser el siguiente:
+
+o 31
+eth c 0
+ip l 1.2.3.4
+
+Las l°neas en blanco y las que comienzan con un car†cter ";" o "#" se ignoran.
+
+No es posible anidar lecturas de ficheros de configuraci¢n (es decir, no se
+puede ejecutar la opci¢n "f" desde un fichero de configuraci¢n). Tampoco es
+posible desinstalar INL (opci¢n "u") desde un fichero de configuraci¢n.
+
+
+2.4.2. OPCIONES DE MODEM Y CONEXI‡N PPP (S‡LO VERSI‡N SERIE)
+
+* Env°o de un comando al modem
+
+inl ppp m <comando>
+
+Esta opci¢n env°a la cadena <comando> al modem, espera una respuesta del
+mismo y la muestra. Puede ser £til, por ejemplo, para silenciar el altavoz
+del modem antes de realizar una conexi¢n (lo cual se consigue con el comando
+ATM0).
+
+
+* Establecimiento de la velocidad de transmisi¢n del interfaz RS232
+
+inl ppp b <c¢digo baudios>
+
+Esta opci¢n establece la velocidad de transmisi¢n del interfaz RS232 seg£n el
+<c¢digo baudios> especificado:
+
+0 para 75 baudios
+1 para 300 baudios
+2 para 1200 baudios
+3 para 1200 baudios
+4 para 2400 baudios
+5 para 4800 baudios
+6 para 9600 baudios
+7 para 19200 baudios
+8 para 38400 baudios
+9 para 57600 baudios
+10 ¢ 11 para 115200 baudios
+
+Recuerda que INL s¢lo soporta hasta 19200 baudios en R800 y hasta 9600
+baudios en Z80, a m†s velocidad hay pÇrdida de datos. Tras la instalaci¢n de
+INL la velocidad habr† sido establecida autom†ticamente al m†ximo valor
+admisible seg£n el procesador detectado.
+
+
+* Establecimiento del n£mero de telÇfono del ISP
+
+inl ppp n [<n£mero>]
+
+Esta opci¢n establece el n£mero de telÇfono que marcar† el modem al abrir una
+conexi¢n por medio de INL PPP O. Si <n£mero> es una cadena vac°a, no se
+marcar† ning£n n£mero y se intentar† abrir la conexi¢n PPP directamente
+(asumiendo que al otro lado hay otro equipo conectado directamente con cable
+null-modem).
+
+La longitud m†xima para <n£mero> es de 15 car†cteres. Si se especifica una
+cadena mayor, s¢lo se tienen en cuenta los 15 primeros.
+
+
+* Establecimiento de la respuesta positiva del modem
+
+inl ppp r <respuesta>
+
+Esta opci¢n establece la parte inicial de la cadena que devolver† el modem
+cuando consiga realizar una marcaci¢n al ISP sin problemas durante el
+establecimento de la conexi¢n mediante INL PPP O. INL.COM necesita conocer
+esta cadena para, una vez finalizada la marcaci¢n, decidir si debe mostrar un
+error o por el contrario puede continuar y abrir la conexi¢n PPP, seg£n la
+respuesta del modem. En la mayor°a de los modems esta cadena es "CONNECT", y
+esa es por tanto la cadena que INL establece por defecto.
+
+No es necesario indicar la respuesta completa, basta con especificar los
+primeros car†cteres. Por ejemplo, los modems suelen responder algo como
+"CONNECT 48000/V24BIS", pero basta con especificar "CONNECT".
+
+La longitud m†xima para <respuesta> es de 15 car†cteres. Si se especifica una
+cadena mayor, s¢lo se tienen en cuenta los 15 primeros. No es posible
+especificar una cadena vac°a.
+
+
+* Establecimiento del nombre de usuario PPP
+
+inl ppp u [<nombre>]
+
+Esta opci¢n establece el nombre de usuario PPP que se usar† durante el
+establecimiento de la conexi¢n mediante INL PPP O; en otras palabras, el
+nombre de usuario de la cuenta de acceso a internet que proporciona el ISP.
+Si se especifica una cadena vac°a, INL cancelar† la conexi¢n si se requiere
+autentificaci¢n.
+
+La longitud m†xima para <nombre> es 31 car†cteres. Si se especifica una
+cadena mayor, s¢lo se tienen en cuenta los 31 primeros.
+
+
+* Establecimiento de la contrase§a PPP
+
+inl ppp p [<contrase§a>]
+
+Esta opci¢n establece la contrase§a PPP que se usar† durante el
+establecimiento de la conexi¢n mediante INL PPP O; en otras palabras, la
+contrase§a de la cuenta de acceso a internet que proporciona el ISP.
+
+La longitud m†xima para <contrase§a> es 31 car†cteres. Si se especifica una
+cadena mayor, s¢lo se tienen en cuenta los 31 primeros.
+
+
+* Apertura de una conexi¢n PPP
+
+inl ppp o [/n:[<n£mero>]] [/u:[<usuario>]] [/p:[<contrase§a>]]
+	  [/r:<respuesta modem>] [/i]
+
+Esta opci¢n inicia una conexi¢n PPP, bien a internet por medio de un ISP,
+bien a otro equipo conectado directamente mediante cable null-modem.
+
+<n£mero> es el n£mero de telÇfono del ISP que ser† marcado por el modem. Si
+es una cadena vac°a, no se marcar† ning£n n£mero (es decir, INL asumir† que
+al otro lado hay otro equipo conectado directamente mediante cable null-
+modem). La longitud m†xima es de 15 car†cteres.
+
+<usuario> y <contrase§a> son los datos de autentificaci¢n PPP que se usar†n
+(es decir, los datos de la cuenta que nos porporciona el ISP). Si no se
+especifica <usuario>, INL.COM cancelar† la conexi¢n si se requiere
+autentificaci¢n. La longitud m†xima para ambos es de 31 car†cteres.
+
+<respuesta modem> es la parte inicial de la cadena que devuelve el modem tras
+realizar la marcaci¢n al ISP si consigue conectar sin problemas. En la
+mayor°a de los modems esta cadena es "CONNECT", que es la cadena establecida
+por defecto por INL, y no es necesario modificarla. La longitud m†xima es de
+15 car†cteres.
+
+/I causa que todas las direcciones IP (local, remota y los dos DNS) se pongan
+a 0.0.0.0, y activa la negociaci¢n de las direcciones IP de los servidores
+DNS, antes de iniciar la conexi¢n. Esta es el comportamiento m†s normal, ya
+que habitualmente conectamos a internet por medio de un ISP que nos
+proporciona din†micamente todas las direcciones. Sin embargo puede ser que
+estemos conect†ndonos con otro equipo mediante cable null-modem y ya
+conozcamos (o queramos proporcionar al otro equipo) una o m†s de las
+direcciones IP a usar. En ese caso establecer°amos previamente las
+direcciones de interÇs con alguna de las opciones INL IP x, y no
+especificar°amos /I al conectar.
+
+Si no se especifica alguno de los par†metros /N, /U, /P y/o /R, se usar† el
+valor que haya sido especificado previamente mediante INL PPP N, INL PPP U,
+INL PPP P y/o INL PPP R, respectivamente. Es decir, las siguientes secuencias
+de ejecuci¢n son equivalentes:
+
+- Secuencia 1:
+
+INL PPP N 12345
+INL PPP U kyoko
+INL PPP P jap0paya
+INL PPP O /R:OK
+
+- Secuencia 2:
+
+INL PPP O /N:12345 /U:kyoko /P:jap0paya /R:OK
+
+Ojo: no es lo mismo especificar un valor nulo para un par†metro que no
+especificar el par†metro (/N a secas significa que no se marcar† ning£n
+n£mero de telÇfono; no especificar /N significa que se marcar† el n£mero
+especificado previamente con INL PPP N).
+
+
+* Cierre de una conexi¢n PPP
+
+inl ppp c
+
+Esta opci¢n cierra la conexi¢n a Internet (o al otro equipo en caso de
+conexi¢n directa); normalmente el modem se desconectr† autom†ticamente del
+ISP al cabo de pocos segundos. No se modifican las direcciones IP ni ninguno
+de los par†metros de INL que hayan sido modificados antes de o durante la
+conexi¢n.
+
+
+* Activaci¢n o desactivaci¢n del eco PPP autom†tico
+
+inl ppp e 0|1
+
+INL no es capaz de detectar la ca°da f°sica de la conexi¢n (es decir, la
+pÇrdida de portadora por parte del modem o el apagado o bloqueo del otro
+ordenador en caso de conexi¢n directa). Por este motivo usa un mecanismo de
+comprobaci¢n soportado por el protocolo PPP, consistente en el env°o
+peri¢dico de paquetes de eco al ISP o al otro ordenador (ojo: son paquetes a
+nivel de protocolo PPP; no confundir con los PINGs, que son paquetes a nivel
+IP).
+
+INL tiene activada esta caracter°stica por defecto, pero puede desactivarse
+ejecutando INL PPP E 0, y volverse a activar con INL PPP E 1. Cuando estÇ
+activada, INL enviar† paquetes de eco PPP al otro extremo cada cinco
+segundos; si env°a cuatro paquetes consecutivos sin obtener respuesta,
+asumir† que la conexi¢n ha ca°do y la cerrar† autom†ticamente.
+
+
+* Activaci¢n o desactivaci¢n de la negociaci¢n de la compresi¢n
+  de Van Jacobson
+
+inl ppp v 0|1
+
+Esta opci¢n activa (1) o desactiva (0) la negociaci¢n de la compresi¢n Van
+Jacobson de cabeceras TCP/IP durante el establecimiento de la conexi¢n PPP;
+si se negoca y el otro extremo tambiÇn soporta dicha compresi¢n, se usar†
+durante toda la vida de la conexi¢n.
+
+La compresi¢n de Van Jacobson es espec°fica de las conexiones punto a punto y
+permite reducir el tama§o de las cabeceras TCP/IP, originalmente de 40 bytes,
+hasta un promedio de cinco bytes. A cambio, se requiere un procesado
+adicional para todos los segmentos TCP que se env°an y reciben.
+
+Los cambios en esta opci¢n tienen efecto la siguiente vez que se abre una
+conexi¢n PPP; no se puede activar o desactivar la compresi¢n Van Jacobson en
+una conexi¢n ya abierta.
+
+
+2.4.3. OPCIONES DE PROTOCOLO IP
+
+* Inicializaci¢n de las direcciones IP
+
+inl ip i
+
+Esta opci¢n inicializa a 0.0.0.0 todas las direcciones IP. Para la versi¢n
+serie, Çstas son: local, remota y de los dos servidores DNS. Para la versi¢n
+Ethernet, son: local, m†scara de subred, del router predeterminado y de los
+dos servidores DNS.
+
+Versi¢n serie: por convenio, anunciar una direcci¢n 0.0.0.0 durante la
+negociaci¢n PPP equivale a anunciar que no conocemos dicha direcci¢n IP y
+que por tanto solicitamos que el otro extremo nos asigne una (todas las
+conexiones a ISPs funcionan de este modo).
+
+Versi¢n Ethernet: este comando no debe ejecutarse si una o m†s de dichas
+direcciones se obtienen mediante DHCP (ver el comando INL IP D).
+
+
+* Establecimiento de la direcci¢n IP local
+
+inl ip l <direcci¢n IP>
+
+Esta opci¢n establece la direcci¢n IP local (la direcci¢n del propio MSX) con
+el valor especificado.
+
+Versi¢n serie: el uso de este comando s¢lo tiene sentido en conexiones
+directas por cable, y s¢lo si sabemos que el otro extremo no nos puede
+proporcionar una direcci¢n IP. Si el otro extremo nos proporciona una
+direcci¢n IP durante el establecimiento de la conexi¢n (lo cual siempre
+ocurrir† en las conexiones mediante ISP), dicha direcci¢n prevalecer† sobre
+la que nosotros hayamos establecido previamente.
+
+Versi¢n Ethernet: no debe ejecutarse este comando si obtenemos dicho
+par†metro mediante DHCP (ver el comando INL IP D).
+
+
+* Establecimiento de la direcci¢n IP remota (s¢lo versi¢n serie)
+
+inl ip r <direcci¢n IP>
+
+Esta opci¢n establece la direcci¢n IP remota (es decir, la del otro extremo
+de la conexi¢n PPP) con el valor especificado. Nunca debe usarse cuando ya
+hay una conexi¢n abierta.
+
+El uso de esta opci¢n s¢lo tiene sentido en conexiones directas por cable, y
+s¢lo si sabemos que el otro extremo no conoce su propia direcci¢n IP y
+debemos proporcion†rsela. Si el otro extremo nos comunica que ya conoce su
+direcci¢n IP durante el establecimiento de la conexi¢n (lo cual siempre
+ocurrir† en las conexiones mediante ISP), dicha direcci¢n prevalecer† sobre
+la que nosotros hayamos establecido previamente.
+
+
+* Establecimiento de la m†scara de subred (s¢lo versi¢n Ethernet)
+
+inl ip m <m†scara>
+
+Esta opci¢n establece la m†scara de subred (es decir, la m†scara que se
+aplicar† a las direcciones IP para decidir si son locales o no) con el valor
+especificado. No debe ejecutarse si obtenemos dicho par†metro mediante DHCP
+(ver el comando INL IP D).
+
+
+* Establecimiento del router predeterminado (s¢lo versi¢n Ethernet)
+
+inl ip g <direcci¢n IP>
+
+Esta opci¢n establece la direcci¢n IP del router predeterminado (es decir, del
+ordenador al que se enviar†n los datagramas no locales en ausencia de una
+entrada adecuada en la tabla de enrutamiento) con el valor especificado. No
+debe ejecutarse si obtenemos dicho par†metro mediante DHCP (ver el comando INL
+IP D).
+
+
+* Establecimiento de la direcci¢n IP del servidor DNS primario
+
+inl ip p <direcci¢n IP>
+
+Esta opci¢n establece la direcci¢n IP del servidor DNS primario, es decir, el
+servidor de nombres al que el resolver integrado en INL consultar† cuando se
+solicite la resoluci¢n de un nombre de host.
+
+Versi¢n Ethernet: no debe ejecutarse este comando si obtenemos dicho
+par†metro mediante DHCP (ver el comando INL IP D).
+
+Versi¢n serie:
+
+La l¢gica de este comando es similar a la l¢gica de los par†comandos IP L e
+IP R (direcciones IP local y remota): las direcciones propuestas por el otro
+extremo durante la conexi¢n PPP prevalecer†n sobre las direcciones que
+hayamos establecido manualmente antes de iniciar la conexi¢n. Sin embargo
+existen dos diferencias importantes:
+
+1) No hay ning£n problema en modificar la direcci¢n IP del servidor DNS una
+vez iniciada la conexi¢n PPP.
+
+2) Es posible desactivar la negociaci¢n de esta direcci¢n ejecutando INL IP N
+0 antes de abrir la conexi¢n. En este caso, la direcci¢n que hayamos
+especificado mediante INL IP P siempre seguir† siendo v†lida una vez iniciada
+la conexi¢n (de hecho, ni siquiera le daremos oportunidad al otro extremo de
+proponer una direcci¢n alternativa). Esto es cierto incluso en las conexiones
+v°a ISP.
+
+El uso de INL IP N 0 seguido de INL IP P <direcci¢n> previo a la conexi¢n es
+£til cuando queremos usar un servidor DNS diferente del proporcionado por el
+ISP.
+
+Nota: El par†metro /I de INL PPP O no s¢lo establece todas las direcciones IP
+a 0.0.0.0, sino que tambiÇn activa la negociaci¢n de las direcciones de los
+DNS. Por tanto, si se desea conectar a un ISP sin negociar las direcciones de
+los DNS se deber† usar esta secuencia de ejecuci¢n:
+
+INL IP I
+INL IP N 0
+INL PPP O /N:<n£mero> /U:<usuario> /P:<contrase§a>
+
+
+* Establecimiento de la direcci¢n IP del servidor DNS secundario
+
+inl ip s <direcci¢n IP>
+
+Esta opci¢n funciona como INL IP P, pero hace referencia a la direcci¢n del
+sevidor DNS secundario. El resolver de INL siempre consulta al servidor DNS
+primario en primer lugar; s¢lo si Çste no responde repetir† la consulta usando
+el servidor DNS secundario.
+
+
+* Activaci¢n o desactivaci¢n de la negociaci¢n de los servidores DNS
+  (s¢lo versi¢n serie)
+
+inl ip n 0|1
+
+Esta opci¢n activa o desactiva la negociaci¢n de las direcciones IP de los
+servidores DNS para las conexiones PPP que se abran en el futuro. Por defecto
+esta negociaci¢n est† activada; se puede desactivar ejecutando INL IP N 0 y
+volver a activarla con INL IP N 1. La opci¢n /I de INL PPP O tambiÇn activa
+esta negociaci¢n.
+
+Suprimir la negociaci¢n de las direcciones de los servidores DNS puede ser
+£til cuando queremos usar servidores diferentes a los proporcionados por el
+ISP. Ver la descripci¢n de INL IP P m†s arriba para m†s detalles.
+
+
+* Activaci¢n o desactivaci¢n de la respuesta autom†tica a PINGs
+
+inl ip e 0|1
+
+Esta opci¢n activa o desactiva el env°o autom†tico de respuesta para todas las
+peticiones de eco ICMP (PINGs) recibidas desde cualquier m†quina de Internet.
+Por defecto esta caracter°stica est† activada; se puede desactivar ejecutando
+INL IP E 0 y volver a activarla con INL IP E 1.
+
+
+* Establecimiento del TTL de los datagramas salientes
+
+inl ip t <valor>
+
+Esta opci¢n establece el valor del campo TTL (Time To Live) para todos los
+datagramas salientes; debe ser un n£mero entre 1 y 255. El valor por defecto
+es 64 y en condiciones normales no deber°a cambiarse.
+
+
+* Establecimiento del TOS de los datagramas salientes
+
+inl ip o <valor>
+
+Esta opci¢n establece el valor del campo TOS (Type Of Service) para todos los
+datagramas salientes; debe ser un n£mero entre 0 y 15. El valor por defecto es
+0 y en condiciones normales no deber°a cambiarse.
+
+
+* Establecimiento del tama§o por defecto para los PINGs salientes
+
+inl ip z <valor>
+
+Esta opci¢n modifica el tama§o por defecto de la parte de datos de las
+solicitudes de eco ICMP (PINGs) que se env°en usando la funci¢n que INL
+proporciona a los programadores para este prop¢sito. Dicha funci¢n permite
+especificar el tama§o del paquete a enviar, pero tambiÇn admite el valor
+especial -1, que significa que se usar† el valor por defecto especificado con
+este comando. <valor> debe estar entre 0 y 548.
+
+El programa PING.COM suministrado con INL siempre env°a solcitudes de eco con
+el tama§o por defecto.
+
+
+* Establecimiento del vector de configuraci¢n DHCP (s¢lo versi¢n Ethernet)
+
+inl ip d <vector>
+
+Esta opci¢n establece el vector de configuraci¢n DHCP, que es un valor que
+indica quÇ par†metros ser†n obtenidos mediante DHCP.
+
+<vector> es un n£mero entre 0 y 63 que debe interpretarse como un vector de
+seis bits. Cada bit gobierna la configuraci¢n para un determinado par†metro:
+si est† a uno, se intentar† obtener ese par†metro mediante DHCP; si est† a
+cero, ese par†metro debe configurarse manualmente.
+
+Los bits de <vector> est†n asignados como sigue:
+
+Bit 0 (valor 1): Direcci¢n IP del MSX
+Bit 1 (valor 2): M†scara de subred
+Bit 2 (valor 4): Router predeterminado
+Bit 3 (valor 8): Servidores DNS
+Bit 4 (valor 16): Tiempo de vida de las entradas ARP din†micas
+Bit 5 (valor 32): Tipo de encapsulado Ethernet para las tramas salientes
+                  (Ethernet II o IEEE802.3)
+
+Por ejemplo, si s¢lo quisiÇramos obtener por DHCP la direcci¢n IP, la m†scara
+de subred y las direcciones de los servidores DNS, usar°amos el vector
+1+2+8=11: INL IP D 11. Lo normal es usar o bien el valor 0 (configuraci¢n
+completamente manual) o el valor 63 (obtener todos los par†metros mediante
+DHCP). El valor por defecto del vector es 0.
+
+Es posible que el servidor DHCP no nos proporcione todos los par†metros que
+pedimos. Los par†metros que se configuren para ser obtenidos por DHCP pero que
+no sean proporcionados por el servidor ser†n establecidos a sus valores por
+defecto: 0.0.0.0 para las direcciones IP, cinco minutos para el tiempo de vida
+de las entradas ARP din†micas, y encapsulado Ethernet II para las tramas
+salientes.
+
+Es recomendable ejecutar este comando £nicamente durante la instalaci¢n (ver
+el comando INL I). Para pasar de configuraci¢n DHCP a configuraci¢n manual, es
+recomendable reiniciar INL (comando INL D) en vez de ejecutar INL IP D 0.
+
+El comportamiento del aut¢mata DHCP ser† distinto seg£n el valor del bit 0 del
+vector. VÇase INL S para m†s detalles.
+
+
+2.4.4. OPCIONES DE RESOLUCI‡N DE NOMBRES
+
+* Resoluci¢n de un nombre de host
+
+inl dns r <nombre host>
+
+Esta opci¢n pedir† al resolver incoroporado en INL que resuelva el nombre de
+host pasado, y mostrar† la direcci¢n IP resultante en caso de que la consulta
+tenga Çxito, o un mensaje de error en caso contrario. Mientras se realiza la
+consulta es posible cancelar el proceso pulsando cualquier tecla; esto causar†
+que el programa finalice inmediatamente sin mostrar ning£n resultado.
+
+
+2.4.5. OPCIONES DEL PROTOCOLO TCP
+
+* Obtenci¢n de informaci¢n sobre el estado de las conexiones TCP
+
+inl tcp s [<conexi¢n>]
+
+Esta opci¢n muestra informaci¢n sobre la conexi¢n especificada (un n£mero
+entre 0 y 3), o sobre todas las conexiones si no se especifica ninguna
+conexi¢n.
+
+Si la conexi¢n no existe (el estado de la misma es CLOSED), se muestra la
+causa del cierre de la misma o se indica que esa conexi¢n nunca ha sido usada.
+En caso contrario, se muestra el estado TCP de la conexi¢n, el puerto local y
+la direcci¢n IP y puerto remotos usados.
+
+
+* Cierre de una conexi¢n TCP
+
+inl tcp c <conexi¢n>
+
+Esta opci¢n cierra la conexi¢n especificada (un n£mero entre 0 y 3) mediante
+una llamada al mÇtodo estandar CLOSE de TCP.
+
+El hecho de cerrar una conexi¢n TCP no implica que la conexi¢n deje de existir
+inmediatamente, ya que para ello es necesario que el otro extremo de la
+conexi¢n tambiÇn la cierre. Por otro lado, si a£n quedan datos pendientes de
+env°o la petici¢n de cierre no se har† efectiva hasta que se hayan enviado
+todos. Por tanto, si lo que se desea es destruir la conexi¢n y dejarla libre
+inmediatamente, en vez de cerrarla es necesario abortarla (ver opci¢n TCP A a
+continuaci¢n).
+
+
+* Abortar una conexi¢n TCP
+
+inl tcp a <conexi¢n>
+
+Esta opci¢n aborta la conexi¢n especificada (un n£mero entre 0 y 3) mediante
+una llamada al mÇtodo estandar ABORT de TCP. La conexi¢n pasa inmediatamente
+al estado CLOSED y queda libre para ser abierta nuevamente.
+
+
+2.4.6. OPCIONES DE LA CAPA ETHERNET (S‡LO VERSI‡N ETHERNET)
+
+* Obtenci¢n de la direcci¢n hardware de la tarjeta Ethernet
+
+inl eth h
+
+Esta opci¢n simplemente muestra la direcci¢n hardware (tambiÇn llamada
+direcci¢n f°sica, direcci¢n Ethernet o MAC) de la tarjeta Ethernet en uso. La
+direcci¢n hardware es £nica para cada tarjeta, se asigna en tiempo de
+fabricaci¢n y no se puede cambiar.
+
+
+* Establecimiento del tipo de trama Ethernet para paquetes salientes
+
+inl eth f 0|1
+
+Esta opci¢n establece el tipo de encapsulado Ethernet que se usar† para los
+paquetes a enviar: Ethernet II (0) o IEEE802.3 (1). No debe ejecutarse si
+obtenemos dicho par†metro mediante DHCP (ver el comando INL IP D).
+
+Debe dejarse el valor por defecto (0, tramas Ethernet II) a no ser que se sepa
+que las restantes m†quinas de la red trabajan £nicamente con el encapsulado
+IEEE802.3. INL reconoce y puede procesar ambos tipos de encapsulado en los
+paquetes recibidos.
+
+
+* Activaci¢n o desactivaci¢n de la comprobaci¢n peri¢dica de la conexi¢n de red
+
+inl eth c 0|1
+
+Esta opci¢n activa (1) o desactiva (0) la comprobaci¢n peri¢dica del estado de
+la conexi¢n de red.
+
+Si est† activa, se ejecutar† la rutina de UNAPI de Ethernet que comprueba la
+conexi¢n f°sica a la red (dicha rutina puede enviar un paquete de prueba)
+cada diez  segundos. Si la comprobaci¢n falla, se considerar† que la red es
+inaccesible y  se cerrar†n todas las conexiones TCP.
+
+La llegada de cualquier paquete reinicia el temporizador usado para la
+comprobaci¢n, por lo que las comprobaciones s¢lo se efect£an si no hay tr†fico
+de red.
+
+Si la comprobaci¢n est† desactivada, INL siempre asumir† que la red est†
+disponible.
+
+
+* Reinicializaci¢n del hardware de Ethernet
+
+inl eth r
+
+Esta opci¢n reinicia el hardware de Ethernet. Puede usarse tras la ejecuci¢n de
+alguna aplicaci¢n que haga uso directo de UNAPI de Ethernet, si no se est†
+seguro del estado en que dicha aplicaci¢n ha dejado el hardware. En esos
+casos no es necesario reiniciar todo INL (con el comando INL  D), y basta
+ejecutar este comando.
+
+
+2.4.7. OPCIONES DEL PROTOCOLO ARP (S‡LO VERSI‡N ETHERNET)
+
+* Establecimiento del tiempo de vida de las entradas ARP din†micas
+
+inl arp t <tiempo>h|m|s
+
+Cuando INL quiere enviar un datagrama local, debe averiguar quÇ direcci¢n
+hardware tiene el ordenador cuya direcci¢n IP es la destinataria del
+datagrama. Para realizar la averiguaci¢n usa el protocolo ARP, y cuando ha
+obtenido la informaci¢n, guarda el par direcci¢n hardware-direcci¢n IP en una
+tabla para usarlo en posteriores env°os a la misma direcci¢n IP.
+
+Las entradas de la tabla tienen un determinado tiempo de vida, transcurrido el
+cual se borran; esto se hace en previsi¢n de que haya m†quinas que se retiren
+de la red o cambien su tarjeta Ethernet. Este comando permite especificar
+dicho tiempo de vida, y no debe ejecutarse si obtenemos dicho par†metro
+mediante DHCP (ver el comando INL IP D).
+
+El tiempo de vida se puede especificar de tres formas:
+
+- Un n£mero entre 1 y 18, seguido de "h", indicando horas.
+- Un n£mero entre 1 y 1080, seguido de "m", indicando minutos.
+- Un n£mero entre 1 y 65535, seguido de "s", indicando segundos.
+
+El valor por defecto es de cinco minutos.
+
+
+* Muestra de la tabla ARP
+
+inl arp s
+
+Esta opci¢n muestra el contenido actual de la tabla ARP. Para cada entrada se
+muestra la direcci¢n IP, la direcci¢n hardware asociada, y el tipo de entrada,
+din†mica o est†tica (las entradas est†ticas se a§aden con INL ARP A).
+
+
+* Borrado de la tabla ARP
+
+inl arp c
+
+Esta opci¢n borra completamente el contenido de la tabla ARP; se borran tanto
+las entradas din†micas como las est†ticas.
+
+
+* Adici¢n de una entrada a la tabla ARP
+
+inl arp a <direcci¢n IP> <direcci¢n hardware>
+
+Esta opci¢n a§ade el par direcci¢n IP-direcci¢n hardware indicado a la tabla
+ARP. Las entradas as° a§adidas son est†ticas, es decir, tienen un tiempo de
+vida infinito: permanecen hasta que se borran expl°citamente (con INL ARP C o
+INL ARP D) o hasta que se reinicia o desinstala INL (con INL D o INL U,
+respectivamente).
+
+Si ya existe una entrada en la tabla cuya direcci¢n IP coincida con la
+indicada en el comando, la entrada se actualiza con la direcci¢n hardware
+indicada, y si era una entrada din†mica se convierte en est†tica.
+
+La tabla ARP tiene espacio para 32 entradas en esta versi¢n de c¢digo de INL,
+y pueden ser est†ticas un m†ximo de 30.
+
+
+* Borrado de una entrada de la tabla ARP
+
+inl arp d <direcci¢n IP>
+
+Esta opci¢n borra de la tabla ARP la entrada cuya direcci¢n IP coincide con la
+especificada. Se pueden borrar tanto entradas est†ticas como entradas
+din†micas.
+
+
+2.4.8. OPCIONES DE LA TABLA DE ENRUTAMIENTO (S‡LO VERSI‡N ETHERNET)
+
+* Muestra de la tabla de enrutamiento
+
+inl rou s
+
+Cuando INL quiere enviar un datagrama, primero comprueba si la direcci¢n IP de
+destino corresponde a un ordenador de la misma red f°sica a la que el MSX est†
+conectado; esto ser† cierto si (IP del MSX) AND (m†scara de subred) = (IP de
+destino) AND (m†scara de subred), y en ese caso el datagrama se env°a
+directamente, previa resoluci¢n de la direcci¢n f°sica por medio de ARP si es
+necesario.
+
+En caso contrario, el datagrama se ha de enviar a un router que ser† el
+encargado de reenviar el datagrama a su destinatario. Para saber la direcci¢n
+del router, se examina la tabla de enrutamiento, que consta de ternas
+direcci¢n de red-m†scara de subred-direcci¢n del router. Si se encuentra una
+entrada para la que se cumpla (IP de destino AND m†scara de la entrada) =
+(direcci¢n de red de la entrada AND m†scara de la entrada), se env°a el
+datagrama al router cuya direcci¢n se indica en la entrada (que s° debe estar
+en la misma red f°sica), previa resoluci¢n de su direcci¢n por medio de ARP si
+es necesario.
+
+Si no se encuentra una entrada adecuada en la tabla de enrutamiento, el
+datagrama se env°a al router predeterminado (cuya direcci¢n se puede
+establecer con INL IP G).
+
+Esta opci¢n muestra el contenido de la tabla de enrutamiento. Se pueden a§adir
+entradas a la misma con INL ROU A, y se pueden borrar entradas existentes con
+INL ROU C e INL ROU D.
+
+
+* Borrado de la tabla de enrutamiento
+
+inl rou c
+
+Esta opci¢n borra completamente el contenido de la tabla de enrutamiento. No
+modifica la direcci¢n del router predeterminado.
+
+
+* Adici¢n de una entrada a la tabla de enrutamiento
+
+inl rou a <direcci¢n de red> <m†scara de subred> <direcci¢n IP del router>
+
+Esta opci¢n a§ade la terna direcci¢n IP-m†scara de subred-direcci¢n IP del
+router indicada a la tabla de enrutamiento. Las entradas permanecen hasta que
+se borran expl°citamente (con INL ROU C o INL ROU D) o hasta que se reinicia o
+desinstala INL (con INL D o INL U, respectivamente).
+
+Si ya existe una entrada en la tabla cuya direcci¢n de red y m†scara coincidan
+con las indicadas en el comando, la entrada se actualiza con la direcci¢n del
+router indicada.
+
+Si en la tabla existe m†s de una entrada apropiada para un datagrama saliente
+dado, se usar† la informaci¢n de la primera entrada encontrada. Por ejemplo,
+si se ejecuta:
+
+inl ip l 192.168.0.7
+inl ip m 255.255.255.0
+inl rou a 1.2.0.0 255.255.0.0 192.168.0.1
+inl rou a 1.2.0.0 255.255.255.0 192.68.0.2
+
+entonces un datagrama destinado a 1.2.0.34 se enviar† al router 192.168.0.1.
+
+La tabla de enrutamiento tiene espacio para 16 entradas en esta versi¢n de
+c¢digo de INL.
+
+
+* Borrado de una entrada de la tabla de enrutamiento
+
+inl rou d <direcci¢n de red> <m†scara de subred>
+
+Esta opci¢n borra de la tabla de enrutamiento la entrada cuyo par direcci¢n de
+red-m†scara de subred coincide con el especificado.
+
+
+2.5. APLICACIONES INCLUIDAS
+
+En esta secci¢n se describe el uso de las aplicaciones de Internet
+suministradas con esta distribuci¢n de INL.
+
+
+2.5.1. EL CLIENTE DE PING
+
+PING.COM es un cliente de petici¢n de eco ICMP (PING) sencillo que permite
+averiguar si un determinado ordenador de Internet est† disponible. Se usa de
+la siguiente forma:
+
+PING <nombre de host>|<direcci¢n IP del host>
+
+El programa enviar† un £nico paquete de petici¢n de eco, pero es posible
+enviar m†s de forma manual pulsando Enter (pulsando cualquier otra tecla, el
+programa terminar†). Cada vez que llegue la respuesta a una de las peticiones
+de eco enviadas, se mostrar† en pantalla informaci¢n sobre su n£mero de
+secuencia y TTL.
+
+PING.COM siempre env°a los paquetes de eco con TTL igual a 255 y el tama§o por
+defecto para la parte de datos (definible mediante INL IP Z).
+
+
+2.5.2. EL CLIENTE/SERVIDOR DE TFTP
+
+TFTP.COM es una utilidad de transferencia de archivos entre dos m†quinas
+mediante TFTP, un protocolo simple basado en UDP (descrito en RFC1350). Una
+transferencia TFTP requiere que una de las m†quinas funcione en modo cliente y
+la otra en modo servidor; TFTP.COM soporta ambos modos.
+
+TFTP.COM s¢lo permite transferir un archivo a la vez, y no dispone de
+mecanismos de seguridad (cualquier archivo existente ser† transferido a o
+desde el servidor a petici¢n del cliente). Al principio del listado de la
+aplicaci¢n, en el fichero TFTP-S.ASC, se mencionan otras limitaciones de la
+misma.
+
+Existen tres formas de ejecutar TFTP.COM seg£n el modo de funcionamiento y la
+direcci¢n de la transferencia:
+
+* Modo cliente, para recibir un fichero:
+
+TFTP <nombre o IP host> R[CV]|G[ET] <fichero remoto> [<fichero local>]
+
+<nombre o IP host> indica el nombre o la direcci¢n IP de la m†quina que nos
+enviar† el fichero (que debe estar ejecutando un servidor de TFTP).
+
+<fichero remoto> es la ruta y el nombre del fichero que se nos enviar†, en el
+formato adecuado al sistema de ficheros del host remoto (no puede contener
+espacios). Debe ser un fichero accesible seg£n la directiva de seguridad del
+host remoto, si es que tiene alguna.
+
+<fichero local> es la ruta y el nombre del fichero que se crear† en el
+ordenador local para alojar los datos recibidos. Debe ser una ruta y nombre
+v†lidos en DOS 1 o DOS 2, seg£n la versi¢n que usa el ordenador local. Si se
+omite la ruta, se usa la unidad y el directorio establecidos por defecto.
+
+Si se omite <fichero local>, se usar† <fichero remoto> sin la informaci¢n de
+ruta. Esto s¢lo es posible bajo DOS 2, y s¢lo si <fichero remoto> tiene una
+ruta v†lida para DOS 2.
+
+* Modo cliente, para enviar un fichero:
+
+TFTP <nombre o IP host> S[END]|P[UT] <fichero local> [<fichero remoto>]
+
+<nombre o IP host> indica el nombre o la direcci¢n IP de la m†quina a la que
+enviaremos el fichero (que debe estar ejecutando un servidor de TFTP).
+
+<fichero local> es la ruta y el nombre del fichero que enviaremos. Debe ser un
+fichero existente en la m†quina local.
+
+<fichero remoto> es la ruta y el nombre del fichero tal como lo anunciaremos
+al ordenador remoto al iniciar el env°o. Debe ser una ruta v†lida para su
+sistema de ficheros (y accesible seg£n su directiva de seguridad, si la tiene).
+
+Si se omite <fichero remoto>, se usar† <fichero local> sin la informaci¢n de
+ruta. Esto s¢lo es posible si el nombre resultante es aceptable para el
+ordenador remoto seg£n su sistema de ficheros y directiva de seguridad.
+
+* Modo servidor
+
+TFTP /S[ERVER]
+
+En este modo, la aplicaci¢n quedar† a la espera de peticiones de env°o y
+recepci¢n de ficheros; ser†n servidas todas las peticiones de env°o que hagan
+referencia a ficheros existentes, y todas las peticiones de recepci¢n que
+indiquen un nombre de fichero v†lido para DOS 1 o DOS 2 (no hay ninguna
+directiva de seguridad). En este modo se puede salir del programa pulsando
+cualquier tecla.
+
+- Ejemplo 1
+
+Para recibir el fichero PruebaDeTexto.Text del directorio /home/konamiman de
+una m†quina con Linux, y almacenarlo localmente en c:\textos con el nombre
+prueba.txt
+
+TFTP mimaquinalinux.com G /home/konamiman/PruebaDeTexto.Text
+c:\textos\prueba.txt
+
+- Ejemplo 2
+
+Para enviar el fichero programa.com a otro MSX que estÇ ejecutando TFTP.COM en
+modo servidor, y hacer que Çste lo almacene con el mismo nombre en su
+directorio por defecto:
+
+TFTP 192.168.0.2 S c:\cosas\programa.com
+
+
+2.5.3. LA CONSOLA TCP
+
+TCPCON.COM es una utilidad simple de c¢nsola TCP. Una vez establecida una
+conexi¢n con el host deseado, todos los datos recibidos se imprimen
+directamente en pantalla, y todos los datos que se introducen mediante el
+teclado se env°an directamente a la conexi¢n; no se realiza ning£n proceso
+adicional en los datos recibidos ni en los enviados. Se puede ver TCPCON como
+un cliente de Telnet simplificado (es un cliente de Telnet excepto por el
+hecho de que no procesa los comandos Telnet recibidos y nunca env°a dichos
+comandos; adem†s de por el hecho de no procesar los datos urgentes, ya que INL
+no los soporta).
+
+TCPCON se usa de la siguiente forma:
+
+TCPCON <nombre o IP host> <puerto remoto> [<puerto local>] [P]
+
+<nombre o IP host> indica el nombre o la direcci¢n IP de la m†quina a la que
+queremos conectar.
+
+<puerto remoto> indica el puerto TCP al que queremos conectar. Puertos
+comunmente usados son 23 para Telnet, 25 para SMTP y 110 para POP3.
+
+<puerto local> es un par†metro opcional que indica el puerto TCP que usaremos
+localmente. Si no se especifica, INL escoger† uno aleatoriamente en el rango
+16384 a 32767.
+
+"P" es un par†metro opcional que indica que la conexi¢n debe abrirse en modo
+pasivo, es decir, TCPCON esperar† a que el host remoto intente conectar con
+nosotros en vez de iniciar activamente la conexi¢n.
+
+Si se especifica conexi¢n pasiva, puede usarse 0.0.0.0 como un valor especial
+de nombre del host. En este caso la conexi¢n se abre en modo "socket remoto
+sin especificar", lo cual implica que se aceptar† una petici¢n de conexi¢n
+procedente de cualquier m†quina y de cualquier puerto remoto (en este caso a£n
+es necesario especificar el n£mero de puerto remoto, pero dicho par†metro se
+ignora; se puede especificar por ejemplo el valor 0).
+
+Una vez abierta la conexi¢n, la aplicaci¢n entra en un bucle en el que imprime
+por pantalla todos los datos que llegan, y env°a todo lo que se introduce
+mediante el teclado. Se aceptan adem†s las siguientes teclas especiales:
+
+F1: Muestra una breve ayuda.
+
+F2: Cambia el modo de entrada de datos entre modo l°nea (se env°an l°neas de
+texto completas, finalizadas con CR-LF, cada vez que se pulsa Enter) y modo
+car†cter (cada vez que se teclea un car†cter, Çste es enviado inmediatamente).
+
+F3: Activa o desactiva el eco local (s¢lo para modo car†cter).
+
+ESC: Cierra la conexi¢n y termina el programa.
+
+CTRL+ESC: Aborta la conexi¢n y termina el programa.
+
+CTRL+C o CTRL+STOP: Termina el programa y vuelve al DOS. Bajo DOS 2, la
+conexi¢n es abortada antes de terminar. Bajo DOS 1 ser† necesario cerrarla
+manualmente con INL TCP C o INL TCP A (es mejor usar ESC o CTRL+ESC para
+salir).
+
+Si el otro extremo cierra o aborta la conexi¢n, la aplicaci¢n finaliza
+inmediatamente.
+
+Ejemplos:
+
+- Conexi¢n activa a telnet.molamazo.com, puerto 23, usando un puerto local
+aleatorio:
+
+TCPCON www.molamazo.com 23
+
+- Conexi¢n pasiva a nuestro puerto 34, el host debe tener la direcci¢n IP
+1.2.3.4 y usar el puerto 100:
+
+TCPCON 1.2.3.4 100 34 P
+
+- Conexi¢n pasiva a nuestro puerto 7, socket remoto sin especificar (aceptamos
+cualquier petici¢n de conexi¢n contra nuestro puerto 7):
+
+TCPCON 0.0.0.0 0 7 P
+
+
+2.5.4. EL CLIENTE DE TELNET
+
+TELNET.COM es un programa similar a TCPCON, pero que cumple las
+especificaciones del protocol Telnet descritas en RFC854 y RFC855.
+
+TELNET se usa de la siguiente forma:
+
+TELNET <nombre o IP host> [<puerto remoto>] [P]
+
+<nombre o IP host> indica el nombre o la direcci¢n IP de la m†quina a la que
+queremos conectar.
+
+<puerto remoto> indica el puerto TCP al que queremos conectar, por defecto es
+el puerto 23. El puerto local usado siempre es el 23.
+
+"P" es un par†metro opcional que indica que la conexi¢n debe abrirse en modo
+pasivo, es decir, TELNET esperar† a que el host remoto intente conectar con
+nosotros en vez de iniciar activamente la conexi¢n. Si se especifica conexi¢n
+pasiva, puede usarse 0.0.0.0 como un valor especial de nombre del host, lo
+cual indica que se aceptar† conexi¢n desde cualquier m†quina, igual que
+ocurr°a con TCPCON.
+
+Las teclas con funci¢n especial en TELNET son las mismas de TCPCON, excepto
+F1. En TELNET, al pulsar F1 aparecer† una pantalla de estado/opciones que
+permite enviar car†cteres especiales al servidor y configurar algunos
+par†metros de la comunicaci¢n (por ejemplo, desde dicha pantalla se le puede
+pedir al servidor que env°e, o deje de enviar, eco de toda la informaci¢n que
+recibe).
+
+TELNET reconoce algunas secuencias de escape ANSI, en concreto las
+relacionadas con el posicionamiento del cursor en la pantalla. De esta forma
+es posible la conexi¢n a terminales VT100, aunque con funcionalidad limitada.
+
+TELNET reconoce y procesa las opciones SUPRESS-GA, BINARY-TRANSMISSION, EOR,
+ECHO y TERMINAL-TYPE. Respecto a esta £ltima, se anuncian los siguientes tipos
+de terminal seg£n las reglas definidas en RFC1091: ANSI, NETWORK-VIRTUAL-
+TERMINAL y UNKNOWN, en ese orden.
+
+
+2.6. USO DE PROXY-ARP (S‡LO VERSI‡N ETHERNET)
+
+Algunos routers responden proporcionando su propia direcci¢n de hardware a las
+peticiones ARP que reciben pidiendo la resoluci¢n de una direcci¢n IP no
+local. Este mecanismo se denomina proxy-ARP, y est† pensado principalmente
+para poder ofrecer servicios de enrutamiento a m†quinas cuya pila TCP/IP no
+soporta el uso de subredes.
+
+Existen tres circunstancias en las que INL intentar† resolver direcciones IP
+no locales usando ARP, pudiendo por tanto usar los servicios de un router que
+soporte proxy-ARP:
+
+1) Si la m†scara de subred es 0.0.0.0, INL intentar† resolver todas las
+direcciones IP usando ARP.
+
+2) Cuando se encuentra una entrada apropiada en la tabla de enrutamiento para
+una direcci¢n IP no local, INL siempre intentar† resolver la direcci¢n del
+router asociado usando ARP, aunque Çste no se encuentre en la misma subred que
+el MSX.
+
+3) Cuando no haya ninguna entrada apropiada en la tabla de enrutamiento para
+una direcci¢n IP no local, y si la direcci¢n del router por defecto es
+0.0.0.0, INL intentar† resolver la direcci¢n en cuesti¢n usando ARP.
+
+Dicho de otro modo, cuando INL necesita resolver una direcci¢n IP "A", sigue
+el siguiente algoritmo:
+
+®La m†scara de subred es 0.0.0.0?
+  S°: resolver A usando ARP. Fin.
+®Est† A en la misma subred que el MSX?
+  S°: resolver A usando ARP. Fin.
+®Hay una entrada apropiada R para A en la tabla de enrutamiento?
+  S°: resolver R usando ARP. Fin.
+®La direcci¢n del router por defecto, G, es 0.0.0.0?
+  S°: resolver A usando ARP. Fin.
+  No: resolver G usando ARP. Fin.
+
+Una vez finalizada la resoluci¢n, los datagramas destinados a "A" se env°an a
+la direcci¢n hardware obtenida (el paso "resolver X usando ARP" puede implicar
+una resoluci¢n real o bien una simple consulta a la tabla ARP).
+
+N¢tese que si la tabla de enrutamiento est† vac°a, tener la m†scara de subred
+a 0.0.0.0 y tener el router por defecto a 0.0.0.0 tienen el mismo efecto.
+
+
+3. INTERNESTOR LITE - GUIA DEL PROGRAMADOR
+
+En esta parte del manual de INL se explica todo lo necesario para desarrollar
+programas que hagan uso de INL para acceder a Internet o para comunicarse con
+otras m†quinas, en topolog°a punto a punto o en una red local, usando TCP/IP.
+
+
+3.1. PARTES DE INTERNESTOR LITE
+
+Una vez instalado, INL modifica el gancho de la interrupci¢n del reloj y ocupa
+tres zonas de memoria:
+
+- Una zona de salto en la p†gina 3.
+- Un segmento del mapeador primario usado para almacenar c¢digo. Esta ser† la
+zona a la que normalmente acceder† el programador para interactuar con INL.
+- Otro segmento del mapeador primario usado para almacenar variables y b£feres
+de datos.
+
+A continuaci¢n se detalla el contenido de cada una de estas zonas, as° como la
+manera de averiguar su localizaci¢n.
+
+
+3.1.1. DETECCI‡N DE INTERNESTOR LITE Y LOCALIZACI‡N DE LAS ZONAS
+
+Para averiguar si INL est† instalado, y para obtener los n£meros de segmento y
+la direcci¢n de la zona de salto de la p†gina 3, se usa el gancho de la BIOS
+extendida, #FFCA. El procedimiento es el siguiente:
+
+1) Se realiza una llamada a #FFCA pasando A=0 y DE=#2203.
+
+2) Si INL no est† instalado, la llamada no hace nada y no modifica AF, BC, DE
+ni HL; por tanto devuelve A=0.
+
+3) Si INL est† instalado, la llamada devuelve A=1, y adem†s la siguiente
+informaci¢n:
+
+B = N£mero del segmento de c¢digo (se refiere siempre al mapeador primario).
+
+C = N£mero del segmento de variables y b£feres (se refiere siempre al mapeador
+primario).
+
+HL = Direcci¢n de la zona de salto en p†gina 3.
+
+El siguiente es un ejemplo de c¢digo para la detecci¢n de INL:
+
+
+	xor	a
+	ld	de,#2203
+	call	#FFCA
+	or	a
+	jp	z,ERROR	;INL no instalado
+	ld	a,b
+	ld	(INL_SEG1),a
+	ld	a,c
+	ld	(INL_SEG2),a
+	ld	(INL_P3DIR),hl
+	...
+
+INL_SEG1:	ds	1	;Segmento de c¢digo
+INL_SEG2:	ds	1	;Segmento de datos
+INL_P3DIR:	ds	2	;Direcci¢n de la zona de salto
+
+
+NOTA: En las versiones de INL anteriores a la 1.0, la detecci¢n de INL y la
+localizaci¢n de las zonas se relizaba consultando un †rea de seis bytes
+situada en una posici¢n fija en memoria. Se incluye aqu° una descripci¢n de
+dicha †rea como ayuda para la modificaci¢n de los programas que funcionen con
+versiones antiguas de INL:
+
+* P3_ID (#F400): Cadena "IN" (bytes #49, #4E). La presencia de esta cadena
+indicaba que INL estaba instalado.
+
+* P3_SEG1 (#F402): N£mero del segmento de c¢digo (se refiere siempre al
+mapeador primario).
+
+* P3_SEG2 (#F403): N£mero del segmento de variables y b£feres (se refiere
+siempre al mapeador primario).
+
+* P3_P3DIR (#F404): Direcci¢n de la zona de salto en p†gina 3.
+
+
+3.1.2. LA ZONA DE SALTO
+
+La zona de salto se sit£a al final de la TPA, cuya direcci¢n se obtiene como
+se indica en 3.1.1. Es una zona de unos 256 bytes a cuyo interior apunta el
+gancho de la interrupci¢n del reloj; el c¢digo as° llamado se encarga de
+conectar el slot+segmento de INL en la p†gina 1, pasar el control a la rutina
+de servicio a la interrupci¢n del reloj de INL, y posteriormente restaurar el
+slot+segmento originales y pasar el control al gancho de interrupci¢n
+original. Es decir, el comportamiento t°pico de cualquier programa residente
+que cargue c¢digo en un segmento de RAM.
+
+Sin embargo, la zona de salto no se limita a eso: a partir de la posici¢n +12
+de la misma hay una tabla de salto a rutinas de bajo nivel que pueden resultar
+de utilidad para el programador. Son las siguientes (el desplazamiento
+indicado, en decimal, es relativo a la direcci¢n inicial de la zona):
+
++12: LDIRP3. Rutina auxiliar que resulta de utilidad a la hora de copiar
+bloques de datos de un segmento a otro. El proceso que realiza es el siguiente:
+
+1) Conecta el slot pasado en L y el segmento pasado en H en la p†gina 1.
+2) Copia BC bytes desde la direcci¢n pasada en IX a la direcci¢n pasada en IY.
+3) Restaura el segmento y el slot originales en la p†gina 1.
+
++15: PUT_P1. Se trata de una rutina para establecer el segmento de la p†gina 1
+de forma independiente de la versi¢n del DOS usada: bajo DOS 1, se ejecutar†
+una instrucci¢n OUT (#FD),A; en cambio bajo DOS 2 se saltar† a la rutina
+PUT_P1 proporcionada por el DOS. Usando este gancho y los tres siguientes es
+posible realizar cambios de segmento sin tener que preocuparse por la versi¢n
+del DOS utilizada.
+
++18: GET_P1. La rutina complementaria de la anterior: ejecutar† una
+instrucci¢n IN A,(#FD) o saltar† a la rutina del DOS GET_P1, seg£n la versi¢n
+del DOS utilizada.
+
++21: PUT_P2. Como PUT_P1, pero para la p†gina 2.
+
++24: GET_P2. Como GET_P1, pero para la p†gina 2.
+
++27: GETSLOT1. Devuelve en A el slot actualmente conectado en la p†gina 1, en
+el formato est†ndar %E000SSPP (Extendido, Secundario, Primario).
+
++30: PUTSLOT1. Establece en la p†gina 1 el slot pasado en A, pero s¢lo si
+A<>B. Si se hace LD B,A antes de llamarla equivale a llamar directamente a
+ENASLT.
+
+
+3.1.3. EL SEGMENTO DE C‡DIGO Y LAS RUTINAS DE USUARIO
+
+Esta es la parte m†s importante de INL de cara al programador. Se trata de un
+segmento de RAM del mapeador primario que contiene todo el c¢digo ejecutable
+de INL; al principio del mismo hay una tabla de salto a rutinas que el
+programador puede usar para interactuar con INL (enviar y recibir datos,
+obtener y establecer par†metros de configuraci¢n de INL, o realizar algunas
+operaciones auxiliares de manipulaci¢n de datos).
+
+El proceso de llamada a una rutina de INL es como sigue:
+
+1) Aseg£rate de que el mapeador primario est† conectado en las p†ginas 1 y 2
+(Çste es el estado por defecto para los programas .COM).
+
+2) Conecta el segmento de c¢digo de INL en la p†gina 1 (el n£mero del segmento
+se obtiene como se indica en 3.1.1; puedes uar la rutina PUT_P1 de la zona de
+salto para conectar el segmento).
+
+3) Llama a la rutina deseada de INL con un simple CALL.
+
+4) Opcionalmente, restaura el segmento/slot anteriores en p†gina 1 y/o 2 (a
+este respecto, ver la secci¢n 3.3, "Consideraciones de programaci¢n", m†s
+adelante).
+
+Observa que en el caso de la p†gina 2 s¢lo hay que asegurar que est† conectado
+el slot del mapeador primario, no es necesario hacer ning£n cambio de segmento.
+
+A continuaci¢n se listan las rutinas disponibles en la tabla de salto, y m†s
+adelante se detalla el funcionamiento de cada una de ellas.
+
+* Interrupci¢n del reloj
+
+- TIME_INT (#4000): Punto de entrada para la rutina de servicio a la
+interrupci¢n del reloj. No debe ser llamado directamente desde un programa.
+
+* Manejo de slots y segmentos (las rutinas LDIRP3 a PUTSLOT1 son saltos
+directos a las rutinas hom¢nimas en la zona de salto en p†gina 3, descrita
+anteriormente)
+
+- LDIRP3 (#4003)
+- PUT_P1 (#4006)
+- GET_P1 (#4009)
+- PUT_P2 (#400C)
+- GET_P2 (#400F)
+- GETSLOT1 (#4012)
+- PUTSLOT1 (#4015)
+- GETSLOT2 (#4018): Obtiene el slot conectado en la p†gina 2.
+- PUTSLOT2 (#401B): Conecta un determinado slot en la p†gina 2.
+
+* Acceso al puerto RS232 (s¢lo versi¢n serie)
+
+Nota: se trata de saltos directos a las rutinas hom¢nimas proporcionadas por
+el driver Fossil
+
+- RS_IN (#401E): Obtiene un byte entrante.
+- RS_OUT (#4021): Env°a un byte.
+- RS_IN_STAT (#4024): Comprueba si hay bytes entrantes disponibles.
+- RS_OUT_STAT (#4027): Comprueba si se pueden enviar bytes (no usado por el
+c¢digo de INL en esta versi¢n de c¢digo, los datos se env°an directamente).
+
+* Manipulaci¢n de datos y configuraci¢n
+
+- VERS_PAUSE (#402A): Obtiene el n£mero de versi¢n de INL, y consulta o
+modifica el estado de pausa/activaci¢n de INL.
+- GET_VAR (#402D): Lee una variable del segmento de datos de INL.
+- SET_VAR (#4030): Modifica una variable del segmento de datos de INL.
+- COPY_DATA (#4033): Copia un bloque de datos del segmento de datos de INL a
+TPA o viceversa.
+- IP_STRING (#4036): Genera una cadena que representa una direcci¢n IP dada.
+- CALC_MD5 (#4039): Calcula el hash MD5 de un cierto bloque de datos de hasta
+1024 bytes.
+- CALC_CHKSUM (#403C): Calcula el checksum estandar de un cierto bloque de
+datos de hasta 1024 bytes.
+- B64_INIT (#403F): Inicia una operaci¢n de codificaci¢n o decodificaci¢n
+Base64.
+- B64_ENCODE (#4042): Codifica un bloque de datos en Base64.
+- B64_DECODE (#4045): Decodifica un bloque de datos codificado en Base64.
+
+* Acceso al modem y conexi¢n PPP (s¢lo versi¢n serie)
+
+- SEND_MODEM (#4048): Env°a un comando al modem y devuelve su respuesta.
+- PPP_OPEN (#404B): Abre una conexi¢n PPP.
+- PPP_CLOSE (#404E): Cierra la conexi¢n PPP.
+
+* Env°o y recepci¢n de PINGs
+
+- SEND_ECHO (#4051): Env°o de un paquete de petici¢n de eco ICMP (PING).
+- RCV_ECHO (#4054): Obtenci¢n del paquete de respuesta de eco ICMP (PING) m†s
+antiguo recibido.
+
+* Env°o y recepci¢n de paquetes UDP
+
+- UDP_SEND (#4057): Env°o de un paquete UDP.
+- UDP_RCV (#405A): Obtenci¢n del paquete UDP m†s antiguo recibido.
+
+* Resoluci¢n de nombres
+
+- DNS_Q (#405D): Efect£a una petici¢n de resoluci¢n de nombre.
+- DNS_S (#4060): Obtenci¢n del estado de la petici¢n de resoluci¢n de nombre.
+
+* Conexiones TCP
+
+- TCP_OPEN (#4063): Abre una conexi¢n TCP.
+- TCP_CLOSE (#4066): Cierra una conexi¢n TCP.
+- TCP_ABORT (#4069): Aborta una conexi¢n TCP.
+- TCP_SEND (#406C): Env°a datos a una conexi¢n TCP.
+- TCP_RCV (#406F): Obtiene datos entrantes de una conexi¢n TCP.
+- TCP_STATUS (#4072): Obtiene el estado de una conexi¢n TCP.
+- TCP_FLUSH (#4075): Limpia el b£fer de salida de una conexi¢n TCP.
+
+* Env°o y captura de datagramas en bruto
+
+- RAW_SEND (#4078): Env°a un datagrama en bruto.
+- RAW_CONTROL (#407B): Controla la captura de un datagrama en bruto.
+- RAW_RCV (#407E): Recupera el datagrama en bruto capturado.
+
+* Varias
+
+- WAIT_INT (#4081): Espera a que se produzca una interrupci¢n del reloj.
+- NETWORK_STATE (#4084): Obtiene el estado de la red.
+
+* Espec°ficas de Ethernet (s¢lo versi¢n Ethernet)
+
+- ENET_INFO (#4087): Obtiene la direcci¢n hardware la tarjeta Ethernet.
+- ETH2ASCII (#408A): Convierte una direcci¢n hardware en una cadena ASCII.
+- ASCII2ETH (#408D): Obtiene la direcci¢n hardware representada por una cadena
+ASCII.
+- MASK2BITS (#4090): Cuenta el n£mero de bits puestos a uno de una m†scara de
+subred.
+- BITS2MASK (#4093): Genera una m†scara de subred a partir del n£mero de bits
+puestos a uno.
+- ARP_ROUTE (#4096): Devuelve la direcci¢n y la capacidad de las tablas ARP y
+de enrutamiento.
+
+A continuaci¢n se detalla el funcionamiento de todas estas rutinas.
+
+
+* LDIRP3 a PUTSLOT1: Ver la descripci¢n de las rutinas hom¢nimas en la
+secci¢n 3.1.2.
+
+
+* GETSLOT2 (#4018): Obtiene el slot conectado en la p†gina 2
+Entrada: -
+Salida: A = Slot conectado actualmente en la p†gina 2,
+            en el formato estandar %E000SSPP (Extendido, Secundario, Primario)
+
+
+* PUTSLOT2 (#401B): Conecta un determinado slot en la p†gina 2
+Entrada: A = Slot a conectar
+         B = Slot para comparar
+Salida:  -
+
+El slot especificado en A ser† conectado en la p†gina 2 s¢lo si es distinto
+del valor especificado en B.
+
+
+* RS_IN (#401E): Obtenci¢n de un byte entrante desde el RS232
+                 (s¢lo versi¢n serie)
+Entrada: -
+Salida:  A = Byte m†s antiguo recibido por el puerto RS232
+
+Antes de ejecutar esta rutina es necesario ejecutar RS_IN_STAT para comprobar
+si realmente hay datos entrantes disponibles.
+
+
+* RS_OUT (#4021): Env°o de un byte al puerto RS232 (s¢lo versi¢n serie)
+Entrada: A = Byte para enviar
+Salida:  -
+
+
+* RS_IN_STAT (#4024): Comprueba si hay bytes entrantes disponibles
+                      desde el puerto RS232 (s¢lo versi¢n serie)
+Entrada: -
+Salida:  A = #FF si hay bytes disponibles, 0 en caso contrario
+
+Es necesario usar esta rutina antes de llamar a RS_IN.
+
+
+* RS_OUT_STAT (#4027): Comprueba si se pueden enviar bytes
+                       al puerto RS232 (s¢lo versi¢n serie)
+Entrada: -
+Salida:  A = #FF si se pueden enviar bytes, 0 en caso contrario
+
+No es necesario usar esta rutina antes de llamar a RS_OUT. De hecho, esta
+versi¢n de c¢digo de INL no usa esta rutina.
+
+
+* VERS_PAUSE (#402A): Obtenci¢n de la versi¢n y el n£mero de versi¢n de INL,
+                      y consulta o modificaci¢n del estado de
+                      pausa/activaci¢n de INL
+Entrada: A = 0 para no modificar el estado de pausa/activaci¢n de INL
+             1 para pausar INL
+             2 para reactivar INL
+Salida:  A = Estado de INL tras la ejecuci¢n de la rutina:
+             1 si INL est† pausado
+             2 si INL est† activo
+         C = N£mero de versi¢n principal del c¢digo de INL
+         D = N£mero de versi¢n secundario del c¢digo de INL
+         E = N£mero de revisi¢n del c¢digo de INL
+         B = Versi¢n de INL
+             0: INL para driver Fossil y PPP (puerto serie)
+             1: INL para ObsoNET (discontinuado)
+             2: INL para la UNAPI Ethernet
+
+Si simplemente se desea consultar la versi¢n de INL y/o el n£mero de versi¢n
+del c¢digo, basta ejecutar esta rutina pas†ndole A=0 y consultar B, C, D y E
+a la salida.
+
+El valor devuelto en B indica la versi¢n de INL que est† instalada. Las
+aplicaciones que hagan uso de dichas rutinas y variables espec°ficas de una
+versi¢n determinada deber°an ejecutar VERS_PAUSE y consultar el valor
+devuelto en B.
+
+Cuando INL est† pausado, no se ejecuta su rutina de servicio a la interrupci¢n
+del reloj, por lo que no recoge datos entrantes, actualiza temporizadores ni
+env°a datos. El estado de pausa puede ser £til cuando se necesita realizar una
+operaci¢n muy larga (por ejemplo copiar muchos ficheros), ya que cuando INL
+est† instalado y activo el funcionamiento global del ordenador se ralentiza.
+
+Nota: en este documento, el tÇrmino "versi¢n de INL" hace referencia al tipo
+de hardware soportado (es decir, versi¢n serie o versi¢n Ethernet) y no al
+n£mero de versi¢n del c¢digo, a no ser que se especifique lo contrario.
+
+
+* GET_VAR (#402D): Lectura una variable del segmento de datos de INL
+Entrada: HL = Direcci¢n de la variable a leer
+Salida:  A = Contenido de la variable, como un dato de un byte
+         DE = Contenido de la variable, como un dato de dos bytes (E=A)
+
+Las variables del segmento de datos de INL gobiernan ciertos par†metros del
+funcionamiento global de INL, y ofrecen diversa informaci¢n como por ejemplo
+las direcciones IP en uso. Las variables £tiles para el programador se listan
+en la secci¢n 3.1.4.
+
+Aunque INL siempre accede al segmento de datos a travÇs de la p†gina 2, no es
+necesario que la direcci¢n pasada en HL estÇ en el rango #8000-#BFFF. Por
+ejemplo, da igual especificar #8034 que #0034, #4034 o #C034.
+
+
+* SET_VAR (#4030): Modificaci¢n una variable del segmento de datos de INL
+Entrada: HL = Direcci¢n de la variable a modificar
+         Cy = 0 y A = Byte a escribir; o bien,
+         Cy = 1 y DE = Dato de dos bytes a escribir
+Salida:  -
+
+Las variables del segmento de datos de INL gobiernan ciertos par†metros del
+funcionamiento global de INL, y ofrecen diversa informaci¢n como por ejemplo
+las direcciones IP en uso. Las variables £tiles para el programador se listan
+en la secci¢n 3.1.4; n¢tese que algunas variables est†n pensadas para ser
+s¢lo leidas, y nunca deben modificarse mediante programa.
+
+Al igual que ocurre con GET_VAR, no es obligatorio que la direcci¢n pasada en
+HL estÇ en el rango #8000-#BFFF.
+
+
+* COPY_DATA (#4033): Copia un bloque de datos del segmento de datos
+                     de INL a TPA o viceversa
+Entrada: HL = Direcci¢n de origen
+         DE = Direcci¢n de destino
+         BC = Longitud
+         Cy = Direcci¢n de la copia:
+              0: Del segmento de datos de INL a TPA
+              1: De TPA al segmento de datos de INL
+Salida:  -
+
+Esta rutina es usada principalmente por el c¢digo de INL cuando ejecuta
+rutinas que implican traspaso de datos entre el usuario e INL, pero tambiÇn
+puede ser £til para el programador, por ejemplo para obtener/establecer
+direcciones IP o para leer con una sola llamada todas las variables de
+configuraci¢n de INL.
+
+Al igual que ocurre con SET_VAR y GET_VAR, la direcci¢n referente al segmento
+de datos de INL (HL si Cy=0, DE si Cy=1) no tiene por quÇ estar en el rango
+#8000-#BFFF.
+
+
+* IP_STRING (#4036): Generaci¢n una cadena que representa
+                     una direcci¢n IP dada
+Entrada: HL, DE = Direcci¢n IP, con el formato L.H.E.D
+	 IX = Direcci¢n en TPA donde dejar la cadena generada
+	      (m†ximo 16 bytes)
+	 A = Car†cter de terminaci¢n a usar en la cadena generada
+Salida:  -
+
+Esta funci¢n resultar† de utilidad para aquellas aplicaciones que muestren por
+pantalla informaci¢n sobre direcciones IP. Por ejemplo, si se le pasa
+HL=#0304, DE=#0A0B y A="$", generar† la cadena "4.3.11.10$".
+
+El b£fer en TPA para la cadena generada deber°a tener una longitud de 16
+bytes, para permitir alojar la cadena generada m†s larga posible (del tipo
+"xxx.xxx.xxx.xxx$").
+
+Para realizar la operaci¢n inversa (obtener una direcci¢n IP a partir de la
+cadena que la representa) se pueden usar las funciones DNS_Q y DNS_S.
+
+
+* CALC_MD5 (#4039): C†lculo del hash MD5 de un bloque de datos
+Entrada: HL = Direcci¢n del bloque en TPA
+         DE = Direcci¢n para dejar el hash resultante en TPA (16 bytes)
+         BC = Longitud del bloque (0 a 1024 bytes)
+Salida:  Cy = 1 en caso de error (se pas¢ BC>512)
+
+Esta rutina calcula el c¢digo hash del bloque de datos pasado usando el
+algoritmo MD5 especificado en RFC1321. El hash resultante es una "firma" de 16
+bytes generada a partir de los datos del bloque; te¢ricamente es £nica para
+cada bloque e irreversible (es decir, no es posible recuperar el bloque de
+datos original a partir del hash).
+
+Esta rutina es usada por INL versi¢n serie para la autentificaci¢n por medio
+del protocolo CHAP durante la apertura de una conexi¢n PPP. Puede ser de
+utilidad a la hora de implementar protocolos de alto nivel sobre TCP que
+hagan uso de mecanismos de autentificaci¢n basados en MD5 (por ejemplo, un
+cliente de SMTP).
+
+
+* CALC_CHKSUM (#403C): C†lculo del checksum estandar
+                       de un cierto bloque de datos
+Entrada: HL = Direcci¢n del bloque en TPA
+         BC = Longitud del bloque (1 a 1024 bytes)
+Salida:  Cy = 1 en caso de error (se pas¢ BC>1024 o BC=0)
+         DE = Checksum resultante
+
+Esta rutina calcula el checksum est†ndar (es decir, el basado en complementos
+a uno que se usa en las cabeceras IP, TCP y UDP) del bloque pasado. El
+checksum es una suma de comprobaci¢n generada a partir de los datos del
+bloque, y se usa normalmente para comprobar la integridad de los paquetes
+recibidos desde Internet.
+
+El siguiente es un procedimiento sencillo para comprobar el funcionamiento de
+esta rutina:
+
+1) Generar un bloque de datos aleatorio.
+2) Poner sus dos primeros bytes a 0.
+3) Pasar el bloque a CALC_CHKSUM.
+4) Escribir el checksum devuelto en los dos bytes que hab°amos puesto a 0:
+   LD (BLOQUE),DE
+5) Volver a pasar el bloque a CALC_CHKSUM.
+
+El resultado devuelto por la £ltima operaci¢n debe ser DE=0 (checksum
+correcto, indica que el bloque no ha sufrido modificaciones entre las dos
+llamadas a CALC_CHKSUM aparte del propio establecimiento del checksum). En un
+caso real, el bloque de datos ser°a un datagrama, y entre los pasos 4 y 5
+habr°a una transferencia del mismo a travÇs de Internet, con una posible
+corrupci¢n de los datos; de ah° la utilidad del checksum.
+
+
+* B64_INIT (#403F): Inicia una operaci¢n de codificaci¢n
+		    o decodificaci¢n Base64
+Entrada: A = Longitud de una l°nea codificada, o 0 para Infinito
+             (usado s¢lo al codificar)
+Salida:  Todos los registros preservados
+
+Esta rutina inicializa las variables internas de INL usadas para la
+codificaci¢n y decodificaci¢n en Base64, de forma que tras ejecutarla es
+posible comenzar la decodificaci¢n o decodificaci¢n de un bloque a/desde
+Base64 usando las rutinas B64_ENCODE y B64_DECODE.
+
+INL permite codificar y decodificar a y desde Base64 un bloque de datos de
+tama§o arbitrariamente grande, para lo cual se debe dividir el bloque en
+subbloques peque§os (de hasta 512 bytes) y codificar o decodificar cada uno de
+ellos mediante llamadas sucesivas a B64_ENCODE o B64_DECODE (que devolver†n, a
+su vez, subbloques de la secuencia de salida). Para que esto sea posible, INL
+necesita almacenar internamente cierta informaci¢n sobre el estado del proceso
+de codificaci¢n o decodificaci¢n; es decir, en cada llamada a B64_ENCODE o
+B64_DECODE se utiliza la informaci¢n de estado guardada en la llamada
+anterior. Por este motivo, antes de iniciar la codificaci¢n o decodificaci¢n
+de un bloque nuevo es necesario llamar a B64_INIT una vez, para establecer las
+variables de estado en sus valores iniciales.
+
+Dicho de otro modo, el proceso para codificar o decodificar un bloque de datos
+de cualquier tama§o es el siguiente:
+
+1) Dividir l¢gicamente el bloque a (de)codificar en subbloques de hasta 512
+bytes.
+2) Ejecutar B64_INIT una vez.
+3) Ejecutar B64_ENCODE o B64_DECODE con Cy=0 para todos los subbloques excepto
+para el £ltimo (bloques intermedios).
+4) Ejecutar B64_ENCODE o B64_DECODE con Cy=1 para el £ltimo subbloque (bloque
+final).
+
+N¢tese que para bloques de tama§o total igual o inferior a 512 bytes se puede
+obviar el paso 3 (aunque tambiÇn se podr°a, por ejemplo, dividir un bloque de
+512 bytes en cuatro subbloques de 128 bytes; todo depende del tama§o de los
+b£feres usados por cada aplicaci¢n en concreto). Adem†s, no es necesario que
+todos los subbloques intermedios tengan el mismo tama§o.
+
+B64_ENCODE y B64_DECODE devuelven los punteros de entrada y salida de datos
+convenientemente actualizados seg£n los tama§os de los bloques pasado y
+devuelto, respectivamente; por tanto, si los subbloques est†n almacenados
+consecutivamente en memoria resulta sencillo componer un bucle que los
+(de)codifique secuencialmente (en la descripci¢n de la rutina B64_ENCODE hay
+ejemplos de c¢digo).
+
+La longitud de una l°nea codificada pasada en A indica cu†ntos car†cteres
+Base64 generar† la rutina B64_ENCODE antes de insertar un fin de l°nea
+(secuencia CR-LF) en la secuencia de salida. Esto resulta £til, por ejemplo,
+si se deben enviar datos mediante el protocolo SMTP, que impone un l°mite en
+la longitud de las l°neas enviadas; en ese caso se suele usar el valor 76.
+Este par†metro no es usado por B64_DECODE.
+
+El valor pasado como longitud de una l°nea codificada debe ser un m£ltiplo de
+cuatro, de lo contrario se redondear† al m£ltiplo de cuatro m†s cercano por
+defecto (excepto los valores uno a tres, que se redondear†n a cuatro). Un
+valor cero significa "Infinito", es decir, no se insertar†n secuencias de fin
+de l°nea en la secuencia codificada de salida.
+
+Nota: no se deben mezclar llamadas a B64_ENCODE y llamadas a B64_DECODE sin
+antes ejecutar B64_INIT de nuevo, ya que ambas rutinas utilizan la misma zona
+de memoria para almacenar el estado del proceso de codificaci¢n o
+decodificaci¢n.
+
+Nota: si se va a codificar o decodificar un bloque muy grande, y se est†n
+enviando o recibiendo datos UDP o TCP, puede ser conveniente insertar llamadas
+a WAIT_INT entre las llamadas a B64_ENCODE o B64_DECODE (ver secci¢n 3.3,
+"Consideraciones de programaci¢n"). La ejecuci¢n del c¢digo principal de INL
+durante una interrupci¢n del reloj no afecta a las variables usadas para
+guardar el estado del proceso de codificaci¢n o decodificaci¢n.
+
+
+* B64_ENCODE (#4042): Codifica un subbloque de datos en Base64
+Entrada: IX = Direcci¢n de origen del subbloque a codificar en TPA
+         IY = Direcci¢n de destino para la secuencia codificada en TPA
+         BC = Tama§o del subbloque a codificar (0 a 512)
+         Cy = 0 si es un bloque intermedio
+              1 si es un bloque final
+Salida:  En caso de error, Cy = 1 y A = C¢digo de error:
+              1: Tama§o del bloque de entrada incorrecto
+                 (mayor que 512)
+         Si no hay error, Cy = 0, A = 0 y el resto de registros como sigue
+         BC = Tama§o de la secuencia Base64 generada
+         IX = IX + BC a la entrada
+         IY = IY + BC a la salida
+         HL:DE = Tama§o acumulado de las secuencias Base64 generadas
+
+Esta rutina codifica un bloque de datos de hasta 512 bytes mediante la
+codificaci¢n Base64. Como se ha explicado en la descripci¢n de la rutina
+B64_INIT, es posible codificar bloques de datos de cualquier tama§o
+dividiÇndolos en subbloques de hasta 512 bytes y ejecutando sucesivamente esta
+rutina para cada uno de los subbloques, pasando Cy=0 para todos ellos excepto
+para el £ltimo. Antes de iniciar el proceso de codificaci¢n es necesario
+ejecutar B64_INIT una vez.
+
+Si se pas¢ un valor distinto de cero como longitud de l°nea codificada al
+ejecutar B64_INIT, la rutina insertar† un fin de l°nea (CR, ASCII 13 seguido
+de LF, ASCII 10) en la secuencia de salida cada vez que haya sido generado el
+n£mero de car†cteres codificados especificado. No se inserta salto de l°nea al
+codificar el bloque final, a no ser que el n£mero total de car†cteres
+codificados sea un m£ltiplo exacto de la longitud de l°nea codificada.
+
+Si termina sin errores, esta rutina devuelve los punteros pasados en IX e IY
+incrementados seg£n el tama§o del bloque de entrada y del bloque de salida,
+respectivamente. Por tanto, el proceso de codificaci¢n resulta sencillo si los
+subbloques se encuentran almacenados consecutivamente en memoria. Por ejemplo,
+para codificar un bloque de 1280 bytes (512+512+256) que se encuentra en la
+posici¢n de memoria #4000 y depositar el resultado en #8000 (ambas direcciones
+referentes a los segmentos de TPA) se puede hacer lo siguiente (suponiendo que
+el segmento de c¢digo de INL se encuentra conectado en la p†gina 1):
+
+        xor     a
+        call    B64_INIT        ;Necesario siempre antes de empezar
+
+        ld      ix,#4000        ;Direcciones iniciales
+        ld      iy,#8000        ;de entrada y salida
+
+        ld      bc,512  ;Primer bloque intermedio
+        or      a
+        call    B64_ENCODE
+
+        ld      bc,512  ;Segundo bloque intermedio
+        or      a
+        call    B64_ENCODE
+
+        ld      bc,256  ;Bloque final
+        scf
+        call    B64_ENCODE
+
+La codificaci¢n Base64 genera cuatro car†cteres codificados por cada tres
+car†cteres a codificar, por tanto la secuencia generada siempre ser† m†s larga
+que el bloque de datos pasado. Concretamente, el tama§o de la secuencia
+generada variar†, seg£n la longitud de l°nea codificada pasado a B64_INIT,
+entre 4/3 del bloque pasado (para una longitud de l°nea infinita) y el doble
+del bloque pasado (para una longitud de l°nea igual a cuatro). Por tanto, el
+tama§o m†ximo absoluto de la secuencia generada por esta rutina es de 1024
+bytes.
+
+El valor devuelto en HL:DE representa el tama§o de secuencia codificada
+acumulado, es decir, la suma de los tama§os de todas las secuencias Base64
+generadas mediante ejecuciones de B64_ENCODE desde que se ejecut¢ B64_INIT. O
+en otras palabras, tras codificar el bloque final es el tama§o de la
+codificaci¢n completa Base64 del bloque completo codificado.
+
+A continuaci¢n se muestra una rutina genÇrica capaz de codificar un bloque de
+datos de "cualquier" tama§o almacenado en la direcci¢n #4000 de TPA; la
+secuencia codificada se devuelve en #8000. El tama§o m†ximo admisible para la
+secuencia codificada por esta rutina es de 16K (toda la p†gina 2 de TPA), por
+tanto, estrictamente hablando el tama§o m†ximo del bloque a codificar es de
+8K. L°mites m†s realistas para este tama§o m†ximo son 12288 bytes (si se usa
+una longitud de l°nea codificada igual a infinito) o 11972 bytes (si se usa
+una longitud de l°nea codificada igual a 76). Se supone que el segmento de
+c¢digo de INL est† conectado en la p†gina 1.
+
+        ;Rutina para codificar un bloque de datos en Base64
+        ;Entrada: Bloque en #4000
+        ;         A=Longitud de una l°nea codificada
+        ;         BC=Tama§o del bloque
+        ;            (hasta 8192 o 12288 bytes seg£n valor pasado en A)
+        ;Salida:  Secuencia Base64 en #8000
+        ;         DE=Longitud secuencia Base64
+
+B64_ENC:        call    B64_INIT        ;No modifica BC
+                ld      ix,#4000
+                ld      iy,#8000
+
+B64_ENC_LOOP:   ld      a,b     ;Quedan menos de 512 bytes?
+                cp      2
+                jr      c,B64_ENC_FIN
+
+                push    bc      ;Codificacion de un bloque intermedio
+                ld      bc,512
+                or      a
+                call    B64_ENCODE
+
+                pop     bc      ;Resta 512 a la longitud pendiente
+                dec     b       ;y repite el bucle
+                dec     b
+                jr      B64_ENC_LOOP
+
+B64_ENC_FIN:    scf     ;Codificacion del ultimo bloque
+		call	B64_ENCODE    ;Devuelve long. total codificada en DE
+                ret
+
+Esta rutina de ejemplo funcionar† incluso aunque el tama§o pasado en BC sea un
+m£ltiplo exacto de 512, ya que B64_ENCODE funciona correctamente incluso
+aunque se le pase un tama§o de bloque a codificar igual a cero (en ese caso,
+si se trata de un subbloque final es posible que a£n se devuelvan datos
+codificados, dependiendo del estado del proceso almacenado).
+
+IMPORTANTE: TÇngase en cuenta las restricciones de uso de TPA con las rutinas
+de INL que se detallan en la secci¢n 3.3, "Consideraciones de programaci¢n".
+En concreto, es importante recordar que un bloque de datos pasado a INL o
+devuelto por INL no debe cruzar los l°mites entre dos p†ginas.
+
+
+* B64_DECODE (#4045): Decodifica una subsecuencia Base64
+Entrada: IX = Direcci¢n de origen de la susecuencia a decodificar en TPA
+         IY = Direcci¢n de destino para el bloque decodificado en TPA
+         BC = Tama§o de la subsecuencia a decodificar (0 a 512)
+         Cy = 0 si es un bloque intermedio
+              1 si es un bloque final
+Salida:  En caso de error, Cy = 1 y A = C¢digo de error:
+              1: Tama§o del bloque de entrada incorrecto
+                 (mayor que 512)
+              2: Tama§o total de la secuencia incorrecta
+                 (s¢lo puede ocurrir al decodificar bloques finales)
+              3: Car†cter inv†lido encontrado en la secuencia
+         Si no hay error, Cy = 0, A = 0 y el resto de registros como sigue
+         BC = Tama§o del bloque de datos generado
+         IX = IX + BC a la entrada
+         IY = IY + BC a la salida
+         HL:DE = Tama§o acumulado de los bloques de datos generadas
+
+Esta rutina es la complementaria de B64_ENCODE: Admite como entrada una
+secuencia Base64 y devuelve el bloque de datos resultante de su
+decodificaci¢n. Como en el caso de B64_DECODE, es posible decodificar
+secuencias Base64 de cualquier tama§o dividiÇndolas en subsecuencias de hasta
+512 bytes y ejecutando sucesivamente esta rutina para cada una de las
+subsecuencias, pasando Cy=0 para todas ellas excepto para la £ltima. TambiÇn,
+antes de iniciar el proceso de decodificaci¢n es necesario ejecutar B64_IN
+IT una vez.
+
+Las rutinas B64_ENCODE y B64_DECODE son esencialmente simÇtricas: ambas tienen
+los mismos par†metros de entrada y salida, y el c¢digo de ejemplo mostrado
+para la rutina B64_ENCODE se puede usar con B64_DECODE sin apenas
+modificaciones. S¢lo hay que tener en cuenta que B64_DECODE puede devolver dos
+c¢digos de error adicionales, y que la relaci¢n entre el tama§o del bloque
+pasado y el tama§o del bloque devuelto cambia.
+
+Dado que el tama§o de una secuencia Base64 es siempre mayor que el
+correspondiente bloque codificado, por simetr°a el bloque de datos devuelto
+por esta rutina siempre ser† menor que la secuencia Base64 pasada.
+Concretamente, si la secuencia no tiene finales de l°nea el tama§o del bloque
+generado ser† 3/4 del tama§o de la secuencia; en caso contrario ser† a£n
+menor. Por tanto, el tama§o m†ximo absoluto del bloque devuelto por esta
+rutina es de 384 bytes.
+
+Los car†cteres de la secuencia pasada son tratados por esta rutina como sigue:
+
+1) Los car†cteres A-Z, a-z, 0-9, "/" y "+" son car†cteres Base64 v†lidos y por
+tanto son procesados adecuadamente.
+
+2) Los car†cteres tabulador (ASCII 9), espacio (ASCII 32), retorno de carro
+(ASCII 13) y salto de l°nea (ASCII 10) son ignorados: no se procesan pero no
+provocan un error.
+
+3) El car†cter "=" (o la secuencia "==") es especial: si se encuentra, se
+considera que marca el final de la secuencia codificada. Si tras llegar al
+final de la secuencia de este modo a£n quedan por procesar car†cteres que no
+pertenecen al grupo mencionado en 2), se consideran car†cteres err¢neos y se
+devuelve el error 3.
+
+4) Cualquier otro car†cter encontrado es err¢neo y provoca siempre el error 3.
+
+El error 2 se produce si el n£mero total de car†cteres codificados en la
+secuencia (es decir, el tama§o total de la secuencia descontanto los
+car†cteres ignorables) no es un m£ltiplo exacto de cuatro. Este error s¢lo
+puede ser devuelto cuando se decodifica un bloque final.
+
+Si esta rutina devuelve el error 2 o el error 3, la secuencia es err¢nea y no
+es posible continuar con el proceso de decodificaci¢n. En cualquier caso,
+antes de procesar otra secuencia siempre es necesario ejecutar B64_INIT.
+
+
+* SEND_MODEM (#4048): Env°o de un comando al modem y obtenci¢n
+		              de su respuesta (s¢lo versi¢n serie)
+Entrada: Cy = 0 para enviar el comando apuntado por HL
+         Cy = 1 para enviar ATDT+el n£mero almacenado en BUF_DIAL
+         HL = Direcci¢n del comando en TPA, acabado en 0 (si Cy=0)
+         DE = Direcci¢n para almacenar la respuesta en TPA
+	      (0 si no estamos interesados en la respuesta)
+         A = Car†cter de terminaci¢n para usar en la cadena de respuesta
+             (si DE<>0)
+Salida:  A = C¢digo de terminaci¢n:
+             0 si no se cumple ninguna de las condiciones siguientes
+             1 si la respuesta comienza con OK
+             2 si la respuesta comienza con ERROR
+	     4 si la respuesta comienza con la cadena almacenada en BUF_MODREP
+	     8 si se pas¢ Cy=1 pero BUF_DIAL contiene una cadena vac°a
+
+Esta rutina es la £nica disponible en INL para interactuar con el modem. Se
+usa t°picamente en dos escenarios:
+
+1) Conexi¢n con el ISP previamente a la apertura de una conexi¢n PPP.
+
+En este caso se debe establecer el n£mero del ISP en el b£fer BUF_DIAL del
+segmento de datos de INL (y si es necesario, establecer la respuesta positiva
+del modem en BUF_MODREP), y ejecutar esta rutina pas†ndole Cy=1. La rutina no
+vuelve hasta que recibe una respuesta por parte del modem.
+
+Si la rutina devuelve A=1 o A=4, la conexi¢n ha tenido Çxito y se puede
+proceder a abrir la conexi¢n PPP; en caso contrario no ha podido establecerse
+la conexi¢n. En concreto, si A=8 no se habr† enviado ning£n comando al modem.
+
+2) Env°o de un comando de inicializaci¢n al modem, con anterioridad al
+establecimiento de la conexi¢n.
+
+En este caso se debe ejecutar la rutina pas†ndole Cy=0 y HL apuntando al
+comando que queremos enviar. De nuevo, la rutina no volver† hasta que reciba
+una respuesta por parte del modem. Si la rutina devuelve A=1, se debe
+interpretar que el comando se ha ejecutado con Çxito.
+
+En ambos casos, opcionalmente podemos pasar en DE la direcci¢n de un b£fer en
+TPA si queremos examinar la respuesta devuelta por el modem (si no nos basta
+saber que era "OK", "ERROR" o "CONNECT").
+
+IMPORTANTE: Si no hay ning£n modem conectado al puerto RS232, esta rutina
+colgar† el ordenador.
+
+Nota: Esta rutina es capaz de detectar si el modem tiene activada la
+devoluci¢n de eco local. En ese caso, el propio comando ser† filtrado de la
+respuesta.
+
+
+* PPP_OPEN (#404B): Apertura de una conexi¢n PPP (s¢lo versi¢n serie)
+Entrada: -
+Salida:  -
+
+Esta rutina inicia la apertura de una conexi¢n PPP, suponiendo que
+previamente se han establecido adecuadamente los par†metros necesarios en el
+segmento de datos de INL (PPP_USER, PPP_PASSWORD y si es necesario las
+direcciones IP). En el caso de conexiones v°a ISP, antes de ejecutar esta
+rutina es necesario que el modem haya establecido una conexi¢n f°sica, para
+lo cual se usa la rutina SEND_MODEM.
+
+La rutina vuelve inmediatamente, y la conexi¢n se establece como tarea de
+fondo, gobernada por la rutina de servicio a la interrupci¢n del reloj. Se
+puede consultar el estado de la conexi¢n en cualquier momento sin m†s que
+leer la variable PPP_STATE del segmento de datos de INL (la conexi¢n quedar†
+completamente establecida cuando esta variable alcance el valor 4). Si
+PPP_STATE vuelve a 0 (conexi¢n cerrada), significa que ha habido un error que
+ha impedido el establecimiento de la conexi¢n. El c¢digo de error se podr†
+consultar entonces en la variable PPP_CLCODE.
+
+IMPORTANTE: Nunca se debe llamar a esta rutina cuando la conexi¢n ya est†
+abierta o abriÇndose (es decir, si PPP_STATE tiene cualquier valor distinto
+de cero). Cuando se usa INL.COM para abrir una conexi¢n PPP, se muestra un
+mensaje de error si la conexi¢n ya est† abierta o abriÇndose; pero esta
+comprobaci¢n la hace el propio INL.COM, no la rutina PPP_OPEN.
+
+
+* PPP_CLOSE (#404E): Cierre de una conexi¢n PPP (s¢lo versi¢n serie)
+Entrada: -
+Salida:  -
+
+Esta rutina cierra la conexi¢n PPP, para lo cual simplemente env°a al otro
+extremo un paquete LCP de terminaci¢n y pone PPP_STATE a cero (se comete
+aqu°, en aras de la simplicidad, una violaci¢n deliberada de las
+especificaciones del protocolo PPP: en teor°a se deber°a esperar a que el
+otro extemo enviara un paquete de confirmaci¢n del cierre). En conexiones v°a
+ISP, no se env°a ning£n comando al modem pero Çste se desconectar† al cabo de
+pocos segundos, debido a que el ISP cortar† el enlace f°sico al recibir el
+paquete de terminaci¢n.
+
+Su puede ejecutar esta rutina sin problemas sea cual sea el estado de la
+conexi¢n PPP, incluso si ya est† cerrada.
+
+
+* SEND_ECHO (#4051): Env°o de un paquete de petici¢n de eco ICMP (PING)
+Entrada:  HL, DE = Direcci¢n IP de la m†quina de destino,
+                   con el formato L.H.E.D.
+         A = TTL del datagrama
+         IX = Identificador ICMP
+         IY = N£mero de secuencia ICMP
+         BC = Longitud de los datos, 0 a 548
+              (-1 para usar el tama§o por defecto)
+Salida:  Cy = 1 en caso de error (no hay conexi¢n de red)
+
+Esta rutina env°a un paquete de petici¢n de eco ICMP (un PING) a la m†quina
+especificada. Es posible elegir el tama§o de la zona de datos del mensaje
+ICMP, pero no su contenido; Çste siempre consistir† en la secuencia de bytes 0
+1 2 ... 253 254 255 0 1 2... convenientemente truncada para que se ajuste al
+tama§o especificado. Si se indica un tama§o de -1, se usar† el valor
+almacenado en la variable PING_SIZE del segmento de datos de INL (tama§o por
+defecto de los PINGs salientes).
+
+El identificador y el n£mero de secuencia pueden ayudar a emparejar respuestas
+con peticiones (una respuesta de eco siempre tendr† estos valores idÇnticos a
+su petici¢n de eco asociada), pero pueden ignorarse si es necesario. El valor
+del campo TTL debe especificarse siempre; en general es recomendable usar el
+valor 255 para maximizar la probabilidad de que el paquete llegue a su destino.
+
+
+* RCV_ECHO (#4054): Obtenci¢n del paquete de respuesta de eco ICMP (PING)
+                    m†s antiguo recibido
+Entrada: -
+Salida: HL, DE = IP del originador del paquete, con el formato L.H.E.D.
+        A = TTL del paquete
+        IX = Identificador ICMP del paquete
+        IY = N£mero de secuencia ICMP del paquete
+        BC = Longitud de los datos del paquete
+	Cy = 1 en caso de error (no hay paquetes disponibles)
+
+Esta rutina es la complementaria de SEND_ECHO: obtiene la informaci¢n asociada
+a la cabecera del paquete de eco m†s antiguo recibido. No es posible recuperar
+la parte de datos de los paquetes de respuesta de eco recibidos; £nicamente se
+recuperar† la informaci¢n de TTL, identificador ICMP, n£mero de secuencia ICMP
+y longitud de la parte de datos.
+
+INL puede almacenar informaci¢n de hasta ocho paquetes de eco recibidos; si
+llegan nuevos paquetes cuando ya hay ocho en cola, estos paquetes nuevos se
+perder†n. Por tanto, un programa que env°e peticiones de eco deber°a recoger
+las respuestas en un tiempo razonable.
+
+Esta rutina siempre devuelve la informaci¢n sobre el paquete m†s antiguo
+recibido (y a£n no consumido) sin comprobar dicha informaci¢n, por lo que es
+responsabilidad del programador comprobar que la direcci¢n IP del originador
+es realmente la esperada.
+
+El siguiente c¢digo muestra una manera sencilla de hacer que INL limpie el
+b£fer de paquetes de respuesta de eco recibidos; lo cual deber°an hacer todas
+las aplicaciones que vayan a enviar y recibir PINGs, para asegurarse de que no
+obtienen paquetes antiguos olvidados por alguna otra aplicaci¢n ejecutada
+anteriormente:
+
+CLEAR_ECHO:
+call RCV_ECHO
+jr nc,CLEAR_ECHO
+
+
+* UDP_SEND (#4057): Env°o de un paquete UDP
+Entrada:  HL, DE = Direcci¢n IP de la m†quina de destino,
+                   con el formato L.H.E.D.
+          IX = Puerto local (origen)
+          IY = Puerto remoto (destino)
+          BC = Direcci¢n en TPA de los datos a enviar
+          AF = Longitud de los datos (0 a 548 bytes)
+Salida:   Cy = 1 en caso de error
+               (no hay conexi¢n de red o se ha especificado BC>548)
+
+Esta rutina env°a el bloque de datos especificado en BC y AF como un paquete
+UDP a la m†quina con la IP especificada en HL y DE, usando los puertos
+especificados en IX e IY. El programador es libre de usar cualquier puerto
+local excepto el #FFFE, ya que este puerto est† reservado para el resolver.
+
+La forma m†s sencilla de establecer el par AF con la longitud de los datos es
+usar la pila:
+
+LD BC,longitud
+PUSH BC
+POP AF
+LD BC,direccion
+...
+
+
+* UDP_RCV (#405A): Obtenci¢n del paquete UDP m†s antiguo recibido
+Entrada: HL = Direcci¢n TPA donde dejar la parte de datos del paquete
+              (0 si no estamos interesados en la parte de datos)
+Salida: HL, DE = IP del originador del paquete, con el formato L.H.E.D.
+        IX = Puerto remoto (origen)
+        IY = Puerto local (destino)
+        BC = Longitud de los datos
+	Cy = 1 en caso de error (no hay paquetes disponibles)
+
+Esta rutina es la complementaria de SEND_UDP: obtiene la informaci¢n de
+cabecera y la parte de datos del paquete de UDP m†s antiguo recibido. Si se le
+pasa HL=0, s¢lo se recuperar† la informaci¢n de cabecera. El b£fer para los
+datos en TPA deber°a tener una longitud de al menos 548 bytes; Çste es el
+tama§o m†ximo que tendr† la parte de datos de un paquete UDP recibido.
+
+INL puede almacenar informaci¢n de hasta ocho paquetes UDP recibidos; si
+llegan nuevos paquetes cuando ya hay ocho en cola, estos paquetes nuevos se
+perder†n. Por tanto, un programa que env°e paquetes UDP y espere respuestas
+deber°a recoger Çstas en un tiempo razonable.
+
+Esta rutina siempre devuelve el paquete m†s antiguo recibido (y a£n no
+consumido) sin comprobar sus datos de cabecera, por lo que es responsabilidad
+del programador comprobar que la direcci¢n IP del originador y los puertos son
+realmente los esperados.
+
+El siguiente c¢digo muestra una manera sencilla hacer que INL limpie el b£fer
+de paquetes UDP recibidos; lo cual deber°an hacer todas las aplicaciones que
+vayan a enviar y recibir paquetes UDP, para asegurarse de que no obtienen
+paquetes antiguos olvidados por alguna otra aplicaci¢n ejecutada anteriormente:
+
+CLEAR_UDP:
+ld hl,0
+call UDP_RCV
+jr nc,CLEAR_UDP
+
+
+* DNS_Q (#405D): Petici¢n de resoluci¢n de nombre de host
+Entrada: HL = Puntero en TPA al nombre a resolver, acabado en 0
+              (longitud m†xima 255 car†cteres)
+         A  = Banderas, cuando est†n establecidas indican:
+              bit 0: S¢lo interrumpir la consulta en curso si la hay
+                     (ignora el resto de banderas y registros)
+              bit 1: NO consultar los servidores DNS
+                     (intentar interpretar el nombre como una direcci¢n IP
+                      y devolver un error si no lo es)
+              bit 2: Si ya hay una consulta en curso, NO interrumpirla
+                     y devolver un error
+Salida:  En caso de error, Cy = 1 y A = c¢digo de error:
+              1: No hay conexi¢n de red
+              2: Ya hay una consulta en curso
+                 (s¢lo si se ha pasado A:1 establecido)
+              3: El nombre pasado no es una direcci¢n IP v†lida
+                 (s¢lo si se ha pasado A:2 establecido)
+              4: No hay servidores DNS disponibles
+         Si no hay error, Cy = 0 y A = c¢digo de resultado:
+              0: La consulta est† en curso
+                 (o ha sido cancelada, si se ha pasado A:0 establecido)
+              1: El nombre era una representaci¢n de una direcci¢n IP
+         HL, DE: Direccion IP resultante con el formato L.H.E.D
+                 (s¢lo si se devuelve Cy=0 y A=1)
+
+Esta rutina junto con su complementaria DNS_S, explicada m†s adelante, permite
+obtener la direcci¢n IP asociada a un determinado nombre de host (por ejemplo
+"smtp.mailserver.com"), para lo cual se consulta a los servidores DNS cuyas
+direcciones IP han sido previamente configuradas (o bien obtenidas durante la
+negociaci¢n PPP o mediante DHCP). Como caso particular de nombre de host
+tambiÇn se aceptan cadenas que representen directamente direcciones IP (por
+ejemplo "120.200.0.34"), lo cual facilita el desarrollo de programas que
+admitan tanto nombres de host como direcciones IP como par†metro de conexi¢n
+(por ejemplo el cliente de PING suministrado, cuya sintaxis de ejecuci¢n es:
+PING <nombre de host>|<direcci¢n IP>).
+
+Tras ser llamada, la rutina termina su ejecuci¢n inmediatamente, y el proceso
+de resoluci¢n del nombre contin£a como tarea de fondo gobernada por la rutina
+de servicio de interrupci¢n al reloj (a no ser que se haya pasado A:0
+establecido; en ese caso, lo £nico que se hace es cancelar la consulta
+actualmente en curso si es que la hay). Es necesario entonces ejecutar la
+rutina DNS_S, explicada m†s adelante, para saber si el proceso ha finalizado
+(en cuyo caso se obtendr† la direcci¢n IP resultante o un c¢digo de error si
+la consulta ha fallado) o por el contrario a£n contin£a.
+
+Si ya hay una consulta en curso cuando DNS_Q es ejecutada, normalmente dicha
+consulta ser† cancelada para poder iniciar la consulta nueva (el resolver de
+INL s¢lo puede ejecutar una consulta simult†neamente). Sin embargo, si se pasa
+A:2 establecido al ejecutar DNS_Q y ya hay una consulta en marcha, Çsta no
+ser† cancelada y DNS_Q devolver† un error.
+
+DNS_Q intentar† en primer lugar interpretar la cadena pasada como si fuera la
+representaci¢n directa de una direcci¢n IP. Si tiene Çxito, devolver† el
+resultado inmediatamente sin que sea necesario realizar ninguna consulta a los
+servidores DNS (aunque el resultado ser† almacenado de forma que posteriores
+ejecuciones a DNS_S tambiÇn lo devolver†n); en caso contrario, se proceder† a
+iniciar el proceso de consulta a los servidores DNS. Sin embargo, si se pasa
+A:1 establecido y la cadena pasada no representa una direcci¢n IP, no se
+iniciar† la consulta y DNS_Q devolver† un error.
+
+A la hora de consultar a los servidores DNS, se consultar† primero al servidor
+primario; si Çste no est† disponible o no responde, se intentar† con el
+secundario (DNS_Q devolver† un error si ninguno de los dos est† disponible, es
+decir, si la direcci¢n IP asociada es 0.0.0.0 para ambos). El resolver de INL
+es recursivo, es decir, si en vez de una respuesta a la consulta se obtiene la
+direcci¢n IP de otro servidor DNS, el proceso de consulta volver† a comenzar
+con el nuevo servidor, y as° sucesivamente hasta obtener una respuesta o hasta
+que uno de los servidores de la cadena no responda (Nota: INL decide que un
+servidor no responde despuÇs de enviarle cinco veces el paquete de petici¢n de
+resoluci¢n del nombre; los env°os est†n espaciados tres segundos). INL
+cancelar† el proceso si Çste dura m†s de un minuto en total.
+
+A continuaci¢n se muestra un ejemplo de c¢digo para la resoluci¢n de un nombre
+de host. Se supone que el segmento de c¢digo de INL ya est† conectado en la
+p†gina 1.
+
+	;* Realiza la consulta
+
+	ld	hl,HOST_NAME
+	xor	a
+	call	DNS_Q
+	jp	c,ERROR_Q
+
+	;* Espera a que se devuelva el resultado o un error
+
+WAIT:	call	WAIT_INT ;Ver la secci¢n 3.3 "Consideraciones de programaci¢n"
+	xor	a
+	call	DNS_S
+	cp	1	;Proceso a£n en curso
+	jr	z,WAIT
+	cp	3	;Error
+	jp	z,ERROR_S
+	;Llegados aqu°, A s¢lo puede ser igual a 2
+	ld	(IP_ADD),hl	;Almacena el resultado
+	ld	(IP_ADD+2),de
+	...
+
+HOST_NAME:	db	"nombre.host.com",0
+IP_ADD:	ds	4
+
+Observa que en ning£n momento comprobamos si HOST_NAME contiene un nombre o la
+representaci¢n de una direcci¢n IP; podemos obtener esta informaci¢n a partir
+del resultado devuelto por DNS_Q en A o el resultado devuelto por DNS_S en B,
+pero normalmente no estaremos interesados en ella.
+
+
+* DNS_S (#4060): Obtenci¢n del estado de la petici¢n
+                 de resoluci¢n de nombre de host
+Entrada: A  = Banderas, cuando est†n establecidas indican:
+              bit 0: Limpiar cualquier resultado o error existente
+                     despuÇs de la ejecuci¢n
+                     (excepto si hay una consulta en curso)
+Salida:  A = C¢digo de estado primario y B = C¢digo de estado secundario:
+         A = 0: No hay ninguna consulta en curso,
+                ni ning£n resultado ni error disponible
+         A = 1: Hay una consulta en curso
+                B=1: Consultando al servidor DNS primario
+                B=2: Consultando al servidor DNS secundario
+                B=3: Consultando a otro servidor DNS
+                     al que se nos ha redirigido
+         A = 2: Consulta completada, se devuelve el resultado en HL, DE
+                en formato L.H.E.D
+                B=0: El nombre no era una direcci¢n IP
+                B=1: El nombre era una direcci¢n IP
+         A = 3: Error:
+                B=1-15: Error devuelto por el servidor DNS:
+                  1: Formato del paquete de petici¢n inv†lido
+                  2: Fallo del servidor DNS
+                  3: El nombre de host especificado no existe
+                  4: El servidor DNS no soporta este tipo de consulta
+                  5: Petici¢n rechazada
+                  6-15: C¢digos no definidos actualmente
+                B=16: Alguno de los servidores DNS no ha respondido
+                B=17: Temporizador total de un minuto expirado
+                B=18: Consulta cancelada por el usuario
+                      (se ejecut¢ DNS_Q con A:0 establecido)
+                B=19: Se ha perdido la conexi¢n de red durante el proceso
+                B=20: La respuesta no conten°a REPLY ni AUTHORITATIVE
+                B=21: La respuesta est† truncada
+         HL, DE: Direccion IP resultante con el formato L.H.E.D
+                 (s¢lo si se devuelve A=2)
+
+Esta es la rutina complementaria de DNS_Q: permite obtener el estado actual
+del proceso de resoluci¢n de nombre y, en caso de que Çste haya terminado,
+devuelve el resultado del mismo (la direcci¢n IP buscada o bien un c¢digo de
+error).
+
+La rutina devuelve un c¢digo de estado primario en A, y un c¢digo secundario
+en B con informaci¢n m†s detallada; normalmente s¢lo estaremos interesados en
+el c¢digo primario (y en la direcci¢n IP resultante cuando el proceso haya
+terminado con Çxito), salvo en caso de error.
+
+Si se pasa A:0 establecido, DNS_S devolver† igualmente el estado actual y el
+resultado de la consulta si lo hay, pero limpiar† dicho resultado de forma que
+posteriores llamadas a DNS_S devolver†n A=0 (excepto si hay una consulta en
+curso; en ese caso se ignora A:0).
+
+Los errores en el rango 1 a 15 son devueltos por el servidor DNS y est†n
+definidos en la especificaci¢n del protocolo usado (RFC1035), mientras que los
+errores a partir del 16 son generados por INL. La recepci¢n de un error con
+c¢digo 1 o 4 implica que el paquete de petici¢n era inv†lido, por tanto nunca
+deber°an recibirse estos errores a no ser que haya fallos en el c¢digo de INL.
+Los errores 20 y 21 implican la imposibilidad de resolver el nombre, pero
+estos errores son muy raros y no deber°an recibirse nunca.
+
+En la explicaci¢n del uso de DNS_Q se muestra un ejemplo de c¢digo que hace
+uso de DNS_Q y DNS_S para resolver un nombre de host.
+
+
+* TCP_OPEN (#4063): Apertura de una conexi¢n TCP
+Entrada:  A  = 0 para conexi¢n activa, #FF para conexi¢n pasiva
+          HL, DE = Direcci¢n IP de la m†quina de destino,
+                   con el formato L.H.E.D.
+                   (0.0.0.0 para socket remoto sin especificar)
+          IX = Puerto remoto (ignorado si la direcci¢n IP es 0.0.0.0)
+          IY = Puerto local (#FFFF para usar un n£mero aleatorio
+                             entre 16384 y 32767)
+          BC = Valor del temporizador de usuario
+               1 a 1080: Valor en segundos
+               0: Valor por defecto, 3 minutos
+               #FFFF: Infinito
+Salida:   En caso de error, Cy = 1 y A = c¢digo de error:
+                1: Hay demasiadas conexiones abiertas
+                2: No hay conexi¢n de red
+                3: Ya existe esa conexion
+                4: Se ha pedido conexi¢n activa pero se ha
+                   especificado 0.0.0.0 como direcci¢n IP
+                5: Valor del temporizador de usuario invalido
+          Si no hay error, Cy = 0 y
+                A = Identificador de la conexi¢n
+
+Esta rutina abre una conexi¢n TCP al socket remoto especificado en HL y DE
+(direcci¢n IP) e IX (puerto), usando el puerto local especificado en IY. Se
+puede especificar #FFFF como puerto local, en cuyo caso INL escoger† un puerto
+aleatoriamente en el rango 16384 a 32767 usando el temporizador del sistema.
+Si no hay errores, la rutina devuelve un identificador de conexi¢n (un n£mero
+entre 0 y 3) que es necesario almacenar para poder interactuar con la conexi¢n
+mediante las dem†s rutinas TCP_xxx.
+
+Si A=#FF, la conexi¢n se abrir† en modo pasivo (entrar† en el estado LISTEN),
+a la espera de que llegue una petici¢n de conexi¢n desde el host y puertos
+especificados en HL, DE e IX, contra el puerto local especificado en IY.
+
+En caso de conexi¢n pasiva, se puede abrir la conexi¢n en modo "socket remoto
+sin especificar", pasando 0.0.0.0 (HL=0, DE=0) como la direcci¢n IP remota. En
+este modo, la conexi¢n se establecer† cuando llegue una petici¢n de conexi¢n
+desde cualquier host y puerto remoto (se ignora el n£mero de puerto pasado en
+IX); la £nica condici¢n para aceptar la conexi¢n es que el puerto requerido
+coincida con el puerto local que hemos especificado en IY.
+
+INL puede mantener abiertas un m†ximo de cuatro conexiones TCP
+simult†neamente. Si ya hay cuatro conexiones abiertas, esta rutina devolver†
+el error 1.
+
+Una conexi¢n TCP se identifica un°vocamente por el socket local (direcci¢n IP
+y puerto locales) y el socket remoto (direcci¢n IP y puerto remotos). Por
+tanto, no es posible abrir una conexi¢n especificando la direcci¢n IP remota y
+los dos puertos iguales a los de una conexi¢n ya existente; si se intenta, la
+rutina devolver† un error 3. Si se permite a INL escoger un puerto local
+aleatoriamente (pasando IY=#FFFF), dicho error nunca se producir†.
+
+Las conexiones pasivas con socket remoto sin especificar son una excepci¢n a
+lo anterior. Se puede abrir m†s de una conexi¢n de dicho tipo a£n usando el
+mismo puerto local.
+
+Aunque el est†ndar TCP permite transformar una conexi¢n pasiva en activa
+volviÇndola a abrir, INL no lo permite; si se intenta, se obtendr† el error 3.
+Para transformar una conexi¢n pasiva en activa es necesario cerrarla y volver
+a abrirla.
+
+El "temporizador de usuario" es un temporizador que se activa cada vez que se
+env°an datos nuevos a la conexi¢n y se detiene cuando llega el reconocimiento
+(ACK) para dichos datos. Si dicho temporizador llega a cero, se considera que
+los datos no pueden llegar a su destino y se aborta la conexi¢n. Este
+temporizador tambiÇn se aplica al establecimiento de la conexi¢n (es decir, es
+tambiÇn el tiempo m†ximo que puede tardar en llegar el reconocimiento de un
+segmento SYN enviado). El valor pasado se interpreta como sigue:
+
+- 1 a 1080: Valor del temporizador en segundos (1 segundo a 18 minutos).
+- 0: Valor por defecto para el temporizador. En esta versi¢n de c¢digo de INL
+el valor por defecto es de 3 minutos, pero podr°a cambiar en futuras
+versiones.
+- #FFFF: Infinito, los datos enviados se retransmiten indefinidamente hasta
+que llega el reconocimiento o hasta que se aborta la conexi¢n o llega un
+segmento RST.
+
+Otros valores causan que la rutina devuelva el error 5.
+
+N¢tese que para el valor "infinito" del temporizador de usuario, una llamada a
+TCP_CLOSE puede tardar un tiempo arbitrario en hacerse efectiva, ya que no se
+env°a el segmento FIN mientras quedan datos por retransmitir. Sin embargo las
+llamadas a TCP_ABORT siempre se hacen efectivas inmediatamente.
+
+N¢tese que no es posible enviar o recibir datos de la conexi¢n inmediatamente
+despuÇs de abrirla con TCP_OPEN. Es necesario esperar a que la conexi¢n
+progrese hasta el estado ESTABLISHED antes de poder iniciar el intercambio de
+datos (el estado de la conexi¢n se puede obtener mediante la rutina
+TCP_STATUS).
+
+
+* TCP_CLOSE (#4066): Cierre de una conexi¢n TCP
+Entrada:  A  = Identificador de la conexi¢n
+Salida:   En caso de error, Cy = 1 y A = c¢digo de error:
+                1: Identificador de conexi¢n inv†lido
+                2: La conexi¢n ya est† cerrada
+          Si no hay error, Cy = 0 y A = 0
+
+Esta rutina cierra la conexi¢n especificada. El error 2 es devuelto cuando la
+conexi¢n est† cerrada (estado CLOSED); si la conexi¢n se est† cerrando, la
+rutina no hace nada pero no devuelve error.
+
+N¢tese que, en concordacia con la especificaci¢n del protocolo TCP, cerrar una
+conexi¢n implica que no es posible enviar nuevos datos a la misma, pero el
+otro extremo puede seguir enviando datos (y nosotros podemos seguir
+recibiÇndolos).
+
+En realidad esta rutina no cierra inmediatamente la conexi¢n, sino que
+establece una bandera que indica que hay que cerrarla. Cuando no quedan datos
+pendientes de env°o (ni nuevos ni a retransmitir), el cierre se hace efectivo
+y se env°a el segmento FIN correspondiente. Se puede usar la rutina TCP_FLUSH
+para eliminar los datos pendientes de env°o que a£n no han sido enviados antes
+o despuÇs de cerrar la conexi¢n (aunque dicha rutina no elimina los datos de
+la cola de retransmisi¢n).
+
+La conexi¢n queda definitivamente cerrada (estado CLOSED) cuando ambas partes
+han intercambiado un segmento FIN, tal como especifica el protocolo TCP. Si lo
+que se quiere es destruir inmediatamente la conexi¢n y dejarla disponible para
+volverla a abrir, se debe usar TCP_ABORT en vez de TCP_CLOSE.
+
+
+* TCP_ABORT (#4069): Abortar una conexi¢n TCP
+Entrada:  A  = Identificador de la conexi¢n
+Salida:   En caso de error, Cy = 1 y A = c¢digo de error:
+                1: Identificador de conexi¢n inv†lido
+                2: La conexi¢n ya est† cerrada
+          Si no hay error, Cy = 0 y A = 0
+
+Esta rutina aborta la conexi¢n especificada: env°a un segmento RST si procede,
+y a continuaci¢n pone la conexi¢n en estado CLOSED, lista para ser abierta de
+nuevo. Se devuelve un error 2 si la conexi¢n ya est† en estado CLOSED.
+
+
+* TCP_SEND (#406C): Env°o de datos a una conexi¢n TCP
+Entrada:  A  = Identificador de la conexi¢n
+          HL = Direcci¢n en TPA de los datos a enviar
+          BC = Longitud de los datos a enviar
+          Cy = 1 para enviar datos como PUSH
+Salida:   En caso de error, Cy = 1 y A = c¢digo de error:
+                1: Identificador de conexi¢n inv†lido
+                2: La conexi¢n est† cerrada
+                3: La conexi¢n est† en un estado que no permite
+                   enviar datos (no es ESTABLISHED ni CLOSE-WAIT)
+                4: Espacio libre en el b£fer de salida
+                   insuficiente para almacenar los datos
+          Si no hay error, Cy = 0 y A = 0
+
+Esta rutina encola los datos especificados en HL y BC para ser enviados por la
+conexi¢n especificada en A. La conexi¢n debe estar en estado ESTABLISHED o
+CLOSE-WAIT, de lo contrario se devolver† el error 3 (aunque el protocolo TCP
+permite que se encolen datos para env°o mientras la conexi¢n se est† abriendo,
+INL no lo permite). En otras palabras: no es posible enviar datos mientras la
+conexi¢n se est† iniciando; y no es posible enviar datos cuando ya hemos
+cerrado la conexi¢n (con TCP_CLOSE), pero s° cuando s¢lo el host remoto la ha
+cerrado.
+
+Cada conexi¢n TCP tiene asignado un b£fer para datos salientes en el segmento
+de datos de INL; esta rutina encola los datos especificados en dicho b£fer,
+donde permanecen hasta que son enviados y se recibe un reconocimiento (ACK)
+para los mismos. El tama§o de este b£fer est† fijado en 1024 bytes, por tanto
+no se puede encolar un n£mero arbitrario de datos, ya sea en una £nica llamada
+a TCP_SEND o en llamadas sucesivas. En concreto, esta rutina deolver† el error
+4 si BC es mayor que el espacio libre en el b£fer de salida. Para saber por
+adelantado cu†nto espacio libre hay, se puede usar la rutina TCP_STATUS; dicho
+valor nunca ser† superior a 1024 bytes.
+
+Si se especifica Cy=1 (datos PUSH), los datos se env°an en la siguiente
+interrupci¢n del reloj (se env°an los datos m†s antiguos encolados, no
+necesariamente los afectados por esta ejecuci¢n concreta de TCP_SEND). Encolar
+datos PUSH implica que todos los datos presentes en la cola de env°o se marcan
+como PUSH, no s¢lo los afectados por esta llamada a TCP_SEND.
+
+En caso contrario (no hay datos PUSH), los datos se env°an cuando ocurre uno
+de estos dos sucesos:
+
+- Se acumulan en la cola de datos a enviar suficientes bytes como para poder
+enviar un segmento de tama§o m†ximo (seg£n lo especificado por el host en la
+opci¢n MSS al iniciar la conexi¢n, 512 si no ha recibido dicha opci¢n).
+- Pasan 0.5 segundos desde que los datos m†s antiguos fueron encolados.
+
+N¢tese que no obstante lo anterior, no se enviar†n datos si el host remoto no
+est† listo para recibirlos (si tiene su ventana de recepci¢n a cero), tal como
+especifica el protocolo TCP.
+
+Por razones de simplicidad de c¢digo y aprovechamiento de memoria, INL s¢lo
+env°a un segmento de datos a la vez. Es decir, una vez que se ha enviado un
+segmento de datos, no se env°an m†s (excepto retransmisiones) hasta que llega
+un reconocimiento (ACK) para los datos enviados.
+
+Se puede ejecutar esta rutina con BC=0 y Cy=1. Esto causar† que no se encolen
+datos nuevos pero se marquen todos los datos ya encolados como PUSH, por lo
+que ser†n enviados inmediatamente. Ejecutar la rutina con BC=0 y Cy=0 no tiene
+ning£n efecto y no se devuelve ning£n error (a no ser que se den las
+condiciones para los errores 1 a 3).
+
+INL no soporta datos urgentes. No es posible indicar que los datos deben ser
+enviados como urgentes.
+
+Los datos encolados pero no enviados a£n se pueden desechar mediante una
+llamada a TCP_FLUSH.
+
+
+* TCP_RCV (#406F): Obtenci¢n de datos entrantes de una conexi¢n TCP
+Entrada:  A  = Identificador de la conexi¢n
+          DE = Direcci¢n en TPA para depositar los datos
+          BC = Longitud del bloque de datos a obtener
+Salida:   BC = N£mero de bytes que han podido ser obtenidos
+          Z  = 1 si BC = 0
+          En caso de error, Cy = 1 y A = c¢digo de error:
+                1: Identificador de conexi¢n inv†lido
+                2: La conexi¢n est† cerrada
+          Si no hay error, Cy = 0 y A = 0
+
+Esta rutina extrae y copia en la direcci¢n de TPA especificada por DE los
+datos recibidos por la conexi¢n TCP especificada en A, hasta un m†ximo de BC
+bytes. Si no hay BC bytes disponibles, se extraen tantos bytes como sea
+posible (todos los disponibles); en cualquier caso se devuelve en BC el n£mero
+de bytes realmente extra°dos.
+
+Si no hay datos entrantes disponibles, se devuelve BC=0 y Z=1, pero esto no se
+considera un error. Tampoco se devuelve error si la conexi¢n est† en un estado
+en el que no puede haber datos entrantes (por ejemplo LISTEN); simplemente no
+se devuelven datos. S¢lo se devuelve error si la conexi¢n est† en estado
+CLOSED.
+
+Cada conexi¢n TCP dispone de un b£fer fijo de 1024 bytes en el segmento de
+datos de INL para almacenar datos entrantes. Si llegan datos sin que la
+aplicaci¢n los recoja con TCP_RCV, dicho b£fer acabar† por llenarse y no se
+podr†n recibir datos nuevos. No obstante esto no se considera un error, ya que
+esta situaci¢n est† prevista y controlada por los mecanismos de control de
+flujo del protocolo TCP (INL anunciar† una ventana de recepci¢n cero en ese
+caso).
+
+Se puede saber por anticipado cu†ntos bytes se pueden obtener mediante una
+llamada a TCP_STATUS, aunque esto no es imprescindible como en el caso de
+TCP_SEND (como se ha visto, no es un error intentar extraer m†s datos de los
+disponibles). Por otro lado, se puede especificar un valor para BC mayor de
+1024, pero eso no tiene mucho sentido porque nunca habr† m†s de 1024 bytes
+disponibles.
+
+INL no soporta datos urgentes, por tanto no hay forma de saber si los datos
+recibidos son normales o urgentes. Tampoco se puede saber si la bandera PUSH
+estaba establecida para los datos recibidos.
+
+Los valores de BC y Z a la salida siempre son v†lidos, a£n en caso de error.
+
+
+* TCP_STATUS (#4072): Obtenci¢n del estado de una conexi¢n TCP
+Entrada:  A  = Identificador de la conexi¢n
+Salida:   En caso de error, Cy = 1 y A = c¢digo de error:
+                1: Identificador de conexi¢n inv†lido
+          Si no hay error, Cy = 0 y el resto de par†metros como sigue
+          Si la conexi¢n est† cerrada:
+             A = 0
+             B = Causa del cierre de la conexi¢n
+          Si la conexi¢n no est† cerrada:
+             A  = Estado de la conexi¢n
+             HL = N£mero de bytes entrantes listos para ser recogidos
+             DE = Espacio disponible en la cola de env°o
+             BC = N£mero de bytes en la cola de retransmisi¢n
+             IX = Direcci¢n del TCB de la conexi¢n
+
+Esta rutina devuelve el estado y diversa informaci¢n sobre la conexi¢n TCP
+especificada en A. Al contrario que las otras rutinas TCP_xxx, esta no
+devuelve error si la conexi¢n est† cerrada.
+
+El estado de la conexi¢n se devuelve en A codificado de la siguiente manera:
+
+0: CLOSED
+1: LISTEN
+2: SYN-SENT
+3: SYN-RECEIVED
+4: ESTABLISHED
+5: FIN-WAIT-1
+6: FIN-WAIT-2
+7: CLOSE-WAIT
+8: CLOSING
+9: LAST-ACK
+10: TIME-WAIT (no implementado)
+
+Nota: El estado TIME-WAIT no est† implementado en esta versi¢n de c¢digo de
+INL; las conexiones TCP pasan directamente a CLOSED cuando deber°an pasar a
+TIME-WAIT. No obstante puede que dicho estado sea implementado en futuras
+versiones de INL.
+
+Si la conexi¢n est† cerrada (CLOSED), se devuelve la causa del cierre de la
+conexi¢n en el registro B, codificada como sigue:
+
+0: Esta conexi¢n nunca ha sido usada desde que se instal¢ INL
+1: Llamada al mÇtodo TCP_CLOSE
+2: Llamada al mÇtodo TCP_ABORT
+3: Segmento RST recibido (conexi¢n rechazada o abortada por el host remoto)
+4: Temporizador de usuario expirado
+5: Temporizador de conexi¢n inicial expirado
+6: Conexi¢n de red perdida mientras la conexi¢n TCP estaba abierta
+7: Mensaje ICMP "Destino inaccesible" recibido
+
+Si la conexi¢n no est† cerrada, otros registros devuelven informaci¢n como
+sigue.
+
+HL devuelve el n£mero de bytes entrantes que pueden ser recogidos mediante una
+llamada a TCP_RCV. Es un valor entre 0 y 1024.
+
+DE devuelve el n£mero de bytes libres en la cola para datos a enviar; es
+decir, el m†ximo n£mero de bytes que pueden encolarse mediante una llamada a
+TCP_SEND. Es un valor entre 0 y 1024.
+
+BC devuelve el n£mero de bytes en la cola de retransmisi¢n; es decir, el
+n£mero de bytes que han sido enviados pero para los cuales a£n no se ha
+recibido reconocimiento (ACK). Es un valor entre 0 y 536 (ya que INL s¢lo
+env°a un segmento cada vez) y no incluye las banderas SYN y FIN.
+
+IX devuelve la direcci¢n del TCB (Transmission Control Block) asociado a esta
+conexi¢n. Se trata de un bloque de variables usado por INL para controlar el
+estado de la conexi¢n y el env°o y la recepci¢n de datos; el TCB se describe
+en la secci¢n 3.4. La direcci¢n devuelta en IX es una direcci¢n de p†gina 2 y
+se refiere al segmento de datos de INL.
+
+
+* TCP_FLUSH (#4075): Limpieza del b£fer de salida de una conexi¢n TCP
+Entrada:  A  = Identificador de la conexi¢n
+Salida:   En caso de error, Cy = 1 y A = c¢digo de error:
+                1: Identificador de conexi¢n inv†lido
+                2: La conexi¢n est† cerrada
+          Si no hay error, Cy = 0 y A = 0
+
+Esta rutina limpia el b£fer de salida de una conexi¢n TCP, es decir, elimina
+los datos encolados mediante TCP_SEND que a£n no han sido enviados.
+
+Esta rutina no afecta a los datos de la cola de retransmisi¢n, que seguir†n
+siendo retransmitidos con normalidad hasta que se reciba un reconocimiento
+(ACK) para los mismos.
+
+
+* RAW_SEND (#4078): Env°o de un datagrama en bruto
+Entrada:  Cy=0 si hay que a§adir una cabecera IP al bloque de datos a enviar
+          Cy=1 si el bloque de datos a enviar es un datagrama completo
+               (es decir, ya incluye la cabecera IP)
+          IX = Direcci¢n en TPA del bloque de datos a enviar
+          BC = Longitud del bloque de datos a enviar
+	       (hasta 556 bytes si Cy=0, hasta 576 bytes si Cy=1)
+          L.H.E.D = Direcci¢n IP de destino (ignorado si si Cy=1)
+          A = Protocolo de transporte (ignorado si Cy=1)
+          IYh = ToS para el datagrama (ignorado si Cy=1)
+          IYl = TTL para el datagrama (ignorado si Cy=1)
+Salida:   En caso de error, Cy = 1 y A = c¢digo de error:
+                1: No hay conexi¢n de red
+                2: Tama§o incorrecto (mayor de 556 ¢ 576)
+          Si no hay error, Cy = 0 y A = 0
+
+Esta rutina permite el env°o de un datagrama en bruto, es decir, el env°o de
+datos IP directos sin pasar por las capas TCP y UDP proporcionadas por INL. Se
+puede pasar un datagrama completo para su env°o o bien dejar que INL componga
+la cabecera IP. Esta rutina est† pensada principalmente para el env°o de
+mensajes ICMP, pero puede usarse para enviar datagramas con cualquier otro
+protocolo de transporte.
+
+Si se especifica Cy=0, se a§adir† al bloque de datos pasado una cabecera IP en
+base a los par†metros pasados en HL, DE, A e IY; el datagrama resultante ser†
+entonces enviado a la red. No es posible incluir opciones IP ni especificar el
+campo de identificador del datagrama si se opta por este mÇtodo.
+
+Si se especifica Cy=1, en cambio, INL asumir† que el bloque de datos pasado es
+un datagrama IP completo (es decir, ya incluye una cabecera IP) y lo enviar† a
+la red sin realizar ning£n proceso adicional sobre el mismo. Este mÇtodo
+permite que el datagrama contenga opciones IP, as° como establecer el campo de
+identificador IP en cualquier valor deseado.
+
+Si se pasa el datagrama completo, es responsabilidad de la aplicaci¢n componer
+la cabecera IP correcta (seg£n se especifica en RFC791), incluyendo el campo
+de checksum (se puede usar la funci¢n CALC_CHKSUM proporcionada por INL para
+calcularlo). Si la cabecera IP del datagrama pasado es incorrecta, el
+datagrama ser† enviado igualmente, pero es probable que no sea recibido o que
+sea descartado por el destinatario.
+
+Al pasar un datagrama completo, si el valor del campo que indica el tama§o del
+datagrama en la cabecera IP no coincide con el tama§o real del bloque de datos
+pasado, se usar† el primero para decidir la cantidad de datos a enviar. Es
+decir, si BC es el par†metro de tama§o pasado a la rutina y L es el tama§o del
+datagrama seg£n se especifica en la cabecera del propio datagrama, se cumple
+lo siguiente:
+
+- Si L=0, no se env°a nada.
+- Si L<BC, se env°an L bytes; el resto del bloque de datos pasado se descarta.
+- Si L>BC, se env°a la totalidad del bloque pasado, y a continuaci¢n se env°an
+datos aleatorios (el contenido de la memoria en ese momento) hasta completar L
+bytes enviados.
+- Si L>576, se env°an exactamente 576 bytes (parte de los cuales pueden ser
+aleatorios, por el punto anterior).
+
+Nota: Esta rutina es completamente independiente de RAW_CONTROL y RAW_RCV; se
+pueden enviar datagramas en bruto en cualquier momento, con independencia del
+estado de la captura de un datagrama en bruto.
+
+
+* RAW_CONTROL (#407B): Control de la captura de un datagrama en bruto
+Entrada:  A = Acci¢n requerida
+              0: S¢lo obtener el estado de la captura
+              1: Requerir la captura de un datagrama
+              2: Cancelar la petici¢n de captura de un datagrama
+          B = Protocolo de transporte del datagrama a capturar
+              (usado s¢lo si A=1)
+              0: Capturar el primer datagrama recibido
+              #FF: Capturar el primer datagrama recibido
+                   que no sea TCP, UDP, petici¢n/respuesta
+                   de eco ICMP o mensaje ICMP "Destino
+                   inaccesible"
+              Otro: Capturar el primer datagrama recibido
+                    que transporte el protocolo especificado
+Salida:   En caso de error, Cy = 1 y A = c¢digo de error:
+                1: Se ha requerido una captura pero no hay conexi¢n de red
+                2: Acci¢n requerida inv†lida
+          Si no hay error, Cy = 0 y otros registros como sigue
+          A = Estado de la captura:
+              0: No se ha requerido la captura de un datagrama,
+                 o ya se ha recuperado el datagrama capturado
+              1: Se ha pedido la captura de un datagrama
+                 pero a£n no ha llegado ninguno del protocolo adecuado
+              2: Hay un datagrama capturado, que se puede recuperar
+                 llamando a RAW_RCV
+          BC = Tama§o del datagrama capturado (s¢lo si se devuelve A=2),
+               20 a 576 bytes
+          D = Protocolo de transporte requerido (s¢lo si se devuelve A=1 ¢ 2)
+
+Esta rutina controla el proceso de captura de un datagrama en bruto. El
+mecanismo de captura de datagramas est† pensado principalmente para la captura
+de mensajes ICMP, pero puede usarse para capturar datagramas de cualquier otro
+protocolo de transporte.
+
+El procedimiento completo de captura es como sigue:
+
+1) Se llama a RAW_CONTROL pasando A=1 y el c¢digo del protocolo de transporte
+deseado en B.
+2) Se llama repetidamente a RAW_CONTROL pasando A=0 hasta que devuelva A=2 (o
+A=0, lo cual indicar°a que se ha perdido la conexi¢n de red).
+3) Al obtener A=2, se recupera el datagrama capturado llamando a RAW_RCV.
+
+Si se ejecuta esta rutina con A=2, la petici¢n de captura se cancela, y el
+datagrama capturado (si lo hay) es descartado.
+
+Cuando se pide la captura de un datagrama en bruto, INL comprueba el c¢digo de
+protocolo de transporte de todos los datagramas recibidos. El primer datagrama
+recibido cuyo protocolo de transporte coincida con el que se especific¢ al
+pedir la captura (y cuyo checksum IP sea correcto) es almacenado, y puede
+recuperarse mediante una llamada a RAW_RCV. S¢lo se puede capturar un
+datagrama a la vez. El datagrama capturado no sufre ning£n otro proceso por
+parte de INL (por ejemplo, si es un paquete UDP no se encola en la cola de
+paquetes UDP recibidos).
+
+Hay dos valores especiales que se pueden especificar como c¢digo de protocolo
+de transporte deseado cuando se realiza la petici¢n de captura. El valor 0
+indica que se debe capturar el primer datagrama que llegue, sea cual sea el
+protocolo que transporta. El valor #FF indica que se debe capturar el primer
+datagrama que llegue y que no sea TCP, UDP, una petici¢n o respuesta de eco
+ICMP o un mensaje ICMP "Destino inaccesible" (es decir, se pasan por alto todos
+los datagramas que normalmente son procesados por INL). N¢tese que el valor 1
+causar† que se capture el primer mensaje ICMP recibido, incluso si es una
+petici¢n o respuesta de eco.
+
+La captura de datagramas no es persistente: una vez se ha capturado un
+datagrama, no se capturan m†s a no ser que vuelva a ejecutarse RAW_CONTROL con
+A=1 (se recupere o no el datagrama con RAW_RCV).
+
+Si se pierde la conexi¢n de red, el proceso de captura pasar† a estado 0
+autom†ticamente; el datagrama capturado y no recogido a£n, si lo hay, se
+perder†.
+
+Realizar una petici¢n de captura implica la cancelaci¢n autom†tica de la
+petici¢n anterior, si la hay; si hay un datagrama capturado, se perder†.
+
+Nota: Para almacenar un datagrama se usa el b£fer correspondiente al octavo
+paquete UDP recibido; por tanto, cuando se pide la captura de un datagram s¢lo
+se pueden recibir siete paquetes UDP. Si hay ocho paquetes UDP almacenados
+cuando se pide la captura, el octavo se pierde.
+
+
+* RAW_RCV (#407E): Recuperaci¢n del datagrama en bruto capturado
+Entrada:  HL = Direcci¢n de destino en TPA para copiar el datagrama capturado
+Salida:   En caso de error, Cy = 1 y A = c¢digo de error:
+                1: No se ha capturado ning£n datagrama
+          Si no hay error, Cy = 0 y otros registros como sigue
+          A = Longitud de la cabecera IP del datagrama
+          BC = Longitud del datagrama
+          DE = Longitud de la parte de datos del datagrama
+               (es decir, BC-A)
+          HL = Puntero al principio de la parte de datos del datagrama
+               (es decir, HL a la entrada - A)
+
+Esta rutina copia en TPA el datagrama capturado tras una petici¢n de captura
+efectuada con RAW_CONTROL. Para saber por adelantado si hay un datagrama
+capturado, as° como su tama§o, se puede llamar a RAW_CONTROL con A=0 (ver la
+descripci¢n de la rutina RAW_CONTROL).
+
+El datagrama completo capturado es copiado en la direcci¢n especificada en HL,
+y los registros A, BC, DE y HL devuelven diversa informaci¢n sobre el mismo.
+Para un datagrama que no contiene opciones IP, se devuelve A=20 y DE=BC-20. En
+cualquier caso, HL apuntar† al principio de la zona de datos del datagrama (es
+decir, apuntar† al primer byte posterior a la cabecera IP).
+
+Tras una ejecuci¢n de RAW_RCV que no devuelve error, el estado de la captura
+de datagramas pasar† a ser 0 de nuevo (no hay captura pendiente). Para
+capturar otro datagrama es necesario efectuar una nueva petici¢n con
+RAW_CONTROL.
+
+
+* WAIT_INT (#4081): Espera a que se produzca una interrupci¢n del reloj
+Entrada:  -
+Salida:   Cy = 1 si ha sido necesario esperar
+          Cy = 0 si no ha sido necesario esperar
+
+Esta rutina compara el valor del temporizador del sistema (variable situada en
+#FC9E) con el valor que ten°a dicha variable en la anterior ejecuci¢n de la
+misma rutina. Si dichos valores difieren, la rutina termina inmediatamente con
+Cy=0. Si son iguales, la rutina espera a que el valor del temporizador cambie,
+y entonces termina con Cy=1.
+
+En otras palabras: entre dos llamadas de WAIT_INT siempre se produce al menos
+una interrupci¢n del reloj, y por tanto el c¢digo principal de INL se ejecuta
+al menos una vez.
+
+El uso de la rutina WAIT_INT o de alguna otra rutina similar se hace necesario
+cuando la aplicaci¢n entra en un bucle en el que se ejecutan continuamente
+otras rutinas de INL en r†pida sucesi¢n. Para m†s detalles, ver la secci¢n
+3.3.3, "Interrupciones y tiempos de espera".
+
+
+* NETWORK_STATE (#4084): Obtenci¢n el estado de la red
+Entrada:  -
+Salida:   A = Estado de la red:
+              0: No disponible
+              1: Inicializ†ndose
+              2: Disponible (se pueden transportar datagramas IP)
+              3: Cerr†ndose
+
+Esta rutina devuelve el estado actual de la red en base a una abstracci¢n a
+cuatro estados que es siempre la misma independientemente de la implementaci¢n
+de INL que estÇ instalada. Las aplicaciones deber°an usar esta rutina para
+saber si es posible enviar y recibir datagramas IP (y por tanto, paquetes UDP
+y TCP). La red s¢lo puede transportar datagramas cuando esta rutina devuelve
+A=2 (red disponible).
+
+Versi¢n serie: esta rutina devuelve 0 cuando PPP_STATE tiene un valor 0,
+devuelve 2 cuando PPP_STATE tiene un valor 4, y devuelve 1 en los dem†s
+casos; nunca devuelve 3.
+
+Versi¢n Ethernet:
+
+El comportamiento de esta rutina es como sigue (n¢tese que nunca devuelve
+los valores 1 ni 3):
+
+- Si la comprobaci¢n peri¢dica de la conexi¢n de red est† activada (variable
+CHECK_NET=#FF), se devuelve el resultado de la £ltima comprobaci¢n (2 si la
+red est† disponible, 0 en caso contrario).
+
+- Si la comprobaci¢n peri¢dica de la conexi¢n de red est† desactivada
+(variable CHECK_NET=0), se efect£a una comprobaci¢n en el momento de
+ejecutarse esta rutina (se usa para ello la rutina ETH_GET_NETSTAT de UNAPI
+Ethernet), y se devuelve el resultado de dicha comprobaci¢n (2 si la red est†
+disponible, 0 en caso contrario).
+
+Si la comprobaci¢n peri¢dica de la conexi¢n de red est† desactivada, INL
+considerar† que la red siempre est† disponible (es decir, ninguna rutina de
+INL devolver† nunca el error "No hay conexi¢n de red").
+
+
+* ENET_INFO (#4087): Obtiene la direcci¢n hardware la tarjeta Ethernet
+                     (s¢lo versi¢n Ethernet)
+Entrada:  -
+Salida:   L-H-E-D-C-B = Direcci¢n hardware de la tarjeta Ethernet
+
+Nota: INL para ObsoNET devolv°a el slot de ObsoNET en el registro A; INL para
+Ethernet no devuelve ninguna informaci¢n £til en dicho registro. Para obtener
+la ubicaci¢n f°sica de la implementaci¢n de la UNAPI de Ethernet, se debe
+usar el procedimiento de descubrimiento est†ndar, tal como se desribe en la
+especificaci¢n MSX UNAPI.
+
+
+* ETH2ASCII (#408A): Conversi¢n de una direcci¢n hardware en una cadena ASCII
+                     (s¢lo versi¢n Ethernet)
+Entrada:  L-H-E-D-C-B = Direcci¢n hardware a convertir
+          IX = Direcci¢n en TPA para depositar la cadena generada
+          A  = Banderas que indican el formato de la conversi¢n:
+               Bit 0: 0 para usar may£sculas para las letras hexadecimales
+                      1 para usar min£sculas para las letras hexadecimales
+               Bit 1: 0 para usar "-" como separador de grupos de dos d°gitos
+                      1 para usar ":" como separador de grupos de dos d°gitos
+Salida:   -
+
+Esta rutina convierte la direcci¢n hardware pasada en HL, DE y BC en una
+cadena ASCII, que es copiada en la direcci¢n de TPA especificada en IX. Por
+ejemplo, si se le pasa HL=#2211, DE=#AA33 y BC=#CCBB, la cadena generada es
+"11-22-33-AA-BB-CC" si A=0, y "11:22:33:aa:bb:cc" si A=3.
+
+La cadena generada siempre tiene una longitud de 17 car†cteres, y no se le
+a§ade ning£n car†cter de terminaci¢n.
+
+
+* ASCII2ETH (#408D): Obtenci¢n de la direcci¢n hardware
+                     representada por una cadena ASCII
+                     (s¢lo versi¢n Ethernet)
+Entrada:  HL = Direcci¢n de la cadena en TPA
+Salida:   L-H-E-D-C-B = Direcci¢n hardware resultante
+          Cy = 1 en caso de error (formato de cadena inv†lido)
+
+Esta rutina interpreta la cadena ASCII cuya direcci¢n en TPA se le pasa en HL,
+y si representa una direcci¢n hardware correcta, devuelve Cy=0 y la direcci¢n
+resultante en HL, DE y BC; en caso contrario devuelve Cy=1.
+
+El formato de la cadena debe ser igual al que genera la rutina ETH2ASCII: seis
+grupos de dos d°gitos hexadecimales separados por car†cteres "-" o ":". No es
+necesario que la cadena tenga ning£n car†cter de terminaci¢n especial.
+
+
+* MASK2BITS (#4090): Obtenci¢n del n£mero de bits puestos a uno
+                     de una m†scara de subred (s¢lo versi¢n Ethernet)
+Entrada:  L.H.E.D = M†scara de subred
+Salida:   A = N£mero de bits puestos a uno
+
+Esta rutina examina la m†scara de subred pasada en HL y DE, y devuelve en A el
+n£mero de bits de la misma que est†n puestos a uno. La rutina empieza el
+examen desde el bit m†s significativo y se detiene al encontrar el primer bit
+cero; es decir, si por ejemplo se le pasa la m†scara 255.192.255.255,
+devolver† A=10.
+
+
+* BITS2MASK (#4093): Generaci¢n de una m†scara de subred
+                     a partir del n£mero de bits puestos a uno
+                     (s¢lo versi¢n Ethernet)
+Entrada:  A = N£mero de bits puestos a uno
+Salida:   L.H.E.D = M†scara de subred
+
+Esta rutina genera una m†scara de subred a partir del n£mero de bits puestos a
+uno de la misma. Por ejemplo, si se le pasa A=17, devuelve la m†scara
+255.255.128.0.
+
+El n£mero de bits pasado debe ser un valor entre 0 y 32. Valores mayores de 32
+devolver†n la m†scara 255.255.255.255.
+
+
+* ARP_ROUTE (#4096): Obtenci¢n de la direcci¢n y la capacidad
+                     de las tablas ARP y de enrutamiento
+                     (s¢lo versi¢n Ethernet)
+Entrada:  -
+Salida:   IX = Direcci¢n de la tabla ARP
+          IY = Direcci¢n de la tabla de enrutamiento
+          B  = Capacidad de la tabla ARP
+          C  = Capacidad de la tabla de enrutamiento
+
+Esta rutina devuelve en IX e IY las direcciones en el segmento de datos de las
+tablas ARP y de enrutamiento, y en B y C sus capacidades (el n£mero m†ximo de
+entradas que pueden albergar). Las capacidades son 32 entradas ARP y 16
+entradas de enrutamiento en esta versi¢n de c¢digo de INL, pero podr°an
+cambiar en futuras versiones.
+
+El formato de ambas tablas se describe en la secci¢n 3.2.
+
+
+3.1.4. EL SEGMENTO DE DATOS
+
+Otra parte importante de INL es el segmento de datos. Se trata de otro
+segmento de RAM del mapeador primario, que esta vez contiene diversas
+variables y b£feres de datos usados por el c¢digo de INL durante su
+funcionamiento. Concretamente, este segmento consta de las siguientes partes:
+
+- Variables de configuraci¢n y estado (unos 64 bytes).
+- Variables y temporizadores de uso interno (unos 64 bytes).
+- Un b£fer de 256 bytes para almacenar el nombre de host que procesa el
+resolver.
+- Ocho b£feres de 11 bytes para almacenar informaci¢n sobre las respuestas de
+eco ICMP recibidas.
+- Ocho b£feres de 10 bytes para almacenar informaci¢n sobre los paquetes UDP
+recibidos.
+- Ocho b£feres de 556 bytes para alojar los paquetes UDP recibidos.
+- Un b£fer para alojar temporalmente el £ltimo paquete recibido. Para la
+versi¢n serie, este b£fer mide 582 bytes (576 bytes para un datagrama de
+tama§o m†ximo, m†s cuatro bytes para la cabecera PPP, m†s dos bytes para el
+FCS final). Para la versi¢n Ethernet, este b£fer mide 598 bytes (576 bytes
+para un datagrama de tama§o m†ximo, m†s 22 bytes para una cabecera Ethernet
+de tipo IEEE802.3).
+- Un b£fer de 582 o 598 bytes para alojar temporalmente un paquete saliente.
+Este b£fer y el anterior tambiÇn son usados por las rutinas de INL que
+realizan alg£n proceso sobre datos del usuario alojados en TPA (por ejemplo
+el calculador de hash MD5, o la rutina de env°o de datos TCP).
+- Un b£fer de 576 bytes para guardar un datagrama saliente mientras se
+resuelve su direcci¢n de destino por medio de ARP (s¢lo versi¢n Ethernet).
+- Cuatro b£feres de 160 bytes (versi¢n serie) o 96 bytes (versi¢n Ethernet)
+para almacenar el TCB de las conexiones TCP, m†s otro b£fer temporal del
+mismo tama§o para almacenar el TCB que est† siendo usado (aunque el tama§o
+real de un TCB es inferior a 160 o 96 bytes).
+- Ocho b£feres circulares de 1024 bytes, dos para cada conexi¢n TCP; uno es
+para datos entrantes y otro para datos salientes y retransmisiones.
+
+En esta secci¢n se describir† en detalle la parte de variables de
+configuraci¢n y estado, que es la que puede resultar de interÇs para el
+programador. La mayor°a de las variables de esta zona tienen asociada una
+opci¢n en INL.COM para permitir su modificaci¢n de forma sencilla. Las
+variables que forman un TCB se describen en la secci¢n 3.4, "Formato del TCB".
+
+Para acceder a las variables de configuraci¢n y estado se pueden usar dos
+mÇtodos distintos, el indirecto y el directo. El mÇtodo indirecto consiste en
+el uso de las rutinas GET_VAR, SET_VAR y COPY_DATA del segmento de c¢digo,
+explicadas en la secci¢n anterior. Para usar el mÇtodo directo, haz lo
+siguiente:
+
+1) Aseg£rate de que el mapeador primario est† conectado en la p†gina 2 (Çste
+es el estado por defecto para los programas .COM).
+
+2) Conecta el segmento de datos de INL en la p†gina 2 (el n£mero del segmento
+se obtiene como se indica en 3.1.1).
+
+3) Lee o escribe la variable de interÇs con instrucciones LD.
+
+4) Opcionalmente, restaura el segmento/slot anteriores en p†gina 2 (a este
+respecto, ver la secci¢n 3.3, "Consideraciones de programaci¢n", m†s adelante).
+
+Naturalmente, tambiÇn podr†s acceder a las variables conectando el segmento de
+datos en cualquier otra p†gina; pero dado que el c¢digo de INL siempre usa la
+p†gina 2 para este prop¢sito, en la descripci¢n de las variables que viene a
+continuaci¢n se usa el rango #8000-#BFFF para especificar sus direcciones.
+
+A continuaci¢n se detallan todas las variables de la zona de variables de
+configuraci¢n; las variables pueden ser modificadas por el programador a no
+ser que se indique lo contrario.
+
+
+Las siguientes variables existen en todas las versiones de INL:
+
+* BUF_IPLOCAL (#8000): Direcci¢n IP local.
+
+* BUF_IPDNS1 (#8004): Direcci¢n IP del servidor DNS primario.
+
+* BUF_IPDNS2 (#8008): Direcci¢n IP del servidor DNS secundario.
+
+* REPLYECHO (#800C): Bandera que indica si se enviar† respuesta a las
+peticiones de eco ICMP (PINGs) recibidas. Por defecto est† activada.
+
+* TTL (#800D): TTL para los datagramas salientes. Por defecto es 64.
+
+* TOS (#800E): TOS para los datagramas salientes. Por defecto es 0.
+
+* CHKVECT (#800F): Vector de c†lculo de checksums de INL. Su funcionamiento
+se  explica en el Manual del Usuario, en la secci¢n 2.4.1. El valor por
+defecto es 31.
+
+* PING_SIZE (#8010): Tama§o por defecto de la parte de datos de las peticiones
+de eco ICMP (PINGs) salientes; debe ser un n£mero de dos bytes entre 0 y 512.
+El valor por defecto es 64.
+
+
+Las siguientes variables existen s¢lo en la versi¢n serie:
+
+* BUF_DIAL (#8012): B£fer de 16 bytes que contiene la cadena con el n£mero de
+telÇfono del ISP. Por defecto es una cadena vac°a.
+
+* BUF_MODREP (#8022): B£fer de 16 bytes que contiene la cadena con la
+respuesta esperada del modem tras una conexi¢n exitosa al ISP. Por defecto es
+la cadena "CONNECT".
+
+* BUF_PPPUSER (#8032): B£fer de 32 bytes que contiene la cadena con el nombre
+de usuario para la autentificaci¢n PPP. Por defecto es una cadena vac°a.
+
+* BUF_PPPASSW (#8052): B£fer de 32 bytes que contiene la cadena con la
+contrase§a para la autentificaci¢n PPP. Por defecto es una cadena vac°a.
+
+* BUF_IPREMOTE (#8072): Direcci¢n IP del otro extremo de la conexi¢n PPP.
+
+* NEG_DNS (#8076): Bandera que indica si se negociar†n las direcciones de los
+servidores DNS al abrir la conexi¢n. Por defecto est† activada.
+
+* USEPPPECHO (#8077): Bandera que indica si se enviar†n peticiones de eco PPP
+peri¢dicamente para comprobar la conexi¢n. Por defecto est† activada.
+
+* PPP_STATE (#8078) - S‡LO LECTURA: Estado actual de la conexi¢n PPP, puede
+tener uno de los siguientes valores:
+
+0: Cerrado
+1: Negociando el enlace (LCP)
+2: Autentificaci¢n (PAP o CHAP)
+3: Negociando las direcciones IP (IPCP)
+4: Abierto (pueden enviarse y recibirse datagramas)
+
+Las £nicas transiciones posibles entre estados son: 0->1 (al ejecutar
+PPP_OPEN), 1->2, 1->3, 2->3, 3->4 y 4->0 (al ejecutar PPP_CLOSE). De nuevo,
+para simplificar el c¢digo se comete aqu° una violaci¢n deliberada de las
+especificaiones del protocolo PPP: el aut¢mata deber°a tener m†s estados y
+permitir m†s transiciones entre ellos.
+
+Para comprobar si hay conexi¢n de red y se pueden transportar datagramas,
+las aplicaciones deber°an usar la rutina NETWORK_STATE en vez de leer esta
+variable; PPP_STATE podr°a no estar disponible en otras implementaciones de
+INL que se desarrollen en el futuro.
+
+* PPP_CLCODE (#8079) - S‡LO LECTURA: Causa del cierre de la £ltima conexi¢n
+PPP que se estableci¢, puede tener uno de los siguientes valores:
+
+0: No se ha establecido ninguna conexi¢n PPP desde que se instal¢ INL
+1: Error al marcar el n£mero del ISP (el modem no devolvi¢ "CONNECT" o
+equivalente)
+2: El usuario ha cerrado la conexi¢n
+3: El otro lado ha cerrado la conexi¢n con un paquete LCP de terminaci¢n
+4: El otro lado ha cerrado la conexi¢n con un paquete IPCP de terminaci¢n
+5: Autentificaci¢n fallida
+6: Autentificaci¢n requerida pero con mÇtodo desconocido (no es PAP ni CHAP)
+7: Autentificaci¢n requerida pero PPP_USER es una cadena vac°a
+8: La negociaci¢n LCP dur¢ m†s de un minuto
+9: El proceso de autentificaci¢n dur¢ m†s de un minuto
+10: La negociaci¢n IPCP dur¢ m†s de un minuto
+11: Direcci¢n IP local desconocida por las dos partes
+12: Direcci¢n IP remota desconocida por las dos partes
+13: Paquete LCP "Code Reject" recibido
+14: Paquete LCP "Protocol Reject" recibido
+15: Paquete IPCP "Code Reject" recibido
+16: Paquete IPCP "Protocol Reject" recibido
+17: Demasiadas peticiones de eco PPP enviadas sin obtener respuesta
+
+
+Las siguientes variables existen s¢lo en la versi¢n Ethernet:
+
+* OBSLOT (#8012): Anteriormente, slot de ObsoNET; actualmente sin uso.
+
+* HWAD (#8013): Direcci¢n hardware de la tarjeta Ethernet, seis bytes.
+
+* SUBNET_MASK (#8019): M†scara de subred.
+
+* DEFGW (#801D): Router predeterminado.
+
+* ARP_TOUT (#8021): Tiempo de vida de las entradas ARP din†micas, en 1/60
+segundos (cuatro bytes). Por defecto es el valor equivalente a cinco minutos.
+
+* ARP_TOUT_SECS (#8025): Tiempo de vida de las entradas ARP din†micas, en
+segundos (cuatro bytes). Esta variable y la anterior deben estar sincronizadas.
+
+* FRAME_TYPE (#8029): Bandera que indica el tipo de trama Ethernet para
+paquetes salientes, Ethernet II (0) o IEEE802.3 (#FF). Por defecto es 0.
+
+* CHECK_NET (#802A): Bandera que indica si se debe comprobar el estado de la
+red cada diez segundos (#FF) o no (0). Por defecto es #FF.
+
+* DHCP_VECT (#802B): Vector de configuraci¢n DHCP (ver el comando INL IP D en
+la Gu°a del Usuario); 16 bits, de los cuales s¢lo se usan seis en esta versi¢n
+de c¢digo de INL. Por defecto es 0.
+
+* DHCP_VECT_O (#802D): Vector que indica quÇ par†metros han sido realmente
+obtenidos mediante DHCP. Se establece cuando el aut¢mata DHCP alcanza el
+estado BOUND o CONFIGURED. SOLO LECTURA.
+
+* DHCP_STATE (#802F): Estado del aut¢mata DHCP (SOLO LECTURA):
+
+0: INIT
+1: SELECTING
+2: REQUESTING
+3: BOUND
+4: RENEWING
+5: REBINDING
+6: INFORMING
+7: CONFIGURED
+
+
+El formato de almacenamiento de estas variables es como sigue:
+
+- Los valores de dos bytes se almacenan en el formato usual little-endian.
+- Las cadenas se almacenan con un car†cter 0 de terminaci¢n.
+- Las direcciones IP se almacenan en su orden natural; por ejemplo 1.2.3.4 se
+almacenar† como DB 1,2,3,4. El valor por defecto para todas las direcciones IP
+es 0.0.0.0
+- Las banderas son 0 si est†n desactivadas y #FF si est†n activadas.
+- Los n£meros de cuatro bytes se almacenan en big-endian (el byte m†s alto
+primero).
+
+Nota: los valores por defecto de las variables son los que tienen cuando INL
+es instalado, o despuÇs de ejecutar INL D. No existe ninguna rutina en el
+segmento de c¢digo de INL que establezca las variables a sus valores por
+defecto; INL.COM realiza esta tarea "a mano", modificando cada variable
+individualmente.
+
+
+3.2. FORMATO DE LAS TABLAS ARP Y DE ENRUTAMIENTO (S‡LO VERSI‡N ETHERNET)
+
+En esta secci¢n se explica el formato de las entradas de las tablas ARP y de
+enrutamiento usadas por INL. Las direcciones y capacidades de estas tablas se
+puede obtener mediante la rutina ARP_ROUTE del segmento de c¢digo de INL, y el
+uso que hace INL de las mismas se explica en la Gu°a del Usuario (ver comandos
+INL ARP e INL ROU de INL.COM).
+
+Una entrada de la tabla ARP consta de 16 bytes, cuyo significado es el
+siguiente:
+
++0:  Estado de la entrada (1 byte)
+     0: Vac°a
+     1: Entrada est†tica
+     2: Entrada din†mica en uso
+     3: Entrada din†mica en proceso de resoluci¢n
++1:  Direcci¢n Ethernet (6 bytes)
+     V†lido en los estados de la entrada 1 y 2
++7:  Direcci¢n IP (4 bytes)
+     V†lido en los estados de la entrada 1, 2 y 3
++11: Tiempo de vida restante (4 bytes, 1/60 segundos)
+     V†lido en el estado de la entrada 2
++15: No se usa, siempre cero (1 byte)
+
+En el estado 3, el significado de los bytes 11 a 14 cambia:
+
++11: Temporizador para enviar la pr¢xima petici¢n ARP (1 byte, 1/60 segundos)
++12: N£mero de peticiones ARP ya enviadas (1 byte)
++13, +14: No se usan, siempre cero
+
+Las entradas est†ticas deben crearse manualmente, buscando una entrada vac°a y
+rellenando adecuadamente los campos de direcci¢n Ethernet, direcci¢n IP y
+estado de la entrada; INL.COM hace eso cuando se ejecuta INL ARP A. TambiÇn se
+borran manualmente, simplemente escribiendo cero en el campo de estado.
+
+Las entradas en resoluci¢n se crean cuando INL necesita averiguar la direcci¢n
+hardware correspondiente a una direcci¢n IP. Se env°an hasta cinco peticiones,
+espaciadas dos segundos entre ellas. Si llega una respuesta, la entrada se
+convierte en din†mica; en caso contrario, la entrada se borra.
+
+Las entradas din†micas en uso se crean a partir de las entradas en resoluci¢n,
+o bien directamente cuando llega una petici¢n o respuesta ARP no solicitada,
+seg£n se especifica en RFC826. Cuando el temporizador de tiempo de vida
+restante llega a cero, la entrada se borra. El temporizador se reinicia si
+llega una petici¢n o respuesta ARP desde la misma direcci¢n IP.
+
+Cuando INL necesita crear una entrada din†mica nueva estando la tabla llena,
+se busca la entrada din†mica en uso cuyo tiempo de vida restante sea inferior,
+y se sobreescribe dicha entrada con la entrada nueva.
+
+INL reconoce los paquetes UNARP (RFC1868) recibidos: cuando el campo "Longitud
+de la direcci¢n hardware" de un paquete de respuesta ARP recibido tiene el
+valor cero, la entrada asociada de la tabla ARP es borrada, si existe.
+
+En cuanto a la tabla de enrutamiento, el formato de las entradas de la misma
+(de 16 bytes cada una) es el siguiente:
+
++0:  Estado de la entrada (1 byte)
+     0: Vac°a
+     1: En uso
++1:  Direcci¢n IP de la red de destino (4 bytes)
++5:  M†scara de subred de la red de destino (4 bytes)
++9:  Direcci¢n IP del router asociado (4 bytes)
++13 a +15: No se usan, siempre cero (3 bytes)
+
+Las entradas deben crearse manualmente, buscando una entrada vac°a y
+rellenando adecuadamente todos los campos; INL.COM hace eso cuando se ejecuta
+INL ROU A. TambiÇn se borran manualmente, simplemente escribiendo cero en el
+campo de estado.
+
+
+3.3. CONSIDERACIONES DE PROGRAMACI‡N
+
+En esta secci¢n se discuten algunos puntos de interÇs para los programadores
+que hagan uso de las rutinas proporcionadas por INL en sus aplicaciones.
+
+
+3.3.1. QUê ES TPA
+
+TPA (Transient Program Area) es la zona de 64K RAM visible por los programas
+ejecutables para MSX-DOS cuando inician su ejecuci¢n (es decir, antes de
+realizar ning£n cambio de slot ni segmento).
+
+Algunas de las funciones de INL realizan transferencias de datos entre TPA y
+el segmento de datos de INL, a fin de intercambiar datos con el programa
+llamador. En estos casos, INL siempre considerar† que TPA es igual a los
+segmentos que forman este †rea por defecto; es decir, los segmentos 3, 2, 1 y
+0 del mapeador primario para las p†ginas 0, 1, 2 y 3, respectivamente. Aunque
+el programa cambie el slot o segmento de alguna de las p†ginas antes de llamar
+a las funciones de INL que acceden a TPA, dichas funciones siempre acceder†n a
+los segmentos mencionados.
+
+El n£mero de segmento se decide en funci¢n de los dos bits altos de la
+direcci¢n TPA asociada: las direcciones en el rango #0000-#3FFF se refieren al
+segmento 3, las direcciones en el rango #4000-#7FFF se refieren al segmento 2,
+etc.
+
+El acceso f°sico al segmento que realiza INL no tiene por quÇ tener lugar a
+travÇs de su p†gina asociada. Por tanto, a la hora de usar rutinas de INL a
+las que haya que indicar una zona de TPA como origen o destino de una
+transferencia de datos, no debe indicarse una zona que cruce los l°mites de
+una p†gina (por ejemplo, la zona que comienza en #7F00 y tiene una longitud de
+1024 bytes cruza los l°mites entre las p†ginas 1 y 2).
+
+
+3.3.2. LLAMADAS A INL Y CAMBIOS DE SEGMENTO
+
+En teor°a, un programa que haga uso de INL podr°a conectar el segmento de
+c¢digo de INL en p†gina 1 al principio de su ejecuci¢n, y a partir de ah° usar
+las rutinas de INL con simples instrucciones CALL (si el programa no necesita
+acceder a la parte de la TPA correspondiente a la p†gina 1) durante toda la
+vida del programa.
+
+Sin embargo, no es posible usar esta simple estrategia debido al
+comportamiento de MSX-DOS (observado, al menos, en el Turbo-R ST):
+
+- DOS 1 restaura los segmentos por defecto de TPA en todas las p†ginas despuÇs
+de las llamadas a las funciones del DOS (es decir, despuÇs de cada CALL 5).
+
+- DOS 2 cuelga el ordenador si no est†n conectados los segmentos por defecto
+de TPA en todas las p†ginas cuando finaliza la aplicaci¢n.
+
+Teniendo en cuenta esto, dos posibles estrategias para usar las rutinas de INL
+desde aplicaciones que sean compatibles con DOS 1 y DOS 2 son las siguientes:
+
+1) Antes de llamar a una rutina de INL, conectar el segmento de c¢digo de INL
+en p†gina 1; e inmediatamente despuÇs, restaurar TPA en dicha p†gina (con esta
+£ltima acci¢n nos aseguramos de que podremos finalizar la aplicaci¢n en
+cualquier momento sin que se cuelgue el ordenador). Esta es la estrategia
+usada por el cliente de ping suministrado (fuente en PING-S.ASC).
+
+2) Antes de llamar a una rutina de INL, conectar el segmento de c¢digo de INL
+en p†gina 1, pero no hacer nada especial despuÇs. Adem†s, al principio de la
+aplicaci¢n, si se detecta DOS 2 definir una rutina que ser† llamada por el DOS
+cuando la aplicaci¢n vaya a finalizar (usando la funci¢n del DOS _DEFAB, #63);
+dicha rutina simplemente restaurar† los segmentos originales de TPA antes de
+la finalizaci¢n de la aplicaci¢n, para evitar que se cuelgue el ordenador.
+Esta es la estrategia usada por el cliente/servidor de TFTP (fuente en TFTP-
+S.ASC) y por la c¢nsola TCP (fuente en TCPCON-S.ASC) suministrados.
+
+Los programas PING, TFTP y TCPCON usan una macro para ejecutar las rutinas de
+INL siguiendo las estrategias mencionadas, pero tambiÇn pueden definirse
+subrutinas que hagan el mismo trabajo, lo cual reducir† el tama§o del c¢digo
+si hay muchas llamadas a INL.
+
+
+3.3.3. INTERRUPCIONES Y TIEMPOS DE ESPERA
+
+INL basa su funcionamiento en las interrupciones generadas por el reloj del
+sistema a 50 o 60 Hz: en cada interrupci¢n se ejecuta su rutina de atenci¢n a
+la interrupci¢n del reloj, en la que se actualizan temporizadores y variables,
+se recogen los datos entrantes que haya pendientes desde el RS232 (versi¢n
+serie) o se obtiene un paquete entrante de la red (versi¢n Ethernet) y se
+env°an los paquetes que sean necesarios (s¢lo paquetes DNS, TCP o ARP; los
+paquetes UDP y de PING se env°an inmediatamente cuando el usuario ejecuta
+las rutinas de env°o correspondientes).
+
+Sin embargo, si la interupci¢n del reloj llega cuando se est† ejecutando
+alguna rutina de usuario de INL, la rutina de servicio a la interrupci¢n no se
+ejecutar†. Esto es necesario para evitar conflictos entre el uso de los
+b£feres de datos por parte de las rutinas de usuario y de la rutina de
+servicio a la interrupci¢n (por ejemplo, los b£feres para paquetes entrantes y
+salientes son usados tambiÇn como b£feres temporales por algunas de las
+rutinas que implican transferencias de datos entre TPA y el segmento de datos
+de INL, por ejemplo la rutina de c†lculo del hash MD5).
+
+Por esta raz¢n, si se va a ejecutar repetidamente una o m†s rutinas de INL en
+espera de alg£n suceso (por ejemplo cuando se espera la respuesta a una
+petici¢n DNS o la llegada de datos TCP), conviene insertar entre las llamadas
+a la rutina en cuesti¢n alg£n c¢digo de espera. Este c¢digo deber°a esperar a
+que llegue una interrupci¢n del reloj, y s¢lo entonces ejecutar la rutina de
+INL de interÇs. De esta forma se da al c¢digo de INL una oportunidad de
+ejecutarse y realizar correctamente las tareas que tiene pendientes.
+
+INL proporciona en su segmento de c¢digo la rutina WAIT_INT para este
+prop¢sito. WAIT_INT espera a que se produzca una interrupci¢n del reloj, y
+entonces termina. Su c¢digo (simplificado porque la rutina real es m†s
+compleja para no esperar innecesariamente y para guardar y recuperar el estado
+anterior) es el siguiente:
+
+TIME:	equ	#FC9E
+
+WAIT_INT:	ld	hl,(TIME)
+WT_LOOP:	ld	de,(TIME)
+	call	COMP	;COMP devuelve Z=1 si HL=DE
+	jr	nz,WT_LOOP
+	ret
+
+As°, por ejemplo un bucle que esperara la respuesta a una petici¢n DNS ser°a
+como sigue:
+
+	;Se supone que ya hemos ejecutado DNS_Q
+DNS_WAIT:	call	WAIT_INT
+	xor	a
+	call	DNS_S
+	cp	1
+	jr	z,DNS_WAIT
+	;Aqu° ya tenemos el resultado o un error
+
+Cada vez que se llama a WAIT_INT se deber°a ejecutar tambiÇn alguna funci¢n
+del DOS, de esta forma se da al sistema la oportunidad de detectar la
+pulsaci¢n de CTRL-C o CTRL-STOP por parte del usuario.
+
+La rutina WAIT_INT est† descrita en la secci¢n 3.1.3, "El segmento de c¢digo".
+
+
+3.3.4. MANEJO DE DIRECCIONES IP
+
+Todas las rutinas de INL que manejan direcciones IP admiten o devuelven Çstas
+en el formato L.H.E.D. Es decir, la direcci¢n x.y.z.s se representa como
+HL=#yx, DE=#sz.
+
+Esto se hace as° para que sea f†cil almacenar las direcciones IP en memoria
+con su orden natural, db x,y,z,s (tal como se almacenan en el segmento de
+datos de INL), ya que entonces la direcci¢n se puede recuperar y almacenar con
+dos simples instrucciones LD. Por ejemplo, para enviar un PING al router
+predeterminado, y suponiendo que ambos segmentos de INL est†n debidamente
+conectados en las p†ginas 1 y 2, basta hacer:
+
+ld hl,(DEFGW)
+ld de,(DEFGW+2)
+;(establecer otros registros aqu°)
+call SEND_ECHO
+
+
+3.4. FORMATO DEL TCB
+
+Para cada conexi¢n TCP, INL mantiene en su segmento de datos un †rea de
+control llamada TCB (Transmission Control Block). Se trata de un bloque de
+variables usado por INL para controlar el estado de la conexi¢n y el env°o y
+la recepci¢n de datos. La direcci¢n del TCB para una conexi¢n dada se puede
+obtener con la rutina TCP_STATUS.
+
+En esta secci¢n se describe el contenido del TCB: se menciona cada variable,
+su ubicaci¢n respecto al comienzo del TCB, su uso y su tama§o. A menos que se
+indique lo contrario, se cumple lo siguiente para todas las variables:
+
+- Los valores de dos bytes se almacenan en el formato habitual del MSX (little-
+endian).
+- Los n£meros de secuencia (valores de 32 bits) se almacenan en el formato en
+que viajan por la red, big-endian. Por ejemplo, #12345678 se almacena como DB
+#12,#34,#56,#78.
+- Las banderas tienen dos posibles valores: 0 cuando est†n desactivadas y #FF
+cuando est†n activadas.
+- Los temporizadores usan unidades de 1/60 de segundo.
+- Los temporizadores siempre se decrementan. Cuando tienen un valor 0, es
+porque o bien no est†n activos, o bien han expirado (para distinguir entre
+ambos casos se comprueban otras variables, seg£n el temporizador).
+
+El tama§o de un TCB es actualmente de 132 bytes (versi¢n serie) o de 88 bytes
+(versi¢n Ethernet). Este tama§o puede aumentar en futuras versiones de INL,
+pero nunca ser† mayor de 256 bytes.
+
+El formato del TCB se proporciona £nicamente a t°tulo informativo. Las
+aplicaciones nunca deber°an modificar el contenido de un TCB manualmente.
+
+Las variables que forman un TCB son las siguientes:
+
++0: TCP_STATE (1). Estado de la conexi¢n, codificado de la misma forma que el
+valor devuelto por la rutina TCP_STATUS. Cuando el estado es 0 (CLOSED), el
+resto del TCB no contiene informaci¢n £til, excepto la variable LAST_CLOSE.
+
++1: REMOTE_IP (4). Direcci¢n IP del host remoto, almacenada en su orden
+natural (db A,B,C,D para A.B.C.D). Para conexiones en estado LISTEN con el
+socket remoto sin especificar, esta direcci¢n es 0.0.0.0.
+
++5: REMOTE_PORT (2). Puerto remoto. Cero en estado LISTEN con el socket remoto
+sin especificar, independientemente del valor especificado al ejecutar
+TCP_OPEN.
+
++7: LOCAL_PORT (2). Puerto local.
+
++9: PASSIVE_OPEN (1). Bandera que est† activada si la conexi¢n se ha abierto
+en modo pasivo.
+
++10: SND_UNA (4). N£mero de secuencia m†s antiguo enviado pero a£n no
+reconocido.
+
++14: SND_NXT (4). Pr¢ximo n£mero de secuencia a enviar.
+
++18: SND_WND (2). Ventana de transmisi¢n. El tama§o de los segmentos de datos
+nuevos que env°a INL es el m°nimo entre este valor, la cantidad de datos
+disponibles en el b£fer de salida, el valor de MSS y 536.
+
++20: SND_WL1 (4). N£mero de secuencia usado para la £ltima actualizaci¢n de la
+ventana de transmisi¢n.
+
++24: SND_WL2 (4). N£mero de reconocimiento (ACK) usado para la £ltima
+actualizaci¢n de la ventana de transmisi¢n.
+
++28: ISS (4). N£mero de secuencia de transmisi¢n inicial. En esta versi¢n de
+c¢digo de INL este n£mero es siempre cero.
+
++32: RCV_NXT (4). Pr¢ximo n£mero de secuencia esperado en recepci¢n.
+
++36: IRS (4). N£mero de secuencia de recepcion inicial.
+
++40: USER_TOUT_V (2). Valor inicial del temporizador de usuario, especificado
+por el usuario al abrir la conexi¢n.
+
++42: USER_TOUT (2). Valor actual del temporizador de usuario.
+
++44: LAST_CLOSE (1). Causa del cierre de la conexi¢n, codificada de la misma
+forma que el valor devuelto por TCP_STATUS. Cero cuando la conexi¢n est†
+abierta. Esta variable es la £nica que contiene informaci¢n v†lida (aparte de
+TCP_STATE) cuando la conexi¢n est† cerrada.
+
++45: SEND_PUSH_PEND (2). N£mero de bytes pendientes de ser enviados con PUSH.
+
++47: SEND_TOUT (2). Temporizador de env°o de datos no PUSH. Los datos se
+env°an cuando expira este temporizador o cuando se acumulan MSS bytes para
+enviar. Se inicializa siempre en 0.5 segundos.
+
++49: SYN_SENT_FLAG (1). Bandera que est† activada cuando se ha enviado un
+segmento con SYN pero a£n no se ha recibido el reconocimiento correspondiente.
+
++50: FIN_SENT_FLAG (1). Bandera que est† activada cuando se ha enviado un
+segmento con FIN pero a£n no se ha recibido el reconocimiento correspondiente.
+
++51: RETX_SIZE (2). Tama§o de la cola de retransmisi¢n. La cola de
+retransmisi¢n no existe como entidad indepediente, sino que los datos enviados
+permanecen en la cola de datos salientes hasta que se recibe el reconocimiento.
+
++53: RTO_T (2). Temporizador usado para la retransmisi¢n de datos y para la
+prueba de ventana cero. Se inicializa siempre en tres segundos en el primer
+caso, y en 10 segundos en el segundo caso.
+
++55: ACK_RCV_NUM (2). N£mero de bytes nuevos que han llegado pero para los que
+a£n no se ha enviado reconocimiento.
+
++57: ACK_DELAY_T (1). Temporizador usado para enviar un reconocimiento de
+datos nuevos. El reconocimiento se env°a cuando este temporizador expira o
+cuando ACK_RCV_NUM alcanza el valor 256. Este temporizador se inicializa
+siempre en 0.1 segundos.
+
++58: FIN_PENDING (1). Bandera que est† activada cuando el usuario ha pedido el
+cierre de la conexi¢n (con la rutina TCP_CLOSE) pero a£n no se ha enviado el
+segmento FIN correspondiente (porque quedan datos por enviar y/o retransmitir).
+
++59: LAST_WIN_SENT (2). Ventana de recepci¢n anunciada en el £ltimo segmento
+enviado. Cuando se extraen datos entrantes con TCP_RCV, se compara el nuevo
+valor de ventana a anunciar con el valor de esta variable. Si difieren, se
+env°a un segmento vac°o (s¢lo con ACK) para anunciar el nuevo valor de la
+ventana.
+
++61: MSS (2). Tama§o m†ximo de segmento que el host puede aceptar. Se toma de
+la opci¢n MSS de los segmentos con bandera SYN recibidos; el valor por defecto
+si dicha opci¢n no est† presente es 512.
+
++63: ACK_PENDING (1). Bandera que est† activada cuando est† pendiente el env°o
+de un segmento ACK por motivos distintos a la recepci¢n de datos nuevos (por
+ejemplo, por la recepci¢n de un segmento fuera de secuencia).
+
+Las siguientes variables hacen referencia al b£fer circular de 1024 bytes
+usado para almacenar los datos entrantes. El b£fer en s° est† en el segmento
+de datos de INL.
+
++64: INBUF_USED (2). Espacio usado.
+
++66: INBUF_FREE (2). Espacio libre (la ventana de recepci¢n anunciada es este
+valor redondeado por defecto a un m£ltiplo de 128 bytes; cuando este valor es
+inferior a 128, se anuncia el valor real).
+
++68: INBUF_INPNT (2). Puntero para la pr¢xima inserci¢n de datos.
+
++70: INBUF_OUTPNT (2). Puntero para la pr¢xima extracci¢n de datos.
+
++72: INBUF_BUFADD (2). Direcci¢n inicial del b£fer (en p†gina 2).
+
++74: INBUF_ENDADD (2). Direcci¢n inicial del b£fer m†s tama§o del b£fer.
+
+Las siguientes variables hacen referencia al b£fer circular de 1024 bytes
+usado para almacenar los datos salientes. El b£fer en s° est† en el segmento
+de datos de INL. Los RETX_SIZE bytes m†s antiguos de este b£fer forman la cola
+de retransmisi¢n, el resto son datos a£n no enviados.
+
++76: OUTBUF_USED (2). Espacio usado.
+
++78: OUTBUF_FREE (2). Espacio libre.
+
++80: OUTBUF_INPNT (2). Puntero para la pr¢xima inserci¢n de datos.
+
++82: OUTBUF_OUTPNT (2). Puntero para la pr¢xima extracci¢n de datos.
+
++84: OUTBUF_BUFADD (2). Direcci¢n inicial del b£fer (en p†gina 2).
+
++86: OUTBUF_ENDADD (2). Direcci¢n inicial del b£fer m†s tama§o del b£fer.
+
++88: VJ_OUT_HEADER (44). Cabecera para la compresi¢n Van Jacobson, usada para
+los paquetes salientes outgoing packets (s¢lo versi¢n serie).
+
+
+4. LISTA DE CAMBIOS Y CONTACTO
+
+4.1. LISTA DE CAMBIOS (VERSI‡N SERIE)
+
+* Versi¢n 1.1.0, Septiembre de 2007:
+
+- Corregido un fallo que causaba que el ordenador se colgara al leer un
+archivo de configuraci¢n, tanto durante la instalaci¢n como al usar el
+comando INL F.
+
+* Versi¢n 1.1.0, Septiembre de 2007:
+
+- Cuando el otro extremo propone un mÇtodo de autenticaci¢n desconocido
+(diferente a PAP y CHAP) durante la negociaci¢n PPP, se enviaba un paquete
+LCP Configure NAK, en el que se propon°a PAP y CHAP. Este parece no ser el
+procedimiento adecuado (el demonio PPP de Linux, que inicialmente propone el
+protocolo EAP, trata el paquete NAK como inv†lido y la negociaci¢n no
+prospera). Ahora, en vez de un Configure NAK se env°a un Configure Reject.
+
+* Versi¢n 1.0.2:
+
+- Arreglado un fallo en la ruitna TCP_STATUS. No se sincronizaba correctamente
+con el c¢digo ejecutado durante la interrupci¢n del reloj.
+
+- Arreglado un fallo en el instalador. Ahora es posible usar un fichero INL.CFG
+e indicar un comando para su ejecuci¢n autom†tica tras la instalaci¢n, al mismo
+tiempo.
+
+- A§adido soporte para mensajes ICMP "Destino inaccesible". Cuando el paquete
+causante de estos mensajes es un segmento TCP, se cierra autom†ticamente la
+conexi¢n implicada.
+
+- A§adido un nuevo c¢digo de causa de cierre de las conexiones TCP: Mensaje
+ICMP "Destino inaccesible" recibido (ver la rutina TCP_STATUS).
+
+
+4.2. LISTA DE CAMBIOS (VERSI‡N ETHERNET)
+
+* Versi¢n 1.1.0, Septiembre de 2007:
+
+VÇase la lista de cambios para la versi¢n serie.
+
+* Versi¢n 1.1.0, Septiembre de 2007:
+
+- INL para Ethernet 1.1.0 es INL para ObsoNET 1.0.2 con el soporte para ObsoNET
+sustitu°do por soporte para la UNAPI Ethernet. La BIOS de ObsoNET es
+compatible con la UNAPI Ethernet desde la versi¢n 1.1.
+
+* Versi¢n 1.0.2:
+
+VÇase la lista de cambios para la versi¢n serie.
+
+
+4.3. CONTACTO
+
+Para contactar con el autor y obtener la £ltima versi¢n de INL, as° como
+software relacionado con ObsoNET e informaci¢n sobre el est†ndar MSX UNAPI:
+
+http://www.konamiman.com
+konamiman@konamiman.com
+
+TambiÇn puedes visitar el portal del proyecto INL en
+http://www.sourceforge.net.
