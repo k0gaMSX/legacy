@@ -1,0 +1,804 @@
+;/*
+	.comment %
+
+	(C) Copyright by ASCII Corporation, 1989
+		All rights Reserved.
+
+	File: clibmac.mac	MSX-C Standard Library Asembler Part (Ver 1.2)
+
+	Includes following functions
+		bdos	bdosh	bios	call	calla
+		inp	outp	memcpy	movmem	memset
+		setmem	setjmp	longjmp	unlink	rename
+		read	write	close	open	creat
+		_exit	callxx
+%
+;------ Faking stuff for M80 and MX ------------------------------------
+module	macro		;; "module" must be lower cased
+	endm
+
+endmodule macro 	;; "endmodule" must be lower cased
+	endm
+
+extrn	macro
+	endm
+;-----------------------------------------------------------------------
+.comment %*/
+
+#include <stdio.h>
+#include <bdosfunc.h>
+
+/*%
+	MODULE  CLIBVER
+
+; This module contains the version number of clib.rel
+
+?clib::	defb    "MSX-C CLIB ver 1.20p"
+
+	ENDMODULE
+.comment %*/
+
+char    bdos(c)
+char    c;
+{
+}
+
+int     bdosh(c)
+char    c;
+{
+/*%
+	MODULE  BDOS
+
+BDOS@::
+BDOSH@::
+	ld      h,b
+	ld      l,c
+	ld      c,a
+	jp      5
+
+	ENDMODULE
+.comment %*/
+}
+
+char    bios(code)
+char    code;
+{
+/*%
+	MODULE  BIOS
+
+BIOS@::
+	ld      c,e
+	ld      e,a
+	ld      d,0
+	ld      hl,(1)
+	add     hl,de
+	add     hl,de
+	add     hl,de
+	jp      (hl)
+
+	ENDMODULE
+.comment %*/
+}
+
+char    calla(addr, a, hl, bc, de)
+int     *addr, a, hl, bc, de;
+{
+}
+
+int     call(addr, a, hl, bc, de)
+int     *addr, a, hl, bc, de;
+{
+/*%
+	MODULE  CALL
+
+CALL@::
+CALLA@::
+	ld      a,e
+	push    hl
+	push    bc
+	ld      hl,2+4
+	add     hl,sp
+	ld      c,(hl)
+	inc     hl
+	ld      b,(hl)
+	inc     hl
+	ld      e,(hl)
+	inc     hl
+	ld      d,(hl)
+	pop     hl
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+char    inp(port)
+unsigned        port;
+{
+/*%
+	MODULE  INP
+
+INP@::
+	ld      c,l
+	in      a,(c)
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID    outp(port, val)
+unsigned port;
+char    val;
+{
+/*%
+	MODULE	OUTP
+
+OUTP@::
+	ld      c,l
+	out     (c),e
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID    memcpy(dest, source, length)
+char    *dest, *source;
+size_t  length;
+{
+}
+
+VOID    movmem(source, dest, length)
+char    *dest, *source;
+size_t  length;
+{
+/*%
+	MODULE	MEMCPY
+
+MEMCPY@::
+	ex      de,hl
+MOVMEM@::
+	ld	a, b
+	or	c		; if length 0
+	ret	z		; do nothing
+;  cp hl,de		src - dst
+	ld	a, l		; if src >= dst
+	sub	e		; 	use LDIR
+	ld	a, h		; else
+	sbc	a, d		; 	use LDDR
+	jr	c, @h2l
+;  src >= dst
+@l2h:
+	ldir
+	ret
+;  src < dst
+@h2l:
+	dec	bc
+	ex	de, hl
+	add	hl, bc		; [DE] <- end of destination
+	ex	de, hl
+	add	hl, bc		; [HL] <- end of source
+	inc	bc
+	lddr
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID    memset(dest, byte, length)
+char    *dest, byte;
+size_t  length;
+{
+}
+
+VOID    setmem(dest, length, byte)
+char    *dest, byte;
+size_t  length;
+{
+/*%
+	MODULE  SETMEM
+
+SETMEM@::
+	ld      a,c             ;swap count & byte
+	ld      c,e
+	ld      b,d
+	ld      e,a
+MEMSET@::
+	ld      a,c             ;see if anything to set
+	or      b
+	ret     z
+	ld      (hl),e          ;set first byte
+	ld      e,l
+	ld      d,h
+	inc     de
+	dec     bc
+	ldir
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+
+VOID    _chai(limit, fd)
+char    *limit;
+FD      fd;
+{
+/*%
+	MODULE  CHAIN
+
+_READ	equ	48h
+_SETDTA	equ	1ah
+WBOOT   equ     0000h           ;MSX-DOS cold start address
+LOAD_FLAG	equ	0037h
+DEFDMA  equ     0080h           ;MSX-DOS defalut DMA address
+TPA     equ     0100h           ;MSX-DOS TPA address
+
+@CHAI@::
+	ld      sp,hl           ;set up stack
+	ld      bc,WBOOT
+	push    bc
+	ld      b,e             ;set file handle
+	ld      a,h
+	sub     2               ;account for TPA and stack
+	ret     c               ;sorry, not enough space
+	ld      h,a
+	ld	a, (LOAD_FLAG)	;save passed LOAD_FLAG
+	ex	af, af'
+	push    hl              ;save requested size
+	ld      de,TPA
+	ld      c,_READ         ;file handle read
+	call    5
+	pop     de              ;restore requested size
+	ret     nz              ;error while reading
+	and     a
+	sbc     hl,de
+	ret     z               ;fully read, sorry
+	ld      de,DEFDMA       ;reset default DMA address
+	ld      c,_SETDTA	;1Ah
+	call    5
+	ex	af, af'		;restore passed LOAD_FLAG
+	ld	(LOAD_FLAG), a
+	jp      TPA             ;let's go!!
+
+; ----- total of 45 bytes -----
+
+	ENDMODULE
+.comment %*/
+}
+
+int     setjmp(env)
+jmp_buf env;
+{
+/*%
+	MODULE	SETJMP
+
+SETJMP@::
+	pop     bc              ;get return address
+	push    bc
+	ex      de,hl
+	ld      hl,2            ;get stack location
+	add     hl,sp
+	ex      de,hl
+	ld      (hl),c          ;save return address
+	inc     hl
+	ld      (hl),b
+	inc     hl
+	ld      (hl),e          ;save stack location
+	inc     hl
+	ld      (hl),d
+	ld      hl,0            ;say this is a immediate return
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID    longjmp(env, val)
+jmp_buf env;
+int     val;
+{
+/*%
+	MODULE	LONGJMP
+
+LONGJMP@::
+	ld      c,(hl)          ;get old return address
+	inc     hl
+	ld      b,(hl)
+	inc     hl
+	ld      a,(hl)          ;get old stack location
+	inc     hl
+	ld      h,(hl)
+	ld      l,a
+	ld      sp,hl           ;restore old stack
+	push    bc              ;restore old return address
+	ex      de,hl
+	ld      a,l             ;never returns 0
+	or      h
+	ret     nz
+	inc     hl
+	ret
+
+	ENDMODULE
+;-------------------------------------------------------------------
+.comment %*/
+}
+
+
+char	*_p_path(fn, last_item, flag)
+char    *fn;
+char	**last_item;
+TINY	*flag;
+{
+/*%
+	MODULE  PPATH
+
+_PARSE	equ	5Bh
+@P@PATH@::
+	push	bc			; save *flag;
+	push	de			; save **last_item
+	ex      de,hl                   ; set pointer to pathname to DE
+	ld      b,0
+	ld      c,_PARSE
+	call    5
+	ex	de,hl			; DE = pointer to last item
+					; HL = pointer to terminator
+	ex	(sp),hl			; save pointer to terminator
+					; HL = **last_item
+	ld	(hl),e
+	inc	hl
+	ld	(hl),d
+	pop	hl			; restore pointer to terminator
+	pop	de			; restore *flag
+	ld	a,b			; return the parse flag
+					; PDWEFDDO
+					; ||||||||
+					; |||||||+-- not drive name only
+					; ||||||+--- path specified
+					; |||||+---- drive name specified
+					; ||||+----- file name specified
+					; |||+------ extension specified
+					; ||+------- wild card specified
+					; |+-------- . or ..
+					; +--------- ..
+	ld	(de),a
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+
+char    *_parsefn(fn, fcb, flag)
+char    *fn;
+char    *fcb;
+TINY	*flag;
+{
+/*%
+	MODULE  PARSEFN
+
+_PARSE	equ	5Bh
+_PFILE	equ	5Ch
+@PARSEFN@::
+	push	bc			; save pointer to flag
+	push    de                      ; save pointer to destination
+	ex      de,hl                   ; set pointer to pathname to DE
+	ld      b,0
+	ld      c,_PARSE
+	call    5
+	ex      de,hl                   ; DE = pointer to last item
+	pop	hl			; HL = pointer to destination
+	push	bc			; save flag returned by _PARSE
+	bit	2,b			; drive name explicitly specified?
+	jr	nz,drv_spc		; yes
+	ld	c,0			; omitted
+drv_spc:
+	ld	(hl),c			; set logical drive number
+	inc	hl
+	ld      c,_PFILE
+	call    5
+	pop	af			; restore flag in A
+	pop     hl			; restore pointer to flag
+	and	00000100b		; leave 'drive specified' flag
+	or	b			; combine with flag returned by _PFILE
+	ld	(hl),a
+	ex	de,hl			; return pointer to terminator
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+
+STATUS  _ffirst(fn, fib, flag)
+char    *fn;
+FIB	*fib;
+TINY	flag;
+{
+/*%
+	MODULE  FFIRST
+
+_FFIRST	equ	40h
+@FFIRST@::
+	push    de                      ; set pointer to FIB
+	pop     ix
+	ex      de,hl                   ; set pointer to pathname to DE
+	ld      b, c			; set attibute for finding
+	ld      c,_FFIRST
+	call    5
+	ret     z                       ; no errors
+	ld      a,-1
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+
+STATUS  _fnext(fib)
+FIB	*fib;
+{
+/*%
+	MODULE  FNEXT
+
+_FNEXT	equ	41h
+@FNEXT@::
+	push    hl
+	pop     ix
+	ld      c,_FNEXT
+	call    5
+	ret     z                       ; no errors
+	ld      a,-1
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+
+STATUS  unlink(filename)
+char    *filename;
+{
+/*%
+	MODULE  DFLUSH
+
+_FLUSH	equ	5Fh
+@DFLUSH@::
+	push    af
+	ld      b,0ffh                  ; flush all drives
+	ld      d,0                     ; flush only, not invalidate
+	ld      c,_FLUSH
+	call    5
+	pop     af
+	ret
+
+	ENDMODULE
+
+	MODULE  UNLINK
+
+_FFIRST	equ	40h
+_FNEXT	equ	41h
+_DELETE	equ	4Dh
+.NOFIL	equ	0D7h
+	extrn	@DFLUSH@
+UNLINK@::
+	ex      de,hl                   ; set pointer to filename to DE
+	ld      b,0
+	ld      ix,FIB
+	ld      c,_FFIRST
+	call    5
+	ld      a,-1                    ; assume error occurred
+	ret     nz                      ; good assumption
+unlink_loop:
+	ld      de,FIB
+	ld      c,_DELETE
+	call    5
+	jr      nz,unlink_error         ; error
+	ld      ix,FIB
+	ld      c,_FNEXT
+	call    5
+	jr      z,unlink_loop           ; no errors
+	cp      .NOFIL                  ; no more files?
+	ld      a,0                     ; assume so
+	jr      z,unlink_done           ; good assumption, return NO ERROR
+unlink_error:
+	ld	a,-1
+unlink_done:
+	jp      @DFLUSH@
+
+FIB:
+	defs    64
+
+	ENDMODULE
+.comment %*/
+}
+
+
+STATUS  rename(oldname, newname)
+char    *oldname, *newname;
+{
+/*%
+	MODULE  RENAME
+
+_RENAME	equ	4Eh
+_PARSE	equ	5Bh
+	extrn	@DFLUSH@
+RENAME@::
+	push	hl			;  save oldname
+	ld	bc,_PARSE		;  parse newname  and  get basename
+	call	5			;  basename of newname in hl
+	pop	de			;  restore oldname
+	jr	nz, rename_fail
+	ld      c,_RENAME		;  ren DE HL
+	call    5
+	jp      z,@DFLUSH@              ; no errors
+rename_fail:
+	ld      a,-1
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+
+int     write(fd, buf, bytes)
+FD      fd;
+char    *buf;
+size_t  bytes;
+{
+/*%
+	MODULE  WRITE
+
+_WRITE	equ	49h
+WRITE@::
+	ld      a,l                     ; save file handle
+	ld      l,c                     ; set byte length
+	ld      h,b
+	ld      b,a                     ; set file handle
+	ld      c,_WRITE
+	jp	5			;  writes and returns byte actually
+
+	ENDMODULE
+.comment %*/
+}
+
+
+int     read(fd, buf, bytes)
+FD      fd;
+char    *buf;
+size_t  bytes;
+{
+/*%
+	MODULE  READ
+
+_READ	equ	48h
+READ@::
+	ld      a,l                     ; save file handle
+	ld      l,c                     ; set byte length
+	ld      h,b
+	ld      b,a                     ; set file handle
+	ld      c,_READ
+	jp	5			;  reads and returns byte actually
+
+	ENDMODULE
+.comment %*/
+}
+
+
+STATUS  _seek(fd, offset, mode)
+FD      fd;
+int     offset;
+TINY    mode;
+{
+/*%
+	MODULE  SEEK
+
+_SEEK	equ	4Ah
+@SEEK@::
+	ld      a,c                     ; get mode
+	cp      2+1                     ; 0, 1, 2?
+	jr      nc,seek_error           ; no, error
+	ld      b,l                     ; get file handle
+	ex      de,hl                   ; set lower word of offset to HL
+	ld      de,0                    ; assume positive
+	bit     7,h                     ; positive?
+	jr      z,seek_pos              ; yes
+	dec     de                      ; extend sign
+seek_pos:
+	ld      c,_SEEK
+	call    5
+	ret     z                       ; no errors
+seek_error:
+	ld      a,-1                    ; return ERROR
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+
+STATUS  close(fd)
+FD      fd;
+{
+/*%
+	MODULE  CLOSE
+
+_CLOSE	equ	45h
+CLOSE@::
+	ld      b,l
+	ld      c,_CLOSE
+	call    5
+	ret     z                       ; no errors
+	ld      a,-1                    ; return ERROR
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+
+FD      open(filename, mode)
+char    *filename;
+int     mode;
+{
+/*%
+	MODULE  OPEN
+
+_OPEN	equ	43h
+OPEN@::
+	ld      a,d                     ; get mode
+	and     a                       ; 0, 1, 2?
+	jr      nz,open_error           ; no
+	ld	a,e
+	cp      2+1
+	jr      nc,open_error           ; no
+	cp      2                       ; 0, 1 -> C
+					; 2    -> NC
+	sbc     a,2
+	and     011b                    ; 0 -> 1
+					; 1 -> 2
+					; 2 -> 0
+	ex      de,hl                   ; set pathname to DE
+	ld      c,_OPEN
+	call    5
+	ld      l,b                     ; assume no errors, return file handle
+	ld      h,0
+	ret     z                       ; good assumption
+open_error:
+	ld      hl,-1                   ; return ERROR
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+
+FD      creat(filename)
+char    *filename;
+{
+/*%
+	MODULE  CREAT
+
+_CREATE	equ	44h
+CREAT@::
+	ex      de,hl                   ; set pathname to DE
+	ld      a,010b                  ; no read
+	ld      b,0                     ; normal file
+	ld      c,_CREATE
+	call    5
+	ld      l,b                     ; assume no errors, return file handle
+	ld      h,0
+	ret     z                       ; good assumption
+	ld      hl,-1                   ; return ERROR
+	ret
+
+	ENDMODULE
+.comment %*/
+}
+
+
+VOID	_chkversion()
+{
+/*%
+	MODULE	CHKVER
+
+_STROUT	equ	09h
+_DOSVER	equ	6Fh
+@CHKVERSION@::
+	ld	c,_DOSVER
+	call	5
+	and	a			; is it MSXDOS?
+	jr	nz,badver		; no
+	ld	a,b			; get major MSXDOS version number
+	cp	2			; version 2.xx or later?
+	ret	nc			; yes
+badver:
+	ld	de,badmsg
+	ld	c,_STROUT
+	call	5
+	rst	0
+
+badmsg:
+	db	'This program needs MSX-DOS2',0dh,0ah,'$'
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	_exit(code)
+int	code;
+{
+/*%
+	MODULE	TERMIN
+
+_TERM	equ	62h
+@EXIT@::
+	ld	b,l			; set error code
+	ld	c,_TERM
+	jp	5
+
+	ENDMODULE
+.comment %*/
+}
+
+VOID	callxx(adrs, reg)
+unsigned adrs;
+XREG	*reg;
+{
+/*%
+	MODULE	CALLXX
+;
+SPSIZE  equ     12
+;
+CALLXX@::
+	push	de
+;
+	call	GO_CALL
+;
+RETREG@::
+;
+	ex	(sp),hl		;get registers
+	push	de
+	push	bc
+	push	iy
+	push	ix
+	push	af
+;
+	ex	de,hl
+	ld	hl,0
+	add	hl,sp
+	ld	bc,SPSIZE
+	ldir
+	ld	sp,hl
+	ret
+
+GO_CALL:
+	push	hl		;save entry address
+;
+	ld	hl,-SPSIZE
+	add	hl,sp
+	ld	sp,hl
+;
+	ex	de,hl
+	ld	bc,SPSIZE
+	ldir
+;
+	pop	af		;set registers
+	pop	ix
+	pop	iy
+	pop	bc
+	pop	de
+	pop	hl
+;
+	ret			;let's go
+	ENDMODULE
+.comment %*/
+}
+
+/*%
+	end
+*/
+
+                                                                                                                               
