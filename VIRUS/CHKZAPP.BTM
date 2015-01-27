@@ -1,0 +1,34 @@
+rem UZ.BTM
+
+gosub ~NewDir
+end
+
+~NewDir
+set file = %@ffirst[*.*]%
+
+~NextFile
+set file = %_fnext%
+if %@len[%file% ]% == 1 goto ~NoMoreFiles
+set attr = %@fileattr[%file%]%
+iff not %@instr[%attr%,D]% == 0 then
+   iff not %file%==. and not %file%==.. then
+   gosub ~Handler
+   endiff
+endiff
+
+goto ~NextFile
+
+~NoMoreFiles
+return
+
+~Handler
+cd %file%
+\utils\unzap *.*
+gosub ~NewDir
+set pfile = %@file[%@full[.]%]%
+cd ..
+set file = %@ffirst[*.*]%
+~Prnts
+set file = %_fnext%
+if not %pfile%!== %file%! goto ~Prnts
+return
