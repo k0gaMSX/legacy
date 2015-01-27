@@ -1,0 +1,1486 @@
+	NestorMan #1.22 - By Nestor Soriano (Konami Man), May 2.002
+	-----------------------------------------------------------
+
+1. WHAT IS THIS?
+
+NestorMan is a dynamic memory manager, intended for programmers who need a 
+more sophisticated memory management system than the 16K segment reservation 
+provided by MSX-DOS 2: it allows the reservation of small memory blocks 
+inside previously reserved 16K segments. In addition, these reserved blocks 
+may be organized in double chained list structures for easier management. 
+Needless to say, NestorMan requires MSX-DOS 2 to be installed.
+
+The main use of NestorMan at the block level is to ask him for a memory block 
+with any size between 1 and 16126 bytes; NestorMan examines then all the 
+segments which have been reserved by himself, and returns a segment number 
+and an address within that segment, both indicating where the reserved block 
+is placed. If not enough free space is available on the already reserved 
+segments, a new one is automatically allocated (there is only one segment 
+allocated at first and up to 250 segments may be allocated). Of course, 
+reserved blocks can be released when no longer needed, in order to make 
+memory available for further reservations.
+
+Based on that basic block management system NestorMan incorporates the double 
+chained list management; a double chained list is a data structure in which 
+each item contains a header with a pointer to the previous item in the list 
+and another pointer to the next item. Once a list is created, it is possibe 
+to insert/obtain/destroy items on it at any position, as well as moving the 
+current item pointer backward or forward or setting it to point to a given 
+item.
+
+Other NestorMan capabilities include direct segment management (allocate, 
+release, clean, obtain information), memory allocation with segment 
+specification (instead of letting NestorMan to automatically select the 
+segment), data transfer between segments and list save/load on disk files. 
+And from version 1.2, NestorMan includes also support for InterNestor Suite 
+(INS): allocation/freeing of segments for installing the modules which 
+compose INS, and special code on the NestorMan page 3 part which allows to 
+execute the INS resident part in each timer interrupt.
+
+Version 1.22 is functionally identical to 1.21 and 1.2, but some bugs have 
+been corrected. See section 8 for more details.
+
+
+2. INSTALLATION
+
+NestorMan is a resident program. Once installed, it may be used through the 
+extended BIOS hook (EXTBIO, &HFFCA) as explained later.
+
+NestorMan needs at least one free RAM segment in any mapper (not necessarily 
+the primary one) and 256 bytes in TPA. Just execute NESMAN.COM and NestorMan 
+will be installed if these requirements are met.
+
+After NestorMan installation system will jump to COMMAND2.COM prompt. You 
+can force NESMAN.COM to execute a command or program before jumping to 
+prompt, just specifying its name as parameter, for example:
+
+NESMAN dir *.com
+
+If you have COMMAND 2.40 or higher you can chain more than one command, using 
+"&" symbol as separator:
+
+NESMAN C:&echo OK!&dir *.com
+
+For uninstall NestorMan and free all of its allocated memory just do
+
+NESTAC U [<command(s)>]
+
+When NestorMan is installed, an environment item named NESMAN is created, 
+containing the program version. This item is removed when NestorMan is 
+uninstalled. This manual describes version 1.11.
+
+Note that for using the list disk load and save functions, it is actually 
+necessary for NestorMan to be installed in a segment belonging to primary 
+mapper. See functions description for details about how to know where 
+NestorMan is installed.
+
+
+3. DETECTING NESTORMAN
+
+If you want to detect whether NestorMan is installed or not, call &HFFCA with 
+A=0, C=1 and DE=&H2202. If NestorMan is installed, on return A will contain 
+the NestorMan main version number (at least 1) and DE will contain the 
+secondary version number in BCD format (ex. &H0203 por version x.23). If 
+NestorMan is not installed, A will be 0.
+
+This is enough for detecting NestorMan, not for using it, of course. More 
+details in the "NestorMan functions list" section.
+
+
+4. HOW IT WORKS
+
+4.1. USING NESTORMAN FUNCTIONS
+
+NestorMan consists on a set of functions (28 in current version) whose code 
+is placed in a RAM segment which is allocated at installation time (the named 
+NestorMan code segment). There are three ways of calling these functions:
+
+- Indirect calling via extended BIOS hook (EXTBIO at &HFFCA). The device 
+number for all NestorWare is 34 (for register D), and the application 
+identifier for NestorMan is 2 (for register E); in other words, you must set 
+DE=&H2202 to call NestorMan functions. The function number is specified in 
+register C. The other registers settings depend on the concrete function.
+
+- Via direct calling if the NestorMan code segment is switched to page 1 
+(NestorMan code segment number and slot can be obtained using function 1 via 
+EXTBIO, see functions description). There is a jump table starting at address 
+&H4100, taking 3 bytes per jump; so CALL &H4100 executes function 0, CALL 
+&H4103 executes function 1, CALL &H4106 executes function 2, and so on. Of 
+course, with this method it is not necessary to set DE and C registers.
+
+- Via semi-direct calling, which is a mix of the other two methods. NestorMan 
+segment must be switched on page 1 as in the direct method, and function 
+number must be set on register C as in the indirect method. The call point is 
+now address &H4139, that is, the direct calling address of an hypothetical 
+function 19; for this reason, function 19 actually does not exist.
+
+All the registers which do not return results are corrupted by NestorMan 
+functions unless otherwise specified. Alternative registers are always 
+corrupted.
+
+WARNING: NestorMan functions are not re-entering proof. This means that if an 
+interrupt happens while the interrupted main program is executing a NestorMan 
+function, the interrupt service routine can't call itself another NestorMan 
+function. To ascertain whether any NestorMan function is being executed or 
+not, the interrupt service routine must call function 1 (this function is 
+special and can be safely re-entered); see section 5 for more details.
+
+All functions return with the interrupts inhibited.
+
+
+4.2. SEGMENTS, LOGICAL SEGMENTS, EXCLUSIVE SEGMENTS
+
+NestorMan manages RAM segments using the concept of logical segments, in a 
+similar way as NestorBASIC does. All the segments allocated by NestorMan have 
+a two byte place in an internal segments table, where the slot number for 
+that segment and the segment number itself are stored. The index number of 
+this pair in the table is called the logical segment number. Thus, a segment 
+is identified by a single byte number regardless of the slot it belongs to.
+
+From now on, in this manual the term "segment" will be used to actually mean 
+"logical segment"; and the real segment number will be referred as "physical 
+segment".
+
+The segments table will always contain at least 5 segments, with the numbers 
+0 to 4. Segments 0 to 3 refer to TPA segments, so it is possible to transfer 
+data between allocated segments and TPA, and also it is even possible to use 
+TPA area itself to reserve memory blocks (all of this will be explained with 
+detail later). Segment 4 is the segment where the NestorMan code itself 
+resides; since this code is only 7K long, the remaining 9K can be used for 
+memory reservation (don't rely on these sizes since they may vary on future 
+versions of NestorMan).
+
+As explained before, normal use of NestorMan consists on calling the memory 
+reservation function with a required block size specification. NestorMan will 
+then check all the reserved segments (initially only the NestorMan code 
+segment itself) for a free block of at least the required size, and will 
+return the segment number and the address for the smaller block found; if no 
+free blocks with the required size are found, a new segment is then 
+allocated. However it is also possible to directly force NestorMan to 
+allocate a new segment without actually performing any block reservation (the 
+segment is just allocated and its information is put in the segments table); 
+and in the other side, it is possible to ask NestorMan for a memory block 
+reservation forcing it to search for free space in a concrete segment (that 
+is, not allowing NestorMan to search along all the allocated segments).
+
+When a segment is manually allocated it may be set up with the "exclusive" 
+attribute. An exclusive segment will never be scanned for free space when 
+performing a normal memory reservation; so the only way of reserving memory 
+blocks in an exclusive segment is the use of the "reservation with segment 
+forcing" function (this may be useful for TSRs, for example; using exclusive 
+segments ensures that other programs will not use the same segment, even if 
+they use also NestorMan). The "exclusive" attribute of an already allocated 
+segment can be changed with another function.
+
+TPA segments (0 to 3) have always the "exclusive" attribute set, so they will 
+never be used for normal memory reservation (note, however, that only 
+segments 1 and 2 can be used for "forced" reservations; see the "Memory 
+reservation strategies" section for more details). NestorMan code segment 
+(number 4) is never exclusive. Trying to change the "exclusive" attribute for 
+segments 0 to 4 always returns an error.
+
+NestorMan always reserves segments in system mode, this means that they are 
+not released even when the application program finishes. Also, freeing all 
+the reserved blocks on a segment does not cause it to be released. However 
+there are various NestorMan functions provided to help in manual segment 
+release: NestorMan reset (releases all the segments with number higher than 
+4), Releasing all segments except exclusive ones, Releasing all clear 
+segments (including exclusive ones or not), and Releasing a single segment. 
+Application programs should always free all the previosuly allocated blocks 
+and then execute the "Release clear segments not including exclusive ones" 
+function before finishing (and of course manually release its own exclusive 
+sements).
+
+
+4.3. LISTS
+
+The double chained list management system of NestorMan is based on the block 
+reservation system explained in previous section. When a list is created, a 
+12 byte list descriptor is created; this descriptor contains a pointer to the 
+first item, a pointer to the current item, a pointer to the last item 
+(segment number+address for each pointer) and three bytes for the number of 
+items on the list. This descriptor is stored on a reserved block, and all 12 
+bytes are zero initially.
+
+After the list is created and its descriptor initialized, its locator is 
+returned to the user; a list locator is a pointer to the reserved block which 
+contains the list descriptor. Normally, this locator is a three byte value, 
+with a segment number and an address within this segment; however, to 
+simplify a bit the list locators management, NestorMan allows to create a 
+list as internal. An internal list is not identified by a three byte value, 
+but by one single byte; NestorMan maintains in its code segment a table with 
+the actual location (segment+address) of the internal lists.
+
+So all the list realted functions need a list locator as input parameter, on 
+registers A and IX. For normal lists, the segment where descriptor is located 
+must be passed in A, and the address in IX. For internal lists, the list 
+number must be passed in A and IX must be set to zero; then NestorMan will 
+get the actual list descriptor location from its internal lists table.
+
+When an item (a piece of data of any length between 1 and 16120 bytes) is 
+inserted in the list, a new block is reserved and the item is copied to that 
+block, as in the case of normal block reservation; however, in this case a 6 
+byte header is added to the item, pointing to the previous and next items on 
+the list, and the appropriate pointers of previous and next items (if any) 
+are updated. The first item has always the pointer to previous item set to 
+zero, and the same applies to the pointer to next item of the last item.
+
+Deleting an item of the list causes the reserved block it occupies to be 
+freed, and the pointers of previous and next items to be updated. It is 
+possible to insert items at/delete items from the start of the list, at the 
+end of the list or before/after the currently pointed item; and it is also 
+possible to obtain an item (copy it to TPA) without deleting it from the 
+list. List descriptor is apppropriately updated when necessary.
+
+Of course, in addition to the item insertion/deletion it is also allowed the 
+pointer manipulation. The list current item pointer may be set to the 
+previous item, to the next item, to the first item or to the last item; it is 
+possible to set it to point to a given item, and even to set it with direct 
+segment and address specification (altough this must be done with care). It 
+is also possible to test special conditions on the list pointer (whether it 
+points to the first item, it points to the last item, both because there is 
+only one item, the list is empty, or none of these conditions).
+
+And finally, there are two special functions to save and load a list on a 
+disk file; a new file will be created or an already opened file will be used, 
+depending on the user choice. Since an internal buffer located at the 
+NestorMan code segment is used for disk transfers, it is required that this 
+segment is placed on primary mapper in order to use these functions. The slot 
+number NestorMan code segment belongs to may be obtained using function 1 
+(see functions description).
+
+It is not possible to create lists on exclusive segments. This maybe will be 
+supported on future versions of NestorMan.
+
+
+4.4. SUPPORT FOR INTERNESTOR SUITE
+
+From version 1.2, NestorMan has support for InterNestor Suite (INS). This 
+support entail in two points:
+
+1) Addition of new functions for the allocation of segments especially for 
+INS.
+
+Function 30 allocates four memory segments, all four in the same mapper slot, 
+and cleans them. Normally, this function is to be used only by INSINS.COM, 
+the INS installer program, when installing and initializing the modules which 
+compose INS. Function 31 frees these reserved segments; again, this function 
+is normally intended to be used only by INSINS.COM, this time to uninstall 
+INS.
+
+Function 32 returns the numbers of the four segments in which the INS modules 
+reside. Programs using INS must execute this function to find out the modules 
+location, and thus to be able to access to their routines, variables and 
+queues.
+
+2) NestorMan page 3 resident code has been expanded to allow the execution, 
+in every timer interrupt, of the interrupt service routines which are part of 
+INS modules. Those routines are executed only if certain flag (whose address 
+may be obtained with function 32) is activated, thus allowing INS to be 
+"paused" by just desactivating that flag.
+
+For more information, see the description of functions 30 to 32 in section 5, 
+and of course the InterNestor Suite manual.
+
+
+5. NESTORMAN FUNCTIONS LIST
+
+The procedure for calling NestorMan functions is explained in section 4.1 
+(summarising: set DE=&H2202, C=function number, and CALL &HFFCA). This 
+section explains all the available functions' behavior, as well as its input 
+and output parameters. Trying to execute an undefined function (including 
+function 19 via indirect or semi-direct calling) will cause nothing except 
+the registers being corrputed.
+
+All functions return with the interrupts inhibited.
+
+
+*** Function 0: NestorMan reset
+
+    Input:  -
+    Output: -
+
+This functions releases all the segments allocated by NestorMan, except the 
+code segment itself (segment 4). Also, the code segment is cleaned (all the 
+reserved blocks are freed) and the internal lists table is also cleaned 
+(since all the lists are indeed destroyed). In other words, executing this 
+function leaves memory in the same state as after NestorMan installation.
+
+Under normal circumstances this function should never be used; it is intended 
+for the NESMAN.COM program itself, which uses it before uninstalling 
+NestorMan. However it may be useful when testing alfa-state or incomplete 
+programs which do not perform proper memory freeing.
+
+
+*** Function 1: NestorMan internal information
+
+    Input:  -
+    Output: HL = Address of NestorMan page 3 part
+	    IX = End of TPA before NestorMan installation
+	    B  = Slot of NestorMan code segment
+	    C  = Physical segment of NestorMan code segment
+	    A  = NestorMan main version
+	    DE = NestorMan secondary version in BCD format
+	    Cy = 1 if any NestorMan function is already being executed
+
+Information returned on HL and IX is needed by NESMAN.COM when uninstalling 
+NestorMan, but unuseful for normal programs. Information on B and C must be 
+used to switch NestorMan segment on page 1 in order to use NestorMan 
+functions via direct calling (as explained in section 4.1).
+
+Value of A will be always at least 1, so calling this function with A=0 and 
+testing the return value of A is a way to detect if NestorMan is actually 
+installed, as explained in section 3 (a return value of 0 means that 
+NestorMan is not installed). Value returned in DE is stored in BCD format 
+(ex. &H0203 for version x.23).
+
+A value of Cy=1 can be returned only if this function is executed from an 
+interrupt service routine, and it means that the interrupted main program was 
+already executing a NestorMan function. NestorMan functions (except for 
+function 1 itself as a special case) are not re-entering proof (they can't be 
+executed when the execution of another function has been interrupted), 
+therefore, any interrupt service routine willing to use NestorMan must first 
+execute function 1: if Cy=0 is returned, then any other function may be 
+executed; if Cy=1, it must give up, wait to the next interrupt and repeat the 
+process.
+
+
+*** Function 2: General information about memory
+
+    Input:  -
+    Output: A  = Total number of segments allocated by NestorMan
+	    B  = Number of exclusive segments allocated by NestorMan
+	    C  = Total number of free segments in the system
+	    D  = Number of free segments in the primary mapper
+	    E  = Number of currently created internal lists
+	    IX = Address of NestorMan internal segments table
+	    IY = Address of NestorMan internal lists table
+
+Number returned in A will include TPA segments and NestorMan segment, so it 
+will be at least 5; number in B will include TPA segments so it will be at 
+least 4.
+
+Values returned in C and D refer to the segments which are not allocated by 
+NestorMan -nor by any other program-, these values are obtained by looking at 
+the DOS 2 mapper variables table.
+
+Values returned in IX and IY should never be used under normal circumstances; 
+direct access to the NestorMan internal tables is dangerous and rather 
+unuseful. If you still want to manipulate it, read the "NestorMan internals" 
+section first.
+
+
+*** Function 3: Information about a segment
+
+    Input:  A  = Segment number
+    Output: A preserved
+	    B  = Slot number the segment belongs to
+		 (0 if this segment actually does not exist)
+	    C  = Physical segment number
+	    Cy = 1 if the segment is exclusive
+	    HL = Total of free memory in the segment
+	    DE = Size of the biggest free memory in the segment
+
+If the value returned in B is 0, it means that there is not any segment 
+reserved whose logical segment number is the specified in A; in this case, 
+all the other return values must be ignored.
+
+Reserving and freeing blocks will cause the free memory blocks in the segment 
+to be fragmented, so HL and DE may of course have different values.
+
+
+*** Function 4: Memory block reservation
+
+    Input:  HL = Required block size (1 to 16126 bytes)
+    Output: A  = Block segment
+	    HL = Block address
+	    Cy = 1 if there is not enogugh free memory
+		   or the required block size is too big
+
+This is the main NestorMan function at the block level. It scans all the 
+allocated non-exclusive segments searching for all the free blocks which are 
+at least of the required size, and returns the segment and address of the 
+smallest one. If there is not enough large free blocks in any of the 
+allocated segments, a new one is allocated; if there is no free segments in 
+the system for doing this, or if a required size bigger than 16126 bytes is 
+specified, an error is returned (Cy=1).
+
+The returned address will be in the range &H8102-&HBFF8; the first 256 bytes 
+of each segment is needed by NestorMan in order to store information about 
+free and reserved blocks. The size of the block is stored also in the segment 
+itself, in two bytes placed immediately before the start of the block. See 
+"NestorMan internals" section for more details.
+
+Once a block is reserved, it can be written to/read from by several ways:
+
+- Use the "Read byte from segment" and "Write byte to segment" functions for 
+single byte access.
+- Use the "Data transfer between segments" (or its TPA variants) to transfer 
+data blocks between your program memory and the reserved block.
+- Switch the block's segment to page 2 with the "Switch segment to page 2" 
+function and access the block via normal memory access.
+- Or, use standard slot switching and DOS 2 segment management routines (you 
+need to get first the slot number and phyisical segment number for the 
+block's segment with function 3).
+
+
+*** Function 5: Memory block reservation with segment forcing
+
+    Input:  HL = Required block size (1 to 16126 bytes)
+	    A  = Required segment
+    Output: A preserved
+	    HL = Block address
+	    Cy = 1 if error (not enough free memory on the segment
+			     or the required block size is too big
+			     or the segment does not exist or it is 0 or 3)
+
+This function acts like function 4, except that no segments scanning is 
+performed to search for the smaller available free block; now, a free block 
+of the appropriate size is searched for in the specified segment, and if not 
+found, an error is returned immediately. Also, if the specified segment does 
+not actually exist, or if a required size bigger than 16126 bytes is 
+specified, an error is returned.
+
+Note that the only way of reserving memory blocks in an exclusive segment is 
+the use of this function. However, normal segments may also be used for 
+memory reservation with segment forcing, although that makes not much sense 
+in normal applications.
+
+TPA segments themselves may be used to perform memory reservations by using 
+this function; however note that only segments 1 and 2 (TPA range &H4000 to 
+&HBFFF) may be used for this, since page 3 is the system variables page and 
+page 0 contains also system information in the first 256 bytes. Also, 
+remember that before using TPA segments for memory reservation, they must be 
+cleaned using "Segment cleaning" function. See "Memory reservation 
+strategies" section for details.
+
+
+*** Function 6: Memory block freeing
+
+    Input:  A  = Block segment
+	    HL = Block address
+    Output: Cy = 1 on error (segment does not exists, or it is 0 or 3)
+
+This function frees a previously reserved block, so its memory can be used 
+for further memory reservations. It is not needed to specify the block size 
+since this information is stored adjacent to the block itself when doing the 
+reservation. All the reserved blocks should be freed as soon as they are no 
+longer useful.
+
+
+*** Function 7: Segment allocation
+
+    Input:  Cy = 1 to allocate the segment in exclusive mode
+		 0 to allocate the segment in normal mode
+    Output: A  = Segment number
+	    Cy = 1 if there is no free segments in the system
+
+This function just allocates a new segment, initializes it and stores its 
+information in the internal segments table, without performing any block 
+reservation. It may be useful for example to allocate an exclusive segment 
+when installing a TSR, or to allocate normal segments to a priori know if the 
+program's memory requirements are met.
+
+NestorMan always tries to allocate a segment in the primary mapper, and if 
+failed, tries in other existing mappers.
+
+
+*** Function 8: Segment releasing
+
+    Input:  A  = Segment number
+    Output: Cy = 1 if error (the segment does not exist, or it si 0 to 4)
+
+This function releases an automatically or manually allocated segment. Of 
+course TPA segments and NestorMan code segment can't be released, so an error 
+will be returned if a segment number in the range 0 to 4 is specified.
+
+
+*** Function 9: Segment cleaning
+
+    Input:  A  = Segment number
+    Output: A  = Preserved
+	    Cy = 1 if error (the segment does not exist, or it si 0 or 3)
+
+This function cleans a segment, that is, frees all the memory blocks reserved 
+in that segment; but keeps it allocated for NestorMan use. Freeing NestorMan 
+code segment (segment 4) causes of course only the data part to be freed; the 
+code part (at the beginning of the segment, 7K long in this NestorMan 
+version) remains always reserved.
+
+Before using TPA segments 1 or 2 for memory reservation it is mandatory to 
+clear them by using this function; segments 0 and 3 can't be used so of 
+course they can't be cleaned. See the "Segment reservation strategies" 
+section for details.
+
+
+*** Function 10: Changing the "exclusive" attribute for a segment
+
+    Input:  A  = Segment number
+	    Cy = 1 to make segment exclusive, 0 to make it normal
+    Output: Cy = 1 if error (the segment does not exist, or it si 0 to 4)
+
+This function sets or resets the "exclusive" attribute for an allocated 
+segment (remember that this attribute can be specified when manually 
+allocating a segment with function 7). TPA segments are always exclusive and 
+NestorMan code segment is never exclusive; they can't be changed.
+
+
+*** Function 11: Switching a segment to page 2
+
+    Input:  A  = Segment number
+    Output: Cy = 1 if the segment does not exist
+
+This function switches the specified segment into page 2, so any memory block 
+placed here can be accessed by normal memory access instruction. Do not 
+modify addresses &H8000 to &H80FF of any segment since they contain internal 
+NestorMan information (see "NestorMan internals" section for details).
+
+
+*** Function 12: Reading a byte from a segment
+
+    Input:  A  = Segment number
+	    HL = Address to read from
+    Output: A, HL preserved
+	    B  = Data
+	    Cy = 1 if the specified segment does not exist
+
+This function just reads a byte from the specified address on the specified 
+segment and returns it in register B. A and HL are preserved to make read 
+loops construction somewhat easier.
+
+
+*** Function 13: Writing a byte into a segment
+
+    Input:  A  = Segment number
+	    HL = Address to write to
+	    B  = Data
+    Output: A, HL preserved
+	    Cy = 1 if the specified segment does not exist
+
+This function writes writes a byte in the specified address of the specified 
+segment. A and HL are preserved to make write loops construction somewhat 
+easier. Make sure that you are actually writing inside a reserved block; 
+writing outside may cause problems, since reserved blocks size and sequence 
+information is stored inside the segment itself (see "NestorMan internals" 
+section for details).
+
+
+*** Function 14: Block transfer between segments
+
+    Input:  A  = Source segment
+	    IX = Source address
+	    B  = Destination segment
+	    IY = Destination address
+	    HL = Block length
+    Output: Cy = 1 if source or/and destination segment do not exists
+
+This function copies a data block from one segment to another. Two higher 
+bits of the addresses are ignored, so it is not mandatory for the addresses 
+to be in the range &H8000-&HBFFF. Make sure to not cross segment boundaries 
+when copying a block (for example do not specify a destination address of 
+&H3000 and a block size of &H2000), since in such case you will write in page 
+3, so the stack and the system area may be destroyed and the computer may 
+even hang. See also the warning for function 13.
+
+If you want to transfer a block from/to TPA, specify source or destination 
+segment 0 to 3 depending on the desired address, or use the "TPA to segment 
+block transfer" or "Segment to TPA block transfer" functions.
+
+
+*** Function 15: Block transfer from TPA to a segment
+
+    Input:  IX = TPA source address
+	    B  = Destination segment
+	    IY = Destination address
+	    HL = Block length
+    Output: Cy = 1 if destination segment do not exists
+
+This function just copies the two higher bits of IX into the two lower bits 
+of A, and jumps to function 14 code. Note that "TPA segments" do not mean 
+"The segments currently switched on pages 0 to 3" but "The segments 0, 1, 2 
+and 3 (the ones switched at system startup)". Please read the warning for 
+function 14.
+
+
+*** Function 16: Block transfer from a segment to TPA
+
+    Input:  A  = Source segment
+	    IX = Source address
+	    IY = TPA destination address
+	    HL = Block length
+    Output: Cy = 1 if source segment do not exists
+
+This function just copies the two higher bits of IY into the two lower bits 
+of B, and jumps to function 14 code. Note that "TPA segments" do not mean 
+"The segments currently switched on pages 0 to 3" but "The segments 0, 1, 2 
+and 3 (the ones switched at system startup)". Please read the warning for 
+function 14.
+
+
+*** Function 17: Releasing all segments except exclusive ones
+
+    Input:  -
+    Output: -
+
+This function releases all the NestorMan allocated segments, except the ones 
+with the "exclusive" attribute set and the NestorMan code segment. It also 
+cleans this one and the internal lists table (since all the lists, which 
+reside always in normal segments, are indeed destroyed).
+
+
+*** Function 18: Releasing all clear segments
+
+    Input:  Cy = 1 to also release exclusive segments which are clear
+	    Cy = 0 to only release normal segments which are clear
+    Output: -
+
+This function releases all the segments which are clear, that is, the ones 
+which do not contain any reserved memory block. Of course, NestorMan code 
+segment is never released even if it is clear. Specifying Cy=1 at input 
+causes to include exclusive segments in the search for clear segments to be 
+released.
+
+Well behaved programs should free all the reserved memory blocks and execute 
+this function with Cy=0 before finishing themselves. A much easier, but less 
+secure alternative, is to execute function 17; anyway programs should not 
+rely on the data stored in non-exclusive segments after finishing or 
+temporarily exiting to DOS, unless they are sure that no other 
+NestorMan-using programs will be executed.
+
+
+*** Function 19: Semi-direct NestorMan functions calling entry point
+
+This function does not actually exist, its associated jump table address 
+(&H4139) is used for semi-direct calling to NestorMan functions. See section 
+4.1 for details.
+
+
+*** Function 20: List creation
+
+    Input:  Cy = 0 to create a normal list
+	    Cy = 1 to create an internal list
+    Output: On success: Cy=0 and B=0
+	    A-IX = New list locator
+	    On error: Cy=1 and B=error code:
+		      B=1: Not enough free memory to create list
+		      B=2: Too many internal lists (if Cy=1 at input)
+
+This function reserves a 12 byte block and creates a new list descriptor on 
+it, returning the list locator (only A for internal lists, A and IX for 
+normal lists, as explained in section 4.3). If Cy=1 at input but there is 
+already 255 internal lists created, an error 2 will be returned; if there is 
+not enough free memory to create the list descriptor, an error 1 will 
+be returned.
+
+
+*** Function 21: Information about a list
+
+    Input:  A-IX = List locator
+    Output: A  = Segment of the list descriptor
+	    IX = Address of the list descriptor
+	    B-IY = Pointer to the current item
+	    D-HL = Number of items on the list
+	    Cy = 1 on error (segment A does not exist for normal lists,
+			     list A does not exist for internal lists)
+
+If the list locator refers to a normal list, registers A and IX will just be 
+returned unmodified; if it is an internal list, A and IX will return 
+information about where the descriptor list is located (segment and address), 
+taken from the internal lists table.
+
+The values of B and IY will be zero, as well as D and HL, if the list is 
+empty.
+
+Note that the current item pointer returned on B-IY actually points to the 
+header of the item, which contains the pointers to the previous and the next 
+items; add 6 to IY to get the actual address of the item data.
+
+
+*** Function 22: List destruction
+
+    Input:  A-IX = List locator
+    Output: Cy = 1 on error (segment A does not exist for normal lists,
+			     list A does not exist for internal lists)
+
+This function destroys an existing list: all the list items are deleted 
+first, then the memory block for the list descriptor is freed, and finally 
+the list entry on the internal lists table is cleaned if it was an internal 
+list.
+
+
+*** Function 23: Test/modify the current item pointer of a list
+
+    Input:  A-IX = List locator
+	    B = Method (what to do with the pointer):
+		0: Do nothing (just return information)
+		1: Set pointer to the first item
+		2: Set pointer to the last item
+		3: Set pointer to the next item (advance one item)
+		4: Set pointer to the previous item (move back one item)
+		5: Set pointer to a given item number
+		6: Set pointer with a given value
+	    H-IY = Item number (if B=5)
+		   Pointer value (if B=6)
+    Output: Cy = 1 on error (segment A does not exist for normal lists,
+			     list A does not exist for internal lists)
+	    A-IX = Pointer value after the function execution
+	    B = Pointer status after the function execution:
+		1: Pointing at the first item
+		2: Pointing at the last item
+		3: There is only one item on the list
+		    (so pointer "points to first" AND "points to last")
+		4: The list is empty (so there is not any pointer set)
+		0: Nothing of the above
+		&H80 = Error: B=5 but the specified item does not exist
+		&H81 = Error: Unknown method
+
+This functions allows various operations on the current item pointer of a 
+list, or just obtain pointer status if called with B=0.
+
+If called with B=3 or 4, the pointer will be advanced or moved back one item 
+regarding to the current one. If B=3 but the current item is already the last 
+one, or if B=4 but the current item is already the first one, nothing will be 
+done and this will not be considered an error; you can always check the 
+pointer status by calling this function with B=0 before doing any 
+modification.
+
+If called with B=5, H-IY must contain an item number between 1 and N, where N 
+is the number of items on the list (item 0 does not exist); if called with 
+B=6, H-IY must contain a raw pointer (segment+address) which will be directly 
+set as the current item pointer. Great care must be taken when directly 
+setting a list current item pointer, since if it does not point actually to a 
+list item, the list may become unusable.
+
+Note that the current item pointer returned on A-IX actually points to the 
+header of the item, which contains the pointers to the previous and the next 
+items; add 6 to IX to get the actual address of the item data.
+
+Also, note that on return Cy will be set only if the list locator is invalid. 
+Otherwise Cy will be zero, even if B=&H80 or &H81.
+
+
+*** Function 24: Inserts an item on a list from TPA
+
+    Input:  A-IX = List locator
+	    B = Method (where to insert the item)
+		0: After the current item
+		1: Before the current item
+		2: At the start of the list (before the first item)
+		3: At the end of the list (after the last item)
+	    IY = Item address on TPA
+	    HL = Item length
+    Output: On success: Cy=0 and A=0
+	    On error: Cy=1 and A=error code:
+		      1: Not enough free memory or too big item
+		      2: Invalid list locator
+			 (segment A does not exist for normal lists,
+			  list A does not exist for internal lists)
+		      3: Unknown method
+		      4: Item length is zero
+
+This function reserves a block of size HL+6, copies on it the data starting 
+at TPA address IY with a list item header, and modifies the appropriate list 
+pointers (depending on the specified method) so the new block becomes part of 
+the specified list; the current item pointer of the list is not modified. The 
+maximum item size allowed is 16120 bytes.
+
+Since NestorMan offers flexibility when inserting and getting/deleting items 
+(not only the current item but also the first one or the last one may be 
+specified in functions 24 and 25), it is easy to emulate useful data 
+structures other than double chained lists. For example, if you need a queue, 
+just insert the items always at the start of the list, and get them always 
+from the end, or vice versa. And if you need a stack, insert and get items 
+always at/from the end of the list.
+
+To insert an item from any NestorMan segment instead of doing it from TPA, 
+use function 28.
+
+
+*** Function 25: Get and/or delete an item from a list to TPA
+
+    Input:  A-IX = List locator
+	    B = Which item to get and/or delete
+		0: Current item
+		1: First item
+		2: Last item
+	    H = Method (what to do with the item)
+		0: Do nothing (just return item size)
+		1: Only get
+		2: Only delete
+		3: Get and then delete
+	    IY= Destination address on TPA (if get)
+    Output: On success: Cy=0 and B=0
+	    BC = Item size
+	    On error: Cy=1 and A=error code:
+		      1: Invalid list locator
+			 (segment A does not exist for normal lists,
+			  list A does not exist for internal lists)
+		      2: The list is empty (nothing to get/delete)
+		      3: Unknown method (B or H)
+
+This function allows to get (copy to TPA) a list item, to delete it (remove 
+from the list and free its memory), or both (it is then first get, and next 
+deleted). In most cases it will be desirable to obtain the item size (method 
+0) before getting it, in order to check the availability of a big enough 
+destination buffer on TPA.
+
+When deleting the current item, the current item pointer of the list is moved 
+to the next item (except when the current item was the last one, then the 
+pointer is moved to the previous item).
+
+To get an item to any NestorMan segment instead of doing it to TPA, use 
+function 29.
+
+
+*** Function 26: Saving a list on a disk file
+
+    Input:  A-IX = List locator
+	    HL = File path and name, B = 255 (to create a new file)
+	    B  = File handle (to use an already opened file)
+    Output: On success: Cy=0, A=0
+	    On error: Cy=1 and A=Error code:
+		      1: Invalid list locator
+			 (segment A does not exist for normal lists,
+			  list A does not exist for internal lists)
+		      Other: Disk error
+
+This function saves a list on a disk file. If B=255, then HL must point to an 
+ASCIIZ string with a filename; the file will be created (if it already exists 
+it will be overwritten), and after the list is saved, it will be closed. If B 
+is any other value, it will be interpreted as the file handle of an already 
+opened file; the list will be saved starting at the current file pointer, and 
+the file will remain open after the process. If a disk error occurs while 
+writing to disk or creating the file, its code will be returned on A and Cy 
+will be set. The list current item pointer will remain always unmodified.
+
+The file format is quite simple, it is as follows:
+
+- First, there are three bytes with the number of items on the list.
+- Next, the list items are saved sequentially, each one preceeded by two 
+bytes indicating the item size, and with no termination character.
+- After the last item, two zero bytes mark the end of the list.
+
+An empty list will be saved as five 0 bytes (three for the number of items, 
+and two for the end of list mark).
+
+Since an internal buffer located at the NestorMan code segment is used for 
+disk transfers, functions 26 and 27 can be used only if this segment belongs 
+to primary mapper. When NestorMan is installed, the primary mapper is always 
+scanned first searching for a free segment, but if there is none, other 
+existing mappers are scanned. Use function 1 to know the mapper slot of the 
+NestorMan code segment.
+
+
+*** Function 27: Loading a list from a disk file
+
+    Input:  A-IX = List locator
+	    HL = File path and name, B = 255 (to open a file)
+	    B  = File handle (to use an already opened file)
+    Output: B-DE = Number of items according to the file header
+		   (-1 if the header couldn't be read)
+	    C-HL = Number of items actually read
+	    On success: Cy=0, A=0
+	    On error: Cy=1 and A=Error code:
+		      1: Invalid list locator
+			 (segment A does not exist for normal lists,
+			  list A does not exist for internal lists)
+		      2: Not enough memory to load all items
+		      3: Too big item (so it is not a valid list)
+		      Other: Disk error
+
+This function reads a list previously saved on a disk file via function 26. 
+If B=255, then HL must point to an ASCIIZ string with a filename; the file 
+will be opened, and after the list is load, it will be closed. If B is any 
+other value, it will be interpreted as the file handle of an already opened 
+file; the list will be load from the current file pointer, and the file will 
+remain open after the load. If the list contains already other items, the 
+load ones will be appended at the end of the list.
+
+If a disk error occurs while reading from disk or opening the file, its code 
+will be returned on A and Cy will be set; C-HL will contain then the number 
+of items which could be successfully read from the file. On success, values 
+of B-DE and C-HL will be identical; if even the file header can't be read 
+(for example in a "file not found" error), registers B, D and E will contain 
+value &HFF (so B-DE will be -1), and C-HL will be of course zero. Note that 
+the load routine does not rely on the information about the number of items 
+provided by the file header, but it loads items until the list termination 
+mark is found.
+
+File format is explained in function 26. Please read also the warning for 
+that function.
+
+
+*** Function 28: Inserts an item on a list from any segment
+
+    Input:  A-IX = List locator
+	    H (bits 7 and 6) = Method (where to insert the item)
+		00: After the current item
+		01: Before the current item
+		10: At the start of the list (before the first item)
+		11: At the end of the list (after the last item)
+	    B-IY = Item address (segment-address)
+	    HL (bits 13 to 0) = Item length
+    Output: On success: Cy=0 and A=0
+	    On error: Cy=1 and A=error code:
+		      1: Not enough free memory or too big item
+		      2: Invalid list locator
+			 (segment A does not exist for normal lists,
+			  list A does not exist for internal lists)
+		      3: Unknown method
+		      4: Item length is zero
+
+This function is identical to function 24, except that now the item to be 
+inserted is located in a non-TPA segment (but must be a segment allocated by 
+NestorMan). The logical segment number is indicated in register B, and method 
+is indicated by the two higher bits of H (the remaining bits, together with 
+register H, indicate the item length in the same way as function 24); the 
+other parameters are the same as for function 24.
+
+Of course, this function can be used to insert items from TPA as a special 
+case, indicating a segment number between 0 and 3.
+
+For details about how this function works, see function 24 description.
+
+
+*** Function 29: Get and/or delete an item from a list to any segment
+
+    Input:  A-IX = List locator
+	    B = Which item to get and/or delete
+		0: Current item
+		1: First item
+		2: Last item
+	    H = Method (what to do with the item)
+		0: Do nothing (just return item size)
+		1: Only get
+		2: Only delete
+		3: Get and then delete
+	    L-IY= Destination address on TPA, segment-address (if get)
+    Output: On success: Cy=0 and B=0
+	    BC = Item size
+	    On error: Cy=1 and A=error code:
+		      1: Invalid list locator
+			 (segment A does not exist for normal lists,
+			  list A does not exist for internal lists)
+		      2: The list is empty (nothing to get/delete)
+		      3: Unknown method (B or H)
+
+This function is identical to function 25, except that now the item is to be 
+extractedis to a non-TPA segment (but must be a segment allocated by 
+NestorMan). The logical segment number is indicated in register L, and the 
+other parameters are the same as for function 25 (in fact, if no item get but 
+only item delete or size return is specified, this function is exactly same 
+as function 25, and both may be used indistinctly).
+
+Of course, this function can be used to extract items to TPA as a special 
+case, indicating a segment number between 0 and 3.
+
+For details about how this function works, see function 25 description.
+
+
+*** Function 30: Allocates four segments for InterNestor Suite
+
+    Input:  -
+    Output: Cy=0 and A=0 if there is no error, or
+	    Cy=1 and A=error code:
+	       1: No mappers were found with at least four free segments
+	       2: There is already segments allocated for INS
+
+This function allocates four memory segments, all four in the same slot (the 
+primary mapper slot is scanned first), especially to be occupied by the 
+modules composing InterNestor Suite. After being allocated, the segments are 
+cleande. This cleaning consists on filling the whole segment with byte &HC9 
+(the opcode for RET) except for the first three memory positions, which are 
+initialized with information about the segment itself, information which will 
+be used by the modules once they are installed:
+
+0: Slot
+1: Physical segment number
+2: Logical segment number
+
+Normally, this function is intended to be used only by INSINS.COM, the INS 
+installation program; after executing this function, the modules are loaded 
+in their respective segments and their initialization routines are executed. 
+See InterNestor suite manual for more information.
+
+
+*** Function 31: Frees the segments allocated for InterNestor Suite
+
+    Input:  -
+    Output: -
+
+This function frees the segments previously allocated for INS with function 
+30. If no INS segments were actually allocated, the function does nothing and 
+does not return any error. Of course, before freeing the segments the 
+interrupt flag is desactivated (see function 32 description for more 
+details).
+
+Normally, this function is intended to be used only by INSINS.COM, the INS 
+installation program, to uninstall INS; first, the deinitialization routine 
+of each module is executed, and then this function is called. See InterNestor 
+suite manual for more information.
+
+
+*** Function 32: Obtaining the numbers of the segments
+		 allocated for InterNestor Suite
+
+    Input:  -
+    Output: A = Segments slot
+		(0 if there are no allocated segments actually)
+	    C = Level 1 module segment number
+	    B = Level 2 module segment number
+	    E = Level 3 module segment number
+	    D = Level 4 module segment number
+	    HL = 0 (reserved for future use)
+	    IX = Interrupt flag address
+		 (IX)=A (segments slot) if activated
+		 (IX)=0 if desactivated
+
+This function returns the numbers of the slot and the four segments reserved 
+for INS. Programs using INS must execute this function to find out the modules 
+location, and thus to be able to access to their routines, variables and 
+queues (more detailed information in the INS manual).
+
+Note that the returned numbers are logical segment numbers. To convert them 
+to physical segment numbers, function 3 must be used.
+
+Value returned on A will be zero if there are no segments reserved for INS 
+actually. Programs using INS must assume that INS is installed if a value of 
+A<>0 is returned, and that it is not installed if A=0. (Strictly this is not 
+correct, sice it is possible the case in which the segments have been 
+reserved but the INS modules have not been installed. However, programs must 
+suppose that INSINS.COM or other equivalent program has been used to install 
+INS; INSINS.COM always performs the modules installation after reserving the 
+segments).
+
+Interrupt flag can have two values: the slot number of the INS segments (the 
+same value returned at A), or zero. In the first case, in each timer 
+interrupt NestorMan switches in page 2 the segment where the level 1 module 
+resides, and calls to addrees &H8009, which is the entry for the interrupt 
+service routine for that module (the module's code itself is responsible for 
+calling the counterpart routine of the other modules; see INS manual for more 
+details). In the second case, no segment switching nor calling will be 
+performed. Thus it is possible to pause INS by just calling this function and 
+executing LD (IX),0. And to restore the normal state, call this function 
+again (or load IX with the value previously obtained if it is remembered) and 
+execute LD (IX),A. Of course, if INS is paused while data is arriving, 
+probably this data will be lost.
+
+
+6. MEMORY RESERVATION STRATEGIES
+
+This sections intends to provide an overview of the possible strategies to 
+follow when using NestorMan at the block level, depending on the concrete 
+characteristics of each program.
+
+
+6.1. NORMAL RESERVATION
+
+The "normal" NestorMan use is to reserve a memory block using function 4, 
+then copying any data we have in our program memory to this block using 
+function 14 or 15, and forget this data until we need it again; then we get 
+back the data block using function 14 or 16. This may be the case of a text 
+processor, where only the current line is stored in the program main memory; 
+or a game which uses mapped memory as buffer to minimize disk access.
+
+
+6.2. USING TPA TO RESERVE MEMORY
+
+For applications with small memory requirements (up to 16K) and if the 
+program itself is smaller than 32K, TPA page 2 (NestorMan segment 2) may be 
+used for memory reservation. The advantage is that the reserved block is 
+directly accesible without needing any segment switching nor data transfer.
+
+To reserve memory in TPA page 2, it must be first cleaned using function 9 
+(don' forget this!) and then you may do memory reservations by just using 
+function 5, specifying segment number 2. Since the returned address is 
+directly a page 2 address, no address conversion is needed and the reserved 
+block can be directly accessed.
+
+Another alternative is to use TPA pages 1 and 2 for memory reservations (as 
+long as the program itself, on page 0, is smaller than 16k, of course). The 
+procedure then is a bit more complex, but not much: try to reserve a block in 
+segment 2, and if failed, try on page 1 and convert the obtained address to a 
+page 1 address. And for freeing the block, just use the two high order bits 
+of the address as the segment specificator. The following code will do it:
+
+
+nesman: macro	@f
+	ld	de,&H2202
+	ld	c,@f
+	call	&HFFCA
+	endm
+
+;--- TPALLOC: Reserves a memory block in TPA, page 1 or 2
+;    Input:   BC = Required size
+;    Output:  HL = Block address
+;	      Cy = 1 if there is not enough free memory on TPA
+
+TPALLOC: push  bc
+	ld	h,b
+	ld	l,c
+	ld	a,2	;First tries on page 2
+	nesman	5
+	pop	bc
+	ret	nc	;Returns if success
+
+	ld	h,b
+	ld	l,c
+	ld	a,1
+	nesman	5	;If page 2 failed, try on page 1
+	ret	c	;Returns if error
+	res	7,h
+	set	6,h	;If success, convert address to page 1 and return
+	ret
+
+
+;--- TPAFREE: Frees a memory block reserved in TPA
+     Input:   HL = Address
+     Output:  Cy = 1 on error (not a page 1 or 2 address)
+
+TPAFREE: ld	a,h
+	rlca
+	rlca
+	and	&B00000011
+	nesman	6
+	ret
+
+
+Of course, in this case you must clean both segments 1 and 2 with function 9 
+before performing any memory reservation. Note that it is not necessary to 
+convert block addresses to page 2 boundary before freeing a block.
+
+
+6.3. USING EXCLUSIVE SEGMENTS
+
+You may want for some reason to have a non-TPA segment switched on page 2, 
+and to do memory reservations on that segment so the reserved blocks can be 
+directly accessed. In this case, the best alternative is the use of exclusive 
+segments. Allocate then an exclusive segment using function 7, switch it into 
+page 2 using function 11, and do memory reservations on that segment using 
+function 5 (you do not need to clean it as in the case of TPA, since when a 
+new segment is allocated, it is automatically initialized).
+
+The same applies to TSRs. Although NestorMan is not really designed for being 
+used on TSRs, we can install one in an exclusive segment if we assume the 
+fact that other programs will not execute function 0 and NestorMan itself 
+will not be uninstalled. Transient programs should never use function 0 for 
+freeing memory, but function 17 or better function 18; and of course, never 
+release single exclusive segments allocated by other applications.
+
+
+7. NESTORMAN INTERNALS
+
+This section explains with detail how NestorMan manages the dynamic memory 
+blocks and the lists, and how the internal segments and lists tables 
+structure are. It is not necessary to know these details in order to use 
+NestorMan, but information is placed here for curious people.
+
+
+7.1. SEGMENTS AND BLOCKS
+
+A segment allocated by NestorMan is divided in two areas: the first 256 bytes 
+are the Memory Allocation Table (MAT), and the remaining 16126 bytes are the 
+Segment Data Area (SDA). The SDA, where reserved blocks reside, is divided in 
+8 byte clusters; reserved blocks always occupies an integer number of 
+clusters. For example a 30 bytes block actually occupies 4 clusters, that is, 
+32 bytes.
+
+MAT keeps a track of the status of SDA clusters, which can be: being part of 
+a reserved block, or being free. Each cluster has one MAT bit associated, 
+which is 1 for reserverd clusters and 0 for free clusters. Having a "Bit" of 
+a MAT "Byte", its associated SDA cluster is the one starting at the segment 
+address Byte*64 + Bit*8. Note that the first four bytes of MAT actually 
+refers to MAT itself, which is a nonsense; these four bytes are actually 
+dummy and always set to &HFF.
+
+As you can see, MAT informs about what clusters are reserved or free, but 
+does not contain any information about the blocks size; the block size is 
+stored in the SDA, immediately before the starting of the block itself.
+
+So the complete procedure when the user asks for a block of size S is as 
+follows. NestorMan increases this value S by 2, and then rounds the result to 
+the nearest upper multiple of 8; dividing this result by 8, the number of 
+required clusters is obtained. NestorMan scans then all the non-exclusive 
+allocated segments (only the specified segment in the case of function 5) 
+searching for free blocks (sequences of consecutive free clusters) with a 
+size of at least the required number of clusters, and returns the segment 
+containing the smaller of these free blocks and its starting address, say A 
+(a new segment is allocated and initialized if not enough large free blocks 
+are found). The appropriate MAT bits are set to 1, the required size S is put 
+in A, and A+2 is returned to the user as the block starting address.
+
+Let's see a simple example. We have a clear segment, whose MAT has then these 
+values:
+
+FF FF FF FF 00 00 00 00 ...
+
+The user asks for a 25 bytes block. Increasing it by 2, we obtain 27. 
+Rounding to the nearest multiple of 8, we obtain 32; so 4 clusters are 
+required. Since the segment is completely free, the block will start at 
+address &H8100. So the value 25 is put in &H8100, address &H8102 is returned 
+to the user as the block starting address, and MAT is updated as follows:
+
+FF FF FF FF 0F 00 00 00 ...
+
+Now let's suppose that the user asks for a 15 bytes block. 15+2=17, rounded 
+is 24 -> 3 cluster are needed. There is only one free block in the segment, 
+starting at address &H8120; so value 15 is put in address &H8120, address 
+&H8122 is returned to the user, and MAT is updated as follows:
+
+FF FF FF FF 7F 00 00 00 ...
+
+The user now requests to free the first reserved block, the one starting at 
+address &H8102. NestorMan reads its size from &H8100, transforms it to a 
+number of clusters by increasing-rounding-dividing, and updates MAT as 
+follows:
+
+FF FF FF FF 70 00 00 00 ...
+
+so now there are two free blocks in the segment: a small one with 4 clusters, 
+starting at address &H8100, and a big one with 2041 clusters starting at 
+address &H8138.
+
+Cleaning a segment is a simple operation: the whole MAT is set to 0, except 
+the first dummy bytes, which are set to &HFF. The NestorMan code segment is 
+an special case: since it contains the NestorMan code itself at the beginning 
+of the SDA, the MAT bytes for this area (7K in current NestorMan version) is 
+also set to &HFF. TPA segments must be cleaned before doing memory 
+reservations on them, in order to create their MATs.
+
+It is not difficult to realize that if several blocks of different size are 
+successively reserverd and freed, memory on the segments will be fragmented, 
+and this is a problem. For example if all MAT bytes are &HF0, this means that 
+there is 8K of free space in the segment, but it is not possible to reserve 
+any block larger than 32 bytes. This is the weak point of NestorMan, since it 
+does not provide any method for defragmenting memory; any defragmentation 
+must be done manually. (However, when using lists there is an easy way to 
+defragment memory; see next section for details)
+
+About the NestorMan internal segments table, it has a quite simple structure. 
+For logical segment S, byte 2*S on the table contains the slot number for the 
+segment, and 2*S+1 contains the physical segment number. Exclusive segments 
+are identified by bit 4 of the slot number being set to 1, and an slot number 
+of 0 menas that there is not any logical segment allocated with this logical 
+segment number. The base address of this table can be obtained via NestorMan 
+function 1.
+
+Note than if there are N segments allocated, this does not mean necessarily 
+that logical segments 0 to N-1 are available. When a segment is released, its 
+entry in the table is set to 0 for both slot and physical segment number, and 
+the rest of the table is not modified. And when allocating a new segment, the 
+first empty table entry is searched for the logical segment number 
+assignation.
+
+
+7.2. LISTS
+
+There is not much more to say about the NestorMan lists management system 
+apart from the explained in section 4.3 (and the file format when saving a 
+list to disk is detailed in the explanation of function 26). Just to add 
+three comments and an example of lists management.
+
+The first comment is about memory fragmentation. If you are using lists 
+instead of raw memory block reservation, there is an easy way to defragment 
+memory and make it more usable. The method is:
+
+- Save all your lists in a temporary file.
+- Destroy the lists and create them again (or just erase all the items of the 
+lists).
+- Load the lists from the temprorary file.
+
+When loading the lists from the file, the items will be placed sequentially 
+in memory, so the fragmentation problem is gone. Of course you must use this 
+system only when you are completely out of memory, since disk accesses are 
+slow processes.
+
+The second comment is about the lists overflow. You have probably noted that 
+there is no mechanism to check for list overflows (too many items) on 
+NestorMan. That's because such overflows are impossible. In fact, list 
+descriptors have three bytes reserved for the number of items the list 
+contains; this is enough for 16 milion items. But NestorMan can manage only 
+4Mbytes of memory (4 milion items assuming they use 1 byte each one, which is 
+impossible due to the clustering system and the item headers). So the only 
+limit on the number of items a list can afford is only the available memory.
+
+And the third comment is about the internal lists table format. It is similar 
+to the segments table: for each internal list there is one byte for the 
+segment number where the descriptor block is, and two for the address; list L 
+has the entry starting at table position L*3 associated, and for undefined 
+lists, all three bytes are zero.
+
+Now let's see a simple example of list creation and item insertion/deletion. 
+Boxes represent reserved blocks and letters A, B, C are labels which refer to 
+hypothetical block addresses. The numbers represent its actual values (3 
+bytes each label or number).
+
+Let's suppose we create a list. Then we have its descriptor as follows:
+
+
+-----------------
+| 0 | 0 | 0 | 0 | (the last number is the items counter)
+-----------------
+ List descriptor
+
+
+We now insert an item on the list. Then we have:
+
+
+-----------------
+| A | A | A | 1 |
+-----------------
+ List descriptor
+
+--------------------
+| 0 | 0 |   Data   |
+--------------------
+       Item A
+
+
+Since there is only one item in the list, it has its previous and next item 
+pointers set to 0. Also, the item is at the same time the first, the current 
+and the last item.
+
+Now we insert two more items, both at the end of the list. So we have:
+
+
+-----------------
+| A | A | C | 3 |
+-----------------
+ List descriptor
+
+--------------------	 --------------------	  --------------------
+| 0 | B |   Data   |	 | A | C |   Data   |	  | B | 0 |   Data   |
+--------------------	 --------------------	  --------------------
+       Item A			Item B			 Item C
+
+
+Note how the pointers structure allows us to see that A is the first item, B 
+is the second, and C is the last. Item A is also the current one according 
+to the list descriptor.
+
+Now we advance current item pointer so it points to B, and we delete it from 
+the list. We have then:
+
+
+-----------------
+| A | C | C | 2 |
+-----------------
+ List descriptor
+
+--------------------	 --------------------	  --------------------
+| 0 | C |   Data   |	 |		    |	  | A | 0 |   Data   |
+--------------------	 --------------------	  --------------------
+       Item A		     Freed block		 Item C
+
+
+Of course the blocks themselves have not moved, only their pointers have 
+changed so the deleted item is skipped. Note how the current item pointer 
+moves automatically to the next item (from B to C) when the current item is 
+deleted.
+
+Now let's suppose we insert a new item at the end of the list, that is, after 
+item C. And let's suppose NestorMan reserves the previously freed block for 
+this new item. Then the list status will be as follows:
+
+
+-----------------
+| A | C | B | 3 |
+-----------------
+ List descriptor
+
+--------------------	 --------------------	  --------------------
+| 0 | C |   Data   |	 | C | 0 |   Data   |	  | A | B |   Data   |
+--------------------	 --------------------	  --------------------
+       Item A		     Item B (new)		 Item C
+
+
+So now item A is the first, item C is the second, and item B is the last. Of 
+course the physical order of items on memory has no meaning for the list 
+structure, only the item pointers are important.
+
+
+8. MISCELLANEOUS
+
+Changes in version 1.22 from version 1.21 are the following:
+
+- Corrected a severe bug in the routines for allocating/freeing memory 
+segments, which caused the memory to be screwed (causing most times the 
+computer to hang) when blocks of certain sizes were requested/freed.
+
+Changes in version 1.21 from version 1.2 were the following:
+
+- Now all the calls to ENASLT are following by EI, so interrupts are enabled 
+during more time (necessary for InterNestor Suite in order to be more stable 
+and to not lose incoming data).
+
+- Internal calls to ALL_SEG and FRE_SEG are preceeded by the saving of some 
+system variables containing information about the current paging status, 
+which are restored after the calls. This avoids the computer hang when these 
+routines are called from a timer interrupt routine and the interrupted 
+program is a DOS funcion call.
+
+Changes in version 1.2 from version 1.11 are the following:
+
+- Function 1 expanded so now returns information on Cy.
+
+- Now all functions returns with interrupts inhibited.
+
+- Added functions 28 and 29.
+
+- Added support for InterNestor Suite (functions 30 to 32 and code in page 3 
+to call the interrupt service routines of the modolues).
+
+Changes in version 1.11 from version 1.1 were the correction of the following 
+bugs:
+
+- Invalid internal lists destruction in function 22.
+
+- Improper page 2 switching, which caused the program executing NestorMan 
+functions to crash when it was being executed on page 2.
+
+- Invalid current item pointer update when destroying the current list item 
+if this item was the first one or the last one.
+
+- Returning Cy=0 (no error) when attempting to insert an item of size zero on 
+a list with function 24. Now returns Cy=1 and an error code of 4.
+
+Changes in version 1.1 from version 1.0 were:
+
+- Corrected a bug which caused block reservation functions to return Cy=0 
+even when there was not free memory available, and to skip allocated segments 
+when scanning them in the search for free blocks.
+
+- NestorMan code size (the unusable part of the NestorMan code segment) 
+growned from 3K to 7K (actually 6K + 1K for the disk transfers buffer).
+
+- Added the semi-direct functions calling method.
+
+- Functions 0 and 17 were expanded so now they also clean the internal lists 
+table.
+
+- Function 2 was expanded so now it also returns the number of internal lists 
+on register E and the internal lists table address on IY.
+
+- Added the double chained lists capability (functions 20 to 27).
+
+There are some NestorMan versions labeled as 1.12 which have been distributed 
+together with InterNestor Suite betas. These versions are not documented and 
+should never been used from now on: use only version 1.2 or higher.
+
+This version of NestorMan probably still containing some bugs (I couldn't 
+test it a lot). If you discover any, or if you have any question or 
+suggestion, please write me to <konamiman@konamiman.com>
+
+However, I decline any responsibility for system malfunctions or computer 
+hangs if your program writes any data outside the reserved blocks or if a 
+list pointer is set to an invalid value (function 23 with B=6). This is not a 
+NestorMan failure but your program's failure, so if you have problems please 
+examine carefully your program before sending me a bug report.
+
+NestorMan is public domain software: please copy it to as much people as 
+possible! You can find the last NestorMan version, as well as other nice 
+NestorWare, in my home page: http://www.konamiman.com
+
+This text was finished on 14-5-2002.
+
+

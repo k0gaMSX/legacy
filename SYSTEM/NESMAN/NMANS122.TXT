@@ -1,0 +1,1602 @@
+      NestorMan #1.22 - Por Nestor Soriano (Konami Man), Mayo de 2.002
+      ----------------------------------------------------------------
+
+1. ¨QUE ES ESTO?
+
+NestorMan es un gestor de memoria din mica, pensado para los programadores 
+que necesitan un sistema de gesti¢n de memoria m s sofisticado que la reserva 
+de segmentos de 16K proporcionada por el MSX-DOS 2: NestorMan permite 
+reservar peque¤os bloques de memoria dentro de segmentos de 16K previamente 
+ubicados (se usar  el t‚rmino "ubicado" en vez de "reservado" al hacer 
+referencia a segmentos, para evitar confusiones con los bloques reservados). 
+Adem s, dichos bloques pueden ser organizados en estructuras de lista 
+doblemente encadenada para facilitar su tratamiento. Por supuesto, NestorMan 
+necesita MSX-DOS 2 para ser instalado.
+
+La utilizaci¢n principal de NestorMan a nivel de bloques de memoria se basa 
+en la petici¢n de uno de dichos bloques de cualquier tama¤o entre 1 y 16126 
+bytes; NestorMan examina entonces todos los segmentos que ‚l mismo ha 
+ubicado, y devuelve un n£mero de segmento y una direcci¢n dentro de dicho 
+segmento, indicando ambos la localizaci¢n del bloque que acaba de ser 
+reservado. Si no hay suficiente memoria libre en ninguno de los segmentos ya 
+ubicados, se ubica uno nuevo (al principio s¢lo hay un segmento ubicado y 
+pueden ubicarse hasta 250). Por supuesto, los bloques reservados pueden ser 
+liberados cuando ya no son £tiles, posibilitando as¡ que la memoria sea 
+reutilizada para posteriores reservas.
+
+Basado en este sistema b sico de reserva de bloques NestorMan incorpora un 
+sistema de gesti¢n de listas doblemente encadenadas, es decir, estructuras de 
+datos en las que cada elemento contiene una cabecera con un puntero al 
+elemento anterior y otro al elemento siguiente. Una vez creada, es posible 
+insertar/obtener/eliminar elementos de una lista, as¡ como hacer avanzar o 
+retroceder el puntero al elemento actual de la lista, o establecerlo en un 
+elemento determinado.
+
+NestorMan incorpora tambi‚n otras funcionalidades, como la manipulaci¢n 
+directa de segmentos (ubicaci¢n, liberaci¢n, limpieza, obtenci¢n de 
+informaci¢n), la reserva de bloques con especificaci¢n de segmento (en vez de 
+dejar que NestorMan escoja el segmento autom ticamente), la transferencia de 
+datos entre segmentos, y la grabaci¢n y carga de listas en ficheros de disco. 
+Y a partir de la versi¢n 1.2, NestorMan incorpora soporte para InterNestor 
+Suite (INS): reserva/liberaci¢n de segmentos para la instalaci¢n de los 
+m¢dulos que componen INS, e inclusi¢n en la parte residente en la p gina 3 de 
+c¢digo que permite que la parte residente de INS sea ejecutada en cada 
+interrupci¢n del reloj.
+
+La versi¢n 1.22 es funcionalmente id‚ntica a la 1.21 y 1.2, pero corrige 
+algunos fallos de ‚stas. Ver la secci¢n 8 para m s detalles.
+
+
+2. INSTALACION
+
+NestorMan es un programa residente. Una vez instalado es accesible a trav‚s 
+del gancho de la BIOS extendida (EXTBIO, &HFFCA) tal como se explica m s 
+adelante.
+
+NestorMan necesita al menos un segmento de RAM libre en cualquier slot (no 
+necesariamente el primario) y 256 bytes en TPA. Si dichos requisitos se 
+cumplen, simplemente ejecutando NESMAN.COM NestorMan ser  instalado.
+
+Tras la instalaci¢n de NestorMan el sistema saltar  al prompt del 
+COMMAND2.COM. Es posible hacer que NESMAN.COM ejecute un comando o programa 
+antes de saltar al prompt, simplemente especificando su nombre como 
+par metro. Por ejemplo:
+
+NESMAN dir *.com
+
+Si dispones de COMMAND 2.40 o superior puedes encadenar la ejecuaci¢n de m s 
+de un comando, usando el s¡mbolo "&" como separador:
+
+NESMAN C:&echo OK!&dir *.com
+
+Para instalar NestorMan y liberar toda la memoria ubicada por ‚l basta 
+ejecutar
+
+NESTAC U [<comando(s)>]
+
+Al instalar NestorMan se crea una variable de entorno llamada NESMAN que 
+contiene la versi¢n del mismo. Esta variable es eliminada al desinstalar 
+NestorMan. Este manual describe la versi¢n 1.11.
+
+Para usar las funciones de grabaci¢n y carga de listas en disco s¡ es 
+necesario que NestorMan est‚ instalado en un segmento del mapeador primario. 
+Ver la descripci¢n de las funciones para saber c¢mo averiguar d¢nde est  
+instalado NestorMan.
+
+
+3. DETECCION DE NESTORMAN
+
+Para comprobar si NestorMan est  instalado o no, ejecuta "call &HFFCA" con la 
+siguiente asignaci¢n de registros: A=0, C=1 y DE=&H2202. Si NestorMan est  
+instalado, tras la ejecuci¢n A contendr  la versi¢n principal de NestorMan 
+(al menos 1) y DE contendr  la versi¢n secundaria en formato BCD (por ejemplo 
+&H0203 para la versi¢n x.23). Si NestorMan no est  instalado, A valdr  0.
+
+Con esto basta para detectar NestorMan, pero no para usarlo, por supuesto. 
+M s informaci¢n en la secci¢n "Listado de las funciones de NestorMan".
+
+
+4. FUNCIONAMIENTO DE NESTORMAN
+
+4.1. COMO USAR LAS FUNCIONES DE NESTORMAN
+
+NestorMan consiste en un juego de funciones (33 en esta versi¢n) cuyo c¢digo 
+se sit£a en un segmento de RAM que es ubicado en la instalaci¢n. Hay tres 
+maneras de ejecutar dichas funciones:
+
+- Llamada indirecta a trav‚s del gancho de la BIOS extendida (EXTBIO en 
+&HFFCA). El n£mero de dispositivo para todo el NestorWare es 34 (para el 
+registro D), y el identificador de aplicaci¢n para NestorMan es 2 (para el 
+registro E); en otras palabras, para ejecutar las funciones de NestorMan 
+debes establecer DE=&H2202. El n£mero de funci¢n ha de ser especificado en el 
+registro C. El resto de los registros han de ser establecidos o no 
+dependiendo de cada funci¢n en concreto.
+
+- Mediante llamada directa si el segmento de c¢digo de NestorMan est  
+establecido en la p gina 1 (el n£mero de slot y segmento del c¢digo de 
+NestorMan pueden obtenerse mediante la ejecuci¢n de la funci¢n 1 a trav‚s de 
+EXTBIO, ver la descripci¢n de las funciones). Hay una tabla de salto situada 
+en la direcci¢n &H4100, en la que cada salto ocupa tres bytes; as¡, CALL 
+&H4100 ejecuta la funci¢n 0, CALL &H4103 ejecuta la funci¢n 1, CALL &H4106 
+ejecuta la funci¢n 2, etc.
+
+- Llamada semidirecta, este m‚todo es una mezcla de los dos anteriores. El 
+segmento de c¢digo de NestorMan ha de estar conectado a la p gina 1 como en 
+el caso de la llamada directa, el n£mero de la funci¢n ha de estar en el 
+registro C como en el caso de la llamada indirecta, y en esta ocasi¢n el 
+punto de llamada es la direcci¢n &H4139. Esta es la direcci¢n de una 
+hipot‚tica funci¢n 19 en la tabla de salto para llamadas directas; por esta 
+raz¢n, no existe ninguna funci¢n 19.
+
+Todos los registros que no devuelven resultados son destruidos por las 
+funciones de NestorMan. Los registros alternativos siempre son destruidos.
+
+ATENCION: Las funciones de NestorMan no son reentrantes. Esto significa que 
+si se produce una interrupci¢n mientras el programa principal interrumpido 
+est  ejecutando una funci¢n de NestorMan, la rutina de atenci¢n a la 
+interrupci¢n no podr  ejecutar a su vez otra rutina de NestorMan. Para 
+averiguar si NestorMan est  siendo ejecutado, la rutina de atenci¢n a la 
+interrupci¢n debe llamar a la funci¢n 1 (que, como caso especial, s¡ es 
+reentrante); ver la secci¢n 5 para m s detalles.
+
+Todas las funcionas dejan las interrupciones inhibidas al terminar.
+
+
+4.2. SEGMENTOS, SEGMENTOS LOGICOS, SEGMENTOS EXCLUSIVOS
+
+NestorMan gestiona los segmentos de RAM usando el concepto de segmentos 
+l¢gicos, de forma similar a NestorBASIC. Todos los segmentos que NestorMan 
+ubica tienen asignados dos bytes en una tabla de segmentos interna, en los 
+que se guarda el n£mero de slot y el propio n£mero de segmento. El n£mero de 
+¡ndice de este par de bytes en la tabla se denomina n£mero de segmento 
+l¢gico. De esta forma, los segmentos se identifican con un £nico byte, con 
+independencia del slot al que pertenecen.
+
+A partir de este punto, en este manual se usar  el t‚rmino "segmento" como 
+equivalente a "segmento l¢gico", mientras que los n£meros reales de segmento 
+ser n denominados "segmento f¡sico".
+
+La tabla de segmentos siempre contendr  al menos 5 segmentos, numerados 0 a 
+4. Los segmentos 0 a 3 son en realidad los segmentos de TPA, de esta forma es 
+posible realizar transferencias de datos entre ‚stos y los segmentos 
+ubicados, e incluso es posible realizar reservas de memoria sobre los propios 
+segmentos de TPA (todo esto ser  explicado con detalle m s adelante). El 
+segmento 4 contiene el propio c¢digo de NestorMan; dado que este c¢digo es 
+peque¤o (7K), el resto del segmento (9K) puede ser usado para reservas de 
+memoria (estas cifras pueden variar en futuras versiones de NestorMan).
+
+Como se ha explicado antes, la utilizaci¢n normal de NestorMan se basa en la 
+ejecuci¢n de la funci¢n de reserva de un bloque de memoria de un tama¤o 
+determinado. NestorMan examina entonces todos sus segmentos ubicados 
+(inicialmente s¢lo el propio segmen to con el c¢digo de NestorMan) en busca 
+de bloques libres de al menos el tama¤o requerido, y devuelve el segmento y 
+la direcci¢n del menor bloque encontrado; si no se encuentra ning£n bloque 
+libre del tama¤o adecuado en los segmentos ubicados, ubica uno nuevo. Sin 
+embargo tambi‚n es posible hacer que NestorMan ubique un segmento nuevo sin 
+realizar ninguna reserva de bloque en ‚l; y por otro lado, es posible pedir 
+la reserva de un bloque especificando el segmento en el que se buscar  
+espacio libre (es decir, no permitiendo a NestorMan buscar a lo largo de 
+todos los segmentos ubicados).
+
+A un segmento es ubicado de forma manual se le puede establecer un atributo 
+de "exclusivo". Los segmentos exclusivos nunca son examinados en busca de 
+bloques de memoria libre al efectuar una reserva normal de memoria; la £nica 
+forma de reservar memoria en un segmento exclusivo es mediante la reserva con 
+especificaci¢n de segmento (esto puede ser £til por ejemplo para TSRs: el uso 
+de segmentos exclusivos asegura que otros programas no usar n el mismo 
+segmento aunque tambi‚n usen NestorMan). El atributo de "exclusivo" tambi‚n 
+puede ser modificado en segmentos que ya han sido ubicados previamente.
+
+Los segmentos de TPA (0 a 3) siempre tienen el atributo de "exclusivo", por 
+tanto nunca son usados en las reservas normales (sin embargo, en el caso de 
+reservas con especificaci¢n de segmento s¢lo se pueden usar los segmentos 1 y 
+2; ver la secci¢n "Estrategias de reserva de memoria" para m s detalles). El 
+segmento de c¢digo de NestorMan (n£mero 4) nunca es exclusivo. Cualquier 
+intento de cambiar el atributo de "exclusivo" de los segmentos 0 a 4 siempre 
+devuelve un error.
+
+NestorMan siempre ubica los segmentos en modo sistema, esto significa que no 
+son nunca liberados autom ticamente, ni siquiera cuando la aplicaci¢n que 
+realiza las reservas finaliza. Adem s, la liberaci¢n de todos los bloques 
+contenidos en un segmento (limpieza) no causa que el segmento sea liberado. 
+No obstante, NestorMan proporciona varias funciones que ayudan a la 
+liberaci¢n manual de los segmentos: Reset de NestorMan (libera todos los 
+segmentos ubicados con n£mero superior a 4), Liberaci¢n de todos los 
+segmentos excepto los exclusivos, Liberaci¢n de todos los segmentos limpios 
+(incluyendo o no los exclusivos), y Liberaci¢n de un segmento concreto. Los 
+programas que usen NestorMan siempre deber¡an liberar todos los bloques que 
+han reservado y despu‚s ejecutar la funci¢n "Liberaci¢n de los segmentos 
+libres sin incluir los exclusivos" antes de su finalizaci¢n (adem s de 
+liberar manualmente los segmentos exclusivos reservados por el propio 
+programa, claro).
+
+
+4.3. LISTAS
+
+El sistema de gesti¢n de listas doblemente encadenadas de NestorMan se basa 
+en el sistema de reserva de bloques explicado en la secci¢n anterior. Cuando 
+se crea una lista, lo que se crea en realidad es un descriptor de 12 bytes; 
+este descriptor contiene un puntero al primer elemento, un puntero al 
+elemento actual, un puntero al £ltimo elemento (n£mero de segmento+direcci¢n 
+para cada puntero) y tres bytes para el n£mero de elementos en la lista. Este 
+descriptor se almacena en un bloque reservado, y los 12 bytes valen cero 
+inicialmente.
+
+Una vez que la lista ha sido creada y su descriptor inicializado, su 
+localizador es devuelto al usuario; un localizador de lista es un puntero al 
+bloque reservado que contiene su descriptor. Normalmente este localizador 
+constar  de tres bytes, un n£mero de segmento y una direcci¢n en ese 
+segmento; pero para simplificar un poco el manejo de localizadores de lista, 
+NestorMan permite crear las listas como internas. Una lista interna no se 
+identifica por medio de un valor de tres bytes, sino por un s¢lo byte; 
+NestorMan mantiene en su segmento de c¢digo una tabla con la localizaci¢n 
+real (segmento+direcci¢n) de las listas internas.
+
+As¡ pues, todas las funciones relacionadas con listas requieren un 
+localizador de lista como par metro de entrada, en los registros A e IX. En 
+el caso de listas normales, el segmento en el que reside el descriptor ha de 
+ser pasado en A, y la direcci¢n en IX. En el caso de listas internas, el 
+n£mero de lista ha de ser pasado en A, e IX debe ser puesto a cero; entonces 
+NestorMan obtendr  la localizaci¢n real del descriptor de la lista a partir 
+de su tabla de listas internas.
+
+Cuando un elemento (un  rea de datos de cualquier longitud entre 1 y 16120 
+bytes) es insertado en la lista, se reserva un nuevo bloque en el que es 
+copiado el elemento, como en el caso de la reserva normal de bloques; pero en 
+esta ocasi¢n se a¤ade una cabecera de 6 bytes al elemento, con punteros a los 
+elementos anterior y siguiente de la lista, y a su vez los punteros de dichos 
+elementos anterior y siguiente (si existen) son actualizados. El primer 
+elemento de la lista siempre tiene el puntero al elemento anterior puesto a 
+cero, y lo mismo ocurre con el puntero al elemento siguiente del £ltimo 
+elemento de la lista.
+
+El borrado de un elemento de la lista causa la liberaci¢n del bloque que lo 
+conten¡a y la actualizaci¢n de los punteros de los elementos anterior y 
+siguiente (que desde ese momento se apuntan entre s¡). Es posible 
+insertar/eliminar elementos al principio de la lista, al final de la lista y 
+delante/detr s del elemento actual; y tambi‚n es posible obtener (copiar a 
+TPA) un elemento sin borrarlo de la lista. El descriptor de la lista es 
+actualizado cuando es necesario.
+
+Por supuesto, adem s de insertar y borrar elementos tambi‚n es posible la 
+manipulaci¢n del puntero de la lista. El puntero al elemento actual puede ser 
+establecido para que apunte al primer elemento, al £ltimo, al anterior o al 
+siguiente (con respecto al actual); tambi‚n se puede establecer apuntando a 
+un elemento determinado, e incluso se puede establecer especificando 
+directamente una localizaci¢n de segmento y direcci¢n (aunque esto £ltimo 
+debe hacerse con cuidado). Tambi‚n pueden comprobarse ciertas condiciones 
+especiales en el puntero (si apunta al primer elemento, al £ltimo, ambos 
+porque s¢lo hay un elemento en la lista, si la lista est  vac¡a, o ninguna de 
+estas condiciones).
+
+Y finalmente, hay dos funciones para grabar y cargar una lista en un fichero 
+de disco; se crear  un fichero nuevo o se usar  uno ya abierto seg£n la 
+elecci¢n del usuario. Dado que se usa un bufer interno en el segmento de 
+c¢digo de NestorMan para las transferencias de disco, es necesario que dicho 
+segmento pertenezca al mapeador primario para usar estas funciones. El slot 
+al que pertenece el segmento de c¢digo de NestorMan puede averiguarse 
+mediante la funci¢n 1 (ver la descripci¢n de las funciones).
+
+No es posible crear listas en segmentos exclusivos. Quiz  lo ser  en futuras 
+versiones de NestorMan.
+
+
+4.4. SOPORTE PARA INTERNESTOR SUITE
+
+A partir de la versi¢n 1.2, NestorMan incorpora soporte para InterNestor 
+Suite (INS). Este soporte se traduce en dos aspectos:
+
+1) Adici¢n de nuevas funciones para la reserva de segmentos especialmente 
+para INS.
+
+La funci¢n 30 se encarga de reservar cuatro segmentos en un mismo slot, y de 
+limpiarlos. Normalmente, esta funci¢n s¢lo es usada por el programa 
+INSINS.COM, el instalador de INS, cuando instala e inicializa los m¢dulos que 
+forman INS. La funci¢n 31 libera estos segmentos reservados; de nuevo, 
+normalmente esta funci¢n s¢lo es usada por INSINS.COM, esta vez para 
+desinstalar INS.
+
+La funci¢n 32 devuelve el n£mero de los cuatro segmentos en los que residen 
+los m¢dulos de INS. Los programas que hagan uso de INS deben ejecutar esta 
+funci¢n para averiguar la ubicaci¢n de los m¢dulos, y de esta forma poder 
+acceder a sus rutinas, variables y colas.
+
+2) El c¢digo residente en la p gina 3 de NestorMan ha sido ampliado para 
+permitir la ejecuci¢n, en cada interrupci¢n del reloj, de las rutinas de 
+atenci¢n a la interrupci¢n que forman parte de los m¢dulos de INS. Dichas 
+rutinas s¢lo son ejecutadas si una cierta bandera (cuya direcci¢n puede 
+averiguarse mediante la funci¢n 32) es activada, posibilitando as¡ que INS 
+sea "pausado" mediante la desactivaci¢n de dicha bandera.
+
+Para m s informaci¢n, ver la descripci¢n de las funciones 30 a 32 en la 
+secci¢n 5, y por supuesto el manual de InterNestor Suite.
+
+
+5. LISTADO DE LAS FUNCIONES DE NESTORMAN
+
+El procedimiento para ejecutar las funciones de NestorMan est  explicado en 
+la secci¢n 4.1 (en resumen: establecer DE=&H2202, C=n£mero de funci¢n, y 
+ejecutar CALL &HFFCA). Esta secci¢n explica con detalle el funcionamiento de 
+las funciones, as¡ como sus par metros de entrada y salida. La ejecuci¢n de 
+una funci¢n no definida (incluyendo la funci¢n 19 por v¡a directa o 
+indirecta) no tendr  ning£n efecto aparte de la destrucci¢n de los registros.
+
+Todas las funcionas dejan las interrupciones inhibidas al terminar.
+
+
+*** Funci¢n 0: Reset de NestorMan 
+
+    Entrada: -
+    Salida:  -
+
+Esta funci¢n libera todos los segmentos ubicados por NestorMan, excepto el 
+propio segmento de c¢digo (segmento 4). Adem s, limpia el susodicho segmento 
+de c¢digo (libera todos los bloques reservados que contiene) y la tabla de 
+listas internas (ya que en efecto todas las listas son destruidas 
+impl¡citamente al liberar todos los bloques reservados). En otras palabras, 
+tras ejecutar esta funci¢n la memoria queda en el mismo estado en el que 
+estaba tras la instalaci¢n de NestorMan.
+
+En circunstancias normales esta funci¢n no deber¡a ser usada nunca; est  
+pensada para el propio programa NESMAN.COM, que la usa antes de desinstalar 
+NestorMan. Sin embargo puede ser £til para probar programas incompletos o en 
+estado alfa que no realicen correctamente la liberaci¢n de la memoria que 
+reservan.
+
+
+*** Funci¢n 1: Informaci¢n interna sobre NestorMan
+
+    Entrada: -
+    Salida:  HL = Direcci¢n de la parte de NestorMan en p gina 3
+	     IX = Direcci¢n final de la TPA antes de instalar NestorMan
+	     B	= Slot del segmento de c¢digo de NestorMan
+	     C	= Segmento f¡sico de c¢digo de NestorMan
+	     A	= Versi¢n principal de NestorMan
+	     DE = Versi¢n secundaria de NestorMan en formato BCD
+	     Cy = 1 si alguna funci¢n de NestorMan ya se estaba ejecutando
+
+La informaci¢n devuelta en HL e IX es necesaria para NESMAN.COM al 
+desinstalar NestorMan, pero poco £til para programas normales. La informaci¢n 
+de B y C es necesaria para conectar el segmento de c¢digo de NestorMan en la 
+p gina 1 si se quieren usar las funciones mediante llamadas directas (tal 
+como se explica en la secci¢n 4.1).
+
+El valor devuelto en A siempre ser  al menos 1, as¡ pues llamando a esta 
+funci¢n con A=0 se puede comprobar si NestorMan est  instalado realmente (si 
+tras la ejecuci¢n obtenemos A=0 significa que NestorMan no est  instalado). 
+El valor devuelto en DE est  en formato BCD (por ejemplo &H0203 para la 
+versi¢n x.23).
+
+El valor Cy=1 s¢lo puede ser devuelto si se ejecuta esta funci¢n desde una 
+rutina de atenci¢n a una interrupci¢n, y significa que el programa principal 
+interrumpido ya estaba ejecutando una funci¢n de NestorMan. Las funciones de 
+NestorMan (excepto la propia funci¢n 1 como caso especial) no son reentrantes 
+(no se pueden ejecutar cuando la ejecuci¢n de otra funci¢n ha sido 
+interrumpida), por tanto, cualquier rutina de atenci¢n a una interrupci¢n que 
+quiera usar NestorMan debe ejecutar antes la funci¢n 1: si devuelve Cy=0, se 
+puede ejecutar cualquier otra funci¢n; si devuelve Cy=1, debe desistir, 
+esperar a la siguiente interrupci¢n y repetir el proceso.
+
+
+*** Funci¢n 2: Informaci¢n general sobre la memoria
+
+    Entrada: -
+    Salida:  A	= N£mero total de segmentos ubicados por NestorMan
+	     B	= N£mero segmentos exclusivos ubicados por NestorMan
+	     C	= N£mero total de segmentos libres en el sistema
+	     D	= N£mero de segmentos libres en el mapeador primaria
+	     E	= N£mero de listas internas creadas
+	     IX = Direcci¢n de la tabla interna de segmentos de NestorMan
+	     IY = Direcci¢n de la tabla de listas internas de NestorMan
+
+El n£mero devuelto en A incluye los segmentos de TPA y el segmento de c¢digo 
+de NestorMan, por tanto siempre ser  al menos 5; el n£mero devuelto en B 
+incluye los segmentos de TPA, por tanto siempre ser  al menos 4.
+
+Los n£meros devueltos en C y D indican el n£mero de segmentos que no han sido 
+ubicados por NestorMan (ni por ning£n otro programa), estos valores se 
+obtienen leyendo la tabla de variables del mapeador del DOS 2.
+
+Los valores obtenidos en IX e IY no deber¡an usarse nunca en circunstancias 
+normales; el acceso directo a las tablas internas de NestorMan es peligroso y 
+poco £til. Si a£n as¡ quieres manipularlas, lee primero la secci¢n 
+"Interioridades de NestorMan".
+
+
+*** Funci¢n 3: Informaci¢n sobre un segmento
+
+    Entrada: A	= N£mero de segmento
+    Salida:  A preservado
+	     B	= N£mero de slot al que pertenece el segmento
+		  (0 si ese segmento no existe en realidad)
+	     C	= N£mero de segmento f¡sico
+	     Cy = 1 si el segmento es exclusivo
+	     HL = Memoria total libre en el segmento
+	     DE = Tama¤o del mayor bloque de memora libre en el segmento
+
+Un valor devuelto en B de 0 significa que no existe ning£n segmento ubicado 
+cuyo n£mero de segmento l¢gico asociado sea el especificado en A; en este 
+caso, el resto de los resultados de salida deben ignorarse.
+
+Las reservas y liberaciones sucesivas de bloques de memoria causar n que los 
+bloques libres de los segmentos est‚n fragmentados, por tanto HL y DE pueden 
+por supuesto tener valores diferentes.
+
+
+*** Funci¢n 4: Reserva de un bloque de memoria
+
+    Entrada: HL = Tama¤o de bloque requerido (de 1 a 16126 bytes)
+    Salida:  A	= Segmento del bloque
+	     HL = Direcci¢n de inicio del bloque
+	     Cy = 1 si no hay suficiente memoria libre para la reserva
+		    o si se especifica un tama¤o de bloque excesivo
+
+Esta es la funci¢n principal de NestorMan. Examina todos los segmentos no 
+exclusivos ubicados en busca de bloques libres de al menos el tama¤o 
+requerido, y devuelve el segmento y la direcci¢n del bloque m s peque¤o 
+hallado. Si no hay ning£n bloque lo suficientemente grande, se ubica un 
+segmento nuevo; si no quedan segmentos libres en el sistema para ubicar, o si 
+se especifica un tama¤o de bloque requerido mayor de 16126 bytes, se devuelve 
+un error (Cy=1).
+
+La direcci¢n devuelta estar  en el rango &H8102-&HBFF8; los primeros 256 
+bytes de cada segmento son usados por NestorMan para llevar la cuenta de los 
+bloques reservados y libres. El tama¤o del bloque es almacenado tambi‚n en el 
+propio segmento, en dos bytes situados inmediatamente despu‚s del bloque. M s 
+detalles en la secci¢n "Interioridades de NestorMan".
+
+Una vez reservado, un bloque puede ser le¡do y escrito de varias formas:
+
+- Usando las funciones "Lectura de un byte de un segmento" y "Escritura de un 
+byte en un segmento" para acceder a un s¢lo byte.
+- Usando la funci¢n "Transferencia de datos entre segmentos" (o sus variantes 
+para TPA) para transferir bloques de datos entre la memoria usada por el 
+programa y el bloque reservado.
+- Conectando el segmento que contiene el bloque en la p gina 2 mediante la 
+funci¢n "Conexi¢n de un segmento en la p gina 2" y accediendo al bloque 
+mediante las instrucciones normales de acceso a memoria.
+- O simplemente, usando la rutina est ndar de establecimiento de slots y las 
+rutinas de gesti¢n de segmentos f¡sicos del DOS 2 (necesitar s obtener antes 
+el slot y el segmento f¡sico correspondientes al segmento mediante la funci¢n 
+3).
+
+
+*** Funci¢n 5: Reserva de un bloque de memoria
+	       con especificaci¢n de segmento
+
+    Entrada: HL = Tama¤o de bloque requerido (de 1 a 16126 bytes)
+	     A	= Segmento requerido
+    Salida:  A preservado
+	     HL = Direcci¢n de inicio del bloque
+	     Cy = 1 si ocurre un error
+		    (no hay suficiente memoria libre para la reserva
+		    o se especifica un tama¤o de bloque excesivo
+		    o el segmento especificado no existe o es el 0 o el 3)
+
+Esta funci¢n act£a como la funci¢n 4, pero en esta ocasi¢n no se realiza una 
+b£squeda de bloques libres a lo largo de todos los segmentos ubicados; ahora 
+simplemente se busca un bloque libre del tama¤o adecuado en el segmento 
+especificado, y si no se encuentra ninguno, se devuelve un error (Cy=1) 
+inmediatamente. Tambi‚n se devuelve un error si el segmento especificado no 
+existe, o si se especifica un tama¤o de bloque requerido mayor de 16126 
+bytes.
+
+Recuerda que la £nica forma de reservar bloques de memoria en segmentos 
+exclusivos es el uso de esta funci¢n. De todas formas tambi‚n es posible usar 
+esta funci¢n para realizar reservas en un segmento normal, aunque esto no 
+tiene mucho sentido en aplicaciones normales.
+
+Los propios segmentos de TPA pueden usarse para realizar reservas de memoria 
+mediante esta funci¢n; pero observa que s¢lo los segmentos 1 y 2 (direcciones 
+TPA de &H4000 a &HBFFF) pueden ser usadas con este prop¢sito, ya que la 
+p gina 3 contiene las variables del sistema y la p gina 0 contiene tambi‚n 
+informaci¢n de sistema en sus primeros 256 bytes. Recuerda tambi‚n que antes 
+de usar los segmentos de TPA para reservas de memoria, deben ser limpiados 
+mediante la funci¢n "Limpieza de un segmento". Ver la secci¢n "Estrategias de 
+reserva de memoria" para m s detalles.
+
+
+*** Funci¢n 6: Liberaci¢n de un bloque de memoria
+
+    Entrada: A	= Segmento del bloque
+	     HL = Direcci¢n de inicio del bloque
+    Salida:  Cy = 1 en caso de error
+		  (el segmento no existe, o es el 0 o el 3)
+
+Esta funci¢n libera un bloque previamente reservado, permitiendo as¡ su 
+reutilizaci¢n en posteriores reservas. No es necesario especificar el tama¤o 
+del bloque, ya que esta informaci¢n se almacena en dos bytes adyacentes al 
+propio bloque al realizar la reserva. Todos los bloques reservados deber¡an 
+ser liberados cuando ya no son £tiles.
+
+
+*** Funci¢n 7: Ubicaci¢n de un segmento
+
+    Entrada: Cy = 1 para ubicar un segmento en modo exclusivo
+		  0 para ubicar un segmento normal
+    Salida:  A	= N£mero de segmento
+	     Cy = 1 si no hay segmentos libres en el sistema
+
+Esta funci¢n simplemente ubica un nuevo segmento, lo inicializa y almacena su 
+informaci¢n en la tabla interna de segmentos, sin realizar ninguna reserva de 
+bloque. Puede ser £til, por ejemplo, para ubicar un segmento exclusivo al 
+instalar un TSR, o para ubicar segmentos normales a fin de saber a priori si 
+se van a cumpir los requerimientos de memoria del programa.
+
+NestorMan siempre intenta ubicar los segmentos en el mapeador primario, y si 
+no es posible, lo intenta en otros mapeadores existentes.
+
+
+*** Funci¢n 8: Liberaci¢n de un segmento
+
+    Entrada: A	= N£mero de segmento
+    Salida:  Cy = 1 en caso de error
+		  (el segmento no existe, o est  entre 0 y 4)
+
+Esta funci¢n libera un segmento ubicado anteriormente, ya sea de forma manual 
+o autom tica. Por supuesto no se pueden liberar los segmentos de TPA ni el 
+propio segmento de c¢digo de NestorMan, por tanto se devolver  un error si se 
+especifica un segmento entre 0 y 4.
+
+
+*** Funci¢n 9: Limpieza de un segmento
+
+    Entrada: A	= N£mero de segmento
+    Salida:  Cy = 1 en caso de error
+		  (el segmento no existe, o es el 0 o el 3)
+
+Esta funci¢n limpia un segmento, es decir, libera todos los bloques de 
+memoria reservados en ese segmento; pero lo mantiene ubicado para posteriores 
+reservas. La limpieza del segmento de NestorMan (n£mero 4) causar  por 
+supuesto que s¢lo la parte de datos sea liberada; la parte de c¢digo (al 
+principio del segmento, 7K en esta versi¢n) siempre queda reservada.
+
+Antes de usar los segmentos de TPA 1 o 2 para reservas de memoria es 
+obligatorio limpiarlos usando esta funci¢n; los segmentos 0 y 3 no pueden 
+usarse y por tanto tampoco pueden limpiarse. Ver la secci¢n "Estrategias de 
+reserva de memoria" para m s detalles.
+
+
+*** Funci¢n 10: Cambio del atributo de "exclusivo" de un segmento
+
+    Entrada: A	= N£mero de segmento
+	     Cy = 1 para hacer el segmento exclusivo, 0 para hacerlo normal
+    Salida:  Cy = 1 en caso de error
+		  (el segmento no existe, o est  entre 0 y 4)
+
+Esta funci¢n establece o quita el atributo de "exclusivo" de un segmento 
+ubicado (recuerda que este atributo puede ser especificado al ubicar 
+manualmente un segmento con la funci¢n 7). Los segmentos de TPA siempre son 
+exlusivos y el segmento de c¢digo de NestorMan nunca lo es; estos segmentos 
+no pueden modificarse.
+
+
+*** Funci¢n 11: Conexi¢n de un segmento en la p gina 2
+
+    Entrada: A	= N£mero de segmento
+    Salida:  Cy = 1 si el segmento no existe
+
+Esta funci¢n conecta el segmento especificado en la p gina 2, de forma que 
+cualquier bloque reservado en ‚l queda accesible mediante las instrucciones 
+normales de acceso a memoria. No modifiques nunca el contenido de las 
+direcciones &h8000 a &H80FF de ning£n segmento, ya que contienen informaci¢n 
+interna de NestorMan (ver la secci¢n "Interioridades de NestorMan" para m s 
+detalles).
+
+
+*** Funci¢n 12: Lectura de un byte de un segmento
+
+    Entrada: A	= N£mero de segmento
+	     HL = Direcci¢n a leer
+    Salida:  A, HL preservados
+	     B	= Dato le¡do
+    Salida:  Cy = 1 si el segmento no existe
+
+Esta funci¢n simplemente lee el byte almcenado en la direcci¢n especificada 
+del segmento especificado y lo devuelve en el registro B. A y HL son 
+preservados para facilitar un poco la construcci¢n de bucles de lectura.
+
+
+*** Funci¢n 13: Escritura de un byte en un segmento
+
+    Entrada: A	= N£mero de segmento
+	     HL = Direcci¢n a leer
+	     B	= Dato a escribir
+    Salida:  A, HL preservados
+    Salida:  Cy = 1 si el segmento no existe
+
+Esta funci¢n simplemente escribe el byte B en la direcci¢n especificada del 
+segmento especificado. A y HL son preservados para facilitar un poco la 
+construcci¢n de bucles de escritura. Aseg£rate de que realmente est s 
+escribiendo en dentro de un bloque reservado; escribir fuera puede dar 
+problemas, ya que la informaci¢n de secuencia y tama¤o de los bloques 
+reservados se almacena en el propio segmento del bloque (ver la secci¢n 
+"Interioridades de NestorMan" para m s detalles).
+
+
+*** Funci¢n 14: Transferencia de datos entre segmentos
+
+    Entrada: A	= Segmento de origen
+	     IX = Direcci¢n de origen
+	     B	= Segmento de destino
+	     IY = Direcci¢n de detino
+	     HL = Longitud del bloque a copiar
+    Salida:  Cy = 1 si el segmento de origen y/o el de destino no existe
+
+Esta funci¢n copia un bloque de datos de un segmento a otro. Los dos bits 
+altos de las direcciones se ignoran, por tanto no es necesario que est‚n en 
+el rango &H8000-&HBFFF. Aseg£rate de no cruzar los l¡mites del segmento al 
+copiar un bloque (por ejemplo, no especifiques &H3000 como direcci¢n de 
+destino y &H2000 como tama¤o del bloque), ya que en ese caso la transferencia 
+invadir  la p gina 3, pudiendo causar la destrucci¢n de la pila y de la zona 
+de variables del sistema; en ese caso el ordenador puede llegar a colgarse 
+(de hecho es probable que lo haga). Ver tambi‚n el aviso de la funci¢n 13.
+
+Si quieres transferir un bloque de/a TPA, establece el segmento de origen o 
+destino 0 a 3 dependiendo de la direcci¢n deseada, o usa las funciones 
+"Transferencia de datos de TPA a un segmento" o "Transferencia de datos de 
+un segmento a TPA".
+
+
+*** Funci¢n 15: Transferencia de datos de TPA a un segmento
+
+    Entrada: IX = Direcci¢n de origen en TPA
+	     B	= Segmento de destino
+	     IY = Direcci¢n de detino
+	     HL = Longitud del bloque a copiar
+    Salida:  Cy = 1 si el segmento de destino no existe
+
+Esta funci¢n simplemente copia los dos bits altos de IX en los dos bits bajos 
+de A, y salta al c¢digo de la funci¢n 14. Observa que "Los segmentos de TPA" 
+no significa "Los segmentos conectados en las p ginas 0 a 3 en el momento de 
+ejecutar la funci¢n", sino "Los segmentos 0, 1, 2 y 3 (los conectados cuando 
+el sistema arranca)." Lee tambi‚n el aviso para la funci¢n 14.
+
+
+*** Funci¢n 16: Transferencia de datos un segmento a TPA
+
+    Entrada: A	= Segmento de origen
+	     IX = Direcci¢n de origen
+	     IY = Direcci¢n de detino en TPA
+	     HL = Longitud del bloque a copiar
+    Salida:  Cy = 1 si el segmento de origen no existe
+
+Esta funci¢n simplemente copia los dos bits altos de IY en los dos bits bajos 
+de B, y salta al c¢digo de la funci¢n 14. Observa que "Los segmentos de TPA" 
+no significa "Los segmentos conectados en las p ginas 0 a 3 en el momento de 
+ejecutar la funci¢n", sino "Los segmentos 0, 1, 2 y 3 (los conectados cuando 
+el sistema arranca)." Lee tambi‚n el aviso para la funci¢n 14.
+
+
+*** Funci¢n 17: Liberaci¢n de todos los segmentos excepto los exclusivos
+
+    Entrada: -
+    Salida:  -
+
+Esta funci¢n libera todos los segmentos ubicados por NestorMan, excepto los 
+marcados con el atributo "exclusivo" y el segmento de c¢digo de NestorMan. 
+Tambi‚n limpia este £ltimo y la tabla de segmentos internos (ya que en efecto 
+todas las listas son destruidas impl¡citamente al liberar todos los bloques 
+reservados).
+
+
+*** Funci¢n 18: Liberaci¢n de todos los segmentos limpios
+
+    Entrada: Cy = 1 para liberar tambi‚n los segmentos exclusivos limpios
+	     Cy = 0 para liberar £nicamente los segmentos normales limpios
+    Salida:  -
+
+Esta funci¢n libera todos los segmentos que est n limpios, es decir, los que 
+no contienen ning£n bloque reservado. Por supuesto, el segmento de c¢digo de 
+NestorMan nunca es liberado, aunque est‚ limpio. Especificando Cy=1 a la 
+entrada se incluyen los segmentos exclusivos en la b£squeda de segmentos 
+limpios para liberar.
+
+Los programas bien dise¤ados deber¡an liberar todos sus bloques de memoria y 
+ejecutar despu‚s esta funci¢n con Cy=0 antes de terminar. Una alternativa 
+mucho m s f cil pero menos segura es ejecutar la funci¢n 17; de todas formas 
+los programas no deber¡an confiar en los datos almacenados en segmentos no 
+exclusivos tras su finalizaci¢n o tras salir temporalmente al DOS, salvo que 
+est‚n seguros de que no se van a ejecutar otros programas que usen NestorMan.
+
+
+*** Funci¢n 19: Punto de llamada de las funciones de NestorMan
+		en modo semidirecto
+
+Esta funci¢n no existe en realidad, su direcci¢n asociada en la tabla de 
+salto (&H4139) es usada para las llamadas semidirectas a las funciones de 
+NestorMan. Ver la secci¢n 4.1 para m s detalles.
+
+
+*** Funci¢n 20: Creaci¢n de una lista
+
+    Input:  Cy = 0 para crear una lista normal
+	    Cy = 1 para crear una lista interna
+    Output: Si no hay error: Cy=0 y B=0
+	    A-IX = Localizador de la nueva lista
+	    Si hay error: Cy=1 y B=c¢digo de error
+		      B=1: No hay suficiente memoria para crear la lista
+		      B=2: Demasiadas listas internas (si Cy=1 a la entrada)
+
+Esta funci¢n reserva un bloque de 12 bytes y crea un nuevo descriptor de 
+lista en el mismo, devolviendo el localizador de la lista (s¢lo A para listas 
+internas, A-IX para listas normales, tal como se explica en la secci¢n 4.3). 
+Si Cy=1 a la entrada pero ya hay 255 listas internas creadas, se devuelve un 
+error 2; si no hay memoria libre para crear el descriptor, se devuelve un 
+error 1.
+
+
+*** Funci¢n 21: Informaci¢n sobre una lista
+
+    Entrada: A-IX = Localizador de la lista
+    Salida:  A	= Segmento del descriptor de la lista
+	     IX = Direcci¢n del descriptor de la lista
+	     B-IY = Puntero al elemento actual
+	     D-HL = N£mero de elementos en la lista
+	     Cy = 1 si hay error (el segmento A no existe para listas
+				  normales, la lista A no existe para
+				  listas internas)
+
+Si el localizador de la lista se refiera a una lista interna, A e IX 
+simplemente ser n devueltos sin ninguna modifciaci¢n; si es una lista 
+interna, A e IX devolver n informaci¢n acerca de la localizaci¢n del 
+descriptor de la lista (segmento y direcci¢n), tomada de la tabla de listas 
+internas de NestorMan.
+
+Los valores de B e IY, as¡ como los de D y HL, ser n cero si la lista est  
+vac¡a.
+
+Atenci¢n: el puntero al elemento actual devuelto en B-IY en realidad apunta a 
+la cabecera del elemento, que contiene los punteros a los elementos anterior 
+y siguiente; para obtener la direcci¢n real de los datos del elemento hay que 
+sumar 6 a IY.
+
+
+*** Funci¢n 22: Destrucci¢n de una lista
+
+    Entrada: A-IX = Localizador de la lista
+    Salida:  Cy = 1 si hay error (el segmento A no existe para listas
+				  normales, la lista A no existe para
+				  listas internas)
+
+Esta funci¢n destruye una lista existente: primero borra todos sus elementos, 
+despu‚s libera la memoria de su descriptor, y finalmente limpia su entrada en 
+la tabla de listas internas si se trata de una lista interna.
+
+
+*** Funci¢n 23: Comprobaci¢n/modificaci¢n del puntero al elemento
+		actual de una lista
+
+    Entrada: A-IX = Localizador de la lista
+	     B = M‚todo (qu‚ hacer con el puntero):
+		 0: No hacer nada (s¢lo devolver informaci¢n)
+		 1: Establecer el puntero en el primer elemento
+		 2: Establecer el puntero en el £ltimo elemento
+		 3: Establecer el puntero en el siguiente elemento
+		    (avanzar un elemento)
+		 4: Establecer el puntero en el elemento anterior
+		    (retroceder un elemento)
+		 5: Establecer el puntero en un determinado elemento
+		 6: Establecer el puntero con un valor dado
+	     H-IY = N£mero de elemento (si B=5)
+		    Valor del puntero (si B=6)
+    Salida:  Cy = 1 si hay error (el segmento A no existe para listas
+				  normales, la lista A no existe para
+				  listas internas)
+	     A-IX = Valor del puntero tras la ejecuci¢n de la funci¢n
+	     B = Estado del puntero tras la ejecuci¢n de la funci¢n:
+		 1: Apunta al primer elemento
+		 2: Apunta al £ltimo elemento
+		 3: S¢lo hay un elemento en la lista
+		    (luego el puntero "apunta al primero" AND "al ultimo")
+		 4: La lista est  vac¡a (no hay ning£n puntero establecido)
+		 0: Nada de lo anterior
+		 &H80 = Error: B=5 pero el elemento especificado no existe
+		 &H81 = Error: M‚todo desconocido
+
+Esta funci¢n permite dfectuar diversas operaciones en el puntero al elemento 
+actual de una lista, o bien s¢lo consultar su estado si se ejecuta con B=0.
+
+Si se ejecuta con B=3 o 4, el puntero avanzar  o retroceder  un elemento 
+respecto al actual. Si B=3 pero el elemento actual ya es el £ltimo, o si B=4 
+pero el elemento actual ya es el primero, no se har  nada y no se considerar  
+un error; siempre puedes consultar el estado del puntero llamando a la 
+funci¢n con B=0 antes de hacer ninguna modificaci¢n sobre el mismo.
+
+Si se ejecuta con B=5, H-IY debe contener un n£mero de elemento entre 1 y N, 
+siendo N el n£mero de elementos en la lista (el elemento 0 no existe); si se 
+llama con B=6, H-IY debe contener un puntero (segmento+direcci¢n) que ser  
+establecido directamente como puntero al elemento actual. Se debe tener mucho 
+cuidado al hacer esto £ltimo, ya que si se establece como puntero una 
+direcci¢n que en realidad no apunta a un elemento de la lista, ‚sta puede 
+quedar inutilizable.
+
+Atenci¢n: el puntero al elemento actual devuelto en A-IX en realidad apunta a 
+la cabecera del elemento, que contiene los punteros a los elementos anterior 
+y siguiente; para obtener la direcci¢n real de los datos del elemento hay que 
+sumar 6 a IX.
+
+Adem s, observa que a la salida Cy valdr  1 s¢lo si el localizador de la 
+lista es inv lido. En caso contraro Cy valdr  0, a£n cuando B=&H80 o &H81.
+
+
+*** Funci¢n 24: Inserci¢n de un elemento en una lista desde TPA
+
+    Entrada: A-IX = Localizador de la lista
+	     B = M‚todo (d¢nde insertar el elemento)
+		 0: Delante (despu‚s) del elemento actual
+		 1: Detr s (antes) del elemento actual
+		 2: Al principio de la lista (antes del primer elemento)
+		 3: Al final de la lista (despu‚s del £ltimo elemento)
+	     IY = Direcci¢n del elemento en TPA
+	     HL = Longitud del elemento
+    Salida:  Si no hay error: Cy=0 y A=0
+	     Si hay error: Cy=1 y A=c¢digo de error:
+		      1: No hay memoria libre o elemento demasiado grande
+		      2: Localizador de lista inv lido
+			 (el segmento A no existe para listas normales,
+			 la lista A no existe para listas internas)
+		      3: M‚todo desconocido
+		      4: El tama¤o del elemento es cero
+
+Esta funci¢n reserva un bloque de tamanyo HL+6, copia en ‚l los datos 
+situados en la direcci¢n IY de TPA a¤adi‚ndoles una cabecera de elemento, y 
+modifica los punteros adecuados de la lista (seg£n el m‚todo especificado) de 
+forma que el nuevo bloque pasa a formar parte de la lista; el puntero al 
+elemento actual de la lista no se ve modificado. El tamanyo m ximo permitido 
+para un elemento es de 16120 bytes.
+
+Dado que NestorMan ofrece flexibilidad a la hora de insertar y borrar 
+elementos en una lista (no s¢lo se puede especificar el elemento actual en 
+las funciones 24 y 25 sino tambi‚n el primero y el £ltimo), es f cil emular 
+otras estructuras de datos distintas de la lista encadenada. Por ejemplo, si 
+necesitas una cola, simplemente inserta los elementos siempre al principio de 
+la lista y extr elos del final, o viceversa. Y si necesitas una pila, inserta 
+y extrae los elementos siempre al final de la lista.
+
+Para insertar un elemento desde cualquier segmento de NestorMan en vez de 
+hacerlo desde TPA, usa la funci¢n 28.
+
+
+*** Funci¢n 25: Obtenci¢n y/o borrado de un elemento de una lista hacia TPA
+
+    Entrada: A-IX = Localizador de la lista
+	     B = Qu‚ elemento obtener y/o borrar
+		 0: El actual
+		 1: El primero
+		 2: El £ltimo
+	     H = M‚todo (qu‚ hacer con el elemento)
+		 0: No hacer nada (s¢lo devolver el tama¤o del elemento)
+		 1: S¢lo obtener
+		 2: S¢lo borrar
+		 3: Obtener y borrar
+	     IY= Direcci¢n de destino en TPA (si se especifica obtenci¢n)
+    Salida:  Si no hay error: Cy=0 y B=0
+	     BC = Tamanyo del elemento
+	     Si hay error: Cy=1 y A=c¢digo de error:
+		      1: Localizador de lista inv lido
+			 (el segmento A no existe para listas normales,
+			  la lista A no existe para listas internas)
+		      2: La lista est  vac¡a (nada que obtener/borrar)
+		      3: M‚todo desconocido (B o H)
+
+Esta funci¢n permite obtener (copiar a TPA) un elemento de la lista, borrarlo 
+(sacarlo de la lista y liberar su memoria reservada) o ambas cosas (primero 
+se obtiene y despu‚s se borra). En muchas ocasiones es deseable obtener el 
+tama¤o del elemento (m‚todo 0) antes de obtenerlo, para comprobar que 
+disponemos de un bufer lo suficientemente grande en TPA.
+
+Al borrar el elemento actual, el puntero al elemento actual de la lista es 
+establecido en el siguiente elemento (excepto si el elemento actual era el 
+£ltimo, en ese caso el puntero es establecido en el elemento anterior).
+
+Para extraer un elemento hacia cualquier segmento de NestorMan en vez de 
+hacerlo hacia TPA, usa la funci¢n 29.
+
+
+*** Funci¢n 26: Grabaci¢n de una lista en un fichero
+
+    Entrada: A-IX = Localizador de la lista
+	     HL = Ruta y nombre del fichero, y B = 255
+		  (para crear un fichero nuevo)
+	     B	= Descriptor del fichero ("File handle")
+		  (para usar un fichero ya abierto)
+    Salida:  Si no hay error: Cy=0 y B=0
+	     Si hay error: Cy=1 y A=c¢digo de error:
+			   1: Localizador de lista inv lido
+			      (el segmento A no existe para listas normales,
+			      la lista A no existe para listas internas)
+			   Otro: Error de disco
+
+Esta funci¢n graba una lista en un fichero. Si B=255, HL debe apuntar a una 
+cadena ASCIIZ con el nombre del fichero y su ruta; el fichero ser  creado (si 
+ya existe un fichero con ese nombre ser  sobreescrito), y tras la grabaci¢n, 
+ser  cerrado. Si B es cualquier otro valor, ser  interpretado como el 
+descriptor de un fichero abierto sobre el que se realizar  la grabaci¢n; la 
+lista se grabar  a partir del puntero actual del fichero, que quedar  abierto 
+tras el proceso. Si ocurre alg£n error durante la grabaci¢n, se devolver  su 
+c¢digo de error en A y Cy valdr  1. El puntero al elemento actual de la lista 
+nunca se ve modificado.
+
+El formato del fichero creado es bastante simple, es como sigue:
+
+- Primero hay tres bytes con el n£mero de elementos en la lista.
+- A continuaci¢n se graban todos los elementos secuencialmente, cada uno 
+precedido por dos bytes que indican su tamanyo y sin ning£n car cter 
+de terminaci¢n.
+- Tras el £ltimo elemento se insertan dos bytes 0 que indican el final de la 
+lista.
+
+Una lista vac¡a se grabar  como cinco bytes 0 (tres para el n£mero de 
+elementos, y dos para indicar el final de la lista).
+
+Dado que se usa un bufer interno situado en el segmento de c¢digo de 
+NestorMan para las transferencias de disco, las funciones 26 y 27 s¢lo pueden 
+usarse si dicho segmento pertenece al mapeador primario. Cuando NestorMan es 
+instalado siempre se examina primero el mapeador primario en busca de un 
+segmento libre, pero si no hay ninguno, se examinan otros mapeadores 
+existentes. Usa la funci¢n 1 para averiguar a qu‚ slot pertenece el segmento 
+de c¢digo de NestorMan.
+
+
+*** Funci¢n 27: Carga de una lista desde un fichero
+
+    Entrada: A-IX = Localizador de la lista
+	     HL = Ruta y nombre del fichero, y B = 255
+		  (para abrir un fichero)
+	     B	= Descriptor del fichero ("File handle")
+		  (para usar un fichero ya abierto)
+    Salida:  B-DE = N£mero de elementos seg£n la cabecera del fichero
+		    (-1 si no se puede leer la cabecera)
+	     C-HL = N£mero de elementos que realmente han podido ser leidos
+	     Si no hay error: Cy=0 y B=0
+	     Si hay error: Cy=1 y A=c¢digo de error:
+			   1: Localizador de lista inv lido
+			      (el segmento A no existe para listas normales,
+			      la lista A no existe para listas internas)
+			   2: No hay suficiente memoria libre para cargar
+			      todos los elementos
+			   3: Elemento demasiado grande (lista inv lida)
+			   Otro: Error de disco
+
+Esta funci¢n carga una lista previamente grabada en un fichero mediante la 
+funci¢n 26. Si B=255, HL debe apuntar a una cadena ASCIIZ con el nombre del 
+fichero y su ruta; el fichero ser  abierto, y tras la carga de la lista, ser  
+cerrado. Si B es cualquier otro valor, ser  interpretado como el descriptor 
+de un fichero ya abierto; la lista se cargar  a partir del puntero actual del 
+fichero, que quedar  abierto tras el proceso. Si la lista ya contiene 
+elementos, los cargados ser n insertados al final de la misma.
+
+Si ocurre un error de disco mientras se leen datos o al abrir el fichero, se 
+devolver  su c¢digo en A y Cy valdr  1; C-HL contiene entonces el n£mero de 
+elementos que realmente han podido ser leidos. Si no hay ning£n error, B-DE y 
+C-Hl tendr n el mismo valor; si ni siquiera la cabecera del fichero puede 
+leerse (por ejemplo en caso de error "file not found"), los registros B, D y 
+E contendr n el valor &HFF (luego B-DE valdr  -1), y por supuesto C-HL ser  
+cero. La rutina de carga no conf¡a en la informaci¢n sobre el n£mero de 
+elementos proporcionada por la cabecera del fichero, sino que va leyendo 
+elementos hasta encontrar la marca de final de lista.
+
+El formato del fichero est  explicado en la Funci¢n 26. Por favor, lee 
+tambi‚n el aviso de esta funci¢n sobre el mapeador primario.
+
+
+*** Funci¢n 28: Inserci¢n de un elemento en una lista
+		desde cualquier segmento
+
+    Entrada: A-IX = Localizador de la lista
+	     H (bits 7 y 6) = M‚todo (d¢nde insertar el elemento)
+		 00: Delante (despu‚s) del elemento actual
+		 01: Detr s (antes) del elemento actual
+		 10: Al principio de la lista (antes del primer elemento)
+		 11: Al final de la lista (despu‚s del £ltimo elemento)
+	     B-IY = Direcci¢n del elemento (segmento-direcci¢n)
+	     HL (bits 13 a 0) = Longitud del elemento
+    Salida:  Si no hay error: Cy=0 y A=0
+	     Si hay error: Cy=1 y A=c¢digo de error:
+		      1: No hay memoria libre o elemento demasiado grande
+		      2: Localizador de lista inv lido
+			 (el segmento A no existe para listas normales,
+			 la lista A no existe para listas internas)
+		      3: M‚todo desconocido
+		      4: El tama¤o del elemento es cero
+
+Esta funci¢n es id‚ntica a la funci¢n 24, excepto que ahora el elemento a 
+insertar se encuentra en un segmento que no es de TPA (pero debe ser un 
+segmento reservado de NestorMan). El n£mero de segmento l¢gico se indica en 
+el registro B, y el m‚todo se indica mediante los dos bits altos del registro 
+H (el resto de bits de H, junto con el registro L, indica la longitud del 
+elemento de la misma forma que en la funci¢n 24); el resto de par metros son 
+como en la funci¢n 24.
+
+Por supuesto, puede usarse esta funci¢n para insertar elementos desde TPA 
+como caso particular, indicando un n£mero de segmento entre 0 y 3 en B.
+
+Para detalles sobre el funcionamiento de esta funci¢n, ver la descripci¢n de 
+la funci¢n 24.
+
+
+*** Funci¢n 29: Obtenci¢n y/o borrado de un elemento de una lista
+		hacia cualquier segmento
+
+    Entrada: A-IX = Localizador de la lista
+	     B = Qu‚ elemento obtener y/o borrar
+		 0: El actual
+		 1: El primero
+		 2: El £ltimo
+	     H = M‚todo (qu‚ hacer con el elemento)
+		 0: No hacer nada (s¢lo devolver el tama¤o del elemento)
+		 1: S¢lo obtener
+		 2: S¢lo borrar
+		 3: Obtener y borrar
+	     L-IY= Direcci¢n de destino, segmento-direcci¢n
+		   (si se especifica obtenci¢n)
+    Salida:  Si no hay error: Cy=0 y B=0
+	     BC = Tamanyo del elemento
+	     Si hay error: Cy=1 y A=c¢digo de error:
+		      1: Localizador de lista inv lido
+			 (el segmento A no existe para listas normales,
+			  la lista A no existe para listas internas)
+		      2: La lista est  vac¡a (nada que obtener/borrar)
+		      3: M‚todo desconocido (B o H)
+
+Esta funci¢n es id‚ntica a la funci¢n 25, excepto que ahora el elemento se
+extrae hacia un segmento que no es de TPA (pero debe ser un segmento 
+reservado de NestorMan). El n£mero de segmento l¢gico se indica en el 
+registro L, y el resto de los par metros son como en la funci¢n 25 (de hecho, 
+si no se especifica extracci¢n sino s¢lo borrado u obtenci¢n del tama¤o, esta 
+funci¢n es exactamente igual que la 25, y ambas pueden usarse 
+indistintamente).
+
+Por supuesto, puede usarse esta funci¢n para extraer elementos hacia TPA 
+como caso particular, indicando un n£mero de segmento entre 0 y 3 en L.
+
+Para detalles sobre el funcionamiento de esta funci¢n, ver la descripci¢n de 
+la funci¢n 25.
+
+
+*** Funci¢n 30: Reserva de cuatro segmentos para InterNestor Suite
+
+    Entrada: -
+    Salida:  Cy=0 y A=0 si no hay error, o
+	     Cy=1 y A=c¢digo de error:
+		1: No hay ning£n mapeador con al menos
+		   cuatro segmentos libres
+		2: Ya se hab¡an reservado segmentos para INS previamente
+
+Esta funci¢n reserva cuatro segmentos de memoria, todos en el mismo slot (se 
+empieza a buscar por el primario), especialmente para ser ocupados por los 
+m¢dulos que forman InterNestor Suite. Tras ser reservados, los segmentos son 
+limpiados. La limpieza consiste en el relleno de todo el segmento con el byte 
+&HC9 (c¢digo de RET) excepto las tres primeras posiciones de memoria, que son 
+inicializadas con informaci¢n referente al propio segmento, informaci¢n que 
+ser  usada por los m¢dulos cuando est‚n instalados:
+
+0: Slot
+1: N£mero de segmento f¡sico
+2: N£mero segmento l¢gico
+
+Normalmente, esta funci¢n s¢lo deber¡a ser usada por INSINS.COM, el programa 
+instalador de INS; tras ejecutar esta funci¢n, los m¢dulos son cargados en 
+sus respectivos segmentos y sus rutinas de inicializaci¢n son llamadas. Para 
+m s informaci¢n, ver el manual de InterNestor Suite.
+
+
+*** Funci¢n 31: Liberaci¢n de los segmentos
+		reservados para InterNestor Suite
+
+    Entrada: -
+    Salida:  -
+
+Esta funci¢n libera los segmentos que previamente han sido reservados para 
+INS mediante la funci¢n 30. Si en realidad no hab¡an sido reservados, la 
+funci¢n no hace nada y no devuelve ning£n error. Por supuesto, antes de 
+efectuar la liberaci¢n, la bandera de interrupci¢n es desactivada (ver 
+descripci¢n de la funci¢n 32 para m s detalles).
+
+Normalmente, esta funci¢n s¢lo deber¡a ser usada por INSINS.COM, el programa 
+instalador de INS, para desinstalar INS; primero se ejecuta la rutina de 
+desinicializaci¢n de cada m¢dulo, y despu‚s se ejecuta esta funci¢n. Para m s 
+informaci¢n, ver el manual de InterNestor Suite.
+
+
+*** Funci¢n 32: Obtenci¢n de los numeros de los segmentos
+		reservados para InterNestor Suite
+
+    Entrada: -
+    Salida:  A = Slot de los segmentos
+		 (0 si en realidad no est n reservados)
+	     C = Segmento del m¢dulo de nivel 1
+	     B = Segmento del m¢dulo de nivel 2
+	     E = Segmento del m¢dulo de nivel 3
+	     D = Segmento del m¢dulo de nivel 4
+	     HL = 0 (reservado para futura expansi¢n)
+	     IX = Direcci¢n de la bandera de interrupci¢n
+		  (IX)=A (slot de los segmentos) si est  activada
+		  (IX)=0 si est  desactivada
+
+Esta funci¢n devuelve los n£meros del slot y los cuatro segmentos reservados 
+para INS. Los programas que usen INS deben usar esta funci¢n para averiguar 
+la localizaci¢n de los m¢dulos de INS, y as¡ poder acceder a sus rutinas, 
+funciones y colas (informaci¢n m s espec¡fica en el manual de INS).
+
+Hay que tener en cuenta que los n£meros de segmento devueltos corresponden a 
+n£meros de segmento l¢gico. Para convertirlos a n£meros de segmento f¡sico 
+hay que usar la funci¢n 3.
+
+El valor devuelto en A ser  cero si en realidad no hay segmentos reservados 
+para INS. Los programas que hagan uso de INS deben asumir que INS est  
+instalado si obtienen un valor A<>0, y que no lo est  si A=0. (Estrictamente 
+esto es incorrecto, pues es posible que los segmentos hayan sido reservados 
+pero sin que los m¢dulos hayan sido instalados. Sin embargo los programas 
+deben suponer que se ha usado INSINS.COM u otro programa equivalente para la 
+instalaci¢n de INS; INSINS.COM siempre realiza la instalaci¢n de los m¢dulos 
+tras la reserva de los segmentos).
+
+La bandera de interrupci¢n puede tener dos valores: el n£mero de slot de los 
+segmentos de INS (el mismo valor devuelto en A), o cero. En el primer caso, 
+en cada interrupci¢n del reloj NestorMan conecta el segmento correspondiente 
+al m¢dulo de nivel 1 en la p gina 2 y realiza una llamada a la direcci¡n 
+&H8009, que corresponde a la rutina de atenci¢n a la interrupci¢n del m¢dulo 
+(el propio c¢digo del m¢dulo se encarga de llamar a la rutina hom¢loga del 
+resto de los m¢dulos; ver el manual de INS para m s detalles). En el segundo 
+caso, no se realizar  la conexi¢n del segmento ni la llamada. Por tanto, es 
+posible pausar INS simplemente llamando a esta funci¢n y ejecutando LD 
+(IX),0. Y para restaurar el estado normal, se vuelve a llamar a esta funci¢n 
+(o se carga IX con el valor previamente obtenido si se recuerda) y se ejecuta 
+LD (IX),A. Por supuesto, si se pausa INS mientras est n llegando datos, es 
+probable que dichos datos se pierdan.
+
+
+6. ESTRATEGIAS DE RESERVA DE MEMORIA
+
+Esta secci¢n pretende ofrecer una visi¢n general de las posibles estrategias 
+a seguir al usar NestorMan a nivel de bloques de memoria, dependiendo de las 
+caracter¡sticas concretas de cada programa.
+
+
+6.1. RESERVA NORMAL 
+
+El uso "normal" de NestorMan consiste en reservar un bloque de memoria usando 
+la funci¢n 4, copiar datos desde nuestro programa hacia ese bloque usando la 
+funci¢n 14 o la 15, y olvidar esos datos hasta que volvemos a necesitarlos; 
+entonces los recuperamos con la funci¢n 14 o la 16. Este puede ser el caso de 
+un procesador de textos, en el que s¢lo mantenemos en la memoria principal la 
+l¡nea que estamos editando; o de un juego que use la memoria mapeada como 
+bufer para miniminar los accesos a disco.
+
+
+6.2. USO DE LA TPA PARA RESERVAR MEMORIA
+
+En aplicaciones con pocos requerimientos de memoria (hasta 16K), y si el 
+propio programa es m s peque¤o de 32K, la p gina 2 de TPA (el segmento 2 de 
+NestorMan) puede usarse para reservas de memoria. La ventaja de este m‚todo 
+estriba en que los bloques reservados son accesibles diractamente sin 
+necesidad de copiar bloques ni conectar segmentos.
+
+Para reservar memoria en la p gina 2 de TPA, esta debe ser primero limpiada 
+mediante la funci¢n 9 (­no olvides esto!) y a partir de ah¡ se pueden hacer 
+reservas de memoria sobre ‚l usando la funci¢n 5, especificando el segmento 
+2. Dado que la direcci¢n devuelta es directamente una direcci¢n de p gina 2, 
+no es necesario realizar ninguna conversi¢n de direcci¢n y el bloque 
+reservado es directamente accesible.
+
+Otra alternativa es el uso de las p ginas 1 y 2 para reservas de memoria 
+(siempre que el propio programa, en la p gina 0, ocupe menos de 16K, claro). 
+El procedimietno es ahora un poco m s complejo, pero no mucho: intenta 
+reservar un bloque en el segmento 2, y si no puedes, int‚ntalo en el segmento 
+1 y convierte la direcci¢n obtenida al rango de la p gina 1. Y para liberar 
+un bloque, simplemente usa los dos bits altos de la direcci¢n como 
+especificador de segmento. El siguiente c¢digo hace todo esto:
+
+
+nesman: macro	@f
+	ld	de,&H2202
+	ld	c,@f
+	call	&HFFCA
+	endm
+
+;--- TPALLOC:  Reserva un bloque de memoria en TPA, p gina 1 o 2
+;    Entrada:  BC = Tama¤o requerido
+;    Salida:   HL = Direcci¢n del bloque reservado
+;	       Cy = 1 si no hay suficiente memoria libre en TPA
+
+TPALLOC: push  bc
+	ld	h,b
+	ld	l,c
+	ld	a,2	;Primero prueba en la p gina 2
+	nesman	5
+	pop	bc
+	ret	nc	;Termina si ha tenido ‚xito
+
+	ld	h,b
+	ld	l,c
+	ld	a,1
+	nesman	5	;si la p gina 2 fall¢, prueba en la p gina 1
+	ret	c	;Termina en caso de error
+	res	7,h
+	set	6,h	;Si ha tenido ‚xito, convierte la direcci¢n a p. 1
+	ret
+
+
+;--- TPAFREE:  Libera un bloque de memoria reservado en TPA
+     Entrada:  HL = Direcci¢n del bloque
+     Salida:   Cy = 1 en caso de error (no era una direcci¢n de pag. 1 o 2)
+
+TPAFREE: ld	a,h
+	rlca
+	rlca
+	and	&B00000011
+	nesman	6
+	ret
+
+
+Por supuesto, en este caso es necesario limpiar los segmentos 1 y 2 con la 
+funci¢n 9 antes de realizar las reservas de memoria. Observa que no es 
+necesario convertir la direcci¢n del bloque al rango de la p gina 2 para 
+liberarlo.
+
+
+6.3. USO DE SEGMENTOS EXCLUSIVOS
+
+Por alguna raz¢n te puede interesar tener un segmento no TPA conectado en la 
+p gina 2 y hacer reservas de memoria sobre este segmento, de forma que los 
+bloques obtenidos sean accesibles directamente. En este caso, la mejor 
+alternativa es el uso de segmentos exclusivos. Ubica entonces un segmento 
+exclusivo usando la funci¢n 7, con‚ctalo en la p gina 2 usando la funci¢n 11, 
+y realiza las reservas de memoria sobre ese segmento usando la funci¢n 5 (no 
+necesitas limpiarlo previamente como en el caso de los segmentos de TPA, ya 
+que cuando un segmento nuevo es ubicado, es limpiado autom ticamente).
+
+Lo mismo es v lido para los TSRs. Aunque NestorMan no est  realmente dise¤ado 
+para ser usado con TSRs, podemos instalar uno en un segmento exclusivo si 
+confiamos en que otros programas no ejecutar n la funci¢n 0 ni se 
+desinstalar  NestorMan. Los programas normales nunca deber¡an usar la funci¢n 
+0 para liberar la memoria reservada, sino la funci¢n 17 o mejor la 18; y por 
+supuesto, nunca deber¡an liberar segmentos exclusivos que no hayan sido 
+ubicados por el propio programa.
+
+
+7. INTERIORIDADES DE NESTORMAN
+
+Esta secci¢n explica detalladamente c¢mo maneja NestorMan los bloques de 
+memoria din mica y las listas, y c¢mo es la estructura de las tablas interna 
+de segmentos y listas. No es necesario conocer estos detalles para usar 
+NestorMan, pero la informaci¢n est  aqu¡ para los curiosos.
+
+
+7.1. BLOQUES Y SEGMENTOS
+
+Un segmento ubicado por NestorMan se divide en dos areas: los primeros 256 
+bytes se denominan Memory Allocation Table (tabla de asignaci¢n de memoria, 
+MAT) y los restantes 16126 bytes se denominan Segment Data Area ( rea de 
+datos del segmento, SDA). La SDA, donde se localizan los bloques reservados, 
+est  dividida en clusters de 8 bytes; los bloques reservados siempre ocupan 
+un n£mero entero de clusters. Por ejemplo, un bloque de 30 bytes ocupa 4 
+clusters, es decir, 32 bytes.
+
+La MAT lleva el control del estado de los clusters de la SDA, que puede ser: 
+formar parte de un bloque reservado, o estar libre. Cada cluster tiene un 
+bit de la MAT asociado, con valor 1 para clusters reservados y 0 para 
+clusters libres. Dado un "Bit" de un "Byte" de la MAT, su cluster asociado es 
+el que empieza en la direcci¢n Byte*64 + Bit*8 del segmento. Observa que 
+los cuatro primeros bytes de la MAT se refieren a la propia MAT, lo cual es 
+absurdo; en realidad estos cuatro bytes son in£tiles y siempre est n puestos 
+a &HFF.
+
+Como puedes ver, la MAT informa sobre qu‚ clusters est n reservados o libres, 
+pero no dice nada del tama¤o de los bloques; esta informaci¢n se almacena en 
+la SDA, en dos bytes situados inmediatamente antes del propio bloque.
+
+As¡ pues el procedimiento completo cuando el usuario pide un bloque de tama¤o 
+T es el siguiente. NestorMan incremententa T en dos, y redondea el resultado 
+por exceso al m£ltiplo de 8 m s cercano; dividiendo este resultado por 8 se 
+obtiene el n£mero de clusters requerido. NestorMan examina entonces todos los 
+segmentos no exclusivos ubicados (s¢lo el segmento especificado en el caso de 
+la funci¢n 5) buscando bloques libres (secuencias de clusters libres) con un 
+tama¤o de al menos el requerido, y devuelve el segmento que contiene el menor 
+de estos bloques y su direcci¢n de inicio D (un segmento nuevo es ubicado si 
+no hay se encuentran bloques libres lo suficientemente grandes). Los bits 
+apropiados de la MAT son puestos a 1, el tama¤o requerido T es almacenado en 
+D, y D+2 es devuelto al usuario como la direcci¢n de inicio del bloque.
+
+Veamos un ejemplo sencillo. Tenemos un segmento limpio, cuya MAT tiene por 
+tanto este aspecto:
+
+FF FF FF FF 00 00 00 00 ...
+
+El usuario pide un bloque de 25 bytes. Incrementando este valor en dos, 
+obtenemos 27. Redondeando por defecto a m£ltiplo de 8, obtenemos 32; por 
+tanto necesitamos 4 clusters. Dado que el segmento est  completamente limpio, 
+el bloque comenzar  en la direcci¢n &H8100. As¡ pues el valor 25 es escrito 
+en &H8100, la direcci¢n &H8102 es devuelta al usuario como inicio del bloque, 
+y la MAT es actualizada como sigue:
+
+FF FF FF FF 0F 00 00 00 ...
+
+Ahora supongamos que el usuario pide un bloque de 15 bytes. 15+2=17, 
+redondeado es 24 -> se necesitan 3 clusters. S¢lo hay un cluster libre en el 
+segmento, que empieza en la direcci¢n &H8120; por tanto el valor 15 es 
+situado en &H8120, la direcci¢n &H8122 es devuelta al usuario, y la MAT es 
+actualizada como sigue:
+
+FF FF FF FF 7F 00 00 00 ...
+
+El usuario solicita ahora la liberaci¢n del primer bloque reservado, el que 
+empieza en la direcci¢n &H8102. NestorMan lee entonces el valor almacenado en 
+&H8100, lo transforma en un n£mero de clusters por 
+incremento-redondeo-divisi¢n, y actualiza la MAT como sigue:
+
+FF FF FF FF 70 00 00 00 ...
+
+de forma que ahora hay dos bloques libres en el segmento: uno peque¤o de 4 
+clusters, que empieza en la direcci¢n &H8100, y uno grande de 2041 clusters 
+que empieza en &H8138.
+
+La limpieza de un segmento es una operaci¢n sencilla: simplemente, toda la 
+MAT es puesta a 0, excepto los cuatro primeros bytes que son puestos a &HFF. 
+El segmento de c¢digo de NestorMan es un caso especial: dado que contiene el 
+propio c¢digo de NestorMan al principio de la SDA, los bytes de MAT para este 
+ rea (7K en esta versi¢n de NestorMan) siempre est n a &HFF. Los segmentos de 
+TPA deben ser limpiados antes de realizar reservas sobre ellos, a fin de 
+crearles una MAT.
+
+No es dif¡cil darse cuenta de que si se reservan y liberan sucesivamente 
+muchos segmentos de tama¤os dispares, la memoria en los segmentos estar  
+fragmentada, y esto es un problema. Por ejemplo, si todos los bytes de MAT 
+valen &HF0, esto significa que hay 8K libres en el segmento, pero no es 
+posible reservar bloques mayores de 32 bytes. Este es el punto d‚bil de 
+NestorMan, ya que no proporciona ning£n medio de desfragmentaci¢n de la 
+memoria; la desfragmentaci¢n debe realizarse manualmente. (Sin embargo, si se 
+usan listas hay una forma sencilla de desfragmentar la memoria; m s detalles 
+en la siguiente secci¢n)
+
+En cuanto a la tabla interna de segmentos de NestorMan, tiene una estructura 
+bastante simple. Para el segmento S, la posici¢n 2*S en la tabla contiene el 
+segmento al que pertenece, y 2*S+1 contiene el n£mero de segmento f¡sico. Los 
+segmentos exclusivos se identifican por el bit 4 del n£mero de slot puesto a 
+1, y un n£mero de slot 0 significa que no hay ning£n segmento l¢gico ubicado 
+con ese n£mero de segmento l¢gico. La direcci¢n de inicio de esta tabla puede 
+obtenerse mediante la funci¢n 1 de NestorMan.
+
+Observa que el hecho de haber N segmentos ubicados no implica necesariamente 
+que los segemntos 0 a N-1 existen. Cuando un segmento es liberado, su entrada 
+en la tabla de segmentos es puesta a 0, tanto el slot como el segmento 
+f¡sico; pero el resto de la tabla no se ve alterado. Y al ubicar un nuevo 
+segmento, se busca la primera entrada libre en la tabla para la asignaci¢n 
+del n£mero de segmento l¢gico.
+
+
+7.2. LISTAS
+
+No queda mucho por decir sobre el sistema de listas de NestorMan aparte de lo 
+explicado en la secci¢n 4.3 (y el formato del fichero al grabar una lista en 
+disco est  detallado en la explicaci¢n de la funci¢n 26). Simplemente a¤adir 
+tres comentarios y un ejemplo de manejo de listas.
+
+El primero comentario es acerca de la fragmentaci¢n de la memoria. Si est s 
+usando listas en vez de reservas directas de memoria, hay una forma f cil de 
+desfragmentar la memoria y hacerla as¡ m s aprovechable. El m‚todo es:
+
+- Graba todas las listas en un fichero temporal.
+- Destruye todas las listas y cr‚alas de nuevo (o simplemente borra todos los 
+elementos de las listas).
+- Carga las listas desde el fichero temporal.
+
+Al cargar las listas desde el fichero, los elementos ser n insertados en 
+memoria secuencialmente, con lo cual el problema de la fragmentaci¢n 
+desaparece. Por supuesto este m‚todo s¢lo deber¡a usarse cuando la memoria 
+est  totalmente agotada por culpa de la fragmentaci¢n, ya que los accesos a 
+disco son procesos lentos.
+
+El segundo comentario se refiere al desbordamiento en las listas. 
+Probablemente habr s notado que NestorMan no incorpora ning£n mecanismo para 
+controlar desbordamientos de lista (inserci¢n de demasiados elementos). Esto 
+es as¡ porque tales desbordamientos son imposibles. En efecto, los 
+descriptores de lista tienen tres bytes reservados para el n£mero de 
+elementos que contiene la lista; esto basta para contabilizar 16 millones de 
+elementos. Pero NestorMan s¢lo puede usar 4Mbytes de memoria (4 millones de 
+elementos suponiendo que cada uno usa s¢lo un byte, lo cual es imposible 
+debido al sistema de clusters y a las cabeceras de los elementos). As¡ pues, 
+la £nica limitaci¢n en el n£mero de elementos de una lista viene dada por la 
+memoria disponible.
+
+Y el tercer comentario trata sobre el formato de la tabla de listas internas. 
+Es similar a la tabla de segmentos: para cada lista interna hay un byte para 
+el n£mero de segmento del bloque que contiene el descriptor, y dos bytes 
+para la direcci¢n; la lista L tiene asociada la entrada que comienza en la 
+posici¢n L*3 de la tabla, y las listas no definidas tienen los tres bytes 
+puestos a cero.
+
+Ahora veamos un ejemplo simple de creaci¢n de una lista e inserci¢n/borrado 
+de elementos. Las cajas representan bloques reservados y las letras A, B, C 
+son etiquetas que se refieren a direcciones hipot‚ticas de bloque. Los 
+n£meros representan su valor real (3 bytes para cada etiqueta y n£mero).
+
+Supongamos que creamos una lista. Entonces tenemos su descriptor como sigue:
+
+
+-----------------
+| 0 | 0 | 0 | 0 | (el £ltimo n£mero es el contador de elementos)
+-----------------
+Descriptor de lista
+
+
+Ahora insertamos un elemento en la lista. Entonces tenemos:
+
+
+-----------------
+| A | A | A | 1 |
+-----------------
+Descriptor de lista
+
+---------------------
+| 0 | 0 |   Datos   |
+---------------------
+     Elemento A
+
+
+Como s¢lo hay un elemento en la lista, tiene el puntero a los elementos 
+anterior y siguiente puestos a 0. Adem s, el elemento es a la vez el primero, 
+el actual y el £ltimo.
+
+Ahora insertamos dos elementos m s, ambos al final de la lista. Entonces 
+tenemos:
+
+
+-----------------
+| A | A | C | 3 |
+-----------------
+Descriptor de lista
+
+---------------------	  ---------------------     ---------------------
+| 0 | B |   Datos   |	  | A | C |   Datos   |     | B | 0 |	Datos	|
+---------------------	  ---------------------     ---------------------
+     Elemento A 	       Elemento B		 Elemento C
+
+
+Observa que la estructura de punteros nos permite ver que A es el primer 
+elemento, B es el segundo, y C es el £ltimo. El elemento A es tambi‚n el 
+actual de acuerdo con el descriptor de la lista.
+
+Ahora avanzamos el puntero al elemento actual de forma que apunte a B, y lo 
+borramos de la lista. Entonces tenemos:
+
+
+-----------------
+| A | C | C | 2 |
+-----------------
+Descriptor de lista
+
+---------------------	  ---------------------     ---------------------
+| 0 | C |   Datos   |	  |		      |     | A | 0 |	Datos	|
+---------------------	  ---------------------     ---------------------
+     Elemento A 	     Bloque liberado		 Elemento C
+
+
+Por supuesto los bloques no se han movido, s¢lo sus punteros han cambiado de 
+forma que el elemento borrado es descartado. Observa que el elemento al 
+puntero actual se mueve autom ticamente al siguiente elemento (de B a C) 
+cuando el elemento actual es borrado.
+
+Ahora supongamos que insertamos un elemento nuevo al final de la lista, es 
+decir, tras el elemento C. Y supongamos tambi‚n que NestorMan reserva el 
+bloque previamente liberado para este nuevo elemento. Entonces la lista queda 
+como sigue:
+
+
+-----------------
+| A | C | B | 3 |
+-----------------
+Descriptor de lista
+
+---------------------	  ---------------------     ---------------------
+| 0 | C |   Datos   |	  | C | 0 |   Datos   |     | A | B |	Datos	|
+---------------------	  ---------------------     ---------------------
+     Elemento A 	    Elemento B (nuevo)		 Elemento C
+
+
+As¡ pues ahora el elemento A es el primero, C es el segundo, y B es el 
+tercero. Por supuesto el orden f¡sico de los elementos en memoria no es 
+relevante para la estructura de la tabla, s¢lo importan los punteros de los 
+elementos.
+
+
+8. COSAS VARIAS
+
+Los cambios en la versi¢n 1.22 respecto a la 1.21 son los sigientes:
+
+- Arreglado un fallo grave en las funciones de reserva/liberaci¢n de bloques 
+de memoria, que causaba la destrucci¢n del contenido de la memoria (lo que 
+muchas veces colgaba el ordenador) cuando se ped¡an/liberaban bloques de 
+ciertos tama¤os.
+
+Los cambios en la versi¢n 1.21 respecto a la 1.2 son los sigientes:
+
+- Ahora todas las llamadas a ENASLT vienen seguidas por un EI, por lo que las 
+interrupciones est n habilitadas durante m s tiempo (esto es necesario para 
+que InterNestor Suite gane estabilidad y no pierda datos de entrada).
+
+- Las llamadas internas a ALL_SEG y FRE_SEG est n precedidas por c¢digo que 
+guarda algunas variables de sistema que contienen informaci¢n sobre la 
+paginaci¢n; y seguidas por c¢digo que restaura estas variables. Esto es 
+necesario para evitar que el ordenador se cuelgue cuando estas rutinas son 
+llamadas desde una interrupci¢n del reloj y el programa principal 
+interrumpido es una funci¢n del DOS.
+
+Los cambios en la versi¢n 1.2 respecto a la 1.11 son los siguientes:
+
+- Ampliada la funci¢n 1 de forma que ahora devuelve informaci¢n en Cy.
+
+- Ahora todas las funciones dejan las interrupciones inhibidas al terminar.
+
+- A¤adidas las funciones 28 y 29.
+
+- A¤adido el soporte para InterNestor Suite (funciones 30 a 32 y c¢digo en la 
+p gina 3 para llamar a las rutinas de atenci¢n a la interrupci¢n de los 
+m¢dulos).
+
+- Corregido un fallo en este texto: en la secci¢n 4.1, al m‚todo para llamar 
+a las funciones de NestorMan a trav‚s del gancho EXTBIO se le llamaba 
+"llamada directa", cuando en realidad es "llamada indirecta".
+
+Los cambios en la versi¢n 1.11 respecto a la 1.1 consistieron en la 
+correcci¢n de los siguientes errores:
+
+- La destrucci¢n de listas internas con la funci¢n 22 no funcionaba.
+
+- El estado de la p gina 2 no era correctamente restaurado, lo cual causaba 
+que cualquier programa que ejecutara las funciones de NestorMan desde la 
+p gina 2 se colgara.
+
+- El puntero al elemento actual de una lista no era correctamente actualizado 
+si se eliminaba el elemento actual cuando este elemento era el primero o el 
+£ltimo de la lista.
+
+- Al intentar insertar un elemento de tama¤o cero con la funci¢n 24 se 
+devolv¡a Cy=0 (ausencia de error). Ahora se devuelve Cy=1 y un c¢digo de 
+error 4.
+
+Los cambios en la versi¢n 1.1 respecto a la 1.0 fueron:
+
+- Corregido un fallo que causaba que las funciones de reserva de bloques 
+devolvieran Cy=0 a£n cuando no hab¡a memoria libre disponible, y que al 
+buscar bloques libres algunos segmentos ya ubicados no fueran examinados.
+
+- El tama¤o del c¢digo de NestorMan (la porci¢n del segmento de c¢digo que no 
+puede usarse para reservas de memoria) creci¢ de 3K a 7K (en realidad 6K + 1K 
+del bufer para transferencias de disco).
+
+- A¤adido el m‚todo semidirecto de llamada de funciones.
+
+- Las funciones 0 y 17 fueron ampliadas de forma que ahora tambi‚n limpian la 
+tabla de listas internas.
+
+- La funci¢n 2 fue ampliada de forma que ahora tambi‚n devuelve el n£mero de 
+listas internas en el registro E y la direcci¢n de la tabla de listas en IY.
+
+- A¤adido el sistema de listas doblemente encadenadas (funciones 20 a 27).
+
+Existen varias versiones de NestorMan numeradas como 1.12 que han sido 
+distribuidas conjuntamente con betas de InterNestor Suite. Esas versiones no 
+est n documentadas y no deber¡an usarse nunca a partir de ahora: usa s¢lo la 
+versi¢n 1.2 o superior.
+
+Esta versi¢n de NestorMan probablemente sigue teniendo errores (no he podido 
+hacer muchas pruebas). Si descubres alguno, o si tienes alguna pregunta o 
+sugerencia, por favor escr¡beme a <konamiman@konamiman.com>
+
+Sin embargo, declino toda responsabilidad por el mal funcionamiento del 
+sistema o incluso por cuelgues del ordenador si escribes cualquier dato fuera 
+de los bloques reservados o si el puntero de una lista es establecido con un 
+valor incorrecto (funci¢n 23 con B=6). Esto no es un fallo de NestorMan sino 
+un fallo de tu programa; as¡ pues, cuando tengas problemas, por favor examina 
+bien tu programa antes de decirme que NestorMan no funciona bien.
+
+NestorMan es un programa de dominio p£blico: ­c¢pialo a diestro y siniestro! 
+Puedes encontrar la £ltima versi¢n de NestorMan, as¡ como otros fant sticos 
+NestorWares, en mi p gina web: http://www.konamiman.com
+
+Texto finalizado el 14-5-2002.
+
+
