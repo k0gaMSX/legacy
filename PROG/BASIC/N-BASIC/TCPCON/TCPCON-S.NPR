@@ -1,0 +1,1256 @@
+'***  TCP Console for InterNestor Suite - NestorBASIC version
+'***  Version 1.0
+'***  By Nestor Soriano (Konami Man), July 2003
+'***
+'***  This is the NestorPreTer source of a program that demonstrates
+'***  how to use InterNestor Suite from within a BASIC program
+'***  using NestorBASIC.
+'***
+'***  TCP Console will open a TCP connection to any host, then it will
+'***  enter and endless loop in which all the data received from that
+'***  connection will be sent to the screen, and all the data you type
+'***  at the keyboard will be sent to the connection. The program terminates
+'***  when either the remote host closes the TCP connection, the PPP
+'***  connection is lost, the modem carrier is lost (if modem is used),
+'***  or when you press CTRL-STOP.
+'***
+'***  By studying this code you will learn how to use InterNestor Suite
+'***  + NestorBASIC to:
+'***  - Make the modem to dial a number.
+'***  - Open, close and check a PPP connection.
+'***  - Resolve a host name using the IP built-in resolver.
+'***  - Open, close and check a TCP connection.
+'***  - Read data from, and send data to, a TCP connection.
+'***  - Read and write the configuration constants and variables
+'***    of an InterNestor Suite module.
+'***
+'***  To convert this source into a standard MSX-BASIC program,
+'***  use NestorPreTer, available at http://msx.konamiman.com
+
+@remon
+'--- TCP Console for NestorBASIC and InterNestor Suite - version 1.0
+'--- By Konami Man, July 2003
+'---
+'--- See the NestorPreTer "source" code file TCPCON.NPR for details
+'---
+@remoff
+
+'This code consists on the following main blocks:
+'Macro definitions, initialization, PPP connection open
+'(includings modem dial-up), TCP connection open, main loop,
+'and subroutines.
+
+
+'***************************
+'***                     ***
+'***  MACRO DEFINITIONS  ***
+'***                     ***
+'***************************
+
+'=========================
+'===  FOSSIL routines  ===
+'=========================
+
+'To call a Fossil routine, call the address resulting from adding
+'the base address (PEEK(&HF3FE)+256*PEEK(&HF3FF)) to the appropriate
+'offset defined for each routine.
+
+@define F_SetBaud 9
+@define F_RS_In 18
+@define F_RS_Out 21
+@define F_Chars_In_Buf 39
+@define F_Flush_Buf 45
+
+
+'====================================
+'===  InterNestor Suite routines  ===
+'====================================
+
+@define PPP_CHK &H800F
+@define PPP_OPEN &H8012
+@define PPP_CLOSE &H8015
+@define PPP_IPS &H8018
+@define PPP_MXU &H801E
+@define PPP_TABLES &H8021
+@define PPP_NETSTAT &H8024
+
+@define IP_TABLES &H8021
+@define IP_DNS_Q &H802A
+@define IP_DNS_S &H802D
+
+@define TCP_TABLES &H801E
+@define TCP_OPEN &H8021
+@define TCP_CLOSE &H8024
+@define TCP_ABORT &H8027
+@define TCP_SEND &H802A
+@define TCP_RCV &H802D
+@define TCP_STATUS &H8030
+
+
+'===========================================================
+'===  InterNestor Suite modules constants and variables  ===
+'===========================================================
+
+'--- PPP module configuration constants
+
+@define MRU 0
+@define AUTH_POLICY 38	'Set to 3 to authenticate, 0 to no authenticate
+@define ECHO_TIMER_V 57  'Set to 0 for not sending LCP echo packets
+@define AUTO_CLOSE_AUTH 61
+@define IP_LOCAL 63
+@define IP_REMOTE 67
+@define USER_LEN 79	'Set here the length of the PPP user name
+@define PASSWORD_LEN 80 'Set here the length of the PPP password
+@define PASSIVE_OPEN 81
+
+'--- PPP module variables
+
+@define AUTH_STATUS 38	'0=Not req., 1=Requested (CHAP), 2=OK, 3=Failed
+@define CLOSE_ERROR 65
+@define OPENED 96
+@define LAST_OPCLOSE 98
+
+'--- TCP module constants
+
+@define DEF_RCV_BUF 0	'Receive buffer size for TCP connections
+
+
+'===================
+'===  Variables  ===
+'===================
+
+@define LOOP l
+
+@define NMAN_SEG4 p(16) 	'NestorMan's segment number of segment 4
+@define INS_SEG1 p(17)		'InterNestor Suite module 1 segment number
+@define INS_SEG2 p(18)		'InterNestor Suite module 2 segment number
+@define INS_SEG3 p(19)		'InterNestor Suite module 3 segment number
+@define INS_SEG4 p(20)		'InterNestor Suite module 4 segment number
+
+@define PPP_BASE_CONS p(21)	'PPP module configuration constants base add.
+@define PPP_BASE_DEF_CONS p(22)     'PPP module variables base address
+@define PPP_CONS_SIZE p(23)
+@define PPP_BASE_USERPASS p(24) 'PPP module buffer for user name+password
+@define PPP_BASE_VARS p(25)
+@define IP_BASE_CONS p(26)	'IP module configuration constants base add.
+@define IP_BASE_DEF_CONS p(27)	    'IP module variables base address
+@define IP_CONS_SIZE p(28)
+@define TCP_BASE_CONS p(29)	'TCP module configuration constants base add.
+@define TCP_BASE_DEF_CONS p(30)     'TCP module variables base address
+@define TCP_CONS_SIZE p(31)
+
+@define FOS_BASE p(32)		'Base address of the FOSSIL driver routines
+
+@define TEMP p(33)
+@define SAVE_USER_LEN p(34)	'Length of the user name and password typed
+@define SAVE_PASSWORD_LEN p(35)
+
+@define TCP_HANDLE p(36)	'TCP connection number
+@define REMOTE_PORT p(37)	'Remote TCP port for connection
+
+@define MAX_VAR_NUM 37
+
+
+'===============
+'===  Other  ===
+'===============
+
+@define BUFFER_ADD &H3DA8	'Address of the 600 byte buf. in the NB seg.
+
+'String returned by the modem after a successful dial-up process.
+'This will be "CONNECT" for most modems, change it here
+'if your modem uses a different string.
+@define CONNECT_STR "CONNECT"
+
+
+'**************************
+'***                    ***
+'***   INITIALIZATION   ***
+'***                    ***
+'**************************
+
+~	cls:
+	screen 0:
+	width 80:
+	? "TCP Console for NestorBASIC - Version 1.0":
+	? "-----------------------------------------":
+	?
+
+
+'==========================
+'===  NestorBASIC load  ===
+'==========================
+
+~	maxfiles=0:
+	? "Loading NestorBASIC...":
+	bload"NBASIC.BIN",r
+
+~	if p(0)=0 then
+	   ? "ERROR: This computer has no mapped memory.":
+	end
+
+~	if p(0)=1 then
+	   ? "ERROR: Disk error when reading from NBASIC.BIN":
+	end
+
+~	if p(0)=2 then
+	   ? "ERROR: No free segments on primary mapper.":
+	end
+
+~	if p(0)=3 then
+	   ? "NestorBASIC was already installed."
+
+~	if p(0)=4 then
+	   ? "ERROR: Unknown error (code 4).":
+	   end
+	else
+	   ? "OK!"
+
+~	clear 100:
+	on stop gosub ~END: stop on:
+	defint a-z:
+	dim p(@MAX_VAR_NUM):
+	dim f$(1):
+	e=usr(1):
+	? "Available RAM:"; p(0)*16;"KBytes."
+
+	'--- We need no segments for any data storage, therefore we
+	'    free all the allocated memory so InterNestor Suite can use it.
+
+~	p(0)=5:
+	e=usr(80)
+
+
+'==================================================
+'===  InterNestor Suite related initialization  ===
+'==================================================
+
+	'--- Check for the presence of InterNestor Suite
+
+~	e=usr(81):
+	if p(0)=0 then
+	   ? "ERROR: NestorMan is not installed.":
+	   goto ~END
+	else if p(0)=1 then
+	   ? "ERROR: InterNestor Suite is not installed.":
+	   goto ~END
+	else
+	   ? "InterNestor Suite found."
+
+	'--- Also, we store the values returned by function 81
+
+~	@NMAN_SEG4 = p(5):
+	@INS_SEG1 = p(1):
+	@INS_SEG2 = p(2):
+	@INS_SEG3 = p(3):
+	@INS_SEG4 = p(4)
+
+	'--- Obtain the base address for the constants and variables
+	'    tables for each module
+
+~	p(0)=2:
+	p(1)=@PPP_TABLES:
+	p(2)=0:
+	e=usr(85):
+	@PPP_BASE_CONS = p(5)
+
+~	p(0)=2:
+	p(1)=@PPP_TABLES:
+	p(2)=&H0100:
+	e=usr(85):
+	@PPP_BASE_DEF_CONS = p(5):
+	@PPP_CONS_SIZE = p(3)
+
+~	p(0)=2:
+	p(1)=@PPP_TABLES:
+	p(2)=&H0200:
+	e=usr(85):
+	@PPP_BASE_VARS = p(5)
+
+~	p(0)=2:
+	p(1)=@PPP_TABLES:
+	p(2)=&H0400:
+	e=usr(85):
+	@PPP_BASE_USERPASS = p(5):
+
+~	p(0)=3:
+	p(1)=@IP_TABLES:
+	p(2)=0:
+	e=usr(85):
+	@IP_BASE_CONS = p(5)
+
+~	p(0)=3:
+	p(1)=@IP_TABLES:
+	p(2)=&H0100:
+	e=usr(85):
+	@IP_BASE_DEF_CONS = p(5):
+	@IP_CONS_SIZE = p(3)
+
+~	p(0)=4:
+	p(1)=@TCP_TABLES:
+	p(2)=0:
+	e=usr(85):
+	@TCP_BASE_CONS = p(5)
+
+~	p(0)=4:
+	p(1)=@TCP_TABLES:
+	p(2)=&H0100:
+	e=usr(85):
+	@TCP_BASE_DEF_CONS = p(5):
+	@TCP_CONS_SIZE = p(3)
+
+	'--- Obtain the base address of the Fossil routines
+
+~	if peek(&HF3FC)<>asc("R") or peek(&HF3FD)<>asc("S") then
+	   ? "ERROR: The Fossil driver is not installed.":
+           goto ~END
+	else
+	   @FOS_BASE = val("&H"+hex$(peek(&HF3FE) + 256*peek(&HF3FF)))
+
+	'--- Set RS232 baud rate to 19200
+
+~      p(0)=0:
+       p(1)=@FOS_BASE + @F_SetBaud:
+       p(5)=&H0707:
+       e=usr(58)
+
+
+'======================================================
+'===  Ask number for modem dial-up,                 ===
+'===  and username+password for PPP authentication  ===
+'======================================================
+
+	'--- First check if a PPP connection is already open, if so
+	'    skip the modem dial-up part and the PPP connection opening part
+
+~	p(0)=2:
+	p(1)=@PPP_CHK:
+	e=usr(85):
+	if p(13) then
+	   ? "PPP connection is already open.":
+	   goto ~PPP_ESTABLISHED_OK   '~PPP_PART_END
+	else
+	   ? "No PPP connection is open, so let's open one.":
+
+	'--- Ask the number to be dialed, and store it in BUFFER_ADD
+
+~	? "Enter the number to be dialed by the modem":
+        ? "(or just press ENTER to skip the modem dial-up part): ";:
+	line input f$(0):
+	f$(0)=left$(f$(0),80):
+	'if f$(0)="" then f$(0)=" "
+
+~	p(0)=0:
+	p(1)=@BUFFER_ADD:
+	e=usr(61)
+
+	'--- Ask the user name for PPP authentication,
+	'    and store it in BUFFER_ADD+80
+
+~	? "Enter the user name for PPP authentication":
+        ? "(or just press ENTER if authentication is not needed): ";:
+	line input f$(0):
+	f$(0)=left$(f$(0),80)
+
+~	p(0)=0:
+	p(1)=@BUFFER_ADD+80:
+	e=usr(61):
+	@SAVE_USER_LEN=len(f$(0))
+
+	'--- Ask the password for PPP authentication,
+	'    and store it in BUFFER_ADD+160
+	'    (only if an user name has been provided)
+
+~	if f$(0)<>"" then
+	   ? "Enter the password for PPP authentication: ";:
+	   line input f$(0):
+	   f$(0)=left$(f$(0),80)
+
+~	p(0)=0:
+	p(1)=@BUFFER_ADD+160:
+	e=usr(61):
+	@SAVE_PASSWORD_LEN=len(f$(0))
+
+
+'*****************************
+'***                       ***
+'***  PPP CONNECTION OPEN  ***
+'***                       ***
+'*****************************
+
+'=======================
+'===  Modem dial-up  ===
+'=======================
+
+	'--- Retrieve the number to be dialed.
+	'    If it is an empty string, skip the model dial-up part.
+
+~	p(0)=0:
+	p(1)=@BUFFER_ADD:
+	e=usr(62):
+	if f$(1)="" then goto ~MODEM_PART_END
+
+	'*** IMPORTANT NOTE ***
+	'    Before performing any direct access to the RS232 port,
+	'    IntertNestor Suite MUST be paused.
+	'    Otherwise the Fossil module, which is attached to the
+	'    timer interrupt hook, will capture all the incoming
+	'    data from the port, so we will not see any
+	'    of these incoming data.
+
+	'--- Pause InterNestor Suite. To do this,
+	'    call NestorMan function 32, and poke with 0
+	'    the address returned in IX register.
+
+~	p(0)=32:
+	e=usr(82):
+	poke p(6),0
+
+	'--- Send ATZ (reset) and ATE0 (disable echo) to the modem.
+	'    We ignore the modem replies for these commands.
+
+~	? "Configuring modem...":
+	f$(0)="ATZ":
+	gosub ~SEND_MODEM:
+	f$(0)="ATE0":
+	gosub ~SEND_MODEM
+
+	'>>> If your modem needs extra initialization commands,
+	'    send them from here, in the same way:
+	'    f$(0)="command" : gosub ~SEND_MODEM
+
+	'--- Get some modem info
+
+~	f$(0)="ATI0":
+	gosub ~SEND_MODEM:
+	gosub ~RCV_MODEM:
+	? "Modem info: "; f$(0)
+
+	'--- Send the dial command and wait for the reply
+
+~	? "Dialing " + f$(1) + "...":
+	f$(0)="ATDT"+f$(1):
+	gosub ~SEND_MODEM:
+	gosub ~RCV_MODEM:
+	? "The modem replied: " + F$(0)
+
+	'--- From here we do not need further direct access
+	'    to the RS232 port, so we resume InterNestor Suite execution.
+	'    To do this, call NestorMan function 32,
+	'    and poke the address returned in IX register
+	'    with the value returned in A register.
+
+~	p(0)=32:
+	e=usr(82):
+	poke p(6),p(12)
+
+	'--- If the reply does not contain @CONNECT_STR,
+	'    assume that connection failed and finish,
+	'    otherwise we are now connected to the remote end
+
+~	if instr(f$(0),@CONNECT_STR)=0 then
+	   ? "Dial-up process failed.":
+	   goto ~END
+	else
+	   ? "Dial-up process successful!"
+
+~MODEM_PART_END:
+
+
+'===============================================
+'===  Setup modules configuration constants  ===
+'===============================================
+
+	'--- First we set all the constants to their default values.
+	'    This is achieved by copying the default constants table
+	'    over the normal constants table for each module.
+	'    NestorMan function 14 is used for doing the copy.
+
+~	p(0)=14:	'NestorMan's function 14: block transfer
+	p(2)=val("&H"+hex$(@INS_SEG2*256)):     'A=Source segment
+	p(6)=@PPP_BASE_DEF_CONS:		'IX=Source address
+	p(3)=p(2):				'B=Destination segment
+	p(7)=@PPP_BASE_CONS:			'IY=Destination address
+	p(5)=@PPP_CONS_SIZE:			'HL=Block size
+	e=usr(82)
+
+~	p(0)=14:
+	p(2)=val("&H"+hex$(@INS_SEG3*256)):
+	p(6)=@IP_BASE_DEF_CONS:
+	p(3)=p(2):
+	p(7)=@IP_BASE_CONS:
+	p(5)=@IP_CONS_SIZE:
+	e=usr(82)
+
+~	p(0)=14:
+	p(2)=val("&H"+hex$(@INS_SEG4*256)):
+	p(6)=@TCP_BASE_DEF_CONS:
+	p(3)=p(2):
+	p(7)=@TCP_BASE_CONS:
+	p(5)=@TCP_CONS_SIZE:
+	e=usr(82)
+
+	'--- If PPP user name has length zero,
+	'    disable authentication (set constant AUTH_POLICY to 0)
+
+~	if @SAVE_USER_LEN=0 then
+	   p(0)=0:
+	   p(1)=@AUTH_POLICY:
+	   gosub ~PPP_CONS_WRITE:
+	   goto ~AUTH_SETUP_END
+
+	'--- Copy the user name and password to their appropriate locations,
+	'    as well as their sizes
+
+~	p(0)=0: 		'User name string
+	p(1)=@BUFFER_ADD+80:
+	p(2)=@INS_SEG2:
+	p(3)=@PPP_BASE_USERPASS:
+	p(4)=@SAVE_USER_LEN + 1:	'Tailing 0 byte must be included
+	e=usr(84)
+
+~	p(0)=@SAVE_USER_LEN:	'User name length
+	p(1)=@USER_LEN:
+	gosub ~PPP_CONS_WRITE
+
+~	p(0)=0: 		'Password string
+	p(1)=@BUFFER_ADD+160:
+	p(2)=@INS_SEG2:
+	p(3)=@PPP_BASE_USERPASS + 256:
+	p(4)=@SAVE_PASSWORD_LEN + 1:
+	e=usr(84)
+
+~	p(0)=@SAVE_PASSWORD_LEN:	'Password length
+	p(1)=@PASSWORD_LEN:
+	gosub ~PPP_CONS_WRITE
+
+~AUTH_SETUP_END:
+
+	'--- Set AUTO_CLOSE_AUTH to &HFF, so if the authenticacion fails,
+	'    connection is automatically closed.
+
+~	p(0)=&HFF:
+	p(1)=@AUTO_CLOSE_AUTH:
+	gosub ~PPP_CONS_WRITE
+
+	'--- Set MRU to 580
+	'    (smaller datagrams usually give better performance).
+
+~	p(0)=&H44:		'580 = &H244, we write it in two steps
+	p(1)=@MRU:
+	gosub ~PPP_CONS_WRITE:
+	p(0)=&H2:
+	p(1)=@MRU+1:
+	gosub ~PPP_CONS_WRITE
+
+	'--- Disable periodical sending of PPP echo requests
+	'    (Uncomment this if you get "PPP connection closed:
+	'    Too many unreplied LCP echo messages sent" often)
+
+~	'p(0)=0:
+	'p(1)=@ECHO_TIMER_V:
+	'gosub ~PPP_CONS_WRITE:
+	'p(0)=0:
+	'p(1)=@ECHO_TIMER_V+1:
+	'gosub ~PPP_CONS_WRITE
+
+	'--- Set the buffer size for incoming TCP data to 1500 bytes.
+	'    This gives better performance than the default, 16K.
+
+~	p(2)=val("&H"+hex$(256 * @INS_SEG4)):
+	p(5)=@TCP_BASE_CONS + @DEF_RCV_BUF:
+	p(3)=&HDC00:	'1500 = &H5DC
+	p(0)=13:
+	e=usr(82):
+
+	p(5)=p(5)+1:
+	p(0)=13:
+	p(3)=&H0500:
+	e=usr(82)
+
+	'--- Set the local IP address to 192.168.0.1
+	'    (uncomment this if the peer cannot provide to you
+	'    an IP address automatically, for example
+	'    when connecting to other machine via null-modem cable)/
+
+	'    To setup also the remote IP address,
+	'    copy-paste this block and change IP_LOCAL into IP_REMOTE;
+	'    and of course, use a different IP address.
+
+~	'p(0)=192:
+	'p(1)=@IP_LOCAL:
+	'gosub ~PPP_CONS_WRITE:
+	'p(0)=168:
+	'p(1)=@IP_LOCAL+1:
+	'gosub ~PPP_CONS_WRITE:
+	'p(0)=0:
+	'p(1)=@IP_LOCAL+2:
+	'gosub ~PPP_CONS_WRITE:
+	'p(0)=1:
+	'p(1)=@IP_LOCAL+3:
+	'gosub ~PPP_CONS_WRITE
+
+	'--- Set PASSIVE_OPEN to True.
+	'    If you have problems when opening the PPP connection,
+	'    try uncommenting this.
+
+~	'p(0)=&HFF:
+	'p(1)=@PASSIVE_OPEN:
+	'gosub ~PPP_CONS_WRITE
+
+	'>>> If you want to modify any other configuration constant
+	'    before opening the connection, do it here
+	'    (you need to create a subroutine IP_CONS_WRITE
+	'    similar to PPP_CONS_WRITE if you want to modify
+	'    constants on the IP module).
+
+
+'=============================
+'===  PPP Connection open  ===
+'=============================
+
+	'--- Request connection open
+
+~	? "Opening PPP connection...":
+	p(0)=2:
+	p(1)=@PPP_OPEN:
+	e=usr(85):
+	@TEMP=-1
+
+	'--- Wait until PPP module has recognized the open request
+
+~	gosub ~WAIT1:
+	p(1)=@LAST_OPCLOSE:
+	gosub ~PPP_VAR_READ:
+	if p(0)=0 then
+	   goto ~~
+
+	'--- Wait until either the connection is established
+	'    or it is closed for whatever reason
+
+~WAIT_PPP_OPEN:
+	gosub ~WAIT10:
+	gosub ~CHECK_PPP_CLOSE
+
+~	p(0)=2: 			'Connection is established?
+	p(1)=@PPP_CHK:
+	e=usr(85):
+	if p(13) then
+	   goto ~PPP_ESTABLISHED_OK
+
+~	p(0)=2:
+	p(1)=@PPP_NETSTAT:
+	e=usr(85):
+	if p(12) = @TEMP then
+	   goto ~WAIT_PPP_OPEN
+
+~	@TEMP = p(12):
+	if p(12)=0 then ? "Negotiating link parameters..."
+	else if p(12)=1 then ? "Authenticating..."
+	else if p(12)=2 then ? "Negotiating IP parameters..."
+
+~	goto ~WAIT_PPP_OPEN
+
+~PPP_ESTABLISHED_OK:
+
+	'--- Connection is now open: show some information
+
+~	? "PPP connection was established successfully!":
+	p(0)=2:
+	p(1)=@PPP_IPS:
+	p(2)=0:
+	e=usr(85):
+	? "Local IP address: ";:
+	gosub ~PRINT_IP:
+
+~	p(0)=2:
+	p(1)=@PPP_IPS:
+	p(2)=&H0100:
+	e=usr(85):
+	? "Remote IP address: ";:
+	gosub ~PRINT_IP
+
+~	p(0)=2:
+	p(1)=@PPP_IPS:
+	p(2)=&H0200:
+	e=usr(85):
+	? "Primary DNS server address: ";:
+	if p(4)=0 and p(5)=0 then
+	   ? "Not available"
+ 	else
+	   gosub ~PRINT_IP
+
+~	p(0)=2:
+	p(1)=@PPP_IPS:
+	p(2)=&H0300:
+	e=usr(85):
+	? "Secondary DNS server address: ";:
+	if p(4)=0 and p(5)=0 then
+	   ? "Not available"
+ 	else
+	   gosub ~PRINT_IP
+
+~	p(0)=2:
+	p(1)=@PPP_MXU:
+	e=usr(85):
+	? "MRU:"; p(4); "bytes":
+	? "MTU:"; p(5);	"bytes"
+
+~PPP_PART_END:
+
+
+'*****************************
+'***                       ***
+'***  TCP CONNECTION OPEN  ***
+'***                       ***
+'*****************************
+
+'==========================================================
+'===  Obtain host name and port, and resolve host name  ===
+'==========================================================
+
+	'--- Ask the host name and store it in BUFFER_ADD
+
+~	? "Enter the host name or IP address you want to connect to:":
+	line input f$(0):
+	if f$(0)="" then
+	   goto ~~
+	else
+	   f$(0)=left$(f$(0),80)
+
+~	p(0)=0:
+	p(1)=@BUFFER_ADD:
+	e=usr(61)
+
+	'--- Ask the port for connection
+
+~	? "Enter the port number you want to connect to (1-65535)":
+	line input f$(0):
+	if val(f$(0))<1 or val(f$(0))>65535 then
+	   goto ~~
+	else
+	   @REMOTE_PORT = val(f$(0))
+
+	'--- Call the resolver
+
+~	? "Resolving host name...":
+	p(0)=3:
+	p(1)=@IP_DNS_Q:
+	p(2)=0:
+	p(5)=@BUFFER_ADD:
+	e=usr(85)
+
+	'--- If an error is returned, show it and finish
+
+~	if p(13)=0 then
+	   goto ~OK_DNS_Q
+	else
+	   ? "Error when querying the resolver:"
+~	if p(12)=1 then ? "PPP connection is lost":
+	goto ~END
+~	if p(12)=4 then ? "No DNS servers are available":
+	goto ~END
+~	? "Unexpected error with code"; p(12):
+	goto ~END
+
+~OK_DNS_Q:
+
+	'--- Wait until the resolver has finished its work
+
+~	gosub ~WAIT10:
+	p(0)=3:
+	p(1)=@IP_DNS_S:
+	p(2)=0:
+	e=usr(85):
+	if p(12)=1 then
+	   goto ~~
+
+~	if p(12)=2 then goto ~OK_DNS_S
+
+	'--- If an error is returned, show it and finish
+
+~	p(0)=p(3):
+	gosub ~HIGH_BYTE:
+	? "Error when resolving the host name:"
+
+~	if p(0)=1 then ? "Query format error"
+~	if p(0)=2 then ? "Server failure"
+~	if p(0)=3 then ? "Name error"
+~	if p(0)=4 then ? "Query type not implemented"
+~	if p(0)=5 then ? "Query refused"
+~	if p(0)<16 and p(0)>5 then
+	   ? "Undefined DNS error with code"; p(0)
+~	if p(0)=16 then ? "Unable to get a reply from the queried DNS"
+~	if p(0)=17 then ? "Global operation timeout expired"
+'  if p(0)=18 then ? "Query aborted by user (impossible in this program)"
+~	if p(0)=19 then ? "PPP connection lost"
+~	if p(0)=20 then ? "Dead-end DNS reply received"
+~	if p(0)=21 then ? "The received reply is truncated"
+~	if p(0)>21 then ? "Unexpected error with code"; p(0)
+
+~	goto ~END
+
+~OK_DNS_S:
+	? "OK, the host's IP address is: ":
+	gosub ~PRINT_IP
+
+
+'=================================
+'===  Open the TCP connection  ===
+'=================================
+
+	'--- Compose the TCP pseudo-header in BUFFER_ADD
+
+~	p(0)=0:
+	p(1)=@BUFFER_ADD:
+
+	p(2)=p(5):	'IP address, returned by IP_DNS_S as L.H.E.D.
+	e=usr(9):
+	p(2)=p(4):
+	e=usr(9):
+
+	p(2)=@REMOTE_PORT:
+	e=usr(9):
+
+	p(2)=-1:	'Let InterNestor to choose the local port
+	e=usr(9):
+
+	p(2)=0: 	'Active connection open
+	e=usr(7):
+
+	p(0)=11:	'Extra parameter:
+	e=usr(7):	'Make TIME-WAIT interval shorter
+	p(0)=500:
+	e=usr(9):
+
+	p(0)=0: 	'0 byte to indicate the end of the pseudo-header
+	e=usr(7)
+
+	'--- Request TCP connection open
+
+~	p(0)=4:
+	p(1)=@TCP_OPEN:
+	p(5)=@BUFFER_ADD:
+	e=usr(85):
+
+	if p(13)=0 then
+	   on stop gosub ~STOP_END: stop on:
+	   goto ~TCP_OPEN_OK1
+
+	'--- If an error is returned, show it and finish
+
+~	? "An error has occurred when requesting TCP connection open:"
+~	if p(12)=2 then
+	   ? "PPP connection is lost"
+	else
+	   ? "Unexpected error with code"; p(12)
+~	goto ~END
+
+~TCP_OPEN_OK1:
+	@TCP_HANDLE = p(12):
+	? "Waiting for the connection to be stablished..."
+
+	'--- Wait until the connection is in the ESTABLISHED state
+
+~WAIT_TCP_OPENING:
+	gosub ~WAIT10:
+	gosub ~CHECK_PPP_CLOSE:
+
+	p(0)=4:
+	p(1)=@TCP_STATUS:
+	p(2)=@TCP_HANDLE * 256:
+	e=usr(85)
+
+~	if p(13) then
+	   ? "Error: connection refused or lost":
+	   goto ~END
+
+~	if p(12) <> 4 then goto ~WAIT_TCP_OPENING
+
+	'--- Connection is established, show some info
+
+~	?:
+	? "TCP connection is established!":
+	? "From now on you can type the data to be sent to the host,":
+	? "and you will see in the screen the data received from the host."
+~	? "Press CTRL-STOP at any time to finish.":
+	?:
+	? "Press any key... ";
+
+~	if inkey$="" then ~~ else cls
+
+
+'********************************
+'***                          ***
+'***  SEND-RECEIVE MAIN LOOP  ***
+'***                          ***
+'********************************
+
+~MAIN_LOOP:
+	gosub ~WAIT1:
+	gosub ~CHECK_PPP_CLOSE
+
+	'--- Check if connection still stablished, otherwise finish
+
+~	p(0)=4:
+	p(1)=@TCP_STATUS:
+	p(2)=@TCP_HANDLE * 256:
+	e=usr(85)
+
+~	if p(13) then
+	   ?:
+	   ? "*** TCP connection lost":
+	   goto ~END
+
+~	if p(12)<>4 then
+	   ?:
+	   ? "*** The host is closing the TCP connection":
+	   goto ~STOP_END
+
+
+'======================================================
+'===  Get incoming data and print it in the screen  ===
+'======================================================
+
+'Note: This routine works if the data does not contain zero bytes
+
+	'--- Try to obtain 80 bytes to BUFFER_ADD
+
+~GET_DATA_LOOP:
+	p(0)=4:
+	p(1)=@TCP_RCV:
+	p(2)=@TCP_HANDLE * 256:
+	p(5)=@BUFFER_ADD:
+	p(3)=80:
+	p(4)=0:
+	e=usr(85)
+
+	'--- Check for error
+
+~	if p(13)=0 then
+	   goto ~GET_DATA_OK
+
+~	if p(12)=5 then 	'No data available
+	   goto ~GET_DATA_END
+
+~	if p(12)=1 then
+	   ? "*** ERROR: TCP connection lost":
+	   goto ~END
+
+~GET_DATA_OK:
+
+	'--- Print all the incoming data
+
+~	@TEMP = p(3):	'Number of data obtained
+	p(0)=0:
+	p(1)=@BUFFER_ADD:
+	for @LOOP=1 to @TEMP:
+	    e=usr(3):
+	    ? chr$(p(2));:
+	next @LOOP
+
+~GET_DATA_END:
+
+
+'=================================================================
+'===  Check for typed characters to be sent to the connection  ===
+'=================================================================
+
+~	f$(1)=inkey$:
+	if f$(1)="" then goto ~MAIN_LOOP
+	else ? f$(1);
+
+	'--- Get one line of text and store it in BUFFER_ADD
+
+~	line input f$(0):
+	f$(0)=f$(1)+left$(f$(0),77) + chr$(13) + chr$(10):
+	p(0)=0:
+	p(1)=@BUFFER_ADD:
+	e=usr(61)
+
+	'--- Send the data to the TCP connection
+
+~	p(0)=4:
+	p(1)=@TCP_SEND:
+	p(2)=@TCP_HANDLE * 256:
+	p(5)=@BUFFER_ADD:
+	p(3)=len(f$(0)):
+	p(4)=&H0100:	'Send the data PUSHed
+	e=usr(85)
+
+	'--- Check for error
+
+~	if p(13)=0 then
+	   goto ~MAIN_LOOP
+
+~	if p(12)=1 then
+	   ? "*** ERROR: TCP connection lost":
+	   goto ~END
+
+~	if p(12)=3 then
+	   ? "*** ERROR: The host is closing the TCP connection":
+	   goto ~STOP_END
+
+~	if p(12)=4 then
+	   ? "*** ERROR: Mapped memory exhausted":
+	   p(0)=4:
+	   p(1)=@TCP_ABORT:
+	   p(2)=@TCP_HANDLE * 256:
+	   e=usr(85)
+
+~	goto ~END
+
+
+'*********************
+'***               ***
+'***  SUBROUTINES  ***
+'***               ***
+'*********************
+
+'================
+'===  YES/NO  ===
+'================
+
+'Waits for a key, that must be Y or N.
+'Returns @TEMP=0 for N, @TEMP=-1 for Y.
+
+~YES_NO:
+	f$(0)=inkey$:
+	if f$(0)="" then ~~
+
+~	@TEMP=asc(f$(0)) or 32:  'Convert key to lower case
+	if @TEMP = asc("n") then
+	   ? "n":
+	   @TEMP=0:
+	   return
+	else if @TEMP = asc("y") then
+	   ? "y":
+	   @TEMP=-1:
+	   return
+	else goto ~YES_NO
+
+
+'====================
+'===  SEND_MODEM  ===
+'====================
+
+'Sends a command to the modem.
+'Specify the command in F$(0).
+
+~SEND_MODEM:
+	gosub ~WAIT10:
+	p(0)=0:
+	p(1)=@FOS_BASE + @F_Flush_Buf:	 'First clears the RS232 rec. buf.
+	e=usr(58):
+
+	p(1)=@FOS_BASE + @F_RS_Out:	 'This Fossil function sends
+	for @LOOP=1 to len(f$(0)):	 'the data in A to the RS-232 port
+	   p(2) = asc(mid$(f$(0),@LOOP,1))*256:
+	   gosub ~WAIT1:	  
+	   e=usr(58):
+	next @LOOP:
+	p(2)=13*256:		'Sends the mandatory CR code at the end
+	e=usr(58):
+	return
+
+
+'===================
+'===  RCV_MODEM  ===
+'===================
+
+'Receives a reply from the modem.
+'The reply is returned in F$(0).
+'F$(1) is erased to avoid "out of string space" errors.
+
+'--- Wait until input data is available from Fossil
+
+~RCV_MODEM:
+	gosub ~WAIT10:
+	f$(0)="":
+	@LOOP=0:
+	p(0)=0:
+	p(1)=@FOS_BASE + @F_Chars_In_Buf
+
+~	e=usr(58):
+	if p(5)=0 then goto ~~
+
+'--- Receive all the available data
+
+~RCV_MODEM_LOOP:
+	p(1)=@FOS_BASE + @F_RS_In:
+	e=usr(58):
+	@LOOP=@LOOP+1:
+	if @LOOP<81 then
+	   f$(0)=f$(0) + chr$(p(12))
+
+~	p(1)=@FOS_BASE + @F_Chars_In_Buf:
+	e=usr(58):
+	if p(5)=0 then
+	   return
+	else
+	   goto ~RCV_MODEM_LOOP
+
+
+'=======================
+'===  PPP_CONS_READ  ===
+'=======================
+
+'Reads a PPP configuration constant.
+'Input:  p(1) = Constant offset
+'Output: p(0) = Data obtained
+
+'NestorMan function 12 is used for the read.
+
+~PPP_CONS_READ:
+	p(0)=12:		'Input: A=Segment number, HL=Address
+	p(2)=val("&H"+hex$(256 * @INS_SEG2)):
+	p(5)=@PPP_BASE_CONS + p(1):
+	e=usr(82):
+	p(0)=p(3):
+	gosub ~HIGH_BYTE:	'Output: B = Obtained data
+	return
+
+
+'========================
+'===  PPP_CONS_WRITE  ===
+'========================
+
+'Writes a PPP configuration constant.
+'Input:  p(1) = Constant offset
+'        p(0) = Data to write
+
+'NestorMan function 13 is used for the write.
+
+~PPP_CONS_WRITE:
+	p(2)=val("&H"+hex$(256 * @INS_SEG2)):
+	p(5)=@PPP_BASE_CONS + p(1):
+	p(3)=val("&H"+hex$(256 * p(0))):
+	p(0)=13:		'Input: A=Segment number, HL=Address, B=Data
+	e=usr(82):
+	return
+
+
+'======================
+'===  PPP_VAR_READ  ===
+'======================
+
+'Reads a PPP variable.
+'Input:  p(1) = Variable offset
+'Output: p(0) = Data obtained
+
+'NestorMan function 12 is used for the read.
+
+~PPP_VAR_READ:
+	p(0)=12:		'Input: A=Segment number, HL=Address
+	p(2)=val("&H"+hex$(256 * @INS_SEG2)):
+	p(5)=@PPP_BASE_VARS + p(1):
+	e=usr(82):
+	p(0)=p(3):
+	gosub ~HIGH_BYTE:	'Output: B = Obtained data
+	return
+
+
+'================
+'===  WAIT10  ===
+'================
+
+'Pauses the program execution for 1/5 or 1/6 seconds.
+
+~WAIT10:
+	time=0
+~	if time<10 then ~~ else return
+
+
+'--- WAIT1 waits for one timer interrupt
+
+~WAIT1:
+	time=0
+~	if time<2 then ~~ else return
+
+
+'=========================
+'===  CHECK_PPP_CLOSE  ===
+'=========================
+
+'Checks that the PPP connection still open.
+'If not, shows why it was closed, and finishes.
+
+~CHECK_PPP_CLOSE:
+	p(1)=@OPENED:			'Connection was closed?
+	gosub ~PPP_VAR_READ:
+	if p(0)<>0 then return
+
+~	p(1)=@CLOSE_ERROR:
+	gosub ~PPP_VAR_READ:
+~	?:
+	? "*** PPP connection was closed for the following reason:":
+~	if p(0)=1 then ? "User close request"
+~	if p(0)=2 then ? "Authentication failed"
+~	if p(0)=3 then ? "Loopback condition detected"
+~	if p(0)=4 then ? "Connection timer expired"
+~	if p(0)=5 then ? "Termination request packet received"
+~	if p(0)=6 then ? "Too many unreplied LCP echo packets sent"
+~	if p(0)>6 or p(0)<1 then ? "Unexpected reason code"; p(0)
+~	return ~END
+
+
+'==================
+'===  PRINT_IP  ===
+'==================
+
+'Prints an IP address stored in the form low(p(5)).high(p(5)).low(p(4)).high(p(4))
+'(that is, how it is returned after calling routine PPP_IPS)
+
+~PRINT_IP:
+	? mid$(str$(p(5) and 255),2); ".";:
+	p(0)=p(5):
+	gosub ~HIGH_BYTE:
+	? mid$(str$(p(0)),2);".";
+	mid$(str$(p(4) and 255),2); ".";:
+	p(0)=p(4):
+	gosub ~HIGH_BYTE:
+	? mid$(str$(p(0)),2):
+	return
+
+
+'====================
+'===  HIGH_BYTE  ====
+'====================
+
+'Converts P(0) into its high byte
+
+~HIGH_BYTE:
+	p(0) = ((p(0) and &HFF00) \ 256) and &HFF:
+	return
+
+
+'=============================
+'===  Program termination  ===
+'=============================
+
+'Close TCP connection
+
+~STOP_END:
+	? "*** Closing TCP connection":
+	p(0)=4:
+	p(1)=@TCP_CLOSE:
+	p(2)=@TCP_HANDLE * 256:
+	e=usr(85):
+
+	? "Close the PPP connection? (y/n) ";:
+	gosub ~YES_NO:
+	if @TEMP then
+	   ? "PPP connection closed.":
+	   p(0)=2:
+	   p(1)=@PPP_CLOSE:
+	   e=usr(85)
+
+'Uninstall NestorBASIC
+
+~END:
+	?"Finishing...":
+	p(0)=0:
+	e=usr(0):
+	end
+
+

@@ -1,0 +1,582 @@
+'***  TCP Console for InterNestor Lite - NestorBASIC version
+'***  Version 1.0
+'***  By Nestor Soriano (Konami Man), July 2003
+'***
+'***  This is the NestorPreTer source of a program that demonstrates
+'***  how to use InterNestor Lite from within a BASIC program
+'***  using NestorBASIC.
+'***
+'***  TCP Console will open a TCP connection to any host, then it will
+'***  enter and endless loop in which all the data received from that
+'***  connection will be sent to the screen, and all the data you type
+'***  at the keyboard will be sent to the connection. The program terminates
+'***  when either the remote host closes the TCP connection, the PPP
+'***  connection is lost, the modem carrier is lost (if modem is used),
+'***  or when you press CTRL-STOP.
+'***
+'***  By studying this code you will learn how to use InterNestor Suite
+'***  + NestorBASIC to:
+'***  - Check the Internet connection.
+'***  - Resolve a host name using the INL built-in resolver.
+'***  - Open, close and check a TCP connection.
+'***  - Read data from, and send data to, a TCP connection.
+'***
+'***  To convert this source into a standard MSX-BASIC program,
+'***  use NestorPreTer, available at http://msx.konamiman.com
+
+@remon
+'--- TCP Console for NestorBASIC and InterNestor Lite - version 1.0
+'--- By Konami Man, July 2003
+'---
+'--- See the NestorPreTer "source" code file TCPCON-L.NPR for details
+'---
+@remoff
+
+'This code consists on the following main blocks:
+'Macro definitions, initialization, Internet connection check,
+'TCP connection open, main loop, and subroutines.
+
+
+'***************************
+'***                     ***
+'***  MACRO DEFINITIONS  ***
+'***                     ***
+'***************************
+
+'====================================
+'===  InterNestor Lite routines  ===
+'====================================
+
+@define DNS_Q &H405D
+@define DNS_S &H4060
+
+@define TCP_OPEN &H4063
+@define TCP_CLOSE &H4066
+@define TCP_ABORT &H4069
+@define TCP_SEND &H406C
+@define TCP_RCV &H406F
+@define TCP_STATUS &H4072
+
+@define WAIT_INT &H4081
+@define NETWORK_STATE &H4084
+
+
+'===================
+'===  Variables  ===
+'===================
+
+@define LOOP l
+
+@define TEMP p(16)
+@define TCP_HANDLE p(17)	'TCP connection number
+@define REMOTE_PORT p(18)	'Remote TCP port for connection
+@define LOCAL_PORT p(19)	'Local TCP port for connection
+@define PASSIVE_OPEN p(20)	'-1 for passive open, 0 for active
+
+@define MAX_VAR_NUM 20
+
+
+'===============
+'===  Other  ===
+'===============
+
+@define BUFFER_ADD &H3DA8	'Address of the 600 byte buf. in the NB seg.
+
+
+'**************************
+'***                    ***
+'***   INITIALIZATION   ***
+'***                    ***
+'**************************
+
+~	cls:
+	screen 0:
+	width 80:
+	? "TCP Console for NestorBASIC & InterNestor Lite - Version 1.0":
+	? "------------------------------------------------------------":
+	?
+
+
+'==================================================
+'===  Check that InterNestor Lite is installed  ===
+'==================================================
+
+~	if peek(&HF400)<>asc("I") or peek(&HF401)<>asc("N") then 
+        print "ERROR: InterNestor Lite is not installed.": end
+
+
+'==========================
+'===  NestorBASIC load  ===
+'==========================
+
+~	maxfiles=0:
+	? "Loading NestorBASIC...":
+	bload"NBASIC.BIN",r
+
+~	if p(0)=0 then
+	   ? "ERROR: This computer has no mapped memory.":
+	end
+
+~	if p(0)=1 then
+	   ? "ERROR: Disk error when reading from NBASIC.BIN":
+	end
+
+~	if p(0)=2 then
+	   ? "ERROR: No free segments on primary mapper.":
+	end
+
+~	if p(0)=3 then
+	   ? "NestorBASIC was already installed."
+
+~	if p(0)=4 then
+	   ? "ERROR: Unknown error (code 4).":
+	   end
+	else
+	   ? "OK!"
+
+~	clear 100:
+	on stop gosub ~END: stop on:
+	defint a-z:
+	dim p(@MAX_VAR_NUM):
+	dim f$(1):
+	e=usr(1):
+	? "Available RAM:"; p(0)*16;"KBytes."
+
+	'--- We need no segments for any data storage, therefore we
+	'    free all the allocated memory so other resident programs
+	'    (if any is installed) can use it.
+
+~	p(0)=5:
+	e=usr(80)
+
+
+'=================================================
+'===  Check that we are connected to Internet  ===
+'=================================================
+
+~	p(1)=@NETWORK_STATE:
+	e=usr(86):
+	if p(12)<>2 then
+	    ? "ERROR: Not connected to Internet":
+	    goto ~END
+
+
+'*****************************
+'***                       ***
+'***  TCP CONNECTION OPEN  ***
+'***                       ***
+'*****************************
+
+'==========================================================
+'===  Obtain host name and port, and resolve host name  ===
+'==========================================================
+
+	'--- Ask if passive open is desired
+
+~	? "Passive open (Y/N)? ";:
+	gosub ~YES_NO:
+	@PASSIVE_OPEN=@TEMP
+
+~	'--- If passive connection is requested,
+	'    ask for the local port; otherwise
+	'    -1 will be especified (so a random
+	'    local port number will be used)
+
+~	if @PASSIVE_OPEN=0 then
+	    @LOCAL_PORT=-1:
+	    goto ~OK_LOCAL_PORT
+
+~	? "Enter the local port for the connection to be accepted on (1-65535): ";:
+	line input f$(0):
+	if val(f$(0))<1 or val(f$(0))>65535 then
+	   goto ~~
+	else
+	   @LOCAL_PORT = val(f$(0))
+
+~	goto ~DO_TCP_OPEN   'If passive open, stop asking
+
+~OK_LOCAL_PORT:
+
+	'--- Ask the host name and store it in BUFFER_ADD
+	'    (if active open)
+
+~	? "Enter the host name or IP address you want to connect to:":
+	line input f$(0):
+	if f$(0)="" then
+	   goto ~~
+	else
+	   f$(0)=left$(f$(0),80)
+
+~	p(0)=0:
+	p(1)=@BUFFER_ADD:
+	e=usr(61)
+
+	'--- Ask the remote port for connection
+
+~	? "Enter the port number you want to connect to (1-65535): ";:
+	line input f$(0):
+	if val(f$(0))<1 or val(f$(0))>65535 then
+	   goto ~~
+	else
+	   @REMOTE_PORT = val(f$(0))
+
+	'--- Call the resolver (if active open)
+
+~	? "Resolving host name...":
+	p(1)=@DNS_Q:
+	p(2)=0:
+	p(5)=@BUFFER_ADD:
+	e=usr(86)
+
+	'--- If an error is returned, show it and finish
+
+~	if p(13)=0 then
+	   goto ~OK_DNS_Q
+	else
+	   ? "Error when querying the resolver:"
+~	if p(12)=1 then ? "Internet connection is lost":
+	goto ~END
+~	if p(12)=4 then ? "No DNS servers are available":
+	goto ~END
+~	? "Unexpected error with code"; p(12):
+	goto ~END
+
+~OK_DNS_Q:
+
+	'--- Wait until the resolver has finished its work
+
+~	gosub ~WAIT10:
+	p(1)=@DNS_S:
+	p(2)=0:
+	e=usr(86):
+	if p(12)=1 then
+	   goto ~~
+
+~	if p(12)=2 then goto ~OK_DNS_S
+
+	'--- If an error is returned, show it and finish
+
+~	p(0)=p(3):
+	gosub ~HIGH_BYTE:
+	? "Error when resolving the host name:"
+
+~	if p(0)=1 then ? "Query format error"
+~	if p(0)=2 then ? "Server failure"
+~	if p(0)=3 then ? "Name error"
+~	if p(0)=4 then ? "Query type not implemented"
+~	if p(0)=5 then ? "Query refused"
+~	if p(0)<16 and p(0)>5 then
+	   ? "Undefined DNS error with code"; p(0)
+~	if p(0)=16 then ? "Unable to get a reply from the queried DNS"
+~	if p(0)=17 then ? "Global operation timeout expired"
+'  if p(0)=18 then ? "Query aborted by user (impossible in this program)"
+~	if p(0)=19 then ? "Internet connection lost"
+~	if p(0)=20 then ? "Dead-end DNS reply received"
+~	if p(0)=21 then ? "The received reply is truncated"
+~	if p(0)>21 then ? "Unexpected error with code"; p(0)
+
+~	goto ~END
+
+~OK_DNS_S:
+	? "OK, the host's IP address is: ":
+	gosub ~PRINT_IP
+
+
+'=================================
+'===  Open the TCP connection  ===
+'=================================
+
+	'--- Request TCP connection open
+	'    The IP address to connect is still stored in
+	'    P(4) and P(5) if active open,
+	'    otherwise they are set to 0
+
+~DO_TCP_OPEN:
+	if @PASSIVE_OPEN=-1 then p(4)=0: p(5)=0
+
+~	p(1)=@TCP_OPEN:
+	p(2)=-@PASSIVE_OPEN*256:
+	p(3)=0:		'Use default user timeout
+	p(6)=@REMOTE_PORT:
+	p(7)=@LOCAL_PORT:
+	e=usr(86):
+
+	if p(13)=0 then
+	   on stop gosub ~STOP_END: stop on:
+	   goto ~TCP_OPEN_OK1
+
+	'--- If an error is returned, show it and finish
+
+~	? "An error has occurred when requesting TCP connection open:"
+~	if p(12)=1 then ? "Too many TCP connections are open"
+~	if p(12)=2 then ? "Internet connection is lost"
+~	if p(13)=3 then ? "This connection already exists"
+~	if p(13)>5 then ? "Unexpected TCP open error with code"; p(12)
+~	goto ~END
+
+~TCP_OPEN_OK1:
+	@TCP_HANDLE = p(12):
+	? "Waiting for the connection to be established..."
+
+	'--- Wait until the connection is in the ESTABLISHED state
+
+~WAIT_TCP_OPENING:
+	gosub ~WAIT10:
+	gosub ~CHECK_NETWORK_LOST:
+
+	p(1)=@TCP_STATUS:
+	p(2)=@TCP_HANDLE * 256:
+	e=usr(86):
+	if p(12)=4 then goto ~TCP_OPEN_END
+
+	'--- If not in ESTABLISHED state, but not closed,
+	'    continue waiting
+
+~	if p(12)>0 then goto ~WAIT_TCP_OPENING
+
+	'--- If CLOSED, show the cause and finish
+
+~	? "Error: ";:
+	p(0)=p(3):gosub ~HIGH_BYTE 'Get error code from B register
+
+~	if p(0)=3 then ? "Connection refused"
+~	if p(0)=5 then ? "Connection timeout expired"
+~	if p(0)=6 then ? "Internet connection lost"
+~	if p(0)>6 then ? "Unexpected TCP close error with code"; p(0)
+
+~	goto ~END
+
+	'--- Connection is established, show some info
+
+~TCP_OPEN_END:
+	?:
+	? "TCP connection is established!":
+	? "From now on you can type the data to be sent to the host,":
+	? "and you will see in the screen the data received from the host."
+~	? "Press CTRL-STOP at any time to finish.":
+	?:
+	? "Press any key... ";
+
+~	if inkey$="" then ~~ else cls
+
+
+'********************************
+'***                          ***
+'***  SEND-RECEIVE MAIN LOOP  ***
+'***                          ***
+'********************************
+
+~MAIN_LOOP:
+	gosub ~WAIT1:
+	gosub ~CHECK_NETWORK_LOST
+
+	'--- Check if the connection still stablished, otherwise finish
+
+~	p(1)=@TCP_STATUS:
+	p(2)=@TCP_HANDLE * 256:
+	e=usr(86)
+
+~	if p(12)=0 then
+	   ?:
+	   ? "*** TCP connection lost":
+	   goto ~END
+
+~	if p(12)<>4 then
+	   ?:
+	   ? "*** The host has closed the TCP connection":
+	   goto ~STOP_END
+
+
+'======================================================
+'===  Get incoming data and print it in the screen  ===
+'======================================================
+
+'Note: This routine works if the data does not contain zero bytes
+
+	'--- Try to obtain 80 bytes to BUFFER_ADD
+
+~GET_DATA_LOOP:
+	p(1)=@TCP_RCV:
+	p(2)=@TCP_HANDLE * 256:
+	p(3)=80:
+	p(4)=@BUFFER_ADD:
+	e=usr(86)
+
+	'--- Check for error and data availability
+
+~	if p(13)=-1 then	'Connection closed?
+	   ? "*** ERROR: TCP connection lost":
+	   goto ~END
+
+~	if p(14)=-1 then 	'No data available?
+	   goto ~GET_DATA_END
+
+
+~GET_DATA_OK:
+
+	'--- Print all the incoming data
+
+~	@TEMP = p(3):	'Number of bytes obtained
+	p(0)=0:
+	p(1)=@BUFFER_ADD:
+	for @LOOP=1 to @TEMP:
+	    e=usr(3):
+	    ? chr$(p(2));:
+	next @LOOP
+
+~GET_DATA_END:
+
+
+'=================================================================
+'===  Check for typed characters to be sent to the connection  ===
+'=================================================================
+
+~	f$(1)=inkey$:
+	if f$(1)="" then goto ~MAIN_LOOP
+	else ? f$(1);
+
+	'--- Get one line of text and store it in BUFFER_ADD
+
+~	line input f$(0):
+	f$(0)=f$(1)+left$(f$(0),77) + chr$(13) + chr$(10):
+	p(0)=0:
+	p(1)=@BUFFER_ADD:
+	e=usr(61)
+
+	'--- Send the data to the TCP connection
+
+~	p(1)=@TCP_SEND:
+	p(2)=@TCP_HANDLE * 256:
+	p(3)=len(f$(0)):
+	p(5)=@BUFFER_ADD:
+	p(2)=p(2) or 1:	'Send the data PUSHed
+	e=usr(86)
+
+	'--- Check for error
+
+~	if p(13)=0 then goto ~MAIN_LOOP
+
+~	if p(12)=2 then ? "*** ERROR: TCP connection lost": goto ~END
+~	if p(12)=3 then ? "*** ERROR: The host is closing the TCP connection": goto ~STOP_END
+~	if p(12)=4 then ? "*** The output buffer of the TCP connection is full."
+			  "Please wait and retry.": goto ~MAIN_LOOP
+~	? "*** Unexpected TCP send error with code"; p(12): goto ~STOP_END
+
+~	goto ~END
+
+
+'*********************
+'***               ***
+'***  SUBROUTINES  ***
+'***               ***
+'*********************
+
+'================
+'===  YES/NO  ===
+'================
+
+'Waits for a key, that must be Y or N.
+'Returns @TEMP=0 for N, @TEMP=-1 for Y.
+
+~YES_NO:
+	f$(0)=inkey$:
+	if f$(0)="" then ~~
+
+~	@TEMP=asc(f$(0)) or 32:  'Convert key to lower case
+	if @TEMP = asc("n") then
+	   ? "n":
+	   @TEMP=0:
+	   return
+	else if @TEMP = asc("y") then
+	   ? "y":
+	   @TEMP=-1:
+	   return
+	else goto ~YES_NO
+
+
+'================
+'===  WAIT10  ===
+'================
+
+'--- Pauses the program execution for 1/5 or 1/6 seconds.
+
+~WAIT10:
+	for @LOOP=1 to 10:
+	gosub ~WAIT1:
+	next @LOOP:
+	return
+
+
+'--- WAIT1 waits for one timer interrupt
+
+~WAIT1: p(1)=@WAIT_INT:
+	e=usr(86):
+	return
+
+
+'============================
+'===  CHECK_NETWORK_LOST  ===
+'============================
+
+'Checks that the network connection stills available.
+'If not, shows why it was lost, and finishes.
+
+~CHECK_NETWORK_LOST:
+	p(1)=@NETWORK_STATE:
+	e=usr(86):
+	if p(12)=2 then return
+
+~	? "*** Internet connection lost":
+	return ~END
+
+
+'==================
+'===  PRINT_IP  ===
+'==================
+
+'Prints an IP address stored in the form low(p(5)).high(p(5)).low(p(4)).high(p(4))
+'(that is, how it is returned after calling any INL routine that return an IP address)
+
+~PRINT_IP:
+	? mid$(str$(p(5) and 255),2); ".";:
+	p(0)=p(5):
+	gosub ~HIGH_BYTE:
+	? mid$(str$(p(0)),2);".";
+	mid$(str$(p(4) and 255),2); ".";:
+	p(0)=p(4):
+	gosub ~HIGH_BYTE:
+	? mid$(str$(p(0)),2):
+	return
+
+
+'====================
+'===  HIGH_BYTE  ====
+'====================
+
+'Converts P(0) into its high byte
+
+~HIGH_BYTE:
+	p(0) = ((p(0) and &HFF00) / 256) and &HFF:
+	return
+
+
+'=============================
+'===  Program termination  ===
+'=============================
+
+'Close TCP connection
+
+~STOP_END:
+	? "*** Closing TCP connection":
+	p(1)=@TCP_CLOSE:
+	p(2)=@TCP_HANDLE * 256:
+	e=usr(86)
+
+'Uninstall NestorBASIC
+
+~END:
+	?"Finishing...":
+	p(0)=0:
+	e=usr(0):
+	end
+
