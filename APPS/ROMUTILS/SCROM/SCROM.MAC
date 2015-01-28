@@ -1,0 +1,623 @@
+; SCROM : Sound Cartridge as ROM
+
+.z80
+
+SC_128	EQU	0
+SC_SD	EQU	1
+SC_TH	EQU	2
+
+	aseg
+
+	org 100h
+
+start:
+	ld	de,INTROMSG
+	ld	c,9
+	call	5
+
+	call	findsc
+	call	gettype
+	call	printsc
+
+	call	get_opts
+
+	ld	a,(scslot)
+	inc	a
+	jp	z,eop
+
+	ld	a,(options)
+	or	a
+	ld	hl,5ch
+	jr	z,parm1
+	ld	hl,6ch
+parm1:
+	ld	de,FCB
+	ld	bc,1+8+3
+	ldir
+
+	ld	de,FCB
+	ld	c,0fh
+	call	5
+	ld	de,FILEOPEN
+	or	a
+	jp	nz,fail
+	
+	ld	hl,(FCB+17)
+	ld	b,3
+next_rot:
+	sla	l
+	rl	h
+	djnz	next_rot
+	ld	a,h
+	ld	(size),a
+	cp	9
+	jr	c,ok
+	cp	17
+	jr	nc,notok
+	ld	a,(type)
+	cp	SC_128
+	jr	z,ok
+notok:
+	ld	de,TOSMALL
+	ld	c,9
+	call	5
+ok:
+	call	loadrom
+
+	ld	a,(options)
+	or	a
+	ld	de,FILEOK
+	jr	z,fail
+	ld	hl,5eh
+nxt_opt1:
+	ld	a,(hl)
+	inc	hl
+	cp	'c'
+	jr	z,doconv
+	cp	'C'
+	jr	z,doconv
+	cp	'a'
+	jr	z,doconva
+	cp	'A'
+	jr	z,doconva
+	cp	' '
+	jr	z,rest_opt
+	jr	nxt_opt1
+doconv:
+	call	convert
+	jr	rest_opt
+doconva:
+	call	converta
+
+rest_opt:
+	ld	hl,5eh
+next_opt:
+	ld	a,(hl)
+	inc	hl
+	cp	'r'
+	jp	z,reset
+	cp	'R'
+	jp	z,reset
+	cp	's'
+	jp	z,dostart
+	cp	'S'
+	jp	z,dostart
+	cp	' '
+	ld	de,FILEOK
+	jp	z,fail
+	jr	next_opt
+
+fail:
+	ld	c,9
+	call	5
+	call	resetsc
+eop:
+	ld	a,(0f342h)
+	ld	h,40h
+	call	024h
+	ld	a,(0f343h)
+	ld	h,80h
+	call	024h
+	rst	0
+
+loadrom:
+	ld	de,LOAD
+	ld	c,9
+	call	5
+	ld	hl,2000h
+	ld	(FCB+14),hl
+	ld	hl,0
+	ld	(FCB+33),hl
+	ld	(FCB+35),hl
+
+	ld	de,2000h
+	ld	c,1ah
+	call	5
+
+	ld	a,(type)
+	ld	bc,0808h
+	cp	SC_SD
+	jr	z,ok_blok
+	ld	bc,0800h
+	cp	SC_TH
+	jr	z,ok_blok
+	ld	bc,1000h
+ok_blok:
+	ld	a,(size)
+	cp	b
+	jr	nc,nxt_blok
+	ld	b,a
+nxt_blok:
+	push	bc
+
+	ld	de,FCB
+	ld	hl,1
+	ld	c,27h
+	call	5
+	or	a
+	ld	de,FILEREAD
+	jr	nz,fail
+
+	ld	a,(first)
+	or	a
+	jr	nz,notchek
+	ld	hl,2000h
+	ld	d,(hl)
+	inc	hl
+	ld	e,(hl)
+	ld	hl,'AB'
+	call	rst_20h
+	ld	de,FILEWONG
+	ld	c,9
+	call	nz,5
+	ld	a,1
+	ld	(first),a
+notchek:
+	ld	a,(scslot)
+	ld	h,80h
+	call	024h
+	xor	a
+	ld	(0bffeh),a
+	pop	bc
+	push	bc
+	ld	a,c
+	ld	(9000h),a
+	ld	a,1fh
+	ld	(0bffeh),a
+
+	ld	hl,2000h
+	ld	de,8000h
+	ld	bc,2000h
+	ldir
+	
+	pop	bc
+	inc	c
+	djnz	nxt_blok
+end:
+	ret
+
+resetsc:
+	ld	a,(scslot)
+	ld	h,40h
+	call	024h
+	ld	a,(scslot)
+	ld	h,80h
+	call	024h
+
+	xor	a
+	ld	(0bffeh),a
+	ld	c,a
+	ld	a,(type)
+	cp	SC_SD
+	jr	nz,not_sd
+	ld	c,8
+not_sd:
+	ld	a,c
+	ld	(5000h),a
+	inc	a
+	ld	(7000h),a
+	inc	a
+	ld	(9000h),a
+	inc	a
+	ld	(0b000h),a
+	ret
+
+reset:
+	call	resetsc
+	call	stop_it
+
+	ld	a,(0fcc1h)
+	ld	hl,0
+	push	hl
+	jp	024h
+
+dostart:
+	call	stop_it
+	call	resetsc
+
+	ld	hl,0fedah
+	push	hl
+	ld	hl,(4002h)
+	push	hl
+	ld	a,(0fcc1h)
+	ld	h,0
+	jp	024h
+
+findsc:
+	ld	bc,00400h
+	ld	hl,0fcc1h
+nxtprim:
+	push	bc
+	push	hl
+	ld	a,(hl)
+	bit	7,a
+	jr	nz,expanded
+	ld	a,c
+	call	chkslot
+	jr	not_exp
+expanded:
+	call	chk_exp
+not_exp:
+	pop	hl
+	pop	bc
+	ret	c
+	inc	hl
+	inc	c
+	djnz	nxtprim
+	ld	a,0ffh
+	ld	(scslot),a
+	ret
+
+chk_exp:
+	and	80h
+	or	c
+	ld	b,4
+next_exp:
+	push	bc
+	call	chkslot
+	pop	bc
+	ret	c
+	add	a,4
+	djnz	next_exp
+	ret
+
+chkslot:
+	ld	(scslot),a
+	ld	h,80h
+	call	024h
+	call	set_vals
+	call	chk_vals
+	ld	a,(scslot)
+	ret
+
+set_vals:
+	ld	bc,1000h
+nxt_val:
+	push	bc
+	call	set_page
+	ld	l,c
+	ld	h,c
+	ld	(9000h),hl
+	ld	(9002h),hl
+	pop	bc
+	inc	c
+	djnz	nxt_val
+	xor	a
+	ld	(0bffeh),a
+	ret
+
+set_page:
+	xor	a
+	ld	(0bffeh),a
+	ld	a,c
+	ld	(09000h),a
+	ld	a,1fh
+	ld	(0bffeh),a
+	ret
+
+chk_vals:
+	ld	a,20h
+	ld	(0bffeh),a
+	ld	bc,0808h
+next_val:
+	ld	a,c
+	ld	(9000h),a
+	call	compare
+	jr	nc, chk_snat
+	inc	c
+	djnz	next_val
+	scf
+	ret
+
+chk_snat:
+	ld	bc,0800h
+nextval2:
+	ld	a,c
+	ld	(9000h),a
+	call	compare
+	ret	nc
+	inc	c
+	djnz	nextval2
+	scf
+	ret
+
+compare:
+	ld	hl,(9000h)
+	call	sub_comp
+	ret	nc
+	ld	hl,(9002h)
+sub_comp:
+	ld	a,l
+	cp	h
+	jr	nz,noway
+	cp	c
+	jr	nz,noway
+	scf
+	ret
+noway:
+	and	a
+	ret
+
+gettype:
+	ld	a,(scslot)
+	ld	h,80h
+	call	024h
+
+	ld	bc,1000h
+	ld	hl,9000h
+	ld	de,9001h
+
+nxt_val2:
+	xor	a
+	ld	(0bffeh),a
+	ld	a,c
+	ld	(hl),a
+	ld	a,1fh
+	ld	(0bffeh),a
+	ld	a,c
+	ld	(de),a
+	inc	c
+	djnz	nxt_val2
+
+	xor	a
+	ld	(0bffeh),a
+	ld	(hl),a
+	ld	a,(de)
+	cp	8
+	ld	c,SC_TH
+	jr	z,found
+	cp	255
+	ld	c,SC_SD
+	jr	z,found
+	ld	(hl),8
+	ld	a,(de)
+	cp	255
+	ld	c,SC_TH
+	jr	z,found
+	ld	c,SC_128
+found:
+	ld	a,c
+	ld	(type),a
+	ret
+
+convert:
+	ld	a,(scslot)
+	ld	h,80h
+	call	024h
+
+	ld	a,(type)
+	ld	bc,0808h
+	cp	SC_SD
+	jr	z,nextblok
+	ld	bc,0800h
+	cp	SC_TH
+	jr	z,nextblok
+	ld	bc,1000h
+nextblok:
+	push	bc
+	xor	a
+	ld	(0bffeh),a
+	ld	a,c
+	ld	(09000h),a
+	inc	a
+	ld	(0b000h),a
+	ld	a,1fh
+	ld	(0bffeh),a
+	ld	hl,8000h
+next_ad:
+	ld	a,(hl)
+	cp	32h
+	jr	nz,next
+	inc	hl
+	ld	a,(hl)
+	or	a
+	jr	nz,next
+	inc	hl
+	ld	a,(hl)
+	cp	040h
+	jr	z,ad_ok
+	cp	060h
+	jr	z,ad_ok
+	cp	080h
+	jr	z,ad_ok
+	cp	0A0h
+	jr	nz,next
+ad_ok:
+	add	a,10h
+	ld	(hl),a
+next:
+	inc	hl
+	ld	a,h
+	cp	0a0h
+	jr	nz,next_ad
+	pop	bc
+	inc	c
+	djnz	nextblok
+	xor	a
+	ld	(0bffeh),a
+	ld	a,(0f343h)
+	ld	h,80h
+	jp	024h
+
+converta:
+	ld	a,(scslot)
+	ld	h,80h
+	call	024h
+
+	ld	a,(type)
+	ld	bc,0808h
+	cp	SC_SD
+	jr	z,nxtbloka
+	ld	bc,0800h
+	cp	SC_TH
+	jr	z,nxtbloka
+	ld	bc,1000h
+nxtbloka:
+	push	bc
+	xor	a
+	ld	(0bffeh),a
+	ld	a,c
+	ld	(09000h),a
+	inc	a
+	ld	(0b000h),a
+	ld	a,1fh
+	ld	(0bffeh),a
+	ld	hl,8000h
+next_ada:
+	ld	a,(hl)
+	cp	32h
+	jr	nz,nexta
+	inc	hl
+	ld	a,(hl)
+	or	a
+	jr	nz,nexta
+	inc	hl
+	ld	a,(hl)
+	cp	060h
+	ld	c,50h
+	jr	z,ad_oka
+	cp	068h
+	ld	c,70h
+	jr	z,ad_oka
+	cp	070h
+	ld	c,90h
+	jr	z,ad_oka
+	cp	078h
+	ld	c,0b0h
+	jr	nz,nexta
+ad_oka:
+	ld	(hl),c
+nexta:
+	inc	hl
+	ld	a,h
+	cp	0a0h
+	jr	nz,next_ada
+	pop	bc
+	inc	c
+	djnz	nxtbloka
+	xor	a
+	ld	(0bffeh),a
+	ld	a,(0f343h)
+	ld	h,80h
+	jp	024h
+
+rst_20h:
+	ld	a,d
+	cp	h
+	ret	nz
+	ld	a,e
+	cp	l
+	ret
+
+printsc:
+	ld	a,(scslot)
+	cp	255
+	ld	de,NOSC
+	ld	c,9
+	jp	z,5
+	and	3
+	add	a,'0'
+	ld	(primslot),a
+	ld	a,(scslot)
+	rra
+	rra
+	and	3
+	add	a,'0'
+	ld	(secslot),a
+	ld	de,SCFOUND
+	ld	c,9
+	call	5
+	ld	a,(type)
+	ld	de,type128
+	cp	SC_128
+	jr	z,go
+	ld	de,typeSD
+	cp	SC_SD
+	jr	z,go
+	ld	de,typeTH
+go:	ld	c,9
+	jp	5
+
+get_opts:
+	ld	a,(5dh)
+	cp	' '
+	ld	de,USAGE
+	jp	z,fail
+	cp	'-'
+	ld	a,0
+	jr	nz,noopt
+	ld	a,(6dh)
+	cp	' '
+	ld	de,USAGE
+	jp	z,fail
+	ld	a,1
+noopt:
+	ld	(options),a
+	ret
+
+stop_it:
+	ld	b,0
+nextstop:
+	push	bc
+	call	0fd9fh
+	pop	bc
+	djnz	nextstop
+	ret
+
+INTROMSG:	db	'SCROM: Sound Cartridge (SCC+) ROM loader',13,10
+		db	'By Sean Young, 1997          version 1.2',13,10,13,10,'$'
+NOSC:		db	'No Sound Cartridge found!',13,10,'$'
+SCFOUND:	db	'Sound Cartridge found in slot '
+primslot:	db	'0-'
+secslot:	db	'0.',13,10,'$'
+
+type128:	db	'Sound Cartridge with 128Kb RAM',13,10,13,10,'$'
+typeTH:		db	'The Snatcher Sound Cartridge (64Kb RAM)',13,10,13,10,'$'
+typeSD:		db	'SD Snatcher Sound Cartridge (64Kb RAM)',13,10,13,10,'$'
+
+TOSMALL:	db	'Warning: File larger than memory in cartridge.',13,10,13,10,'$'
+FILEWONG:	db	'Warning: File not in ROM format.',13,10,13,10,'$'
+
+FILEOPEN:	db	'Cannot open file!$'
+FILEOK:		db	'File loaded.$'
+FILEREAD:	db	'Unable to read file!$'
+LOAD:		db	'Loading...',13,10,'$'
+
+USAGE:		db	'Loads a ROM file into the RAM of a Sound Cartridge.',13,10,13,10
+		db	'SCROM [-<options>] <romfile>',13,10
+		db	'  <options>',13,10
+		db	'     c   Loads konami4 format file (converts to konami5).',13,10
+		db	'     a   Loads ascii format file (converts to Ascii/8Kb).',13,10
+		db	'     r   Resets the MSX after loading the ROM file.',13,10
+		db	'     s   Starts the ROM file after loading it.',13,10
+		db	'  <romfile>',13,10
+		db	'     filename and extention of the ROM file to load.',13,10,'$'
+scslot:		db	0
+type:		db	0
+options:	db	0
+size:		db	0
+first:		db	0
+FCB:		ds	37
+
+END start
+
