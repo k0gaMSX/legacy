@@ -1,0 +1,107 @@
+******************************************************************************
+* ROM                                                                        *
+* EXAMPLE ROM                                                                *
+* DEMOSTRATION:								     *
+*	AS.COM								     *
+*	LD.COM								     *
+*	D2R.COM								     *
+*	TOAS.COM				                             *
+*	SMAKE.COM							     *
+*	ASIZE.COM							     *
+* (C) 2014 ARMANDO PEREZ ABAD                                                *
+******************************************************************************
+
+
+--- INCLUDES	--------------------------------------------------------------
+
+
+		INCL	HARD.MAC
+	
+
+--- EXTERNAL SYMBOLS	------------------------------------------------------
+
+
+- DATA
+	
+		EXTR	VRAM
+
+- SLOT
+
+		EXTR	SEARSLOT, SETSLOT	
+		
+- VARS
+
+		EXTR	SLOTVAR
+		EXTR	VPORT98W, VPORT99W, VPORT98R, VPORT99R
+
+
+--- ROM HEADER		------------------------------------------------------
+
+
+		DEFB	#41, #42
+		DEFW	INIT
+		DEFS	12
+
+
+--- PROGRAM INIT	------------------------------------------------------
+
+
+- INIT ----------------
+- INIT ROM 
+
+INIT		DI
+		IM	1
+		LD	SP,#F380		MANDATORY
+		CALL	SETSLOT			SET SLOT
+		LD	(SLOTVAR),A		SAVE SLOT
+
+-		INIT VDP PORT
+
+		LD	A,(#07)			WRITE
+    		LD	(VPORT98W),A
+		INC	A
+		LD	(VPORT98W),A	
+
+		LD	A,(#06)			READ
+		LD	(VPORT98R),A
+		INC	A
+		LD	(VPORT99R),A
+
+
+- 		SCREEN 2 COLOR 0,0,0		
+
+		LD	HL,0
+		XOR	A
+		LD	(FORCLR),A
+		LD	(BAKCLR),HL
+		LD	A,2
+		CALL	CHGMOD
+
+- 		SET VDP SPRITES 16X16 NOMAG
+		
+		LD	A,(VPORT98W)
+    		LD	C,A
+		LD	A,(RG0SAV + 1)
+    		AND	%11111100
+		OR	%10
+		DI
+		OUT	(C),A
+		LD	(RG0SAV + 1),A
+		LD	A,#80 + 1		VDP REG#1
+		EI
+		OUT	(C),A
+
+-		VRAM TRANSFER
+
+		LD	HL,VRAM
+		LD	DE,#0000
+		LD	BC,#4000
+		CALL	LDIRVM
+
+-		DI HALT (FERNANDO JOKE)
+
+		DI
+		JP	$
+		
+		
+

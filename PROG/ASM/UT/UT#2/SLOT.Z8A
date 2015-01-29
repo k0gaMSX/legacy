@@ -1,0 +1,57 @@
+		**************************************************************
+		* SLOT ROUTINES                                              *
+		**************************************************************
+
+
+--- INCLUDES	------------------------------------------------------
+
+
+		INCL	HARD.MAC		SYSTEM VARS, BIOS...
+
+
+--- PUBLIC SYMBOLS	------------------------------------------------------
+		
+
+		PUBL	SEARSLOT, SETSLOT
+
+
+--- ROUTINES		------------------------------------------------------
+
+
+- SEARSLOT ------------				
+- SEARCH ROM SLOT		
+- ROM IN PAGE 1 (#4000 - #7FFF)
+
+SEARSLOT	CALL	RSLREG
+		RRCA	
+		RRCA
+		AND	3
+		LD	C,A
+		LD	B,0
+		LD	HL,EXPTBL
+		ADD	HL,BC
+		LD	A,(HL)
+		AND	#80
+		JP	Z,$NOEXP
+		OR	C
+		LD	C,A
+		INC	HL
+		INC	HL
+		INC	HL
+		INC	HL
+		LD	A,(HL)
+		AND	%00001100
+$NOEXP		OR	C
+		LD	H,#80
+		RET
+
+- SSETSLOT ------------
+- SEARCH AND SET SLOT
+- OUT	A SLOT
+
+SETSLOT		CALL	SEARSLOT
+		PUSH	AF
+		CALL	ENASLT
+		POP	AF
+		RET
+
