@@ -1,18 +1,19 @@
 ---------------------------------------------------------------------------
-                  GEM - Gameboy Emulator for MSX v0.9990
-                      (c) 2000-2007 by The New Image
+                    GEM - Gameboy Emulator for MSX v1.0
+                      (c) 2000-2010 by The New Image
 
                       Programmed by Patriek Lesparre   
 
                             http://gem.tni.nl/
-                            e-mail: gem@tni.nl
 ---------------------------------------------------------------------------
 
 
 About GEM
 ---------
 GEM is a Gameboy emulator for MSX2/turboR running MSX-DOS2 written in 100%
-assembly language. As of version v1.0, Gfx9000 is required as well.
+assembly language. Since version v0.9990, Gfx9000 is required as well. By 
+employing advanced translation techniques, GEM is able to run games at
+playable speeds.
 
 
 System Configuration
@@ -20,20 +21,16 @@ System Configuration
 Minimum:
 MSX2, 256kB RAM, MSX-DOS2, Gfx9000
 or
-MSX turboR, Gfx9000
+MSXturboR, Gfx9000
 
-GEM is optimized for R800, so running it on a MSX turboR gives the best
-performance.
+Recommended:
+MSXturboR, Gfx9000, SCC, 4MB Memory Mapper
 
-Free memory required:
-160kB + ROM-size (absolute minimum, uses Interpreter mode only)
-160kB + 2 * ROM-size + ... (Dynamic Recompiler mode)
-
-The Dynamic Recompiler needs memory for its code-cache. The amount needed
-differs per ROM. If memory runs out, the remainder of the ROM program will
-be interpreted which has a negative effect on speed.
-
-GEM doesn't do any mapper switching and works from the mapper DOS selected.
+Memory requirements:
+GEM requires 144kB to run at all. Additionally, it needs space to store the
+Gameboy ROM, which may be in an external Memory Mapper. To be able to use
+the Dynamic Recompiler, space for twice the ROM size is required and at
+least 16K in main memory for cached translations.
 
 
 Usage
@@ -58,7 +55,6 @@ Configuration mode controls are:
 ESC  - Exits GEM
 STOP - Exits configuration mode without changes
 BS   - Backspace resets the emulated Gameboy
-F5   - Toggles sound on/off
 0    - Display all frames
 1    - Display 1/2 of all frames
 2    - Display 1/3 of all frames
@@ -71,6 +67,44 @@ F5   - Toggles sound on/off
 
 What's New
 ----------
+19 August 2010, v1.01
+
+  - Fixed grave bug in block chaining.
+
+12 August 2010, v1.0
+
+TNI celebrates GEM's 10th anniversary! Among other great improvements, this
+release brings a massive speed increase. With a small amount of frameskip,
+most games play fast enough to be enjoyed and many even run at full speed!
+
+  - Greatly improved sound emulation.
+    * Emulated sound lengths.
+    * Conversion of GB linear to PSG logarithmic volumes.
+    * Noise channel emulation on PSG.
+    * Added proper SCC emulation of the GB wave channel.
+    * Removed problematic PSG emulation of the GB wave channel.
+    * SCC support with accurate emulation of waveforms.
+    * Emulated volume envelopes.
+    * Partially emulated pitch sweep register.
+  - Greatly improved Dynamic Recompiler.
+    * Cache purging.
+    * Block chaining.
+    * Lazy evaluation of CPU registers.
+    * Optimized block loops.
+    * Static CPU simulation for improved code quality.
+    * Optimized block epilogue.
+    * Extended blocks beyond conditional jumps.
+    * Memory segment tracking.
+    * Optimized cache handling.
+    * Optimized memory access.
+    * Optimized I/O access.
+  - Greatly improved memory management.
+    * External Memory Mapper support. Large games finally work on MSX turboR!
+    * Rewrote loading and startup.
+    * Proper DOS2 memory handling, GEM now works in all DOS2 environments.
+  - Removed F5 key sound switch from configuration mode.
+  - Optimized GB Sprite DMA.
+
 8 August 2007, v0.9990
 
   This release signifies a major step. After the failing of the LPE-Z380
