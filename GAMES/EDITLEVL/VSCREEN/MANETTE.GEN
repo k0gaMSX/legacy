@@ -1,0 +1,100 @@
+;routine universelle de test joystick
+;copie des routine d5h et d8h du bios
+;legerement modifiee pour retourner le flag z a 1 si rien n'est appuye
+;
+;for m-kid game
+
+
+;*******************************************************************
+;
+;	lecture des joystick (port 0, 1, 2) voir #d5 du bios
+;
+;*******************************************************************
+rd_stk:	dec	a
+	jp	m,keybrd	;saut si clavier (port 0)
+	call	sel_stk		;selection du port joystick
+	ld	hl,stick_tbl1
+end_stk:
+	and	#0f
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	or	a		;position le flag z si rien de nouveau ;-)
+	ret
+
+keybrd:	call	rd_stk0
+	rrca
+	rrca
+	rrca
+	rrca
+	ld	hl,stick_tbl2
+	jr	end_stk
+
+sel_stk:			;selection du port joystick 1 ou 2
+	ld	b,a		;numero de port dans b
+	ld	a,#0f
+	call	rd_psgport
+	djnz	port2
+
+        and	#df		;joystick port 1
+        or	#03
+        jp	rd_stick
+
+port2   and	#af		;joystick port 2
+	or	#03
+rd_stick:
+	out	(#a1),a
+	call	rd_joy
+	ret
+
+rd_joy:
+	ld	a,#0e
+rd_psgport:
+	out	(#a0),a
+	in	a,(#a2)
+	ret
+
+rd_stk0:			;lit joystick port 0
+	in	a,(#aa)
+	and	#f0
+	add	a,8
+	out	(#aa),a
+	in	a,(#a9)
+	ret
+
+stick_tbl1:
+	defb	0,5,1,0,3,4,2,3,7,6,8,7,0,5,1,0
+stick_tbl2:
+	defb	0,3,5,4,1,2,0,3,7,0,6,5,8,1,7,0
+
+
+;*********************************************************
+;
+;	lecture des switch fire voir #d8 du bios
+;
+;*********************************************************
+rd_stg:
+	dec	a
+	jp	m,kbd_stg	;si strig 0 saute
+	push	af
+	and	1
+	call	sel_stk
+	pop	bc
+	dec	b
+	dec	b
+	ld	b,#10
+	jp	m,stg1
+	ld	b,#20
+stg1:	and	b
+stg2:	sub	1
+	sbc	a,a
+	or	a		;positionne le flag z si pas d'appui
+	ret
+
+kbd_stg:
+	call	rd_stk0
+        and	1
+	jr	stg2
+
+

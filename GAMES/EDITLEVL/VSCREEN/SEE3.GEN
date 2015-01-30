@@ -1,0 +1,580 @@
+; File:SEE3EDPL.asm             Project:SEE v3.00 release A    Update:31/10/94
+; Sound Effect Driver v3.00A    coding:SHADOW                  (c) FUZZY LOGIC
+; Replay a SEE file (v3.xx only!)
+;
+;   * This source is 100% PUBLIC DOMAIN, and may never be sold for profit! *
+; The Z80 commands 'EI' and "'DI' are not used, except during H_TIMI set/reset.
+; Uses ROM-BIOS: &h20 (RST) in the MAIN routine (check it, can be removed...).
+; If ye'r using DOS-2.xx then replace the MAPPER commands in "SETMAP:", or
+; use "MAP.COM" first.
+;+-----------------------------------------------------------------------------+
+
+H_TIMI   EQU   #FD9F          ; Hook_Timer Interrupt
+
+; Song structure OFFSETS
+SEEID  EQU   #00            ;"SEE3EDIT"
+HISPT  EQU   #08            ;Highest used Start_pattern
+HIPTA  EQU   #0A            ;Higest used pattern+1_address
+HISFX  EQU   #0C            ;Highest used SFX (not used)
+POSTB  EQU   #10            ;Table with SFX start pattern
+PATTS  EQU   #0210          ;Pattern data (max 1024 patts)
+
+
+
+;      [Vector Jump Table]
+        JP    SEE_IN          ;Init SEE replayer
+        JP    SEE_EX          ;Exit SEE replayer
+        JP    SETSFX          ;Set a new sound effect
+        JP    CUTSFX          ;Cut current sound effect
+SEEINT: JP    MAIN_A          ;Main routine jumper (for own timing)
+
+;      [Vars]
+SEEADR: DW    #8000          ;Base address
+SEETID: DB    1               ;Timer I.D.  0=SEE (uses "H_Timi")
+;                                          1=Own timing (from other ISR)
+SEESTA: DB    0               ;SEE status: b0: 1=SEE is installed
+;                                          b1: 1=SFX on (SFX status)
+;                                          b2: 1=Busy setting SFX
+SFXPRI: DB    0               ;SFX priority: 0=Overwrite, otherwise no effect
+;                                           can be set if the current one is
+;                                           still playing!
+SEEVOL: DB    15              ;Maximum Volume (makes real volume relative!)
+;                              (this option is not 100% yet)
+;+-----------------------------------------------------------------------------+
+
+
+;+----- Init SEE -----+
+; Out: Carry, 1=not installed (no SEE3 file)
+;             0=succes fully installed
+SEE_IN: LD    A,(SEESTA)      ;See already installed?
+        AND   A               ;[Cy:0]
+        RET   NZ              ;Yup, so return
+
+        LD    A,(SEEADR+1)    ;data in page 2 only!
+        AND   #BF
+        LD    (SEEADR+1),A
+
+        CALL  SETMAP
+
+        LD    HL,(SEEADR)     ;check file
+        LD    BC,SEEID
+        ADD   HL,BC
+        LD    DE,SEE_ID
+        LD    B,8
+SEEI0: LD    A,(DE)
+        CP    (HL)
+        SCF                   ;[Cy:1]
+;       JP    NZ,RETURN       ;not a SEE3EDIT file!
+        INC   HL
+        INC   DE
+        DJNZ  SEEI0
+
+        LD    A,#01
+        LD    (SEESTA),A      ;[status: SEE on]
+        DEC   A
+        LD    (SFXPRI),A      ;[Priority]
+
+        LD    A,(SEETID)      ;Timing on H_TIMI?
+        AND   A               ;[Cy:0]
+        JP    NZ,RETURN       ;nope.
+
+; set SEE on Vblank Hook
+        DI
+        LD    HL,H_TIMI       ;Store intr. hook
+        LD    DE,OLDVBL
+        LD    BC,5
+        LDIR
+        LD    DE,H_TIMI       ;Set new intr. hook
+        LD    HL,NEWVBL
+        LD    BC,5
+        LDIR
+        EI
+        AND   A               ;[Cy:0]
+        JP    RETURN
+
+NEWVBL: JP    MAIN            ;This is the new Vblank hook (H_TIMI)
+        RET
+        RET
+
+
+;+----- Exit SEE -----+
+SEE_EX: LD    A,(SEESTA)      ;See installed?
+        AND   A
+        RET   Z               ;Nope, so return
+        XOR   A
+        LD    (SEESTA),A      ;[status: SEE off]
+
+        CALL  PSGOFF
+
+        LD    A,(SEETID)      ;Timing from H_TIMI?
+        AND   A
+        RET   NZ              ;nope
+
+; reset SEE from Vblank hook
+        DI
+        LD    HL,OLDVBL       ;Restore intr. hook
+        LD    DE,#FD9F
+        LD    BC,5
+        LDIR
+        EI
+        RET
+
+
+;+----- Set new Sound Effect -----+
+; In:   C, SFX nr
+;       B, priority (0, low / <>0, high)
+; Out:  Cy, 1=SFX not set -> A, error nr
+;                               0, SFX doesn't excist
+;                               1, previous SFX still playing (higher prior.)
+;                             255, SFX not defined (OFF)
+SETSFX: LD    A,B             ;New Priority <>0 ?
+        AND   A
+        JR    NZ,SEFF0
+        LD    A,(SFXPRI)      ;Current SFX priority <>0?
+        AND   A
+        JR    Z,SEFF0
+        LD    A,(SEESTA)      ;SFX on?
+        AND   2               ;[Cy:0]
+        SCF                   ;[Cy:1]
+        LD    A,1             ;[error nr]
+        RET   NZ
+
+SEFF0: CALL  SETMAP          ;Store and Set mapper
+
+        LD    HL,(SEEADR)     ;Max SFX nr?
+        LD    DE,HISFX
+        ADD   HL,DE
+        LD    A,(HL)
+        CP    C
+        LD    A,0             ;[error nr]
+        JP    C,RETURN        ;Cy -> SFX doesn't excist
+
+        LD    L,C
+        LD    H,0
+        ADD   HL,HL           ;Eff *2
+        LD    DE,(SEEADR)
+        ADD   HL,DE
+        LD    DE,POSTB
+        ADD   HL,DE
+        LD    E,(HL)          ;Get start pattern
+        INC   HL
+        LD    D,(HL)
+        LD    A,D
+        CP    #FF            ;in use?...
+        SCF                   ;[Cy:1]
+        JP    Z,RETURN        ;...nope
+
+; All checks are done, now set SFX:
+        LD    A,C
+        LD    (SFX_NR),A
+        LD    A,B
+        LD    (SFXPRI),A
+
+        CALL  CUTSFX
+
+        LD    A,(SEESTA)      ;status:
+        OR    #04            ;b2: Busy setting SFX
+        LD    (SEESTA),A      ;(no double SEE int while setting SFX)
+
+        LD    (PAT_NR),DE
+
+        CALL  C_PTAD
+
+        LD    HL,0
+        LD    (TEMPO),HL
+        LD    A,#03          ;[status: b0: SEE on
+        LD    (SEESTA),A      ;         b1: SFX on]
+        XOR   A               ;[Cy:0], succesfull
+        JP    RETURN
+
+
+;+----- Cut Sound Effect -----+
+CUTSFX: LD    A,(SEESTA)
+        AND   1
+        RET   Z
+        LD    (SEESTA),A
+        JP    PSGOFF
+
+
+;+----- Main routine (timed) / Main_A from own timing -----+
+MAIN:   CALL  OLDVBL          ;Call old Vblank first [Timing from H_timi]
+	
+; ["MAIN_A" from timing other than H_timi ("SEEINT")]
+MAIN_A: LD    A,(SEESTA)
+        BIT   0,A             ;SEE on?
+        RET   Z               ;...nope
+        BIT   1,A             ;SFX on?
+        RET   Z               ;...nope
+        BIT   2,A             ;Busy setting new SFX?
+        RET   NZ              ;...Yup!
+
+        LD    A,(TEMPO+1)
+        SUB   1
+        LD    (TEMPO+1),A
+        RET   NC
+        LD    A,(TEMPO+0)
+        LD    (TEMPO+1),A
+
+        CALL  SETMAP
+        LD    HL,(PATADR)
+;<
+;  The following piece'a code is only an xtra security. It's not realy necessary
+;  if ye make correct SEE data! (check for a pattern overflow).
+;  Besides it uses a ROM-BIOS routine, so you'd better remove it if
+;  you've set page 0 to RAM and didn't include de RST vector jumps!
+        PUSH  HL              ;(HL=current pat adr)
+        LD    HL,(SEEADR)     ;[base adr]
+
+        PUSH  HL
+        LD    BC,HIPTA
+        ADD   HL,BC
+        LD    E,(HL)          ;[hi pat adr offset]
+        INC   HL
+        LD    D,(HL)
+        POP   HL
+
+        ADD   HL,DE
+        EX    DE,HL
+        POP   HL
+
+        call simrst20            ; Max patt adr?
+        JR    C,MAIN0
+
+        CALL  CUTSFX          ;Pattern overflow!!
+        JP    RETURN
+;>
+
+MAIN0: LD    A,(_HALT)       ;Halt counter
+        AND   A
+        JR    Z,MAIN1
+
+        DEC   A
+        LD    (_HALT),A
+        AND   A
+        JP    NZ,RETURN
+        JR    MAIN2          ;previously a HALT event was done, now do PSG
+
+MAIN1:  CALL  EVENT          ;Do operation command
+
+MAIN2:  CALL  SETPSG          ;Set PSG reg.
+        LD    (PATADR),HL
+        JP    RETURN
+
+
+;+----- Event Commands -----+
+EVENT: LD    A,(HL)          ;Get event
+        LD    C,A
+        AND   #70
+        AND   A
+        RET   Z               ; No command
+
+        CP    #10
+        JP    Z,EV_HLT        ; Halt
+        CP    #20
+        JP    Z,EV_FOR        ; Loop start
+        CP    #30
+        JP    Z,EV_NXT        ; Loop next
+        CP    #40
+        JP    Z,EV_STR        ; Continue Loop start
+        CP    #50
+        JP    Z,EV_RER        ; Continue Loop next
+        CP    #60
+        JP    Z,EV_TEM        ; Tempo
+        JP    EV_END          ; End
+
+;- Halt "hlt:x"
+EV_HLT: LD    A,C
+        AND   #0F
+        LD    (_HALT),A
+        POP   AF              ;restore stack
+        JP    RETURN
+
+;- Loop start "for:x"
+EV_FOR: PUSH  HL
+        LD    A,(LOOPNR)      ;Inc loop nr
+        INC   A
+        AND   #03
+        LD    (LOOPNR),A
+
+        PUSH  HL
+        LD    HL,LOOPBF
+        LD    D,0
+        LD    E,A
+        ADD   HL,DE
+        ADD   HL,DE
+        ADD   HL,DE
+
+        LD    A,C
+        AND   #0F
+        LD    (HL),A          ;[Counter]
+        INC   HL
+        POP   DE
+        LD    (HL),E          ; Set address
+        INC   HL
+        LD    (HL),D
+
+        POP   HL
+
+        RET
+
+;- Loop next "next"
+EV_NXT: PUSH  HL
+
+        LD    A,(LOOPNR)
+        AND   #03
+
+        LD    HL,LOOPBF
+        LD    D,0
+        LD    E,A
+        ADD   HL,DE
+        ADD   HL,DE
+        ADD   HL,DE
+        DEC   (HL)            ;Dec. counter
+        JR    Z,EV_N0        ;Loop end
+
+        INC   HL
+        LD    E,(HL)          ;get address
+        INC   HL
+        LD    D,(HL)
+
+        POP   HL
+        EX    DE,HL
+
+        RET
+
+; Loop done, now remove this loop
+EV_N0: LD    A,(LOOPNR)      ;Dec loopnr
+        DEC   A
+        AND   3
+        LD    (LOOPNR),A
+
+        POP   HL
+
+        RET
+
+;- Continue loop start "start"
+EV_STR: LD    (CLPADR),HL     ;Store Patt adr.
+        RET
+
+;- Continue loop next "rerun"
+EV_RER: LD    HL,(CLPADR)
+        RET
+
+;- Tempo "tmp:x"
+EV_TEM: LD    A,C
+        AND   #0F
+        LD    (TEMPO+0),A
+        LD    (TEMPO+1),A
+        RET
+
+;- Effect end " end "
+EV_END: LD    A,1
+        LD    (SEESTA),A
+        POP   AF              ;restore stack
+        JP    RETURN
+
+
+;+----- Set all PSG regs.-----+
+SETPSG: LD    IX,PSGREG
+        LD    E,0             ;Start reg.0
+        INC   HL              ;[skip event byte]
+
+        LD    B,3             ;First 6 reg. [sound frequency]
+STPS0: PUSH  BC
+        LD    C,(HL)          ;reg.0, 2 or 4
+        INC   HL
+        LD    B,(HL)          ;reg.1, 3 or 5
+        BIT   7,(HL)          ;check and handle Tuning
+        CALL  NZ,TUNWUP
+        BIT   6,(HL)
+        CALL  NZ,TUNWDW
+        INC   HL
+        LD    A,C
+        CALL  WRTPSG
+        LD    A,B
+        AND   #0F
+        CALL  WRTPSG
+        POP   BC
+        DJNZ  STPS0
+
+        LD    A,(HL)          ;reg.6 [Rustle frequency]
+        INC   HL
+        BIT   7,A
+        CALL  NZ,TUN_UP
+        BIT   6,A
+        CALL  NZ,TUN_DW
+        AND   #1F
+        CALL  WRTPSG
+
+        LD    A,(HL)          ;reg.7 [set channel ON/OFF]
+        AND   #3F
+        OR    #80            ;set bit 7 is necessary to write the PSG!!
+        INC   HL
+        CALL  WRTPSG
+
+        LD    B,3             ;reg 8-10 [Volume]
+STPS1:  PUSH  BC
+        LD    A,(HL)
+        INC   HL
+        BIT   5,A
+        JP    NZ,STPS2       ;Volume pattern is set.
+        LD    C,A
+        AND   #0F
+        BIT   7,C
+        CALL  NZ,TUN_UP
+        BIT   6,C
+        CALL  NZ,VOL_DW
+        CALL  FIXVOL
+STPS2:  AND   #1F
+        CALL  WRTPSG
+        POP   BC
+        DJNZ  STPS1
+
+        LD    B,3             ; reg 11-13 [volume effect]
+STPS_2: LD    A,(HL)
+        INC   HL
+        CALL  WRTPSG
+        DJNZ  STPS_2
+        RET
+
+
+; Tuning
+;- byte
+TUN_UP: ADD   A,(IX)          ; Up
+        RET
+TUN_DW: SUB   (IX)            ; Down
+        NEG
+        RET
+;- word
+TUNWUP: PUSH  HL
+        LD    L,(IX)
+        LD    H,(IX+1)
+        ADD   HL,BC
+        PUSH  HL
+        POP   BC
+        POP   HL
+        RET
+TUNWDW: PUSH  HL
+        LD    L,(IX)
+        LD    H,(IX+1)
+        XOR   A
+        SBC   HL,BC
+        PUSH  HL
+        POP   BC
+        POP   HL
+        RET
+
+; Volume Down
+VOL_DW: AND   #0F
+        LD    B,A
+        LD    A,(IX+0)
+        SUB   B
+        RET   NC
+        XOR   A
+        RET
+
+
+; Make relative volume (depending on "SEEVOL")
+; In:  A, volume
+; Out: A, new volume [seevol - (15-volume)]
+FIXVOL: AND   #0F
+        LD    B,A
+        LD    A,15
+        SUB   B
+        LD    C,A
+        LD    A,(SEEVOL)
+        AND   #0F
+        SUB   C
+        RET   NC
+        XOR   A
+        RET
+
+
+; Shut up PSG!
+PSGOFF: LD    A,7
+        OUT   (#A0),A
+        LD    A,#3F
+        OUT   (#A1),A
+        RET
+
+
+; Write PSG (not ROM-BIOS compatible!)
+; In:   A, data
+;       E, port
+;      IX, PSG store table
+; Out:  E+1
+;      IX+1
+WRTPSG: LD    (IX),A
+        INC   IX
+        PUSH  AF
+        LD    A,E
+        OUT   (#A0),A
+        INC   E
+        POP   AF
+        OUT   (#A1),A
+        RET
+
+
+; Calculate pattern address
+; In:  (PAT_NR), pattern nr (0-$3FF)
+; Out: (PATADR), pattern adr
+;            DE, pattern adr
+C_PTAD: PUSH  AF
+        PUSH  HL
+        PUSH  BC
+        LD    HL,(SEEADR)
+        LD    BC,PATTS
+        ADD   HL,BC
+        LD    BC,(PAT_NR)
+        LD    DE,15
+C_PA0: LD    A,B
+        OR    C
+        JR    Z,C_PA1
+        ADD   HL,DE
+        DEC   BC
+        JP    C_PA0
+C_PA1:  LD    (PATADR),HL
+        EX    DE,HL
+        POP   BC
+        POP   HL
+        POP   AF
+        RET
+
+
+; Store current mapper and Set SEE mapper
+SETMAP: PUSH  AF
+	call ReadFE		;        IN    A,(#FE)        ;Store old mapper
+        LD    (OLDMAP),A
+        LD    A,(SEEMAP)      	;Set SEE mapper
+        call WriteFE		;	OUT   (#FE),A
+        POP   AF
+        RET
+
+
+;+----- Return from SEE-driver, restore map -----+
+RETURN: PUSH  AF
+        LD    A,(OLDMAP)
+        call WriteFE		; 	OUT   (#FE),A
+        POP   AF
+        RET
+
+
+;+----------------------------< Work Area >------------------------------------+
+SEE_ID: DB    "SEE3EDIT"
+TEMPO:  DB    0,0
+PAT_NR: DW    0               ;Current pattern (0-511)
+PATADR: DS    2               ;Current pattern address
+SFX_NR: DB    0               ;Current Sound effect (0-255)
+_HALT:  DB    0               ;Halt counter (0-15)
+LOOPNR: DB    0               ;Current loop number (0-3)
+LOOPBF: DS    4*3
+CLPADR: DW    #00            ;"Continue" loop address
+
+;       reg.  0 1 2 3 4 5 6 7 8 9 A B C D
+PSGREG: DB    0,0,0,0,0,0,0,0,0,0,0,0,0,0 ;   - PSG port store buffer -
+
+OLDVBL: DS    5               ;Old Vblank Interrupt (H_timi)
+OLDMAP: DB    0               ;Stored mapper (page 2)
+
+END:
+

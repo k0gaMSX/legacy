@@ -1,0 +1,196 @@
+trt_enm2:
+	ld a,(ix+0)
+	cp 2
+	jp z,trt_enmdeath
+        ld l,(ix+9)	;
+        ld h,(ix+10)	;
+        ld a,(timer)
+        and spdinert
+        or a
+        jp nz,noacc
+        ld a,l
+        cp 5
+        jp z,noacc
+        inc hl
+noacc:        
+	ld (ix+9),l	;
+	ld (ix+10),h	;
+        call tstendown
+	ld e,(ix+7)	;
+	ld a,e
+	and 128
+	jp nz,engoleft
+engoright:
+	ld a,(ix+11)	;
+	add a,8		
+	ld (ix+14),a	;
+	call enm3x
+	cp bgrblocks
+	call c,eobstright
+        ld l,(ix+7)	;
+	ld h,(ix+8)	;
+	ld e,(ix+3)	;
+	ld d,(ix+4)	;
+	add hl,de
+	ld (ix+3),l	;
+	ld (ix+4),h	;
+	ld l,(ix+9)	;	
+	ld h,(ix+10)	;
+	ld e,(ix+5)	;
+	ld d,(ix+6)	;
+	add hl,de
+        ld (ix+5),l	;
+        ld (ix+6),h	;
+	ret
+
+eobstright:
+	ld a,-1
+	ld (ix+7),a	;
+	ld (ix+8),a	;
+	ret
+engoleft:
+	ld a,(ix+11)	;
+	ld (ix+14),a	;
+	call enm2x
+	cp bgrblocks
+	call c,eobstleft
+	ld l,(ix+7)	;
+	ld h,(ix+8)	;
+	ld e,(ix+3)	;
+	ld d,(ix+4)	;
+	add hl,de
+	ld (ix+3),l	;
+	ld (ix+4),h	;
+	ld l,(ix+9)	;
+	ld h,(ix+10)	;
+	ld e,(ix+5)	;
+	ld d,(ix+6)	;
+	add hl,de
+        ld (ix+5),l	;
+        ld (ix+6),h	;
+	ret
+
+eobstleft:
+	ld a,1
+	ld (ix+7),a	;
+	xor a
+	ld (ix+8),a	;
+	ret
+
+tstendown:
+	call enm2yb
+	cp bgrblocks
+	ret nc
+enobstd:
+	ld l,(ix+5)	;
+	ld h,(ix+6)	;
+	ld e,(ix+9)	;
+	ld d,(ix+10)	;
+	add hl,de
+	ld a,l
+	and %11111000
+	ld (ix+5),a	;
+	ld (ix+6),h	;
+        ld l,(ix+12)	;
+	ld h,(ix+13)	;	
+	ld (ix+9),l	;
+	ld (ix+10),h	;
+	ret
+enm2x:
+	ld l,(ix+3)	;
+	ld h,(ix+4)	;
+	ld d,(ix+8)	;
+	add hl,de
+	srl h
+	rr l
+	srl h
+	rr l 
+	srl h
+	rr l 
+	ex de,hl
+	ld l,(ix+5)	;
+	ld h,(ix+6)	;
+	ld bc,15
+	add hl,bc
+	ld a,l
+	and #F8
+	ld l,a
+	add hl,hl
+	add hl,hl
+	add hl,hl
+	add hl,hl
+	add hl,hl
+	add hl,de
+        ld de,#4000
+        add hl,de
+;        set 6,h
+	ld a,(hl)
+	ret
+enm2yb:
+	ld l,(ix+3)	;
+	ld h,(ix+4)	;
+	ld de,8
+	add hl,de
+	srl h
+	rr l
+	srl h
+	rr l 
+	srl h
+	rr l 
+	ex de,hl
+	ld l,(ix+5)	;
+	ld h,(ix+6)	;
+	ld c,(ix+9)	;
+	ld b,(ix+10)	;
+	add hl,bc
+	ld bc,16
+	add hl,bc
+	ld a,l
+	and #F8
+	ld l,a
+	add hl,hl
+	add hl,hl
+	add hl,hl
+	add hl,hl
+	add hl,hl
+	add hl,de
+        ld de,#4000
+        add hl,de
+;       set 6,h
+	ld a,(hl)
+	ret
+
+enm3x:
+	ld l,(ix+3)	;
+	ld h,(ix+4)	;
+	ld d,(ix+8)	;
+	add hl,de
+	ld de,15
+	add hl,de
+	srl h
+	rr l
+	srl h
+	rr l 
+	srl h
+	rr l 
+	ex de,hl
+	ld l,(ix+5)	;
+	ld h,(ix+6)	;
+	ld bc,15
+	add hl,bc
+	ld a,l
+	and #F8
+	ld l,a
+	add hl,hl
+	add hl,hl
+	add hl,hl
+	add hl,hl
+	add hl,hl
+	add hl,de
+        ld de,#4000
+        add hl,de
+;        set 6,h
+	ld a,(hl)
+	ret
+
+

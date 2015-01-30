@@ -1,0 +1,534 @@
+
+*i macro
+*i vsbios
+	org #1000
+
+start:
+	ld hl,palblank
+        call setpal
+	xor a
+	ld (exit),a
+        ld (nextload),a
+	call initall
+        di
+        
+stp:
+        di
+	ld a,(speedscroll)
+	ld b,a
+	ld a,(scrx)
+	add a,b
+	and 7
+	ld (scrx),a
+	or a
+        call z,doscroll
+        
+        call domenu
+	call MAIN_A
+	call dspmenu
+        ld a,192-10
+        call interupt
+        ld a,(scrx)
+	out (#99),a
+	ld a,128+18
+	out (#99),a
+        ld a,192
+        call interupt
+	xor a
+	out (#99),a
+	ld a,128+18
+	out (#99),a
+        call testf1
+        or a
+        jp z,set50hz
+        call testf2
+        or a
+        jp z,set60hz
+	call selectopt
+        call fade
+        ld a,(exit)
+        cp 0
+        jp z,stp
+	call SEE_EX
+	ld	a,0			;set screen 0
+	calslt	exttbl,chgmod
+        ld hl,pal
+        call setpal
+        ret
+domenu:
+	ld a,0
+	call rd_stk
+	or a
+	jp nz,tstmenu
+        ld a,1
+        call rd_stk
+        or a
+        jp z,nomove
+tstmenu:
+	cp 1
+	jp z,moveup
+	cp 5
+	jp z,movedown
+	ret
+selectopt:
+	ld a,0
+	call rd_stg
+	jp nz,tstopt
+        ld a,1
+        call rd_stg
+        or a
+        jp z,nospace
+tstopt:        
+	ld hl,pal
+	ld a,(cursel)
+	or a
+	jp z,startgame			; start
+	cp 1
+	jp z,joyselect
+	cp 2
+	jp z,chgfreq
+        cp 3
+        jp z,chgsound
+	cp 4
+	jp z,doexit			;exit
+	ret
+chgsound:
+	ld a,(rebound)
+	or a
+	ret nz
+	ld a,1
+	ld (rebound),a
+	ld bc,#010A
+	call SETSFX
+        ld a,(mussetting)
+        inc a
+        cp 3
+        call z,xora
+        ld (mussetting),a
+	ret        
+xora:
+	xor a
+	ret
+nospace:
+	xor a
+	ld (rebound),a
+	ret
+rebound:
+	db 0
+joyselect:
+	ld a,(rebound)
+	or a
+	ret nz
+	ld a,(joy)
+	xor 1
+	ld (joy),a
+	ld a,1
+	ld (rebound),a
+	ld bc,#010A
+	call SETSFX
+	ret
+startgame:
+	ld a,(rebound)
+	or a
+	ret nz
+        ld a,(nextload)
+        cp 1
+        ret z
+	ld a,1
+	ld (nextload),a
+        ld (rebound),a
+	ld bc,#0107
+	call SETSFX
+        ld hl,pal
+	jp initfadeout
+doexit:
+	ld a,(rebound)
+	or a
+	ret nz
+        ld a,(nextload)
+        cp -1
+        ret z
+	ld a,-1
+	ld (nextload),a
+        ld (rebound),a
+	ld bc,#0107
+	call SETSFX
+        ld hl,pal
+	jp initfadeout
+
+reg8cur:
+	db 41
+reg8old:
+	db 43	
+moveup:
+	ld a,(lastmove)
+	or a
+	ret nz
+	ld a,(cursel)
+	or a
+	ret z
+	dec a
+	ld (cursel),a
+	ld bc,#0109
+	call SETSFX
+        ld a,1
+        ld (lastmove),a
+	ret
+movedown:
+	ld a,(lastmove)
+	or a
+	ret nz
+	ld a,(cursel)
+	cp 4
+	ret z
+	inc a
+	ld (cursel),a
+	ld bc,#0109
+	call SETSFX
+        ld a,5
+        ld (lastmove),a
+	ret	
+nomove:
+	xor a
+	ld (lastmove),a
+	ret
+lastmove:
+	db 0	
+cursel:
+	db 0
+chgfreq:
+	ld a,(rebound)
+	or a
+	ret nz
+	ld a,1
+	ld (rebound),a
+	ld bc,#010A
+	call SETSFX
+	ld a,(#ffe8)
+	and 2
+	jp nz,set60hz                
+set50hz:
+	ld a,(#ffe8)
+	or 2
+        ld (#ffe8),a
+	out (#99),a
+	ld a,128+9
+	out (#99),a
+	jp stp        
+set60hz:
+	ld a,(#ffe8)
+	and 253
+	ld (#ffe8),a
+	out (#99),a
+	ld a,128+9
+	out (#99),a
+	jp stp        
+
+speedscroll:
+	db 2
+scrx:
+	db 0
+
+txtpos: dw mytext       
+doscroll:
+	ld de,curtext
+	ld hl,curtext+1
+	ld bc,31
+	ldir
+	ld hl,(txtpos)        
+	ld a,(hl)
+	cp "#"
+	call z,speed4
+	cp "%"
+	call z,speed2
+	ld (curtext+31),a
+        ld de,#1800+(32*23)
+        call vpoke
+        ld hl,curtext
+        ld c,#98
+        ld b,32
+        otir
+	ld hl,(txtpos)        
+	inc hl
+	ld a,(hl)
+	cp "*"
+	call z,resettext
+	ld (txtpos),hl
+	ret	
+resettext:
+	ld hl,mytext
+        ret
+speed2:
+	ld a,2
+	ld (speedscroll),a
+	ld a,32
+	ret
+speed4:
+	ld a,4
+	ld (speedscroll),a
+	ld a,32
+	ret
+settnp:
+	di
+	ld a,(hl)
+	ld b,a
+	inc hl
+looptnpy:
+	push af
+	push bc
+	push hl
+	push de
+	call vpoke
+	pop de
+	pop hl
+	ld c,#98
+        otir
+        pop bc
+	push hl
+	ld hl,32
+	add hl,de
+	ex de,hl
+	pop hl
+	pop af
+        dec a
+	jp nz,looptnpy
+        ret
+        
+
+blank:
+	db 8
+	ds 256,255
+
+mytext:	
+	DB " $                      VSCREEN MENU         "
+	DB "                                             "
+	DB " SELECT FREQUENCY WITH F1/F2                 "
+        DB " *"
+        
+curtext: ds 32,32
+
+initall:
+	ld	a,1 	;set color 1,14,14
+	ld	(#f3ea),a
+	ld	a,1 
+	ld	(#f3eb),a
+	ld	a,15
+	ld	(#f3e9),a
+	calslt	exttbl,chgclr
+	
+	ld a,4
+	call setscreenmode
+	di
+        ld a, 00100010b
+        out (#99),a
+        ld a,128+1
+        out (#99),a
+        
+        ld a,159
+        out (#99),a
+        ld a,128+3
+        out (#99),a
+
+        xor a
+        out (#99),a
+        ld a,128+4
+        out (#99),a
+
+;ld hl,name6
+;ld de,end
+;call diskload		; load fonts
+	ld de,8*32
+	call settgp 		; set fonts tgp 
+	
+;ld hl,name5
+;ld de,end
+;call diskload		; load tc data
+	ld hl,#9000+7
+        call settc
+	call cleartnp
+	call setfnttc
+	ld hl,pal
+	ld a,0
+	call initfadein
+        call cleartnp
+
+        ld a, 01100010b
+        out (#99),a
+        ld a,128+1
+        out (#99),a
+
+	ret
+cleartnp:
+	ld de,#1800
+	call vpoke
+	ld a,16
+	ld b,0
+	ld c,3
+loopb:
+	out (#98),a
+	djnz loopb
+	dec c
+	jp nz,loopb
+	ret
+settgp:
+	call vpoke
+	ld hl,#8000+7
+	ld c,#98
+	ld b,0
+	otir
+        otir
+	ret
+settc:
+        ld de,#2000
+	push hl
+        call vpoke
+	pop hl
+        ld b,0
+	ld c,#98
+	otir
+        ret
+setfnttc:
+	ld de,#2000+(32*8)
+	call vpoke
+	ld b,0
+	ld c,7
+	ld a,#51
+loopfnt:
+	out (#98),a
+	djnz loopfnt
+	dec c
+	jp nz,loopfnt
+	ret
+
+
+testf1:
+	in a,(#aa)
+	and %11110000
+	add a,6
+        out (#aa),a
+        in a,(#a9)
+        and 32
+        ret
+
+testf2:
+	in a,(#aa)
+	and %11110000
+	add a,6
+        out (#aa),a
+        in a,(#a9)
+        and 64
+        ret
+testf3:
+	in a,(#aa)
+	and %11110000
+	add a,6
+        out (#aa),a
+        in a,(#a9)
+        and 128
+        ret
+pal:
+	db 0,0
+	db 0,0
+	db 0,0
+	db 0,0
+	db 0,0
+	db #77,7
+	db 0,0
+	db 0,0
+	db 0,0
+	db 0,0
+	db 0,0
+	db 0,0
+	db 0,0
+	db 0,0
+	db 0,0
+	db #77,7
+
+*i manette.gen
+palblank:
+	ds 32
+
+ymenu 	equ 12
+xmenu	equ 8
+dspmenu:
+	ld de,#1800+(ymenu*32)+xmenu
+	call vpoke
+	ld hl,starttxt
+	ld bc,#1398
+	otir
+	ld de,#1800+(ymenu*32)+32+xmenu
+	call vpoke
+	ld hl,keybtxt
+	ld a,(joy)
+	or a
+	jp z,outctrl
+	ld hl,joytxt
+outctrl:
+	ld bc,#1398
+	otir
+	ld de,#1800+(ymenu*32)+64+xmenu
+	call vpoke
+	ld hl,paltxt
+	ld a,(#ffe8)
+        and 2
+        jp nz,outfrq
+        ld hl,ntsctxt                
+outfrq:
+	ld bc,#1398
+	otir
+	ld de,#1800+(ymenu*32)+96+xmenu
+	call vpoke
+	ld hl,music1txt
+	ld a,(mussetting)
+	or a
+	jp z,outmusset
+	ld hl,music2txt
+	cp 1
+	jp z,outmusset
+	ld hl,music3txt
+outmusset:
+	ld bc,#1398
+	otir
+	ld de,#1800+(ymenu*32)+128+xmenu
+	call vpoke
+	ld hl,exittxt
+	ld bc,#1398
+	otir
+        ld a,(cursel)
+        add a,ymenu
+        ld e,a
+        ld h,32
+        call mult8
+        
+        ld de,#1800+(xmenu)
+        add hl,de
+        ex de,hl
+        call vpoke
+        ld a,"O"
+        out (#98),a
+	ret
+
+starttxt:
+	db "  START            "
+keybtxt:
+	db "  CONTROL: KEYBOARD"
+joytxt:
+	db "  CONTROL: JOYSTICK"
+paltxt:
+	db "  FREQUENCY: PAL   "
+ntsctxt:
+	db "  FREQUENCY: NTSC  "
+music1txt:
+	db "  MUSIC + SOUND FX "
+music2txt:
+	db "  MUSIC ONLY       "
+music3txt:
+	db "  SOUND FX ONLY    "
+music4txt:
+	db "  SILENT           "
+exittxt:
+	db "  EXIT             "
+end    equ     $
+
+
+

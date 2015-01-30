@@ -1,0 +1,212 @@
+
+srcchp:
+
+srcfmp:
+	call	testpac
+	ld	a,(opll_flag)
+	cp	#00
+	ret	nz
+
+	ld	de,pactext+4
+	ld	hl,#4018
+	ld	a,(opll_slt)
+	ld	c,a
+	ld	b,4
+
+pacloop:
+	push	bc
+	push	de
+	push	hl
+	ld	a,c
+	call	#000c
+	pop	hl
+	pop	de
+	ld	b,a
+	ld	a,(de)
+	cp	b
+	pop	bc
+	jr	nz,initpac
+	inc	hl
+	inc	de
+	djnz	pacloop
+	
+        ret
+
+initpac:
+	push	bc
+	ld	a,c
+	ld	hl,#7ff6
+	push	bc
+	push	hl
+	call	#000c
+	pop	hl
+	pop	bc
+	or	#01
+	ld	e,a
+	ld	a,c
+	call	#0014
+	pop	bc
+	ld	a,(chips)
+	set	1,a
+	ld	(chips),a
+	ret
+
+testpac:
+	ld	a,#80
+	ld	b,16
+	ld	c,a
+
+testpac1:
+	push	bc
+	ld	b,4
+	ld	hl,#401c
+	ld	de,pactext
+
+testpac2:
+	push	bc
+	push	de
+	push	hl
+	ld	a,c
+	call	#000c
+	pop	hl
+	pop	de
+	ld	b,a
+	ld	a,(de)
+	cp	b
+	pop	bc
+	jr	nz,not_opll
+	inc	hl
+	inc	de
+	djnz	testpac2
+
+	pop	bc
+	ld	a,c
+	ld	(opll_slt),a
+	ld	a,0
+	jr	findpac
+
+not_opll:
+	pop	bc
+	inc	c
+	djnz	testpac1
+
+	ld	a,#ff
+findpac:
+	ld	(opll_flag),a
+	ret
+
+pactext:
+	defm	"OPLLAPRL"
+
+opll_flag:
+	defb	0
+opll_slt:
+	defb	0
+
+
+
+
+;------------------- laad moonblaster samplekit -----------
+;
+; opm: - de r800 mag niet aanstaan bij aanroep!
+;
+mkload:
+	ld	a,(chips)	; MusMod present?
+	and	1
+;	ret z			; if not, skip sample load
+        call setfcb
+	xor	a
+	call	openf		; open file
+        jp	nz,ferror
+
+	ld	de,#8000	; load sample addresses
+	ld	hl,56
+	call	loadf
+ 	jp	nz,ferror
+	ld	de,tmpsmpadr	; Loading here directly from file
+	ld	hl,#8000	; appeared not to work, so load somewhere
+	ld	bc,56		; and copy to correct place
+	ldir
+
+	ld	de,#8000	; load first 16K of sampledata
+	ld	hl,#4000
+	call	loadf
+        jp	nz,ferror
+	call	movsm1		; move to MusMod RAM
+
+	ld	de,#8000	; load second part
+	ld	hl,#4000
+        call	loadf
+	jp	nz,ferror
+	call	movsm2
+	call	closef
+	ret
+
+
+ferror:
+	ld	de,error	; print the error...
+	ld	c,#09    
+	call	bdos		; reset -- who cares
+	ld	c,#00   
+	jp	bdos
+	jp 0
+
+movsm1:
+	ld	hl,mmld1	; init MusMod for sample loading
+	jr	movsmp
+movsm2:
+	ld	hl,mmld2
+movsmp:
+	di
+	call	mmprog
+
+	ld	hl,#8000	; data buffer
+	ld	bc,#4000
+movlp:
+	ld	a,15		; set data in register 15
+	out	(#C0),a
+	ld	a,(hl)
+	inc	hl
+	out	(#C1),a
+	ld	a,4
+	out	(#C0),a
+	ld	a,#80
+	out	(#C1),a
+movwt:	in	a,(#C0)		; wait till MusMod is ready
+	bit	7,a
+	jr	z,movwt
+	bit	4,a		; EOS? then ready
+	jr	nz,movrdy
+	dec	c		; count down...
+	jr	nz,movlp
+	djnz	movlp
+movrdy:
+	ld	hl,mmok		; end sample loading
+	call	mmprog
+	ei
+	ret
+
+mmprog:
+	ld	b,(hl)		; get program size
+	inc	hl
+proglp:
+	ld	a,(hl)		; set register
+	inc	hl
+	out	(#C0),a
+	ld	a,(hl)		; write data
+	inc	hl
+	out	(#C1),a
+	djnz	proglp
+	ret
+tmpsmpadr:
+	ds 56
+
+mmld1:	db	11,04,#78,04,#80,07,#01,07,#60,08,#00	; load first 16K
+	db	   09,#00,10,#00,11,#FF,12,#0F,16,#F0,04,#60
+mmld2:	db	11,04,#00,04,#80,07,#01,07,#60,08,#00	; load 2nd 16K
+	db	   09,#00,10,#10,11,#FF,12,#1F,16,#F0,04,#60
+mmok:	db	 3,04,#78,04,#80,07,#00              	; end - ok
+
+error: db	"File load error!",#0A,#0D,"$"
+
+

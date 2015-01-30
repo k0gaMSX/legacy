@@ -1,0 +1,105 @@
+
+mbhlt	equ	#492d
+mbstr	equ	#4013
+mbstp	equ	#492d
+mbcnt	equ	#41fa
+mbint	equ	#4206
+
+
+	org #c000
+
+	jp interupt
+	jp setscreenmode
+	jp SEE_IN
+	jp SEE_EX
+	jp MAIN_A
+	jp WriteFC
+	jp WriteFD
+	jp WriteFE
+	jp WriteFF
+	jp ReadFC
+	jp ReadFD
+	jp ReadFE
+	jp ReadFF
+	jp vpoke
+	jp vpoke2
+	jp testspace
+	jp testesc
+        jp xmmm
+        jp InitMapRouts
+        jp setcolor
+        jp setscreen4
+        jp SETSFX
+        jp simrst20
+        jp strmus
+        jp domus 
+        jp stpmus
+        jp test_r800
+        jp setr800
+        jp setz80
+	jp mult8        
+        jp hltmus
+        jp cntmus
+	jp setpal
+        jp fade
+        jp initfadein
+        jp initfadeout
+
+
+
+hltmus:
+	call ReadFD
+	push af
+	ld a,(replaypge)
+	call WriteFD
+	call mbhlt
+	pop af
+	call WriteFD
+	ret
+        
+strmus:
+	call ReadFD
+	push af
+	ld a,(replaypge)
+	call WriteFD
+	call mbstr
+	pop af
+	call WriteFD
+	ret
+stpmus:
+	call ReadFD
+	push af
+	ld a,(replaypge)
+	call WriteFD
+	call mbstp
+	pop af
+	call WriteFD
+	ret
+cntmus:
+	call ReadFD
+	push af
+	ld a,(replaypge)
+	call WriteFD
+	call mbcnt
+	pop af
+	call WriteFD
+	ret
+musint:
+	call ReadFD
+	push af
+	ld a,(replaypge)
+	call WriteFD
+	call mbint
+	pop af
+	call WriteFD
+	ret
+
+*i macro.gen
+*i abysslib.gen
+*i see3.gen
+*i mapper2.gen
+*i r800.gen
+*i scrlib.gen
+
+end:
+

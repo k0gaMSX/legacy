@@ -1,0 +1,1143 @@
+
+*i macro.gen
+*i vsbios.gen
+
+leveldata:	equ #100+3
+	
+
+	org #1000-3
+
+	jp start
+
+tiletbl:
+	dw noact	;208
+	dw noact	;209
+	dw noact	;210
+	dw noact	;211
+	dw noact     	;212
+	dw noact	;213
+	dw noact	;214
+	dw noact	;215
+	dw noact	;216
+	dw noact	;217
+	dw noact  	;218
+	dw noact	;219
+	dw noact   	;220
+	dw noact	;221
+	dw noact	;222
+	dw noact	;223
+	dw noact	;224
+	dw noact	;225
+	dw killbill	;226
+	dw killbill	;227
+	dw noact	;228
+	dw noact	;229
+	dw initbridge	;230
+	dw noact	;231
+	dw noact	;232
+	dw noact	;233
+	dw noact	;234
+	dw noact	;235
+	dw noact   	;236
+	dw noact   	;237
+	dw exitstg	;238
+	dw exitstg1	;239
+	dw get1upnw	;240
+	dw get1upne	;241
+	dw get1upsw	;242
+	dw get1upse	;243
+	dw getpownw	;244
+	dw getpowne	;245
+	dw getpowsw	;246
+	dw getpowse	;247
+	dw getstarnw	;248
+	dw getstarne	;249
+	dw getstarsw	;250
+	dw getstarse	;251
+	dw noact	;252
+	dw noact	;253
+	dw noact    	;254
+	dw noact    	;255
+
+
+starptr		equ     10		;points for collecting star
+enmptr		equ	5		;points for enemy killed
+
+maxspeedx	equ     2		;maximum speed horizontal
+reboundjump	equ     4		;jump height zhen bounces
+heightjump	equ 	5		;normal jump height
+trempjump	equ	10		;trempoline jump height
+jumpkilled	equ     5		;jump when killed by enemy
+spdinert	equ	3		;0=no/1=medium/3=a lot/7=max
+maxfallspeed	equ 	5
+
+tgpadr		equ	#0
+tcadr		equ	#2000
+tgsadr		equ	#3800
+tcsadr  	equ	#1c00
+xsize		equ	8	
+ysize		equ     4
+tasadr		equ 	#1e00
+tnpadr		equ     #1800
+firstspr0	equ     0
+allmst		equ     #a000
+
+bgrblocks	equ	96	;background blocks start
+
+bgrnw		equ 	252
+bgrne		equ	253
+bgrsw		equ	254
+bgrse		equ	255
+
+; Trempoline
+
+tremp_c_0	equ	8	;pattern for trempoline closed left
+tremp_c_1	equ	9	;pattern for trempoline closed right
+tremp_o_0	equ	10	;pattern for trempoline open top left
+tremp_o_1	equ	11	;pattern for trempoline open top right
+tremp_o_2	equ     12	;pattern for trempoline open bottom left
+tremp_o_3	equ	13	;pattern for trempoline open bottom right
+trempdelay	equ 	50	;delay trempoline stays open 
+
+; pickup bonuses
+
+star0		equ	248	;pattern star top left
+star1		equ 	249	;pattern star top right
+star2		equ	250	;pattern star bottom left
+star3		equ	251	;pattern star bottom right
+
+rspecialbl0	equ	231   	;pattern to clear specialbl0
+patladderw	equ	224	;pattern ladder left
+patladdere	equ	225	;pattern ladder right
+
+patbridge0	equ 	14	;patterns used to build the bridge 16*16
+patbridge1	equ 	15
+patbridge2	equ 	46
+patbridge3	equ	47
+
+; breakable block
+
+brkblk2		equ	2	;bottom left of breakable block
+brkblk3		equ 	3	;bottom right of breakable block
+cbrkblk0	equ	4	;top left of breakable block (cracked)
+cbrkblk1	equ	5	;top right of breakable block (cracked)
+cbrkblk2	equ     6	;bottom left of breakable block (cracked)
+cbrkblk3	equ	7	;bottom right of breakable block (cracked)
+
+;exit door
+
+opendoor0	equ 	236
+opendoor1	equ	237
+opendoor2	equ	238
+opendoor3	equ	239
+
+; anim blocks
+
+killblk1	equ	226
+killblk2	equ 	227	
+animblk1	equ	226
+animblk2	equ	228
+animblk3	equ	96
+
+start:
+	call initall	
+start_level:
+        xor a
+        ld (iskilled),a
+	ld hl,(leveldata+16)
+	ld (posx),hl
+	ld hl,(leveldata+18)
+	ld (posy),hl
+	ld hl,0
+	ld (exitadr),hl
+	ld (y_speed),hl
+	ld (x_speed),hl
+main_loop:
+ 	di
+	ld a,(pause)
+	or a
+        jp nz,dopause
+        call gest_perso 	; main sprite
+        call gest_screen        ; Evaluate screen parameters
+        call gest_enemies
+        call musint
+        call gesttremp
+        call gest_bridge
+        call gest_bonus
+        call setblack
+        call animblocks
+	call test_rebound	; cancel jump rebound effect
+dopause:
+	call MAIN_A		; sound effects (if any)
+	call testpause
+        
+        call sc4to5split
+	call dspscore
+	ld a,(txtvdp)
+        add a,194
+        call interupt
+	call setscreen4
+	call tweaksc4
+	call putspr		; Update sprites
+        ld a,(vdpy)
+        dec a
+	ld c,a
+        ld a,(vdpx)
+        ld b,a
+	call gest_mask
+        outvdp 2,#8f
+	wait_hbl
+        call setscrollxy
+        call put_screen		; Display screen
+	call ReadFD
+	push af
+	ld a,6
+	call WriteFD
+        call putsprtcs
+        call putsprtgs
+        call fade
+	call doscroll
+	pop af
+	call WriteFD
+	ld a,(timer)
+	inc a
+	ld (timer),a
+        call testesc		; Exit on press space key
+        or a
+        jp z,do_exit   
+     	ld a,(iskilled)
+	or a
+	jp nz,theend
+	ld a,(nextload)
+	or a
+	jp nz,do_exit
+      	jp main_loop
+timer:
+	db 0
+pause:
+	db 0
+f1pressed:
+	db 0        
+testpause:
+	ld a,(f1pressed)
+	or a
+	jp nz,resetf1
+	call testf1
+	or a
+	jp z,setpause
+	ret
+setpause:
+	ld a,1
+	ld (f1pressed),a
+	ld a,(pause)
+	xor 1
+	ld (pause),a
+	or a
+ 	call z,cntmus
+        ld a,(pause)
+        or a
+ 	call nz,hltmus
+        ld bc,#0106
+        call SETSFX
+        ret        
+resetf1:
+	call testf1
+	or a
+	ret z
+	xor a
+	ld (f1pressed),a
+	ret
+testf1:
+	in a,(#aa)
+	and %11110000
+	add a,6
+        out (#aa),a
+        in a,(#a9)
+        and 32
+        ret
+
+
+setred:
+	outvdp 0,128+16
+	ld a,#70
+	out (#9a),a
+	ld a,0
+	out (#9a),a
+	ret
+setblack:
+	outvdp 0,128+16
+	xor a
+	out (#9a),a
+	out (#9a),a
+	ret
+
+sc4to5split:
+	di
+        outvdp 1,#8f
+        ld a,(oldvdpy)
+        add a,173
+	outvdp a,#93
+wtl1:
+        in a,(#99)
+        rrca
+        jp nc,wtl1
+        
+	outvdp %00100010,128+1
+	outvdp 2,#8f
+
+	wait_hbl
+	outvdp 6,128
+	outvdp 63,128+2
+	outvdp 10,128+8
+        outvdp 4,128+18
+        ld a,(txtvdp)
+	outvdp a,128+23
+	wait_hbl
+
+	outvdp %01100010,128+1
+	ret
+animblocks:
+	ld a,(screenrefresh)
+	cp 1
+	ret z
+	ld a,6
+	call WriteFD
+	ld hl,(animadr)
+	inc hl
+	ld (animadr),hl
+	ld a,(hl)
+	cp 255
+	call z,resetanim
+	cp 1
+	jp z,setpage2	
+        cp 2
+        jp z,setpage3
+setpage1:
+; Set flame anim
+	ld de,tgpadr+(killblk1*8)
+	call vpoke
+	ld hl,tgploadadr+(animblk1*8)
+	ld c,#98
+	ld b,16
+	otir
+        ld de,tcadr+(killblk1*8)
+        call vpoke
+        ld hl,tcloadadr+(animblk1*8)
+        ld c,#98
+        ld b,16
+        otir
+	ld a,2
+	call WriteFD
+	ret
+setpage2:
+	ld de,tgpadr+(killblk1*8)
+	call vpoke
+	ld hl,tgploadadr+(animblk2*8)
+	ld c,#98
+	ld b,16
+	otir
+        ld de,tcadr+(killblk1*8)
+        call vpoke
+        ld hl,tcloadadr+(animblk2*8)
+        ld c,#98
+        ld b,16
+        otir
+	ld a,2
+	call WriteFD
+	ret
+setpage3:
+	ld de,tgpadr+(killblk1*8)
+	call vpoke
+	ld hl,tgploadadr+(animblk3*8)
+	ld c,#98
+	ld b,16
+	otir
+        ld de,tcadr+(killblk1*8)
+        call vpoke
+        ld hl,tcloadadr+(animblk3*8)
+        ld c,#98
+        ld b,16
+        otir
+	ld a,2
+	call WriteFD
+	ret
+
+resetanim:
+	ld hl,animseq
+	ld (animadr),hl
+	ld a,(hl)
+	ret
+;reg4:
+;	db 0
+;reg3:
+;	db 159
+animseq:
+	db 1,0,1,1,1,1,0,1,0,1,0,0,0,1,255
+animadr:
+	dw animseq
+;
+; Enemies
+;
+gest_enemies:
+	ld a,1
+	call WriteFE
+initenm:
+	ld a,(timer)
+	and 7
+	call z,animspr
+	ld ix,allmst
+        ld iy,tasenm
+loop_enm:
+	ld a,(ix+0)		
+	cp 255
+	jp z,end_enm
+	or a
+        jp z,next_enm
+;position y
+        ld l,(ix+5)	;
+        ld h,(ix+6)	;
+        ld de,(scrypos)
+        or a
+        sbc hl,de
+        ld a,h
+        or a
+        jp nz,next_enm
+	ld c,l
+        ld a,l
+        cp 192
+        jp nc,next_enm
+;position x
+        ld l,(ix+3)	;
+        ld h,(ix+4)	;
+        ld de,(scrxpos)
+        or a
+        sbc hl,de
+        ld a,h
+        or a
+        jp z,trtenmdsp
+	cp 1
+	jp z,trtenmnodsp
+        cp 255
+        jp z,trtenmnodsp
+next_enm:
+	ld de,15
+	add ix,de
+	jp loop_enm
+trtenmdsp:
+        ld (iy+0),c
+        ld (iy+1),l
+        ld a,(ix+1)
+        push af
+        cp 2
+        call c,trt_enm
+        pop af
+        push af
+        cp 2
+        call z,trt_enm2
+        pop af
+        cp 3
+        call z,enm3
+; animate spr
+	ld a,(ix+14)	;
+	ld b,a
+	ld a,(patspr)
+	add a,b
+	ld (iy+2),a
+; next display sprite        
+	call testenmcol
+	ld de,4
+	add iy,de
+        jp next_enm
+testenmcol:
+	ld a,(iskilled)
+	or a
+	ret nz
+	ld a,(ix+0)
+	cp 1
+	ret nz
+	ld a,(spry)
+	ld b,(iy+0)
+	cp b
+	call c,swapab
+	sub b
+	cp 16			;16
+	ret nc
+	ld a,(sprx)
+	ld b,(iy+1)
+	cp b
+	call c,swapab
+	sub b
+	cp 14			;12
+	ret nc
+	ld a,(ix+2)
+	cp 2			; collision type 
+	jp z,onplateform        ; 2 = platform
+        cp 1
+        ret z			; 1 = no collision
+        cp 3
+        jp z,setkilled		; 3 = die always
+; if spr on floor then -> Die
+        ld a,(ctrlmode)
+        cp 1
+	jp nz,setkilled
+        ld a,(ix+2)
+        cp 4
+        jp z,rebound1 
+; if spry > eny then -> die
+        ld a,(spry)
+        ld b,a
+        ld a,(iy+0)
+        sub b
+        jp c,setkilled
+; if direction = up -> die
+	ld a,(y_speed)
+	bit 7,a
+	jp nz,setkilled
+; else enemy die
+	ld a,2
+	ld (ix+0),a
+        ld hl,-8
+        ld (ix+9),l	;
+        ld (ix+10),h	;
+rebound1:
+        ld a,-reboundjump
+        ld (y_speed),a
+enm1:
+	ld de,enmptr
+	call addscore
+	ld bc,#0105
+	call SETSFX
+	ret
+onplateform:
+	ld a,(spry)
+	ld b,(iy+0)
+	cp b
+	ret nc
+	ld a,(y_speed)
+	bit 7,a
+	ret nz
+	ld a,0
+	ld (ctrlmode),a
+	ld l,(ix+5)	;
+	ld h,(ix+6)	;
+	ld de,-16
+	add hl,de
+	ld (posy),hl
+        ld hl,(posx)
+        ld e,(ix+7)	;
+        ld d,(ix+8)	;
+        add hl,de
+        ld (posx),hl
+        jp pattern_select
+	ret
+
+setkilled:
+	ld a,(ix+2)
+	cp 2
+	ret z
+killbill:
+	ld a,(bonus)
+	cp 1
+	ret z
+	ld bc,#0104
+	call SETSFX
+	ld a,1
+	ld (iskilled),a
+        ld (ctrlmode),a
+	ld a,40
+	ld (killcnt),a
+	ld hl,-jumpkilled
+	ld (y_speed),hl
+	ld hl,0
+	ld (x_speed),hl
+	ret
+swapab:
+	ld c,a
+	ld a,b
+	ld b,c
+	ret
+trtenmnodsp:
+	ld a,(ix+1)
+	push af
+        cp 2
+	call c,trt_enm
+	pop af
+	push af
+	cp 2
+	call z,trt_enm2
+	pop af
+	cp 3
+	call z,enm3
+	ld a,(ix+0)
+	cp 2
+	call z,setenmdead		; dying enemy outside the screen-> dead
+	jp next_enm
+setenmdead:
+	xor a
+	ld (ix+0),a
+	ret
+end_enm:
+	ld a,255
+	ld (iy+0),a
+	ret
+negd_left:
+	ld d,255
+	ld c,0
+	ret
+trt_enm:
+	ld a,(ix+0)
+	cp 2
+	jp z,trt_enmdeath
+	ld a,(ix+11)		;
+	or a
+	call z,next_vector
+	ld l,(ix+7)		;
+	ld h,(ix+8)		;
+	ld e,(ix+3)		;
+	ld d,(ix+4)		;
+	add hl,de
+	ld (ix+3),l		;
+	ld (ix+4),h		;
+	ld l,(ix+9)		;
+	ld h,(ix+10)		;
+	ld e,(ix+5)		;
+	ld d,(ix+6)		;
+	add hl,de
+        ld (ix+5),l		;
+        ld (ix+6),h		;
+        dec (ix+11)		;
+	ret
+animspr:
+	ld a,(patspr)
+	add a,4		;8
+	and 4		;4
+	ld (patspr),a
+	ret
+
+trt_enmdeath:
+	ld l,(ix+9)		;
+	ld h,(ix+10)		;
+	ld de,10
+	call simrst20
+	jp z,setnoinc
+	inc hl
+setnoinc:
+	ld (ix+9),l		;
+	ld (ix+10),h		;
+	ld e,(ix+5)		;
+	ld d,(ix+6)		;
+	add hl,de
+	ld (ix+5),l		;
+	ld (ix+6),h		;
+	ret
+cntspr:
+	db 0
+patspr:
+	db 0	        
+next_vector:
+	push ix
+	pop de
+	ld hl,7			;
+	add hl,de
+	ex de,hl
+	ld l,(ix+12)		;
+	ld h,(ix+13)		;
+	ld bc,8
+	ldir
+	ret
+
+*i enmtype2.gen
+*i enmtype3.gen
+*i ctrlhero.gen
+*i obstacle.gen
+*i special.gen
+*i screen.gen
+*i manette.gen
+*i scorebar.gen
+
+;
+; Load all gfx + stage
+;
+initall:
+	di
+	xor a
+	ld (nextload),a
+	call setcolor
+        ld a,4
+	call setscreenmode
+	outvdp %00100010,128+1
+	call tweaksc4
+ 
+;	Set GFX date page
+ 
+	ld a,6
+	call WriteFD
+ 
+;  	Load score gfx
+ 
+	ld de,#8000
+	call vpoke
+	ld bc,128
+	xor a
+clearp1:
+	out (#98),a
+	djnz clearp1
+	dec c
+	jp nz,clearp1
+
+        ld de,#d880
+        call vpoke
+        ld hl,scrloadadr+7
+        ld bc,#98
+        ld a,24
+loopscr:
+	otir
+	dec a
+	jp nz,loopscr	        
+ 
+;	Set palette
+
+	ld a,6
+	call WriteFD
+ 
+        ld hl,pal1
+	call setpal
+
+	ld hl,tplloadadr
+	ld de,pal1
+	ld bc,32
+	ldir
+        xor a
+        ld (pal1),a
+        ld (pal1+1),a
+        ld hl,pal1
+        call initfadein
+ 
+; 	Set TGP
+ 
+	ld de,tgpadr
+	call vpoke
+	ld hl,tgploadadr
+	ld c,#98
+	ld d,8
+	ld b,0
+load_tgp:
+	otir
+	dec d
+	jp nz,load_tgp
+ 
+; 	Set TC
+ 
+	ld de,tcadr
+	call vpoke
+	ld hl,tcloadadr
+	ld c,#98
+	ld d,8
+	ld b,0
+load_tc:
+	otir
+	dec d
+	jp nz,load_tc
+
+	call initscroll
+
+	ld a,2
+	call WriteFD
+        ld a,1
+        call WriteFE
+        
+;	Search exit door address
+ 
+ 	ld hl,0
+ 	ld (adrexit),hl
+        ld hl,#4000
+        ld c,96
+        ld b,0
+loopstgx:
+	ld a,(hl)
+	cp 232				; top left door tile
+	jp z,setdooradr
+	inc hl
+	djnz loopstgx
+	dec c
+	jp nz,loopstgx	
+
+	ld hl,0
+setdooradr:
+	ld (adrexit),hl
+ 
+; 	Load set
+ 
+	call cleartas
+	call settgsmask
+	call settcsmask
+ 
+; 	Set level height and width
+ 
+ 	ld a,(leveldata+77)		; level width
+ 	ld h,a
+	dec h
+	ld l,128		; hl = (xsize*256)-128
+	ld (xs1+1),hl
+	ld l,0			; hl = (xsize-1)*256
+	ld (xs2+1),hl
+	ld e,32
+ 	ld a,(leveldata+77)
+ 	ld h,a
+	dec h
+	call mult8		; hl = (xsize-1)*32
+	ld a,l
+	ld (xs3+1),a
+
+        ld a,(leveldata+78)
+ 	ld h,a        
+	ld e,192
+	call mult8
+	ld de,-96
+	add hl,de
+	ld (ys1+1),hl
+
+	ld a,(leveldata+78)
+	dec a
+	ld h,a
+	ld e,64
+	call mult8
+	ld a,l
+	ld (ya1+1),a
+
+        ld a,(leveldata+78)
+ 	ld h,a        
+	dec h
+	ld e,192
+	call mult8
+	ld (ys2+1),hl
+
+        ld a,(leveldata+78)
+ 	ld h,a        
+	dec h
+	ld e,24
+	call mult8
+	ld a,l
+	ld (ys3+1),a
+
+; 	set max speed
+
+	ld a,(leveldata+79)
+	ld (mxspd1+1),a
+	neg
+	ld (mxspd2+1),a
+
+; 	set heightjump
+
+	ld a,(leveldata+80)
+	ld (heightj1+1),a
+
+;       set inertia
+
+	ld a,(leveldata+81)
+	ld (inert1+1),a
+
+;       set trempoline jump
+
+	ld a,(leveldata+82)
+	ld (trempo1+1),a
+
+;       set maxfall speed
+
+	ld a,(leveldata+83)
+	ld (maxfall1+1),a
+
+;	set rebound jump
+
+	ld a,(leveldata+84)
+	ld (rebound1+1),a
+
+;       set bonus pts
+
+	ld a,(leveldata+85)
+	ld (bonus1+1),a
+	xor a
+	ld (bonus1+2),a
+
+;       set enemy pts
+
+	ld a,(leveldata+86)
+	ld (enm1+1),a
+	xor a
+	ld (enm1+2),a
+
+;	set animation
+
+	ld a,(leveldata+87)
+	cp 2
+	jp z,skipsetanim
+	ld a,#c9
+	ld (animblocks),a
+skipsetanim: 
+
+;	setparallax
+	ld a,(leveldata+88)
+	cp 2
+	jp z,skipsetscroll
+	ld a,#c9
+        ld (doscroll),a
+skipsetscroll:
+
+        call strmus
+
+        ld hl,leveldata+1
+        ld de,start_text
+ 	ld bc,15
+	ldir
+	ld hl,start_text
+	call inittext
+	ret
+initscroll:
+	ld hl,tgploadadr+(96*8)
+	ld de,#7c00
+	ld bc,8
+	ldir
+	ld hl,tgploadadr+(96*8)
+	ld bc,8
+	ldir
+	ld hl,tgploadadr+(97*8)
+	ld bc,8
+	ldir
+	ld hl,tgploadadr+(97*8)
+	ld bc,8
+	ldir
+        ld b,7
+        ld de,#7c00+32
+loopcp:
+        push bc
+        ld hl,#7c00
+        ld bc,32
+        ldir
+        pop bc
+        djnz loopcp
+          
+	ld b,8
+	ld hl,#7c00
+loop1sc:
+	ld e,32
+loop2sc:
+	push bc
+        ld a,(hl)
+rotscrl
+	rrca
+	djnz rotscrl
+        ld (hl),a
+	inc hl
+	pop bc
+	dec e	
+	jp nz,loop2sc
+	djnz loop1sc
+;tc
+	ld hl,tcloadadr+(96*8)
+	ld de,#7d00
+	ld bc,8
+	ldir
+	ld hl,tcloadadr+(96*8)
+	ld bc,8
+	ldir
+	ld hl,tcloadadr+(97*8)
+	ld bc,8
+	ldir
+	ld hl,tcloadadr+(97*8)
+	ld bc,8
+	ldir
+	ret        
+doscroll:
+;	call ReadFD
+;	push af
+;	ld a,6
+;	call WriteFD
+	ld de,tgpadr+(96*8)
+	call vpoke
+        ld a,(scrxpos)
+        srl a
+        neg
+        and 7
+        add a,a		;*2
+        add a,a		;*4
+        add a,a		;*8
+        add a,a		;*16
+        add a,a		;*32
+        ld e,a 
+	ld a,(scrypos)
+        srl a
+        neg
+        and 7
+        push af
+        add a,e
+	ld l,a
+	ld h,#7c
+	ld bc,#898
+	otir
+        add a,16
+        ld l,a
+	ld bc,#898
+	otir
+	ld de,tcadr+(96*8)
+	call vpoke
+        pop af
+	ld l,a
+	ld h,#7d
+	ld bc,#898
+	otir
+        add a,16
+        ld l,a
+	ld bc,#898
+	otir
+;	pop af
+;	call WriteFD
+	ret        
+start_text:
+	db "               @#$"
+settgsmask:
+        ld de,tgsadr+512 
+        call vpoke
+        ld bc,6
+        ld a,#ff
+looptgsmask:
+	out (#98),a
+	djnz looptgsmask
+	dec c
+	jp nz,looptgsmask
+	ret
+settcsmask:
+	ld de,tcsadr		;+128
+	call vpoke
+        ld c,12
+looptcsmask:
+        ld a,128
+	ld b,16
+looptcsm1:
+	out (#98),a
+	djnz looptcsm1 
+        ld b,16
+        xor a
+        ld b,16
+looptcsm2:
+	out (#98),a
+	djnz looptcsm2
+	dec c
+	jp nz,looptcsmask
+	ret
+theend:
+	ld a,(killcnt)
+	dec a
+	ld (killcnt),a
+	or a
+	jp nz,main_loop
+	ld a,(lives)
+	or a
+	jp z,do_exit
+	dec a
+	daa
+	ld (lives),a
+        outvdp %00100010,128+1
+        ; clear mst 
+        ld hl,allmst
+	ld de,14
+clrmst:
+	ld a,(hl)
+	cp 255        
+        jp z,clrmste
+	cp 2
+	call z,setmstde
+	add hl,de
+	jp clrmst
+
+clrmste:
+        ld b,100
+waitstg:
+	push bc
+	ld a,176
+	call interupt
+	call MAIN_A
+        call musint
+	pop bc
+	djnz waitstg        
+
+	jp start_level
+do_exit:
+ 	call stpmus
+        outvdp %00100010,128+1
+	outvdp 0,#8f
+	outvdp 0,128+16
+        xor a
+        out (#9a),a
+        out (#9a),a
+	call SEE_EX
+	xor a
+	call setscreenmode
+ 	ld a,(nextload)
+ 	cp 1
+ 	call z,selnextlev
+	ret
+selnextlev:
+	ld hl,(exitadr)
+	ld a,(leveldata+89)
+	ld b,a
+	ld ix,leveldata+90
+loopsellev:
+	ld e,(ix+0)
+	ld d,(ix+1)
+	call simrst20
+	jp z,foundlev	
+	ld de,11
+	add ix,de
+	djnz loopsellev	
+	ret
+foundlev:
+	inc ix
+	inc ix
+	push ix
+	pop hl		; hl+1 points on next file to load
+	ret		; hl points on file type
+tweaksc4:
+	outvdp 159,128+3
+	outvdp 0,128+4
+	ret
+setmstde:
+	xor a
+	ld (hl),a
+	ret
+
+adrexit		dw 0
+iskilled 	db 0            ; is killed ?
+killcnt  	db 0
+stars		db 0		; number of stars collected
+posxst:		dw #20
+posyst:		dw #40
+posx    	dw 0            ; sprite position  x = 16 bits
+posy    	dw 0            ; screen position  y = 16 bits
+vdpy    	db 0            ; vdp 23
+vdpx    	db 0            ; vdp 18
+;Minitas
+spry:   db 0            ; sprite position y = 8 bits
+sprx:   db 0            ; sprite position x = 8 bits
+sprnbr: db 0		; sprite pattern number
+oldsprnbr: db -1	; sprite pattern at previous frame
+tasenm:
+        ds 255,0
+;end of minitas
+x_speed:	dw 0		; speed of the sprite x
+y_speed:	dw 0		; speed of the sprite y
+
+;                  sx  sy    dx	 dy    nx  ny	  
+scrcopy:	db 0,0,193,1,0,0,181,1,8  ,0,8,0,0,0,#d0
+txtcopy:	db 0,0,193,1,0,0,164,1,8  ,0,8,0,0,0,#d0
+clearcopy:	db 0,0,000,1,0,0,164,1,254,0,1,0,0,0,#e0
+
+pal1:
+	ds 32
+
+end:
+
+tgsload		equ     #6000
+tcsload		equ     tgsload+3000
+
+
+

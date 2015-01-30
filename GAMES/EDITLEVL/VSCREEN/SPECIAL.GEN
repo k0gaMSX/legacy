@@ -1,0 +1,227 @@
+bonus:		db 0
+bonustimer:	db 0		; counter bonus
+bridgestatus:   db 255 		; status bridge
+blockstep:      db 0 		; step building bridge
+blockcount:     db 10 		
+bridgeadr:      dw 0
+savetremp:	db 0,0
+trempcount:	db 255		; counter trempoline
+trempadr:	dw 0		; address trempoline
+
+gestspecial:
+
+	ret
+gest_bonus:
+	ld a,(bonus)
+	or a
+	ret z
+	ld a,(timer)
+	and 31
+	ret nz
+	ld a,(bonustimer)
+	dec a
+	ld (bonustimer),a
+        push af
+        ld bc,#010d
+        cp 4
+        call c,SETSFX
+        pop af
+	or a
+	ret nz
+	xor a
+	ld (bonus),a
+	ret
+
+initbridge: 
+	ex de,hl
+        ld a,rspecialbl0
+        ld (hl),a
+	inc hl
+	inc h
+        ld (bridgeadr),hl 
+        ld a,(hl)
+        cp bgrblocks
+        jp c,bridgeleft
+        xor a 
+        ld (blockstep),a 
+        ld (bridgestatus),a 
+        ld hl,-1
+        ld (old_vpokeadr),hl
+        ld bc,#0101
+        call SETSFX
+        ret 
+bridgeleft:
+	dec hl
+	dec hl
+	ld a,(hl)
+	cp bgrblocks
+	ret c
+        ld (bridgeadr),hl
+	xor a
+	ld (blockstep),a
+	ld a,1
+	ld (bridgestatus),a
+	ld hl,-1
+	ld (old_vpokeadr),hl
+	ld bc,#0101
+	call SETSFX
+	ret        
+        
+
+gestbridgel:
+        ld hl,-1
+        ld (old_vpokeadr),hl
+	ld a,(blockstep)
+	cp 0
+	jp z,setbridge1
+	cp 1
+	jp z,setbridge2
+	cp 2
+	jp z,setbri3l
+	cp 3
+	jp z,setbri0l
+	jp resetbridge
+gest_bridge: 
+        ld a,(bridgestatus) 
+        cp 255 
+        ret z 
+        ld a,(timer)
+        and 1
+        ret nz
+        ld a,(bridgestatus)
+	cp 1
+	jp z,gestbridgel
+        ld hl,-1
+        ld (old_vpokeadr),hl
+        ld a,(blockstep) 
+        cp 0 
+        jp Z,setbridge0 
+        cp 1 
+        jp z,setbridge1 
+        cp 2 
+        jp z,setbridge2
+        cp 3 
+        jp z,setbridge3 
+resetbridge:
+	ld a,(hl)
+	cp bgrblocks 
+	jp c,endbridge
+        ld a,(blockstep) 
+        inc a 
+        and 3 
+        ld (blockstep),a 
+	ret
+endbridge:
+        ld a,255 
+        ld (bridgestatus),a 
+        ret 
+setbridge0: 
+        ld hl,(bridgeadr) 
+        ld a,patbridge0 
+        ld (hl),a 
+        inc hl 
+        ld (bridgeadr),hl 
+        jp resetbridge 
+setbri0l: 
+        ld hl,(bridgeadr) 
+        ld a,patbridge0 
+        ld (hl),a 
+	dec hl
+        ld (bridgeadr),hl 
+        jp resetbridge 
+setbridge1: 
+        ld hl,(bridgeadr) 
+        ld a,patbridge1 
+        ld (hl),a 
+        inc h 
+        ld (bridgeadr),hl 
+        jp resetbridge 
+setbridge2: 
+        ld hl,(bridgeadr) 
+        ld a,patbridge3 
+        ld (hl),a 
+        dec hl 
+        ld (bridgeadr),hl 
+        jp resetbridge 
+setbridge3: 
+        ld hl,(bridgeadr) 
+        ld a,patbridge2 
+        ld (hl),a 
+        inc hl 
+        inc hl 
+        dec h 
+        ld (bridgeadr),hl 
+        jp resetbridge 
+setbri3l: 
+        ld hl,(bridgeadr) 
+        ld a,patbridge2 
+        ld (hl),a 
+        dec h 
+        ld (bridgeadr),hl 
+        jp resetbridge 
+;
+; Close the tempoline and restore previous patterns
+;        
+gesttremp:
+	ld a,(trempcount)
+	cp 255
+	ret z
+	dec a
+	ld (trempcount),a
+	or a
+	ret nz
+	ld hl,(trempadr)
+	ld a,tremp_c_0
+	ld (hl),a
+	inc hl
+	ld a,tremp_c_1
+	ld (hl),a
+	dec h
+	ld a,(savetremp+1)
+	ld (hl),a
+	dec hl
+	ld a,(savetremp)
+	ld (hl),a
+        ld hl,-1
+        ld (old_vpokeadr),hl
+	ret
+trempor:
+	dec hl
+trempol:
+	ld (trempadr),hl
+	ld a,trempdelay			; delay the trempoline stays open
+	ld (trempcount),a
+	ld a,tremp_o_2
+	ld (hl),a
+	inc hl
+	ld a,tremp_o_3
+	ld (hl),a
+	dec h
+	ld a,(hl)
+	ld (savetremp+1),a
+	ld a,tremp_o_1
+	ld (hl),a
+	dec hl
+	ld a,(hl)
+	ld (savetremp),a
+	ld a,tremp_o_0
+	ld (hl),a
+        ld hl,-1
+        ld (old_vpokeadr),hl
+	ld bc,#0100
+	call SETSFX
+trempo1:
+	ld hl,-trempjump
+	ld (y_speed),hl
+	jp retrempoli
+tsttrempoline:
+	push af
+	cp tremp_c_0
+	jp z,trempol
+	cp tremp_c_1
+	jp z,trempor
+retrempoli:
+	pop af
+	ret
+
+

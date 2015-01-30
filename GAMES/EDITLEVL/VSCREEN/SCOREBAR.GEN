@@ -1,0 +1,189 @@
+addscore:
+	ld hl,score+2
+	ld a,(hl)
+	add a,e
+	daa
+	ld (hl),a
+	dec hl
+	ld a,(hl)
+	adc a,d
+	daa
+	ld (hl),a
+	dec hl
+	ld a,(hl)
+	adc a,0
+	daa
+	ld (hl),a
+	ret
+scorefrm:
+	db 0
+dspscore:
+	di
+	ld a,(scorefrm)
+	inc a
+	and 7
+	ld (scorefrm),a
+	cp 1
+	jp z,dspsc0
+	cp 2
+	jp z,dspsc1
+	cp 3
+	jp z,dspsc2
+        cp 4
+        jp z,dspsta
+        cp 6
+        jp z,dspliv
+ 	or a
+ 	jp z,dsptxt
+;       cp 5
+;       jp z,dsptxt
+	ret
+curtext:
+	dw -1			; if set to -1, then inactive	
+txtvdp:
+	db 0
+txtwait:
+	db 1
+dsptxt:
+	ld hl,(curtext)
+	ld de,-1
+	call simrst20
+	ret z
+	ld a,(txtwait)
+	dec a
+	ld (txtwait),a
+	or a
+	ret nz
+	ld a,1
+	ld (txtwait),a
+	ld hl,(curtext)
+	ld b,209
+	ld a,(hl)
+	cp "$"
+	jp z,endtext
+	cp "&"
+	jp z,strtext
+	cp "#"
+	jp z,cleartext
+	cp "@"
+	jp z,waittext
+        inc hl
+        ld (curtext),hl
+	cp 64
+	call c,firstrow
+	sla a
+	sla a
+	sla a
+	ld (txtcopy),a
+	ld a,b
+	ld (txtcopy+2),a
+	ld a,(txtcopy+4)
+	add a,8
+	ld (txtcopy+4),a
+	ld hl,txtcopy
+	call xmmm
+	ret
+inittext:
+	ld (curtext),hl
+        ld a,-16
+        ld (txtvdp),a
+	xor a
+	ld (txtcopy+4),a
+        ld a,164
+        ld (clearcopy+6),a
+	ret
+endtext:
+	ld a,(txtvdp)
+        inc a
+	ld (txtvdp),a
+	or a
+	ret nz
+	ld hl,-1
+	ld (curtext),hl
+	ret
+strtext:
+	ld a,(txtvdp)
+	dec a
+	ld (txtvdp),a
+	cp -16
+	ret nz
+	inc hl
+	ld (curtext),hl
+	ret
+cleartext:
+	push hl
+	ld hl,clearcopy
+	call xmmm
+	pop hl
+        ld a,(clearcopy+6)
+        inc a
+        ld (clearcopy+6),a
+        cp 164+8
+        ret nz
+	inc hl
+	ld (curtext),hl
+        xor a
+        ld (txtcopy+4),a
+        ld a,164
+        ld (clearcopy+6),a
+	ret	
+waittext:
+	ld a,10
+	ld (txtwait),a
+	inc hl
+	ld (curtext),hl
+	ret
+firstrow:
+	sub 32
+	ld b,201
+	ret
+dspsc0:
+	ld a,(score)
+	ld d,a
+	ld e,120
+	jp dspscr
+dspsc1:
+	ld a,(score+1)
+	ld d,a
+	ld e,120+16
+	jp dspscr
+dspsc2:
+	ld a,(score+2)
+	ld d,a
+	ld e,120+32
+	jp dspscr
+dspsta:
+	ld a,(stars)
+	ld d,a
+	ld e,200
+	jp dspscr
+dspliv:
+	ld a,(lives)
+	ld d,a
+	ld e,232
+	jp dspscr        
+dspscr:
+	and 240
+	srl a
+	ld (scrcopy),a
+	ld a,e
+	ld (scrcopy+4),a
+	add a,8
+	ld e,a
+	ld hl,scrcopy
+	push de
+	call xmmm
+	pop de
+	ld a,d
+	and 15 
+	sla a
+	sla a
+	sla a
+	ld (scrcopy),a
+	ld a,e
+	ld (scrcopy+4),a
+	ld hl,scrcopy
+	call xmmm		
+	ret
+
+

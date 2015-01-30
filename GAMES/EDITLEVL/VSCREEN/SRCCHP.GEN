@@ -1,0 +1,112 @@
+;MBLOADER:
+
+srcchp:
+	call	srcfmp
+
+;routine de recherche de l'OPLL
+;ecrite le 23/04/92
+;par BENOIT Martial
+;fonctionne sous MSX DOS et MSX BASIC
+srcfmp:
+	call	testpac
+	ld	a,(opll_flag)
+	cp	#00
+	ret	nz
+
+	ld	de,pactext+4
+	ld	hl,#4018
+	ld	a,(opll_slt)
+	ld	c,a
+	ld	b,4
+
+pacloop:
+	push	bc
+	push	de
+	push	hl
+	ld	a,c
+	call	#000c
+	pop	hl
+	pop	de
+	ld	b,a
+	ld	a,(de)
+	cp	b
+	pop	bc
+	jr	nz,initpac
+	inc	hl
+	inc	de
+	djnz	pacloop
+	
+	jr	end
+
+initpac:
+	push	bc
+	ld	a,c
+	ld	hl,#7ff6
+	push	bc
+	push	hl
+	call	#000c
+	pop	hl
+	pop	bc
+	or	#01
+	ld	e,a
+	ld	a,c
+	call	#0014
+	pop	bc
+	ld	a,(chips)
+	set	1,a
+	ld	(chips),a
+end:	ret
+
+testpac:
+	ld	a,#80
+	ld	b,16
+	ld	c,a
+
+testpac1:
+	push	bc
+	ld	b,4
+	ld	hl,#401c
+	ld	de,pactext
+
+testpac2:
+	push	bc
+	push	de
+	push	hl
+	ld	a,c
+	call	#000c
+	pop	hl
+	pop	de
+	ld	b,a
+	ld	a,(de)
+	cp	b
+	pop	bc
+	jr	nz,not_opll
+	inc	hl
+	inc	de
+	djnz	testpac2
+
+	pop	bc
+	ld	a,c
+	ld	(opll_slt),a
+	ld	a,0
+	jr	findpac
+
+not_opll:
+	pop	bc
+	inc	c
+	djnz	testpac1
+
+	ld	a,#ff
+findpac:
+	ld	(opll_flag),a
+	ret
+
+pactext:
+	defm	"OPLLAPRL"
+
+opll_flag:
+	defb	0
+opll_slt:
+	defb	0
+
+

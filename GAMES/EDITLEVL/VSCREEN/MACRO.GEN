@@ -1,0 +1,79 @@
+stg_nb          equ     #f975
+dest_page	equ     stg_nb+1
+SEEMAP		equ     dest_page+1
+f_r800		equ	SEEMAP+1
+m_r800		equ	f_r800+1
+chips		equ	m_r800+1
+muspge		equ     chips+1
+musadr		equ	muspge+1
+nbrstars	equ	musadr+2
+joy		equ	nbrstars+1
+nextload	equ	joy+1
+mussetting	equ	nextload+1
+exit		equ	mussetting+1
+lives		equ	exit+1
+replaypge	equ	lives+1	
+score		equ	replaypge+1	; 3 bytes
+
+
+dcompr: 	equ	#20	;compare hl et de
+disscr:		equ	#41	;disable screen
+enascr:		equ	#44	;enable screen
+ldirmv:		equ	#59	;vram -> ram
+ldirvm		equ	#5c	;ram -> vram
+chgmod:		equ	#5f	;change graphic mode
+chgclr:		equ	#62	;change colors
+clrspr:		equ	#69	;clear sprites
+beep:		equ	#c0	;beep!!
+cls:		equ	#c3	;clear screen
+gtstck:		equ	#d5	;get joystick
+gttrig:		equ	#d8	;get trigger
+gtpad:		equ	#db	;get pad
+bigfil:		equ	#16b	;fill vram
+nsetrd:		equ	#16e	;new set add for read
+nstwrt:		equ	#171	;new set add for write
+nrdvrm:		equ	#174	;new read vram
+nwrvrm:		equ	#177	;new write vram
+chgcpu: 	equ	#180	;change cpu mode
+getcpu: 	equ	#183	;get cpu mode
+
+wrboot:		equ	#0000
+bdos:		equ	#0005
+rdslt:		equ	#000c
+wrslt:		equ	#0014
+CALSLT:		equ	#001c
+enaslt:		equ	#0024
+callf:		equ	#0030
+setdma: 	equ     26
+read:   	equ     39
+open:   	equ     15
+close:  	equ     16
+subrom:		equ	#faf8		;sub rom slot
+hokvld:		equ	#fb20
+exttbl:		equ	#fcc1		;main rom slot
+extbio:		equ	#ffca
+outvdp macro @value,@reg
+	ld a,@value
+	out (#99),a
+	ld a,@reg
+	out (#99),a
+	endm
+calslt	macro	@SLOTADD,@ADD	;inter slot call macro
+	ld	iy,(@SLOTADD-1)
+	ld	ix,@ADD
+	call	CALSLT
+	ENDM
+
+wait_hbl macro
+
+VA@$YM
+	in a,(#99)
+	and %00100000
+	jp nz,VA@$YM
+VB@$YM
+	in a,(#99)
+	and %00100000
+	jp z,VB@$YM
+	ENDM
+        
+

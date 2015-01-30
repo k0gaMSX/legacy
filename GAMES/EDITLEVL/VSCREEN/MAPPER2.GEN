@@ -1,0 +1,117 @@
+; MAPPER2.GEN
+; Standard mapper routines
+; Runs under both DOS1 & DOS2
+; Use DOS2 mapper routines if present
+; Don't access the mapper directly, do everything
+; with these routines!!!
+
+; Call InitMapRouts first before using the other routines!
+
+; By Roderik Muit/Stefan Boer
+; Sunrise Magazine #16
+; (c) Stichting Sunrise 1995
+
+
+; Init mapper routines
+; Call once before using Read/Write routines!
+
+InitMapRouts:
+	LD	A,(#FB20)	; Not necessary
+	RRCA                    ;  under MSX-DOS
+	RET	NC		; No EXTBIOS
+
+	XOR	A
+	LD	DE,0402H	; ID/functionnr
+	CALL	#FFCA
+	OR	A
+	RET	Z		; No maprouts
+
+	LD	BC,18H
+	ADD	HL,BC		; Jumpadres PUT_P0
+	LD	DE,WriteFC	; Copy jumps
+	LD	C,3
+	LDIR
+	LD	DE,ReadFC
+	LD	C,3
+	LDIR
+	LD	DE,WriteFD
+	LD	C,3
+	LDIR
+	LD	DE,ReadFD
+	LD	C,3
+	LDIR
+	LD	DE,WriteFE
+	LD	C,3
+	LDIR
+	LD	DE,ReadFE
+	LD	C,3
+	LDIR
+	LD	DE,WriteFF
+	LD	C,3
+	LDIR
+	LD	DE,ReadFF
+	LD	C,3
+	LDIR
+	RET
+
+
+; Routines for writing the mapper (if DOS2 not present)
+; In : A = segmentnumber
+; Out: -
+; Changes: - (also when relinked to DOS2 routines)
+; Like DOS2 WriteFF has no effect. It is never allowed to
+; change page 3.
+
+WriteFC:
+	LD	(StoreFC),A
+	OUT	(#FC),A
+	RET
+
+WriteFD:
+	LD	(StoreFD),A
+	OUT	(#FD),A
+	RET
+
+WriteFE:
+	LD	(StoreFE),A
+	OUT	(#FE),A
+
+WriteFF:
+	RET
+	DW	0
+
+; DW 0 is necessary because there have to be 3 bytes
+; between WriteFF and ReadFC. (You can discuss the use
+; of relinking WriteFF, but never mind.)
+
+
+; Routines for reading the mapper
+; In : -
+; Out: A = segmentnumber
+; Changes: - (also when relinked to DOS2 routines)
+
+ReadFC:
+	LD	A,(StoreFC)
+	RET
+
+ReadFD:
+	LD	A,(StoreFD)
+	RET
+
+ReadFE:
+	LD	A,(StoreFE)
+	RET
+
+ReadFF:
+	LD	A,(StoreFF)
+	RET
+
+; storage space under DOS1
+
+StoreFF: DB	0
+StoreFE: DB	1
+StoreFD: DB	2
+StoreFC: DB	3
+
+
+

@@ -1,0 +1,430 @@
+gest_mask:
+	push bc
+	ld de,tasadr		;+(8*4)
+	call vpoke
+	pop bc
+	ld d,b
+        ld b,11
+loop_mask:        
+        ld a,c		;y
+	out (#98),a
+        ld a,d
+        add a,16
+	out (#98),a	;x
+	ld a,128
+	out (#98),a	;spr
+        nop
+	xor a		;void
+	out (#98),a
+        nop
+	ld a,c		;ld a,c
+	out (#98),a
+	add a,16
+	ld c,a
+	ld a,d
+	add a,248
+	out (#98),a
+	ld a,128
+	out (#98),a
+        nop
+	xor a
+	out (#98),a
+        djnz loop_mask        
+	ret
+
+setscrollxy:
+        ld a,(vdpy)
+        and 7
+        ld (oldvdpy),a
+        out (#99),a
+        ld a,128+23
+        out (#99),a
+        ld a,(vdpx)
+        and 7
+        ld (oldvdpx),a
+        out (#99),a
+        ld a,128+18
+        out (#99),a
+        ret
+oldvdpy:
+	db 0
+oldvdpx:
+	db 0
+
+scrxpos:
+	dw 0
+scrypos:
+	dw 0
+
+;  comp the values of vert scroll and horizontal scroll
+;  + x and y of main sprite
+gest_screen:
+        xor a
+        ld (offsetx),a
+        ld (vdpx),a
+        ld hl,(posx)
+	and 127
+        ld a,l
+        ld (sprx),a     
+	ld hl,0
+	ld (scrxpos),hl
+	ld (scrypos),hl
+; default case, sprite is NW of the screen
+; offset en x =0
+; scroll en x =0
+
+        ld hl,(posx)
+        ld de,128
+        call simrst20
+        jp c,offset1
+
+;
+; East part of the screen.
+;
+        ld hl,(posx)
+xs1:
+        ld de,(256*xsize)-128
+        call simrst20
+        jp nc,maxdroite
+;
+; middle of the screen
+;
+        ld hl,(posx)
+        ld a,128
+        ld (sprx),a
+        ld e,l  ;on sauve l
+        ld a,l
+        and 7
+        ld (vdpx),a     		
+        ld l,e
+        ld de,-128      ; take off 128 (sprite position in the middel of the screen)
+        add hl,de
+	ld (scrxpos),hl
+        srl h           ; divide de hl by 8 
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l   
+        ld a,l          ; keep lowest 8 bits
+        ld (offsetx),a   
+        jp offset1
+maxdroite:
+;  offset x = debut du dernier ecran
+;  vdp x = 0
+;  x reel du sprite = partie basse du x reel
+;
+xs2:
+	ld hl,(xsize-1)*256
+	ld (scrxpos),hl
+xs3:
+        ld a,(xsize-1)*32
+        ld (offsetx),a
+        xor a
+        ld (vdpx),a
+        ld hl,(posx)
+        ld a,l
+        ld (sprx),a
+        
+;
+;  ici, c'est tout a droite du stage.
+;
+offset1:
+; maintenant calcul pour la position en y
+        xor a
+        ld (offsety),a
+        ld (vdpy),a
+        ld hl,(posy)
+        ld a,l
+        ld (spry),a  
+        ld hl,(posy)
+        ld de,96		; 128
+        call simrst20
+        jp c,offset2
+
+        ld hl,(posy)
+ys1:
+        ld de,(ysize*192)-96	;896
+        call simrst20
+        jp nc,maxbas
+;
+; middle of the stage (y)
+;
+        ld hl,(posy)
+        ld a,96			;128
+        ld (spry),a
+        ld e,l  ;on sauve l
+        ld a,l
+        and 7
+        ld (vdpy),a     		
+        ld l,e
+        ld de,-96		;-128      
+        add hl,de
+	ld (scrypos),hl
+        srl h           
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l   
+        ld a,l          
+        ld (offsety),a  
+        jp offset2
+maxbas:
+ys2:
+	ld hl,(ysize-1)*192
+	ld (scrypos),hl
+ys3:
+        ld a,24*(ysize-1)
+        ld (offsety),a
+        xor a
+        ld (vdpy),a
+        ld hl,(posy)
+        ld a,l
+ya1:    add a,0   
+        ld (spry),a
+offset2:
+        ld a,(offsety)
+        ld h,a
+        ld a,(offsetx)
+        ld l,a
+        ld (vpoke_adr),hl
+	ret
+blinkspr:
+	ld a,(timer)
+	and 3
+	jp nz,noblink
+	ld a,217
+	jp blink
+putspr:
+	di
+        ld de,tasadr+(22*4)	;+0
+        call vpoke
+        ld a,(vdpy)
+        and 7
+        ld b,a
+	ld a,(bonus)		
+	cp 1
+	jp z,blinkspr		;if bonus=1 then blink
+noblink:
+        ld a,(spry)
+blink:
+        add a,b
+        ld e,a
+        out (#98),a		; Out Y
+        ld a,(vdpx)
+        and 7
+        ld b,a
+        ld a,(sprx)
+        add a,b
+        ld d,a
+        out (#98),a		; Out X
+	ld a,(sprdir)
+	add a,a
+	add a,a
+	ld b,a
+        ld a,(ctrlmode)
+        cp 2	 ;or a
+        call z,setb0
+	ld a,(sprframe)
+	add a,a
+	add a,a
+	add a,b
+	ld (sprnbr),a
+	xor a
+        out (#98),a		; Out sprite
+        ld a,15
+        out (#98),a		; Reserved
+        nop
+        ld a,e
+        out (#98),a		; Out y
+        nop
+        ld a,d
+        out (#98),a		; Out X
+	ld a,4
+        out (#98),a		; Out Sprite
+        ld a,15
+        out (#98),a		; Reserved
+; DISPLAY ENEMIES
+	ld hl,tasenm
+        ld b,16
+        ex af,af'
+	ld a,8
+        ex af,af'
+loop_dspenm
+	ld a,(hl)
+	cp 255		
+        jp z,cleartasl		; end of list reached, clear TAS
+	ld c,a			; !! troubles if more than 8 enm on scr
+	ld a,(vdpy)
+	and 7
+	add a,c
+        ld e,a			; e = sprypos
+	inc hl
+	ld a,(vdpx)
+	and 7
+	ld c,a
+	ld a,(hl)
+	add a,c
+        call c,sprout
+        ld d,a			; d = sprxpos
+        ld a,e
+	out (#98),a		;y
+        nop
+        ld a,d        
+	out (#98),a		;x
+	inc hl
+        ex af,af'
+	out (#98),a		;mst
+	add a,4			;inc pointer on tgs
+        ex af,af'
+	inc hl
+	inc hl
+	xor a 
+	out (#98),a		;void
+        nop
+        ld a,e
+        out (#98),a
+        nop
+        ld a,d
+        out (#98),a
+        nop      
+        ex af,af' 
+        out (#98),a
+	add a,4			;inc pointer on tgs
+        ex af,af'
+        xor a 
+        out (#98),a		;void
+        dec b
+        dec b
+	jp loop_dspenm
+sprout:
+	ld e,210
+	ret
+setb0:
+	ld b,0
+	ret        
+putsprtcs:
+	di
+	ld a,(screenrefresh)
+	cp 1
+	ret z
+	ld de,tcsadr+(22*16)
+	call vpoke
+	ld bc,spry
+	ld de,tcsloadadr
+loopputtcs:
+	ld a,(bc)	
+	cp 255		; 255 = end of tas
+	ret z
+	inc bc
+	inc bc
+	ld a,(bc)	; sprite number *8
+	ld l,a
+	inc bc
+	ld h,0
+        add hl,hl	; spr * 8
+	add hl,hl	; sprite number * 16
+	add hl,hl       ; sprite number * 32
+	add hl,de
+ 	push bc
+ 	ld bc,#2098	; out 32 bytes
+ 	otir
+ 	pop bc
+nexttcs:
+	inc bc
+	jp loopputtcs
+
+putsprtgs:
+	ld a,(screenrefresh)
+	cp 1
+	ret z
+	ld de,tgsadr
+	call vpoke
+	ld bc,spry
+	ld de,tgsloadadr
+loopputtgs:
+	ld a,(bc)	
+	cp 255
+	ret z
+	inc bc
+	inc bc
+	ld a,(bc)	; sprite number *8
+	ld l,a
+	inc bc
+	ld a,(bc)
+	ld a,l		;l
+	ld (bc),a
+	ld h,0
+        add hl,hl	; spr * 8
+	add hl,hl	; sprite number * 16
+	add hl,hl       ; sprite number * 32
+	add hl,hl	; sprite number * 64
+	add hl,de
+	push bc
+	ld bc,#4098
+	otir
+	pop bc
+nexttgs:
+	inc bc
+	jp loopputtgs
+
+cleartas:
+	ld de,tasadr+(22*4)	;+0
+	call vpoke
+	ld b,32
+cleartasl:
+	ld a,210
+	out (#98),a
+        nop
+	xor a
+	out (#98),a
+        nop
+        xor a
+	out (#98),a
+        nop
+        ld a,15
+	out (#98),a
+	djnz cleartasl
+	ret        
+;
+; Refresh entire screen
+;
+put_screen:
+	di                
+        xor a
+        ld (screenrefresh),a
+	ld hl,(vpoke_adr)
+	ld de,(old_vpokeadr)
+	call simrst20
+	ret z
+        ld de,tnpadr
+        call vpoke      
+        ld hl,(vpoke_adr)
+	ld (old_vpokeadr),hl
+        ld de,#4000
+        add hl,de
+        ld c,#98
+        ld a,23
+loop_vpoke:
+        ld b,32
+        otir
+        ld de,(32*8)-32			; 32*xsize
+        add hl,de
+	dec a
+        jp nz,loop_vpoke
+        ld a,1
+        ld (screenrefresh),a
+        ret
+screenrefresh:
+	db 0        
+offsetx:
+        db 0
+offsety:
+        db 0
+vpoke_adr:
+        dw 0
+old_vpokeadr:
+	dw -1
+
+

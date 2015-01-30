@@ -1,0 +1,895 @@
+;
+; Obstacle detection for main sprite
+;
+obstacle:
+	ld a,(iskilled)
+	or a
+	ret nz
+ 	ld a,(x_speed)
+ 	and 128
+ 	jp nz,obs_tstleft
+obs_tstright:
+	call obs_tstupdown
+	call cpt1x
+        cp bgrblocks
+        call c,obstright
+        call cpt3x
+        cp bgrblocks
+        call c,obstright
+        call cpt1xy
+        cp bgrblocks
+        call c,obstright
+        call cpt3xy
+        cp bgrblocks
+        call c,obstright
+        call cpt2obj
+        ex de,hl
+        sub 208
+        jp c,obtrp2
+ 	add a,a
+ 	ld l,a
+ 	ld h,tiletbl/256
+ 	ld a,(hl)
+ 	inc hl
+ 	ld h,(hl)
+        ld l,a
+ 	jp (hl)
+obtrp2: 
+        call cpt1obj
+	ex de,hl
+	sub 208
+        ret c
+ 	add a,a
+ 	ld l,a
+ 	ld h,tiletbl/256
+ 	ld a,(hl)
+ 	inc hl
+ 	ld h,(hl)
+        ld l,a
+ 	jp (hl)
+
+noact:
+	ret
+exitstg1:
+	dec de
+exitstg:
+	ld a,1
+	ld (nextload),a
+	ex de,hl
+	dec h
+        ld de,-#4000
+        add hl,de
+	ld (exitadr),hl
+	ret        
+exitadr:
+	dw 0
+tstbrk:	
+	push af
+	cp brkblk2
+	jp z,blkbrk50
+	cp brkblk3
+	jp z,blkbrk51
+        cp cbrkblk2
+        jp z,blkbrk52
+        cp cbrkblk3
+        jp z,blkbrk53
+retblkbrk:
+	pop af
+	ret
+blkbrk51:
+	dec hl
+;set the block as 'cracked'
+blkbrk50:
+	ld a,cbrkblk2
+	ld (hl),a
+	inc hl
+	ld a,cbrkblk3
+	ld (hl),a
+	dec h
+	ld a,cbrkblk1
+	ld (hl),a
+	dec hl
+	ld a,cbrkblk0
+	ld (hl),a
+        ld bc,#0102
+        call SETSFX
+        call obstup
+        ld hl,-1
+        ld (old_vpokeadr),hl
+	jp retblkbrk
+blkbrk53:
+	dec hl
+;replace broken block with pick up bonus        
+blkbrk52:
+	ld a,star2
+	ld (hl),a
+	inc hl
+	ld a,star3
+	ld (hl),a
+	dec h
+	ld a,star1
+	ld (hl),a
+	dec hl
+	ld a,star0
+	ld (hl),a
+        ld bc,#0102
+        call SETSFX
+        call obstup
+        ld hl,-1
+        ld (old_vpokeadr),hl
+	jp retblkbrk
+getstarsw:
+	dec d
+	jp getstarnw
+getstarne:
+	dec de
+	jp getstarnw
+getstarse:
+	dec de
+	dec d
+	jp getstarnw
+getstarnw:
+	ld a,bgrnw
+	ld (de),a
+	inc de
+	ld a,bgrne
+	ld (de),a
+	inc d
+	ld a,bgrse
+	ld (de),a
+	dec de
+	ld a,bgrsw
+	ld (de),a
+ 	ld a,(nbrstars)
+ 	ld b,a
+	ld a,(stars)
+	inc a
+	daa
+	ld (stars),a
+	cp b
+ 	call z,openexit
+        ld bc,#0101
+        call SETSFX
+bonus1:
+	ld de,starptr
+	call addscore
+        ld hl,-1
+        ld (old_vpokeadr),hl
+	ret
+getpowsw:
+	dec d
+	jp getpownw
+getpowne:
+	dec de
+	jp getpownw
+getpowse:
+	dec de
+	dec d
+getpownw:
+	ld a,bgrnw
+	ld (de),a
+	inc de
+	ld a,bgrne
+	ld (de),a
+	inc d
+	ld a,bgrse
+	ld (de),a
+	dec de
+	ld a,bgrsw
+	ld (de),a
+        ld bc,#010B
+        call SETSFX
+bonuspower:
+	ld a,1
+	ld (bonus),a
+	ld a,20
+	ld (bonustimer),a
+	ld de,starptr
+	call addscore
+        ld hl,-1
+        ld (old_vpokeadr),hl
+	ret
+get1upsw:
+	dec d
+	jp get1upnw
+get1upne:
+	dec de
+	jp get1upnw
+get1upse:
+	dec de
+	dec d
+get1upnw:
+	ld a,bgrnw
+	ld (de),a
+	inc de
+	ld a,bgrne
+	ld (de),a
+	inc d
+	ld a,bgrse
+	ld (de),a
+	dec de
+	ld a,bgrsw
+	ld (de),a
+        ld bc,#010B
+        call SETSFX
+bonuslives:
+	ld a,(lives)
+        inc a
+        daa
+	ld (lives),a
+	ld de,starptr
+	call addscore
+        ld hl,-1
+        ld (old_vpokeadr),hl
+        ld hl,liveuptxt
+        jp inittext
+liveuptxt:
+	db "1 UP!  #$"        
+
+openexit:
+	ld hl,(adrexit)
+	ld de,0
+	call simrst20
+	ret z
+	ld hl,(adrexit)
+	ld a,opendoor0
+	ld (hl),a
+	ld a,opendoor1
+	inc hl
+	ld (hl),a
+	inc h
+	ld a,opendoor3
+	ld (hl),a
+	dec hl
+	ld a,opendoor2
+	ld (hl),a
+	ld hl,dooropentxt
+	call inittext
+	ret
+dooropentxt:
+	db "EXIT DOOR IS OPEN!  #$"        
+obs_tstleft:	
+	call obs_tstupdown
+	call cpt0x
+        cp bgrblocks
+        call c,obstleft
+	call cpt2x
+        cp bgrblocks
+        call c,obstleft
+        call cpt0xy
+        cp bgrblocks
+        call c,obstleft
+        call cpt2xy
+        cp bgrblocks
+        call c,obstleft
+        call cpt2obj
+        ex de,hl
+        sub 208
+        jp c,obtlp2
+ 	add a,a
+ 	ld l,a
+ 	ld h,tiletbl/256
+ 	ld a,(hl)
+ 	inc hl
+ 	ld h,(hl)
+        ld l,a
+ 	jp (hl)
+obtlp2:
+        call cpt1obj
+        ex de,hl
+        sub 208
+        ret c
+ 	add a,a
+ 	ld l,a
+ 	ld h,tiletbl/256
+ 	ld a,(hl)
+ 	inc hl
+ 	ld h,(hl)
+        ld l,a
+ 	jp (hl)
+obs_tstupdown:
+	ld a,(ctrlmode)
+	cp 2
+	jp z,ctrlnoreset
+ 	ld a,1
+ 	ld (ctrlmode),a
+ctrlnoreset:
+        call cpt0yb
+        call tstbrk
+        call cpt2yb
+        call tsttrempoline
+        call cpt0y
+        cp bgrblocks
+        jp c,obstup
+        ld de,0
+        cp patladderw
+        call z,tstladup
+        call cpt1y
+        cp bgrblocks
+        jp c,obstup
+        ld de,8
+        cp patladdere
+        call z,tstladup
+        call cpt2y
+        cp bgrblocks
+        jp c,obstdown
+        ld de,0
+        cp patladderw
+        jp z,tstladdown
+	cp patladderw
+        call nz,outladder
+        call cpt3y
+        cp bgrblocks
+        jp c,obstdown
+        ld de,8
+        cp 235
+        jp z,tstladdown
+        cp 235
+        jp nz,outladder        
+        ret
+outladder:
+	ld a,1
+	ld (ctrlmode),a
+	ret        
+tstladup:
+	ld a,(ctrlmode)
+	cp 2	; or a
+	ret z
+	ld a,(joy_value)
+	cp 1
+	jp z,setladup
+	ret
+tstladdown:
+	ld a,(ctrlmode)
+	cp 2	; or a
+	ret z
+        ld a,(joy_value)
+        cp 5
+        jp z,setladdown
+        dec h
+        ld a,(hl)
+        cp patladderw
+        ret z
+        cp patladdere
+        ret z
+        jp obstdown
+setladup:       
+	ld a,2
+	ld (ctrlmode),a
+	ld hl,0
+	ld (x_speed),hl	
+        ld hl,-1
+        ld (y_speed),hl
+        ld hl,(posx)
+        add hl,de
+        ld a,l
+        and %11111000
+        ld l,a
+        ld (posx),hl
+	ret
+setladdown:       
+	ld a,2
+	ld (ctrlmode),a
+	ld hl,0
+	ld (y_speed),hl	
+        ld (x_speed),hl
+        ld hl,(posx)
+        add hl,de
+        ld a,l
+        and %11111000
+        ld l,a
+        ld (posx),hl
+	ret
+obstdown:
+        xor a
+        ld (ctrlmode),a
+	ld hl,(posy)
+        ld de,(y_speed)
+        add hl,de
+	ld a,l
+	and %11111000
+	ld l,a
+	ld (posy),hl
+	ld hl,0
+	ld (y_speed),hl
+	ret
+obstup:
+	ld hl,(posy)
+	ld a,l
+	and %11111000
+	ld l,a
+	ld (posy),hl
+	ld hl,0
+	ld (y_speed),hl
+	ret
+obstleft:
+	ld hl,(posx)
+	ld a,l
+	and %11111000
+	ld l,a
+	ld (posx),hl
+	ld hl,0
+	ld (x_speed),hl
+	ret
+obstright:
+	ld hl,(posx)
+        ld de,(x_speed)
+        add hl,de
+	ld a,l
+	and %11111000
+	ld l,a
+	ld (posx),hl
+	ld hl,0
+	ld (x_speed),hl
+	ret
+cpt0x:
+	ld hl,(posx)
+        ld de,(x_speed)
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+        ld de,#4000
+        add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+cpt1x:
+	ld hl,(posx)
+        ld de,(x_speed)
+        add hl,de
+        ld de,15
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+cpt2x:
+	ld hl,(posx)
+        ld de,(x_speed)
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,15
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+cpt3x:
+	ld hl,(posx)
+        ld de,(x_speed)
+        add hl,de
+        ld de,15
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,15
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+        ld de,#4000
+ 	add hl,de
+;	set 6,h
+	ld a,(hl)
+	ret
+cpt0y:
+	ld hl,(posx)
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,(y_speed)
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+cpt0yb:
+	ld hl,(posx)
+        ld de,8
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,(y_speed)
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+cpt2yb:
+	ld hl,(posx)
+        ld de,8
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,(y_speed)
+        add hl,bc
+        ld bc,15
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+
+cpt0xy:
+	ld hl,(posx)
+        ld de,(x_speed)
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,(y_speed)
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+        
+cpt1y:
+	ld hl,(posx)
+        ld de,15
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,(y_speed)
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+cpt1xy:
+	ld hl,(posx)
+        ld de,(x_speed)
+        add hl,de
+        ld de,15
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,(y_speed)
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+cpt2obj:
+	ld hl,(posx)
+        ld de,(x_speed)
+        add hl,de
+        ld de,12
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,(y_speed)
+        add hl,bc
+        ld bc,15
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+cpt1obj:
+	ld hl,(posx)
+        ld de,(x_speed)
+        add hl,de
+        ld de,4
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,(y_speed)
+        add hl,bc
+        ld bc,15
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+        
+cpt2y:
+	ld hl,(posx)
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,16
+        add hl,bc
+        ld bc,(y_speed)
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+cpt3y:
+	ld hl,(posx)
+        ld de,15
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,16
+        add hl,bc
+        ld bc,(y_speed)
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+cpt3xy:
+	ld hl,(posx)
+        ld de,(x_speed)
+        add hl,de
+        ld de,15
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,15
+        add hl,bc
+        ld bc,(y_speed)
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+cpt2xy:
+	ld hl,(posx)
+        ld de,(x_speed)
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de,hl
+        ld hl,(posy)
+        ld bc,15
+        add hl,bc
+        ld bc,(y_speed)
+        add hl,bc
+        ld a,l
+        and #f8
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+ 	ld de,#4000
+ 	add hl,de
+;set 6,h
+	ld a,(hl)
+	ret
+
+

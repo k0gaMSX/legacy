@@ -1,0 +1,32 @@
+enm3:
+	ld a,(ix+0)
+	cp 2
+	jp z,trt_enmdeath
+        call tstdown3
+	ld e,(ix+7)		;
+	ld a,e
+	and 128
+	jp nz,engoleft
+        jp engoright
+
+tstdown3:
+	call enm2yb
+	cp bgrblocks
+	jp nc,turnen3
+	ret
+
+turnen3:
+	ld a,(ix+8)	;
+	or a
+	jp z,goleft3
+	xor a
+	ld (ix+8),a	;
+        ld a,1
+	ld (ix+7),a	;
+	ret
+goleft3:
+	ld a,255
+	ld (ix+8),a	;
+	ld (ix+7),a	;
+	ret
+

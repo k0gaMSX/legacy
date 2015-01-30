@@ -1,0 +1,344 @@
+;
+; manage main sprite
+;
+gest_perso:
+	call read_stick
+	call sign_speed
+        call obstacle
+	ld hl,(posx)
+	ld de,(x_speed)
+	add hl,de
+	ld (posx),hl
+	ld hl,(posy)
+	ld de,(y_speed)
+	add hl,de
+	ld (posy),hl
+        ld de,768
+        call simrst20
+	jp nc,setposy0
+pattern_select:
+        ld a,(ctrlmode)
+        cp 2
+        jp z,pattern_lad
+        ld a,(ctrlmode)
+        cp 1
+        jp z,pattern_jmp
+	ld a,(x_speed)
+	or a
+	jp z,pattern_stop
+pattern_mr:
+	ld a,(timer)
+	and 3
+	ret nz
+	ld a,(sprframe)
+	inc a
+	cp 4
+	call nc,xora
+	ld (sprframe),a
+	ret
+xora:
+	xor a
+	ret
+pattern_stop:
+	xor a
+	ld (sprframe),a
+	ret
+pattern_lad:
+	ld a,10
+	ld (sprframe),a
+        ld a,(y_speed)
+        or a
+        ret z
+	ld a,(timer)
+	and 15
+	cp 7
+	ret c
+	ld a,(sprframe)
+	inc a
+	ld (sprframe),a
+	ret
+pattern_jmp:
+        ld a,4
+        ld (sprframe),a
+        ret
+setdirleft:
+        xor a
+	ld (sprdir),a
+	ret
+setdirright:
+	ld a,5
+	ld (sprdir),a
+	ret
+sign_speed:
+	ld de,(x_speed)
+	ld d,0
+	bit 7,e
+	call nz,negd
+	ld (x_speed),de
+	ld de,(y_speed)
+	ld d,0
+	bit 7,e
+	call nz,negd
+	ld (y_speed),de
+	ret
+negd:
+	ld d,255
+	ret
+; gravity, accelerate falling speed till max speed reached
+gravity:
+	ld a,(y_speed)
+maxfall1:
+	cp maxfallspeed
+	ret z
+	inc a
+	ld (y_speed),a
+	ret
+; prevent from rebound if jump key is held down       
+test_rebound:
+        ld a,(joy)
+	call rd_stg
+	ret nz
+	xor a
+	ld (rebound),a
+	ret
+rebound:	db 0
+        
+read_stick:
+	ld a,(timer)
+inert1:
+	and spdinert
+	or a
+	ret nz
+        ld a,(ctrlmode)		; case ctrlmode
+        cp 2
+        jp z,ctrl_ladder	; on ladder
+        cp 3
+        jp z,ctrl_swim		; in water
+; ctrlmode = 0 or 1 (on floor or in the air)        
+	call gravity		; else apply gravity
+	ld a,(iskilled)
+	or a
+	ret nz			; if here killed, no control
+        ld a,(joy)
+        call rd_stg
+        call nz,go_n		; jump if button 1 pressed
+        ld a,(joy)              ; read joy/keyboard direction
+        call rd_stk             
+        ld (joy_value),a	; save value
+        cp 1
+        jp z,go_center
+        cp 2
+        jp z,go_e		;go_ne
+        cp 3
+        jp z,go_e   
+        cp 4
+        jp z,go_e		;go_se
+        cp 5
+        jp z,go_center
+        cp 6
+        jp z,go_w		;go_sw
+        cp 7
+        jp z,go_w    
+        cp 8
+        jp z,go_w		;go_nw
+        or a
+	jp z,go_center
+        ret
+
+; if no direction selected then decrease speed
+go_center:
+	ld a,(x_speed)
+	ld b,a
+	or a
+	ret z
+	and 128
+	jp nz,speed_left
+	ld a,b
+	dec a
+	ld (x_speed),a
+	ret
+speed_left:
+	ld a,b
+	inc a
+	ld (x_speed),a
+	ret
+go_n:
+	ld a,(rebound)
+	or a
+	ret nz
+	ld a,(ctrlmode)		; if main sprite not on floor, jump not allowed
+	or a
+	ret nz
+	ld a,1
+	ld (rebound),a
+	ld bc,#0100
+	call SETSFX
+heightj1:
+        ld de,-heightjump	; initial jump speed
+        ld (y_speed),de
+        ret
+; run right, accelerate till maxspeed reached         
+go_e:
+	call setdirright
+	ld a,(x_speed)
+mxspd1:
+	cp maxspeedx
+	ret z
+	inc a
+	ld (x_speed),a
+	ret
+
+; run left, accelerate till maxspeed reached
+go_w:
+	call setdirleft
+	ld a,(x_speed)
+mxspd2:
+	cp -maxspeedx
+	ret z
+	dec a
+	ld (x_speed),a
+	ret
+setposy0:
+	ld hl,0
+	ld (posy),hl
+	ret
+; comtrols of hero in the water        
+ctrl_swim:
+	ld a,(iskilled)
+	or a
+	ret nz
+        ld a,(joy)              
+        call rd_stk             
+        ld (joy_value),a
+        ret
+; controls of hero on a ladder                
+ctrl_ladder:
+	ld a,(iskilled)		; no control if hero killed
+	or a
+	ret nz
+        ld a,(joy)              ; joy/keyboard
+        call rd_stk              
+        ld (joy_value),a	; save value
+        cp 1
+        jp z,go_nladder
+        cp 3
+        jp z,go_eladder
+        cp 5
+        jp z,go_sladder
+        cp 7
+        jp z,go_wladder
+        or a
+	ret nz
+; no direction selected, stop moving on ladder        
+ladder_stop:
+	ld de,0
+	ld (y_speed),a
+	ret
+go_nladder:
+	ld de,-1
+	ld (y_speed),de
+	ret
+go_sladder:
+	ld de,1
+	ld (y_speed),de
+	ret
+; jump from ladder to the left         
+go_wladder:		
+	ld de,-2
+	ld (x_speed),de
+        ld a,1
+        ld (ctrlmode),a
+ 	ld bc,#0100
+ 	call SETSFX
+	ret
+; jump from ladder to the right         
+go_eladder:
+	ld de,2
+	ld (x_speed),de
+        ld a,1;	xor a
+        ld (ctrlmode),a
+ 	ld bc,#0100
+ 	call SETSFX
+	ret
+initfire:
+	ld a,(fireon)
+	or a
+	ret z
+	ld hl,(posx)
+	ld de,8
+	add hl,de
+	ld (firex),a
+	ld hl,(posy)
+	add hl,de
+	ld (firey),a
+	ld hl,8
+	ld (firespeedx),hl
+	ld hl,-4
+	ld (firespeedy),hl
+	ld a,1
+	ld (fireon),a
+ 	ld bc,#0100
+	call SETSFX
+	ret
+
+gestfire:
+	ld a,(fireon)
+	or a
+	ret z
+	ld a,(timer)
+	and 3
+	call z,firegravity
+        ld hl,(firex)
+        ld de,(firespeedx)
+        add hl,de
+        ld (firex),hl
+        ld hl,(firey)
+        ld de,(firespeedy)
+        add hl,de
+        ld (firey),hl
+        ld de,(scrypos)
+        or a
+        sbc hl,de
+        ld a,h
+        or a
+        jp nz,offfire
+	ld c,l
+	ld a,l
+	cp 192
+	jp nc,offfire
+	ld (firetasy),a
+	ld hl,(firex)
+	ld de,(scrxpos)
+	or a
+	sbc hl,de
+	ld a,h
+	or a
+	jp nz,offfire
+	ld (firetasx),a
+	ret
+offfire:
+	xor a
+	ld (fireon),a
+	ret        
+firegravity:
+	ld hl,(firespeedy)
+	ld a,l
+	cp maxfallspeed
+	ret z
+	inc hl
+	ld (firespeedy),hl
+	ret
+        
+firetasy:	db 0
+firetasx:	db 0
+firex:		dw 0
+firey:		dw 0        
+firespeedx:	dw 0
+firespeedy:	dw 0
+fireon:		db 0	; 0 = fire off / 1 = on
+joy_value:      db 0	; save joystick value
+sprdir:		db 0	; 0 = left / 1 = right
+sprframe:	db 0	; animation frame
+ctrlmode:	db 0	; control mode
+			; 0=walk/1=jump/2=on ladder/3=swim/4=fly
+

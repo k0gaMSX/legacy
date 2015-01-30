@@ -1,0 +1,398 @@
+
+
+	org #100
+*i vsbios.gen
+	jp initall
+leveldata:
+	ds 255
+initall:
+	ld de,msgstart
+	call print
+	ld de,msgbios
+	call print
+; load bios at #c000
+	ld hl,fbios
+	ld de,#c000			
+        call diskload
+	jp nz,printerror
+	call printok
+; Set black background / white fnt
+        call setcolor
+; Initialize mapper (for dos 2)
+	call InitMapRouts	
+; Test if R800 present and set z80 mode
+	xor a
+	ld (f_r800),a
+	ld (m_r800),a
+	call test_r800
+	ld a,(f_r800)
+	cp 1
+	call z,setz80
+        xor a
+        ld (joy),a
+	ld (mussetting),a
+; search audio chip present
+        call srcchp
+; load psg sound effects
+	call loadsound
+menustr:
+; set first stage passed as parameter
+       	ld hl,#5c
+       	ld de,flevel
+       	ld bc,9
+       	ldir
+; load menu and display
+	call loadmenu
+	call #1000
+        ld a,(nextload)
+        cp -1
+        jp z,0
+; set number of lives before starting game
+        ld a,3
+        ld (lives),a
+        xor a
+        ld (score),a
+        ld (score+1),a
+        ld (score+2),a
+gameloop:
+; load
+	call loadplayer
+; load main routine
+	call loadlevel
+; load main vscreen routine
+	ld de,loadmain
+	call print
+	ld hl,fvscreen
+	ld de,#1000-3
+	call diskload
+	jp nz,printerror
+	call printok
+        ld a,(leveldata+76)
+        add a,0
+        daa
+        ld (nbrstars),a
+	call #1000-3
+	ld a,(nextload)
+	cp -1
+	jp z,0			; if nextload = -1 quit
+	cp 2
+	jp z,ending		; if nextload = 2 display ending
+	cp 0
+	jp z,menustr		; if nextload = 0 go back to menu
+	ld a,(hl)		; a=filetype to load
+	inc hl			; so far handle level file by default
+	ld de,flevel+1		; else load next level @ HL
+	ld bc,8
+	ldir
+	jp gameloop
+ending:
+	jp 0
+
+loadlevel:
+; load level description file
+
+	ld hl,flevel+1
+	ld de,loadmsg+6
+	ld bc,8
+	ldir
+	ld de,loadmsg
+	call print
+       	ld hl,flevel
+       	ld de,leveldata
+       	call diskload
+
+; retrieve file names for level description file
+
+	call setfilenames
+
+; load sound kit
+
+	ld de,loadmbk
+	call print
+	ld hl,fmbsample
+	call mkload
+        ld a,(replaypge)
+        call WriteFD
+        
+; move smpadr a data        
+
+        ld hl,tmpsmpadr
+        ld de,smpadr
+        ld bc,56
+        ldir
+	call printok
+
+;  Load music
+
+	call loadmusic
+	jp nz,printerror
+	call printok
+
+;	Load gfx
+
+	ld de,loadgfx
+	call print
+	ld a,6
+	call WriteFD
+	ld hl,fsc4
+	ld de,tplloadadr
+	call diskload
+	jp nz,printerror
+        call printok
+
+;	Load scr
+
+	ld de,loadscr
+	call print
+	ld hl,fscr
+	ld de,scrloadadr
+	call diskload
+	jp nz,printerror
+	call printok
+        
+;	Load sprites
+ 
+	ld de,loadspr
+	call print
+	ld hl,ftgs
+	ld de,tgsloadadr
+	call diskload
+	jp nz,printerror
+	ld hl,ftcs
+	ld de,tcsloadadr
+	call diskload
+	jp nz,printerror
+	call printok
+
+;	Load level
+
+	ld a,2
+	call WriteFD
+	ld a,1
+	call WriteFE
+	ld de,loadmap
+	call print
+	ld hl,fstg
+	ld de,#4000
+	call diskload
+	jp nz,printerror
+	call printok
+ 
+;	Load enemies
+ 
+	ld hl,fmst
+	ld de,#a000
+	call diskload
+	ret	
+setfilenames:
+	ld hl,leveldata+60
+	ld de,fmbsample+1	;mbk
+	ld bc,8
+	ldir
+        ld hl,leveldata+52
+        ld de,fmbm+1		;mbm
+        ld bc,8
+        ldir
+	ld hl,leveldata+28
+	ld de,fsc4+1		;sc4
+	ld bc,8
+	ldir
+	ld hl,leveldata+36
+	ld de,ftgs+1		;tgs
+	ld bc,8
+	ldir
+	ld hl,leveldata+36
+	ld de,ftcs+1		;tcs
+	ld bc,8
+	ldir
+	ld hl,leveldata+20
+	ld de,fstg+1		;stg
+	ld bc,8
+	ldir
+        ld hl,leveldata+68	;scr
+        ld de,fscr+1
+        ld bc,8
+        ldir
+        ld hl,leveldata+44	;mst
+        ld de,fmst+1
+        ld bc,8
+        ldir
+	ret
+loadmenu:
+	ld a,1
+	call WriteFE
+	ld de,msgmenu
+	call print
+	ld hl,fmenu
+        ld de,#1000
+	call diskload
+	jp nz,printerror
+	call printok
+	ld hl,fmenufnt		; menu fonts gfx
+	ld de,#8000
+	call diskload
+	ld hl,fmenutc
+	ld de,#9000		; menu coor table
+	call diskload
+	ret
+loadsound:
+	ld de,loadsee
+	call print
+	ld a,4
+	ld (SEEMAP),a
+        call WriteFE
+	ld hl,fsee
+	ld de,#8000
+	call diskload
+	jp nz,printerror
+	call printok
+	CALL SEE_IN
+	ret
+
+loadmusic:
+	ld de,loadmbm
+	call print
+	call srcchp
+	ld a,2
+	ld (chips),a
+	ld a,4
+	ld (muspge),a
+	call WriteFE
+	ld hl,fmbm
+	ld de,#9500
+	ld (musadr),de
+	call diskload
+	ret        
+loadplayer:
+	ld de,msgmbplay
+	call print
+	ld a,5
+	ld (replaypge),a
+	call WriteFD
+	ld hl,fmbplay
+	ld de,#4000
+	call diskload
+	jp nz,printerror
+	call printok
+	ret
+printok:
+	ld de,okmsg
+	jp print
+printerror:
+	ld de,errormsg
+	call print
+	jp 0
+        
+fbios:		defb 0,"vbiosbincom"	; vscreen bios
+fvscreen:	defb 0,"vscreen com"	; vscreen main
+fmbplay:	defb 0,"mbplay  com"	; Moonblaster replayer
+flevel:		defb 0,"        lev"	; level file
+fmbsample:	defb 0,"        mbk"	; sample kit file
+ftgs:	        defb 0,"        tgs"	; sprite gfx
+ftcs:	        defb 0,"        tcs"	; sprite color
+fmst:	        defb 0,"        mst"	; enemies position and movements
+fsee:           defb 0,"vscreen see"	; sound effects                 
+fscr:		defb 0,"        scr"	; score panel gfx
+fmbm:		defb 0,"        mbm"	; music          
+fsc4:        	defb 0,"        sc4"	; gfx of the tiles
+fstg:	        defb 0,"        stg"	; stage data
+fmenu:  	defb 0,"vsmenu  com"	; menu      
+fmenutc:	defb 0,"vsmenu  tc "
+fmenufnt:	defb 0,"vsmenu  fnt"
+
+msgstart:	defb "VScreen 1.0",13,10,"$"
+msgbios:	defb "Loading VScreen bios...$"
+msgmenu:	defb "Loading VScreen menu...$"
+msgmbplay:	defb "Loading replayer...$"
+loadmsg:	defb "Level:         ",13,10,"$"
+loadmbk:	defb "Loading sample kit... $"
+loadsee:	defb "Loading sound effects... $"
+loadmbm:	defb "Loading music file... $"
+loadmain:	defb "Loading game engine... $"
+loadgfx:	defb "Loading background gfx... $"
+loadspr:	defb "Loading sprites gfx... $"
+loadscr:	defb "Loading misc gfx... $"
+loadmap:	defb "Loading map data... $"
+loadenm:	defb "Loading monster data... $"
+errormsg:	defb "ERROR",13,10,"$"	
+okmsg:		defb "OK",13,10,"$"	
+endmsg:		defb "debug exit position",13,10        
+		defb " adr : #"
+xptr:           defb "    ",13,10
+		defb " found: #"
+yptr:	        defb "    ",13,10,"$"
+hexval:		defb "0","1","2","3","4","5","6","7","8","9"
+		defb "A","B","C","D","E","F"
+debugadr:
+	push de
+	push hl
+	pop bc
+	ld a,b
+	srl a
+        srl a
+        srl a
+        srl a
+	call gethexval
+	ld (xptr),a
+	ld a,b
+	and 15
+	call gethexval
+	ld (xptr+1),a
+	ld a,c
+	srl a
+	srl a
+	srl a
+	srl a
+	call gethexval
+	ld (xptr+2),a
+	ld a,c
+	and 15
+	call gethexval
+	ld (xptr+3),a
+	pop bc
+	ld a,b
+	srl a
+        srl a
+        srl a
+        srl a
+	call gethexval
+	ld (yptr),a
+	ld a,b
+	and 15
+	call gethexval
+	ld (yptr+1),a
+	ld a,c
+	srl a
+	srl a
+	srl a
+	srl a
+	call gethexval
+	ld (yptr+2),a
+	ld a,c
+	and 15
+	call gethexval
+	ld (yptr+3),a
+
+	ld de,endmsg
+	ld c,9
+	call 5
+	jp 0
+
+gethexval:
+	ld e,a
+	ld d,0
+	ld hl,hexval
+	add hl,de
+	ld a,(hl)        
+        ret
+; Print text: Hl points on text string.        
+print:
+	ld c,9
+	jp 5
+
+*i macro.gen
+*i loader.gen
+*i mbloader.gen
+
+end:
+

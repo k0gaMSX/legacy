@@ -1,0 +1,330 @@
+;
+; Mult h by e
+; result in hl
+mult8:
+	ld l,0
+	ld d,0
+	ld b,8
+mulloop:
+	add hl,hl
+	jr nc,suite
+	add hl,de
+suite:
+	djnz mulloop
+	ret	
+
+; Vpoke: position write address = de
+; Only works in the first 64 kb of vram
+vpoke:
+        ld a,d
+        and %11000000
+        rlca
+        rlca
+dovpoke:        
+        out (#99),a
+        ld a,128+14
+        out (#99),a
+
+        ld a,e
+        out (#99),a
+        ld a,d
+        and %00111111 
+        or %01000000
+        out (#99),a
+	ret	
+; Same as vpoke but in the higher 64kb
+vpoke2:
+        ld a,d
+        and %11000000
+        rlca
+        rlca
+        or %00000100
+        jp dovpoke
+;        out (#99),a
+;        ld a,128+14
+;        out (#99),a
+;        ld a,e
+;        out (#99),a
+;        ld a,d
+;        and %00111111 
+;        or %01000000
+;        out (#99),a
+;	ret	
+
+; Test if space bar is pressed.
+; If pressed, z flag is positioned to 0 
+testspace:
+	in a,(#aa)
+	and %11110000
+	add a,8
+        out (#aa),a
+        in a,(#a9)
+        and 1
+        ret
+; Test if esc key is pressed.
+; If pressed, z flag is positioned to 0 
+testesc:
+	in a,(#aa)
+	and %11110000
+	add a,7
+        out (#aa),a
+        in a,(#a9)
+        and 4
+        ret
+; Wait for a line interupt.
+; in: A specifies the line of interupt
+interupt:
+        push af
+        ld a,1
+        out (#99),a
+        ld a,#8f
+        out (#99),a
+        pop af
+
+        out (#99),a
+        ld a,#93
+        out (#99),a
+waitint:
+        in a,(#99)
+        and 1
+        jr z,waitint
+        xor a
+        out (#99),a
+        ld a,#8f
+        out (#99),a
+        ret
+statreg:       
+        ld a,d
+        out (#99),a
+        ld a,#8f
+        out (#99),a        
+        in a,(#99)            
+        ret
+; xmmm block copy
+; in: hl points on the xmmm command parameters        
+xmmm:   
+tst:    ld d,2
+        call statreg
+        rrca
+        jr c,tst
+        rlca
+        push bc                         ;                   ld hl,adr                                           
+        ld b,15                         ;                   call hmmm
+        ld a,32        
+        out (#99),a
+        ld a,#91
+        out (#99),a
+        ld c,#9b         
+        otir     
+        pop bc
+        xor a
+        out (#99),a
+        ld a,#8f
+        out (#99),a        
+        ret
+; Select screen mode
+; in : A contains the screen mode number
+setscreenmode:
+	calslt	exttbl,chgmod
+        ret
+;set color 255,0,0
+setcolor:
+	ld	a,0			
+        ld	(#f3ea),a
+	ld	a,0
+	ld	(#f3eb),a
+	ld	a,255
+	ld	(#f3e9),a
+	calslt	exttbl,chgclr
+        ret
+; Simulate RST20 (compare hl,de) under dos
+simrst20:
+	ld a,h
+	sub d
+	ret nz
+	ld a,l
+	sub e
+	ret
+; Change freqency Pal / NTSC        
+chfreq:
+	ld a,(#ffe8)
+	xor 2
+	ld (#ffe8),a
+	out (#99),a
+	ld a,128+9
+	out (#99),a
+	ret
+; Call music replayer at the right speed
+; depending on frequency selected. NEVER call musint directly
+domus:
+	ld a,(#ffe8)
+	and 2  
+	jp nz,musint
+	ld a,(slmus)
+	inc a
+	ld (slmus),a
+	cp 6
+	jp z,resetmus
+	jp musint
+resetmus:
+	xor a
+	ld (slmus),a
+	ret
+slmus:
+	db 0
+; Set color palette
+; in : hl points on the palette table        
+setpal:
+	xor a 
+	ld c,#9a
+	out (#99),a
+	ld a,128+16
+	out (#99),a
+	ld b,32
+	otir
+	ret
+paltmp:
+	ds 32
+ftimer:
+	db 0
+fadedir:
+	db 255	;0=fade in/1=fadeout/255=nofade
+fadeto:
+	dw 0
+fadestep:
+	db 0
+initfade:
+	or a
+	jp z,initfadein
+initfadeout:
+	ld a,8
+	ld (fadestep),a
+	ld de,paltmp
+	ld bc,32
+	ldir
+        ld a,1
+        ld (fadedir),a
+	ret
+initfadein:
+	ld (fadeto),hl
+	ld a,8
+	ld (fadestep),a
+	xor a
+	ld (paltmp),a
+	ld hl,paltmp
+	ld de,paltmp+1
+	ld bc,31
+	ldir
+        xor a
+        ld (fadedir),a
+	ret
+fade:
+	ld a,(ftimer)
+        inc a
+        ld (ftimer),a
+	and  3		;7
+	ret nz
+	ld a,(fadedir)
+	or a
+	jp z,fadein
+fadeout:
+	ld a,(fadestep)
+	cp 255
+	jp z,exiton
+	dec a
+	ld (fadestep),a
+	ld hl,paltmp
+	ld b,16
+	outvdp 0,128+16	
+loopfade:
+	ld a,(hl)
+	ld d,a
+	and 15
+	or a
+	jp z,nofad1	
+	dec a
+nofad1:
+	ld e,a
+	ld a,d
+	and 240
+	or a
+	jp z,nofad2
+	sub 16
+nofad2:
+	or e
+	ld (hl),a
+	out (#9a),a
+	inc hl
+	ld a,(hl)
+	and 15
+	or a
+	jp z,nofad3
+	dec a
+nofad3:
+	ld (hl),a
+	out (#9a),a
+	inc hl
+	djnz loopfade
+	ret
+fadein:
+	ld a,(fadestep)
+	cp 255
+	ret z
+	dec a
+	ld (fadestep),a
+	ld hl,paltmp
+	ld de,(fadeto)
+	ld b,16
+	outvdp 0,128+16	
+loopfadein:
+	push bc
+	ld a,(hl)
+	and 7 
+	ld b,a
+	ld a,(de)
+	ld c,a
+	and 7 
+	cp b
+	jp z,nofadi1	
+	inc (hl)
+nofadi1:
+	ld a,(hl)
+	and 112
+	ld b,a
+	ld a,c
+	and 112
+	cp b
+	jp z,nofadi2
+	ld a,(hl)
+	add a,16
+	ld (hl),a
+nofadi2:
+	ld a,(hl)
+	out (#9a),a
+	inc hl
+	inc de
+	ld a,(hl)
+	and 7 
+	ld b,a
+	ld a,(de)
+	ld c,a
+	and 7 
+	cp b
+	jp z,nofadi3	
+	inc (hl)
+nofadi3:
+	ld a,(hl)
+	out (#9a),a
+	inc hl
+	inc de
+	pop bc
+	djnz loopfadein
+	ret
+exiton:
+	ld a,1
+	ld (exit),a
+	xor a
+	ld (fadedir),a
+	ret
+
+

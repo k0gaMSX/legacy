@@ -1,0 +1,43 @@
+;***************************************
+;
+;	detect r800 mode if turbo r detected
+;
+;***************************************
+test_r800:
+	ld	a,(#fcc1)	;test msx2, msx2+
+	ld	hl,#002d
+	call	rdslt
+	cp	3
+	ret	c		;if yes ret
+
+	ld	a,1		;r800 present
+	ld	(f_r800),a
+
+;***************************************
+;
+;	switch to r800 rom mode
+;
+;***************************************
+setr800:
+	calslt	exttbl,getcpu	;test if turbo-r in r800 rom
+	and	1
+	ret	nz		;if yes ret
+
+	ld	a,#81		;select r800 rom mode
+	calslt	exttbl,chgcpu
+	ld	a,1		;set r800 mode flag, same as #183 of bios
+	ld	(m_r800),a
+	ret
+
+;***************************************
+;
+;	switch to z80
+;
+;***************************************
+setz80: ld	a,#80
+	calslt	exttbl,chgcpu
+	ld	a,0		;set r800 mode flag, same as #183 of bios
+	ld	(m_r800),a
+	ret
+
+
