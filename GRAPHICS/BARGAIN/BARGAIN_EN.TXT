@@ -1,0 +1,240 @@
+
+	Lossless image compression tool BARGAIN 14.22 for MSX2
+
+		  Copyright(C)1990-2012 KATSU
+
+
+  << Content explanation >>
+
+ This is a MSX2 software that can view the screen 0-12 images by lossless compression.
+ It corresponds to a logical operation, the interlace display, and the encryption.
+
+-(SELECTÅ®TAB) was changed to drive the Select button.
+
+  << Corresponding model >>
+
+ Since MSX2 (VRAM128KB) Disk BASIC version 1.0/ 2.01
+
+
+  << Collection file >> *It is necessary for execution.
+
+*BARGAIN.BAS  	Image Compression and decompression BASIC main program.
+*BN142.BIN    	Compression and decompression machine language routine.(Ultimate compression rate is valued)
+ bn142.asm    	Technological explanation and assembly source code of the Bargain compression.
+ bargain.txt  	Manual.
+ bargain_EN.txt	Manual in English.
+ BARGIAN.BIN	Machine language routine of the decompression exclusive.(For built-in usage)
+ bargain.asm 	Assembly source code of the decompression exclusive.
+
+-The following plug-ins are necessary for decompressing the image compressed previous version.
+  BN135 /124 /116 /108 /96 /89 /79 /69 /39 .BIN
+
+
+  << How to use >>
+
+ <BASIC> run "bargain.bas"
+
+
+  << Key corresponding to function >>
+
+****** Browser screen ************************************************************
+
+ < CURSOR >
+ The file is selected with the cursor key.
+ < CURSOR + SHIFT >
+ Two or more files are specified putting up !-mark. 
+
+ < RETURN >
+ The file is fixed. if it is a file 
+ It advances to the compression screen which the preserved BSAVE (*.SC?).
+ It advances to the decompression screen which the Bargain compression (*.BN?).
+ If it is common code key (*.KEY), the key is selected. 
+
+ < V >
+ The compression version is switched.
+ Plug-in of necessity: BN39.BIN (High speed is valued)
+
+ < SELECT >
+ The second drive is selected. A: to H:.
+ Initial state = H: Or B:
+ -The drive letter can be registered in DC$ of the 100th line according to the system requirements.
+
+ < BS >
+ The current drive is switched to the second drive.
+ Initial state = A:
+
+ < C >
+ The file is copied in the second drive.
+ -Those all if there is !-mark
+
+ < M >
+ The file is moved to the second drive.
+ -Those all if there is !-mark
+
+ < DEL >
+ It deletes a file.
+ -Those all if there is !-mark
+
+ < R >
+ The name of the file is changed.
+
+ < Q >
+ It ends and it returns to the command level of BASIC.
+
+ < ESC >
+ It ends and it returns to DOS.
+
+ < T >
+ The file of the compression origin is replaced with the file at the compression destination.
+ Initial state = Off
+
+ < D >
+ The matrix mode is selected.
+ Initial state = Normality
+ [ ] Normality
+ [.] Mix (The middle of normality and dither)
+ [_] Dither (Effective in taking image of SCREEN8)
+ -It always becomes YJK mode in SCREEN10 or more.
+
+ < E >
+ The encryption mode is made effective.
+ Initial state = Off
+ [ ]OFF
+ [.]Common key (Encrypt it by the key file "*.KEY")
+ [_]Permutation key (Encrypt it by the image that compresses or decompresses immediately before)
+ -It is automatically made if there is no "LOCK.KEY" when the program starts. 
+
+ < I >
+ The interlace display is effectively done.
+ Initial state = On
+ -It is the maximum and the free space of 53KB is necessary for the work drive (H: Or A:).
+ -The compressibility changes by on and off in the non-interlace image. 
+  Especially, making to turning off tends to rise and to rise in the YJK image the compressibility.
+		    ON     (OFF)
+	PERRO.BNC   28,085 (28,026)
+	MEGUMI.BNC  18,620 (18,644)
+
+ < O >
+ It overlaps it with the previous image.
+ Initial state = Off
+
+ < L >
+ A logical operation is selected by order sending.
+ Initial state = PSET
+ < L + SHIFT >
+ It selects it by reversely sending.
+ -At PSET, the setting when compressing it is reflected.
+
+ < 5-8,0-2,* >
+ The image is browsed according to the screen mode.
+ Initial state = *
+ -It doesn't function for turboR if it is not Disk BASIC 1.0 
+
+****** Compression screen ************************************************************
+
+ < CURSOR >
+ The range of compression is specified with the cursor key.
+
+ < RETURN >
+ When the starting point and the terminal are fixed, the image is compressed.
+
+ < BS >
+ The fixation of the starting point is canceled.
+
+ < ESC /Q /BS >
+ It discontinues and it returns to the browser screen.
+
+****** Decompression screen ************************************************************
+
+ < CURSOR >
+ The starting point is specified with the cursor key.
+
+ < RETURN >
+ When the starting point is fixed, the image is decompressed.
+ -The second piece doesn't decompress when some keys are pushed while decompressing the first piece of the interlace image.
+
+ < DEL >
+ The screen is deleted.
+
+ < HOME /B >
+ The image is preserved with BSAVE.
+
+ < SPACE /INS >
+ Condensed information in the image is seen.
+
+ < SELECT /C >
+ The image is compressed again. The specification of the range is omitted.
+ < SELECT /C + SHIFT >
+ The range of compression can be specified.
+ -Because the encryption comes to encrypt oneself for myself (chicken and egg), it is invalid.
+ -The re-compression of the encryption image is dangerous if it doesn't do after it forwards it to another drive.
+
+ < ESC /Q /BS >
+ It discontinues and it returns to the browser screen.
+ 
+
+  << Notes >>
+
+ A logical operation cannot be correctly done to the image into which the tile is compressed.
+ It comes to be able to do correctly by the tile compression's being nullified if kinds other
+ than PSET are chosen and compressed by the setting again.
+
+ <C><M><DEL><R> The file operation can be done with the wild-card.
+ Example) rename *.sr* *.sc*
+ After inputting by <R> in a suitable place as *.sr* and doing <RETURN>
+ It is corrected again by <R> in the place as *.sc*, does <RETURN>, and completion.
+
+ The label of the interlace image is as follows.(?= 5, 6, 7, 8, A, B, C)
+ ..page 0: (*.SC?) --> (*.BN?)
+ ..page 1: (*.S1?) --> (*.B1?)
+
+ The noise occurs to the interlace display when [B1?] is 6000 bytes or more larger than [BN?].
+ At that time, please enlarge the value of VA+6000 of the 1550th line.
+ Because [B1?] is encrypted, it cannot be decoded that [BN?] that becomes a key is not decompressed.
+
+ If the permutation encryption function decompresses IROHANI.BN8 by <E> while turned on and compresses HOHETO.SC8,
+ HOHETO.BN8 becomes an encryption image that cannot be decrypted not to decompresses IROHANI.BN8.
+ Please note that all the encryption images following it never return to the origin earnestly 
+ when the image that becomes the key to the encryption is deleted or is compressed again. (^c^;)
+
+The common-key encryption is encrypted with the key that has been selected now. 
+The re-compression with an encryption is also possible. 
+
+
+  << Software used to develop and reference book census register >>
+
+ SjASM Z80 Assembler v0.39g - Copyright 2006 Sjoerd Mastijn XL2S Entertainment
+ 			      http://home.wanadoo.nl/smastijn/home.html
+  *The Bargain compression might not have been completed without this assembler.
+ MSX machine language introductory lecture - Takashi Yuasa /ASCII
+  *It is a master of the hand assemble.
+ MSX Datapack (1)(2) - /ASCII
+  *The bit block transfer is valuable.
+ The image information compression - Hiroshi Harashima /Ohm company
+  *It gave the hint that divided the image.
+ Story of image compression technique. - Shiro Horiuchi and Ichiro Arimura /Industrial investigation committee
+
+
+  << Others >>
+
+ The copyright of this software is in KATSU.
+ It is a free software to which the reprint, the re-distribution, and the modification of the program can be freely done.
+ As a rule, please give the self-responsibility to me even if damage occurs because of the use of the program by any chance.
+ Inquiries to the author are hcmkkk@mb.tcn.ne.jp
+ The latest version has been opened to the public with http://www.tcn.ne.jp/~hcmkkk/MSX.htm
+
+
+  << Postscript >>
+
+ Interested chance in the image compression of me is software 'Easy Telopper' attached to HBI-F900.
+ It was what the HAL laboratory developed aiming at SONY in 1986, and being possible to do of the graphic editor was the wonderful one.
+ I have felt admiration especially for can increase the capacity of the disk by an original compression format 'G-Editor'.
+ I think that it was motivated that only the impression at that time created the Bargain compression though the compressional effect is insignificant now.
+
+ I never thought that it took as many as 21 years by completion •••. It is surprised for myself as I (^^;)
+ Thank you for the dream and impression. It dedicates it to all people who love MSX. Completion!
+
+										Katsuhiro Noguchi
+
+
+						This was translated by http://www.excite.co.jp/world/
