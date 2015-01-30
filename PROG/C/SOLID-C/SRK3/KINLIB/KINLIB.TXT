@@ -1,0 +1,192 @@
+勤労5号 Interface Library for SOLID C
+By Tatsuhiko Syoji 1998-2000
+
+[何をするものか?]
+  本パッケージは黒田圭一氏が製作したMSX用FM,PSG,SCC音源ドライバー勤労5号
+をHI-TECH Cから制御するためのライブラリです。SOLID Cと勤労5号が別途必要
+です。
+
+[構成ファイル]
+KINROU  .H   :本ライブラリのヘッダーファイルです。
+INSTALL .BAT :本プログラムの各関数を任意のライブラリファイルに結合する
+              為のバッチファイルです。
+KINLIB  .TXT ;本ファイルです。
+KINTEST .COM :本ライブラリのサンプルプログラムです。
+KINTEST .C   :本ライブラリのサンプルプログラムソースのC言語部分です。
+SETHEAP .ASM :本ライブラリのサンプルプログラムソースのアセンブリ言語部分です。
+INTLIB  .ASM :
+MKKTEST .BAT :サンプルプログラム構築用バッチファイルです。
+拡張子ASMのファイル:本ライブラリの各関数ソースファイルです。
+*       .REL   :本ライブラリの各関数オブジェクトです。
+REMAKE  .BAT :本ライブラリの再コンパイル用バッチファイルです。
+LICENCE .TXT :本ライブラリのライセンスに関するテキストです。
+
+[セットアップ]
+  まず、インクルードファイルのあるドライブ・ディレクトリにKINROU.Hをコピー
+します。INSTALL.BATを使って既存のライブラリに、本ライブラリの関数
+オブジェクトを結合することで、本ライブラリを使うことができます。
+
+[INSTALL.BATの使い方]
+  INSTALL.BATは既存のライブラリファイルに本パッケージの各関数オブジェクトを
+結合するためのバッチファイルです。SOLID CのOL.COMが実行できる環境で、
+本ライブラリの各関数オブジェクトのあるドライブ・ディレクトリから
+>INSTALL ライブラリファイル名
+
+  とすることで、ライブラリファイルに本パッケージの各関数オブジェクトを結
+合することができます。本パッケージの関数群は他の関数に依存することが無い
+ので、ライブラリ内の配置はどこでも結構です。
+
+[本ライブラリの使い方]
+  本ライブラリで、勤労5号を使う場合、次のような手順を取ります。
+
+  本ライブラリを使うプログラムでは、まず、KINROU.Hをインクルードします。
+  次に、本ライブラリの関数が使われる前に、勤労5号のドライバ本体である
+KINROU5.DRVを6000H以降の2000Hバイトのメモリブロックにロードし、タイマー
+割り込みをフックします。
+  その後、曲データをタイマー割り込みルーチンから見えるようにロードし、本
+ライブラリを使って、ドライバの初期化、演奏初期設定(kinrou_init()関数)を
+行った後、演奏開始関数(kinrou_play1(),kinrou_play2()関数)を呼び、タイ
+マー割り込みルーチンから6029H(勤労5号の演奏ルーチン)が呼び出されるように
+します。これで、SOLID CからMuSICA/勤労規格用のデータを演奏することが
+できます。
+  コンパイルする際には、本ライブラリの関数オブジェクトを収めたライブラリ
+ファイルをリンクするようにしてください。
+  これで、本ライブラリを使って、SOLID CからMuSICA/勤労規格用のデータを
+演奏することができます。詳しくは、サンプルプログラムを参照してください。
+
+[サンプルプログラムについて]
+  サンプルプログラムはSOLID Cをセットアップしたドライブ・ディレクトリに
+サンプルプログラムのソースファイルと本ライブラリのオブジェクトを結合した
+ライブラリファイルを置いて、
+MKKTEST.BATを実行することで、コンパイルすることができると思います。
+  なお、このファイルのコンパイルには、MSX-C Library互換ライブラリがセッ
+トアップされていることが必要です。
+
+  サンプルプログラムは、KINTEST Data file
+  とすることで、Data fileを読み込んで演奏します。カレントディレクトリに
+KINROU5.DRVが必要です。演奏開始後は、キーボード操作で、簡単な特殊演奏が
+できます。
+キー:機能
+   P:演奏開始
+   S:一時停止
+   F:フェードアウト
+   V:全体のボリュームの調整
+   Q:本プログラムの終了
+
+[関数の説明]
+  本ライブラリの関数について説明します。
+
+unsigned int kinrou_init(void);
+  勤労5号を初期化します。他の本ライブラリ関数の利用前に、必ず呼び出して
+ください。
+
+char kinrou_play1(void *data,unsigned char count);
+  kinrou_init関数を実行した後に、この関数を実行することで、演奏が始まり
+ます。
+　dataにはBGMデータの先頭アドレスをいれます。(BSAVE形式のヘッダを含みま
+せん。)
+　BGMデータはデータのコンパイル時に指定したアドレスと同じアドレスに置い
+てください。
+　countには繰り返す回数を入れます。0で無限ループ演奏となります。
+　演奏に成功すると0を、失敗すると1を返します。
+
+char kinrou_play2(void *data,unsigned char count);
+  kinrou_init関数を実行した後に、この関数を実行することで、演奏が始まり
+ます。
+　dataにはBGMデータのBSAVE形式ヘッダアドレスをいれます。本関数では、BGM
+　データのBSAVE形式ヘッダを利用して、勤労5号が必要とするBGMデータをコン
+パイルした際のアドレスとBGMデータの先頭アドレスを取得し、勤労5号が内部
+で処理をしてBGMデータを演奏します。これにより、BGMデータをコンパイルした
+ときのアドレスに実際にBGMデータを置く場所が依存せずにBGMデータを演奏する
+ことが出来ます。
+　countには繰り返す回数を入れます。0で無限ループ演奏となります。
+　演奏に成功すると0を、失敗すると1を返します。
+
+void kinrou_stop(void);
+  演奏を終了します。本関数を実行してから勤労5号用に設定した割り込みを元
+に戻してください。
+
+void kinrou_fadeout(unsigned char speed);
+  この関数の実行直後からspeedで指定した速度でフェードアウトして演奏を終
+了します。speedが大きくなるほど、フェードアウトスピードが遅くなります。
+
+unsigned int kinrou_getloops(void);
+  演奏開始後のループ回数を返します。
+
+char kinrou_checkplay(void);
+　演奏中かどうかを調べます。
+　bit 0が1のときは曲を演奏中です。
+　bit 1が1のときはポーズがかかっていません。
+
+void kinrou_pause(void);
+　この関数を実行するとポーズ・リプレイが切り替わります。
+
+void kinrou_vol(unsigned char v);
+  全チャンネルのマスターボリュームをvで設定した音量に設定します。vは0か
+ら15までの値を取り、数字が小さくなるほど、音量が大きくなります。
+
+void kinrou_volpart(unsigned char v,unsigned char c);
+  チャンネルcのマスターボリュームをvで設定した音量に設定します。vは0から
+15までの値を取り、数字が小さくなるほど、音量が大きくなります。
+　cの番号は0-8がFM音源(リズム使用時のリズムは8)、9-11がPSG音源、12-16が
+SCC音源です。
+
+void kinrou_psgswitch(unsigned char f);
+　fの値で示した状態にPSG音源の出力を設定します。
+　fはbit 0が0でPSG音源の出力がオンに、1でオフになります。
+
+unsigned char *kinrou_credit(void);
+  MSX-DOSのBDOSファンクションコール09H形式になっている著作権表示用文字列
+の先頭アドレスを返します。
+
+unsigned char *kinrou_getparam(void *data,unsigned char kind);
+　勤労5号バージョン1.00以降のファンクションコールGETPARを呼び出してパラ
+メータを獲得します。dataにデータを置いた先頭アドレスを、kindにパラメータ
+番号を得ます。パラメータ番号、パラメータの意味に関しては勤労5号公式規格
+書を参照してください。
+
+[参考文献]
+勤労5号公式規格書(By 黒田圭一)
+MSX2/2+早分かり小事典(日本文芸社)
+
+[後書き]
+　本ライブラリも自作のゲームで音楽を演奏するために作ったものです。
+　本ライブラリは、HI-TECH Cからの移植だったので、シンボル名の長さ調節と
+関数呼び出しプロトコル部分の変更くらいで比較的簡単にできました。
+　後は、このライブラリを使った面白いゲームが出てくれると良いのですが。
+
+[使用にあたって]
+　本プログラムおよび、ソースコードはBSD copyright に従います。
+　BSD copyright については、同梱のLICENCE.TXTを参照してください。
+　また、BSD copyrightの日本語訳は下記のURLにて公開されております。
+http://openlab.etl.go.jp/freesoft/BSD-j.htm
+
+/*
+ * Copyright (c) 1998-2000 Tatsuhiko Syoji, Japan . All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without 
+ * modification, are permitted provided that the following conditions are 
+ * met:
+ * 
+ * 1 Redistributions of source code must retain the above copyright notice,
+ *  this list of conditions and the following disclaimer as the first lines
+ *  of this file unmodified.
+ * 
+ * 2 Redistributions in binary form must reproduce the above copyright 
+ * notice, this list of conditions and the following disclaimer in the 
+ * documentation and/or other materials provided with the distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY Tatsuhiko Syoji ``AS IS'' AND ANY EXPRESS 
+ * ORIMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL Tatsuhiko Syoji BE LIABLE FOR ANY DIRECT,
+ *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) 
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, 
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
+ * IN
+ *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+

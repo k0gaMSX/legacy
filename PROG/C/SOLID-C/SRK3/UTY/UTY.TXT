@@ -1,0 +1,171 @@
+SOLID C 用各種関数拡張セットマニュアル
+By Tatsuhiko Syoji 1993-2000
+
+[本パッケージに含まれるファイルの内容]
+UTY     .H   :各種関数を定義したヘッダーファイルです。
+UTY     .TXT :今、あなたが読んでいるファイルです。
+*.C , *.ASM  :本ライブラリのソースファイルです。
+*       .REL :本ライブラリのオブジェクトファイルです。
+INSTALL .BAT :本ライブラリのオブジェクトを任意のライブラリファイルに
+              結合するためのバッチファイルです。
+REMAKE  .BAT :本ライブラリを再コンパイルするためのバッチファイルです。
+
+[本ライブラリの対象]
+SOLID C
+
+[このライブラリは何者か？]
+　本ライブラリはSOLID CでMSX用プログラムを作成するにあたって汎用的で
+便利そうな関数をまとめたものです。
+
+[使い方]
+  まず、UTY.HをSOLID Cの実行用ディスクにコピーします。
+　次に、本ライブラリのオブジェクトファイルとINSTALL.BATをカレントドライ
+ブ・ディレクトリに用意して次のようにコマンドラインから打ちこんでください。
+>INSTALL ライブラリファイル名
+　ライブラリファイル名に既存のライブラリファイルの名前を入力して既存のラ
+イブラリファイルに本ライブラリを結合することも、新規のライブラリファイル
+名を入力して独立したライブラリファイルを作ることもできます。
+　本ライブラリのライブラリファイル名をLIBU.IRLとしたい場合はコマンドラインに
+次のように記述します。
+>INSTALL LIBU.IRL
+
+　ソースファイル作成時には、#includeを使ってUTY.Hをstdlib.hの後に読み込
+ませてください。
+　そして、リンク時に本ライブラリを結合したライブラリファイルをCLIB.IRLの前に
+リンクするようにしてください。
+　本ライブラリは内部でMSX-C Library互換ライブラリを呼び出しているので、
+リンク時にはMSX-C互換ライブラリの前にリンクするようにして下さい。
+　本ライブラリのライブラリファイル名をLIBU.IRLとすると、コマンドラインは
+次のようになります。
+
+>LD TEST,LIBU,LIBM,CLIB/s/gXMAIN
+
+　これで、本セットを利用したプログラムが可能となります。
+
+[再コンパイル法]
+　本ライブラリを再コンパイルするにはREMAKE.BATを実行して下さい。
+　そのあとで、INSTALL.BATを実行するとライブラリモジュールを差し替えることが
+できます。
+
+[ライブラリ関数リファレンス]
+
+  この先の関数はuty.hをインクルードすることで使用可能になります。
+
+unsigned char inkey(void);
+  キー入力が有ると入力された文字を、ないときは'\0'を返します。
+
+int maxpos(int x,int lim);
+  x>limの時は0を、x<0の時は、limを、そうでない時はxをそのまま返します。
+  座標調整などに使います。
+
+void kbcom(unsigned char *buf);
+void kbcomr(unsigned char *buf);
+  bufの内容をMSXのキーバッファに入れます。例えば、
+int main()
+{
+	printf("This is a test.\n");
+	kbcomr("dir");
+}
+  とすると、This is a test.と表示された後、DOSのdir命令を実行します。
+  この２つの関数の違いは、kbcomrはリターンキーのキーコードを勝手に付加します
+が、kbcomでは付加しません。
+
+void plxpal(unsigned int *dat,unsigned char tr,unsigned char pal);
+  datで示されるメモリ領域の内容をグラフサウルス型式のパレットデータとみなし、
+pal番の色のパレットをtrで示されるトラックのpal番のパレットデータに設定します。
+
+void plxset(unsigned int *dat,unsigned char tr);
+  datで示されるメモリ領域の内容をグラフサウルス型式のパレットデータとみなし、
+全色のパレットをtrで示されるトラックのパレットデータに設定します。
+  たとえば、
+for (i = 0;i < 8;i++){
+	plxset(dat,i);
+	/* ウェイト処理をここにいれる */
+}
+  とし、変化前のパレット内容をトラック0に入れ、変化後のパレット内容をトラック7に入れて、その間のパレット内容を変化前と変化後の段階的な中間値にすることでちょっとしたフェードイン/アウト処理が実現できます。
+
+void nrsort(void *base,size_t nel,size_t width,int (*compar)())
+    nrsort()はデータを昇順に並べ換えます。baseはデータの先頭アドレス、nel
+はソートするデータの個数、 widthはデータの各要素の大きさをバイト数で
+表したもの、comparは比較関数へのポインタです。
+
+  comparの指している関数は、2つのポインタ(xとy)を引数として、 次の値を
+返さなくてはなりません。
+
+        *x > *yの時 正
+        *x = *yの時 0
+        *x < *yの時 負
+
+  qsortと同じ働きをしますが、こちらは再帰呼び出しを行わないので、大きな
+データも安心して扱う事ができます。
+
+char bloads(char filename,unsigned int offset)
+  MSX-BASICのbload"filename",s,offsetと同様の働きをします。
+返す値は次の意味を持ちます。
+0:ロードに成功した。
+1:ディスク関連のエラーが起きた。
+2:メモリが足りない。
+3:ファイルがBSAVE形式のファイルではない。
+
+char bloads(char filename,unsigned int s_addr,unsigned int e_addr)
+　VRAMのs_addrからe_addrまでの間の内容をMSX-BASICのBSAVE形式で保存します。
+アドレス指定はVRAMのアクティブページの影響を受けます。
+
+unsigned char getkmode(void)
+　漢字ドライバーの有無と漢字モードを調べます。返す値の意味は次のとおりです。
+0:ANK mode
+1:Kanji0 mode
+2:Kanji1 mode
+3:Kanji2 mode
+4:Kanji3 mode
+255:漢字ドライバーが無い/インストールされてない
+
+void setkmode(unsigned char mode)
+　漢字モードを切り替えます。
+　modeの値はgetkmode()関数の返す値と同じです。
+　あらかじめ漢字ドライバーがインストールされている必要があります。
+
+int grand(int range)
+　0から(range-1)の間の擬似乱数を返します。
+　rangeは0から32767までの間の数になります。
+　乱数系列の初期化にはsrand関数が使えます。
+　乱数の範囲が決まっている際にスマートにプログラムが記述できると思います。
+　この関数はSOLID Cのrand関数をプリプロセッサの#define命令で読み替えている
+だけです。
+　本マクロはHI-TECH C Resource kit #3との互換性の為に存在します。
+
+[使用にあたって]
+　本プログラムおよび、ソースコードはBSD copyright に従います。
+　BSD copyright については、同梱のLICENCE.TXTを参照してください。
+　また、BSD copyrightの日本語訳は下記のURLにて公開されております。
+http://openlab.etl.go.jp/freesoft/BSD-j.htm
+
+/*
+ * Copyright (c) 1993-2000 Tatsuhiko Syoji, Japan . All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without 
+ * modification, are permitted provided that the following conditions are 
+ * met:
+ * 
+ * 1 Redistributions of source code must retain the above copyright notice,
+ *  this list of conditions and the following disclaimer as the first lines
+ *  of this file unmodified.
+ * 
+ * 2 Redistributions in binary form must reproduce the above copyright 
+ * notice, this list of conditions and the following disclaimer in the 
+ * documentation and/or other materials provided with the distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY Tatsuhiko Syoji ``AS IS'' AND ANY EXPRESS 
+ * ORIMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL Tatsuhiko Syoji BE LIABLE FOR ANY DIRECT,
+ *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) 
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, 
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
+ * IN
+ *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
