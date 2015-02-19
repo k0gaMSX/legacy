@@ -1,0 +1,431 @@
+                            SofaRun 1.0
+                            ===========
+
+                 coded by Louthrax in December 2014
+
+
+
+                            Introduction
+                            ============
+
+SofaRun is  an  MSX  program that   allows you  to  run  ROM images.
+It features  a  joystick-controlled  file browser,  and  options  to
+map JoyMega  buttons to  keyboard keys  and even  the reset  button,
+allowing you to play lying  on your sofa just like a lazy penguin!
+
+It  requires an   MSX  computer  with  MSX-DOS  2,  and  some  extra
+memory available depending on what you want to do.
+
+It also features:
+
+ * Disk access  to  MSX-DOS  2  drives when  running  ROMs.  You can
+   save and load, for  example, your  King's Valley  stages or  Game
+   Masters game states to a specific directory.
+
+ * Snapshots for  each  ROM game.  You can  add  as many images   as
+   you want (snapshots, manual   scans, tips or  keys  used...), and
+   display  them  by  clicking on  "Snapshots" in  the ROM  settings
+   menu.
+
+ * Game Master  1 and Game  Master 2 support.  Game Master 2  can be
+   used  only with   a MegaFlashROM  SCC+   SD  cartridge, but  Game
+   Master  1 works without.
+
+ * Soft  reset: if  you have  selected JoyMega   support,   you  can
+   reset  the  game   by  pressing    the  [A]   and  [Start] button
+   simultaneously.
+
+ * Editable    SOFARUN.INI  file.     You   can   add   your    Game
+   Masters and  "saves"  locations   here,  and  also  define   your
+   JoyMega  to keyboard mappings and custom palettes.
+
+ * Default  (global)  settings.  Those  settings  are  inherited  by
+   all games, but you can override them for each one.
+
+ * Save of  all settings for   each  game, so  that you don't   have
+   to set them every time.
+
+ * Save of  the last   started ROM:   the file  browser comes   back
+   automatically to the ROM location.
+
+ * MegaFlashROM SCC+ SD  support to run MegaROMs.  MegaFlashROM SCC+
+   only  (not  SD)  is  not   supported  yet,   but this should   be
+   available soon.
+
+    ** You need to have OPFXSD.COM somewhere in your PATH so that
+           SofaRun can flash your cartridge when needed **
+
+ * Metal Gear  2 specific  fix   to  make it  work on   MegaFlashROM
+   SCC+ SD with disk access.
+
+ * Support of Konami's Game Collection SCC+ ROMs.
+
+ * Support  of external SCC or SCC+ sound  cartridge,if you want  to
+   hear the "real thing".
+
+ * Various  settings,  like  all  other  ROM  loaders  (video  mode,
+   language, CPU mode, MSX version).
+
+
+
+                         Installing SofaRun
+                         ==================
+
+The minimal configuration  for SofaRun is  MSX 1 with  MSX-DOS 2 and
+32KB of available  mapped memory. You'll  need 128KB if  you want to
+use the Game Masters,  and a MSX 2  to access the palette  and video
+settings. Running  ROMs bigger  than 32KB  or ROMs  along with  Game
+Master 2 requires a MegaFlashROM SCC+ SD cartridge.
+
+Copy SOFARUN.COM and SOFARUN.INI somewhere in your path. If you want
+to use  your MegaFlashROM  SCC+ SD  cartridge, you'll  need to  have
+OPFXSD.COM in your path too.
+
+Just  type  SOFARUN  from  the  MSX-DOS2  command  line  to   start.
+SOFARUN.COM takes  no parameters.  You are  just allowed  to pass  a
+single dummy parameter  to SOFARUN.COM to  skip the display  of  the
+title screen.
+
+
+
+                              Controls
+                              ========
+
+Everything in SofaRun  can be  controlled  with either the  keyboard
+or the joystick in port 1.
+
+To validate  something,  you  can press   [Space] key,  [Enter]  key
+or joystick  [Button A].  This is  referred later  in this  document
+as [Validate].
+
+To cancel  something, you  can press  [ESC] key  or joystick [Button
+B]. This is referred later in this document as [Cancel].
+
+
+
+                          The ROM browser
+                          ===============
+
+This is  what  you  get when   you launch  SofaRun:  a  list of  all
+*.ROM files and directories.
+
+You can  move  in  the entries   here using  the  keyboard arrows or
+the joystick.
+
+To open the "Start"  menu in  order to  launch you game, or   change
+to another directory, just push [Validate].
+
+Push [Cancel] to enter the "Main" menu.
+
+
+
+                          The "Start" menu
+                          ================
+
+Here, you can adjust lots of settings before starting the ROM.
+
+You can change  a setting with   the [Left] and  [Right] cursor keys
+or with the joystick in port 1.
+
+At first, all settings are set to the default values. If you  change
+a setting, it  will be displayed  with a star  ("*"). This indicates
+that this setting is changed.
+
+You  can  toggle a  setting   between its  default  and ROM-specific
+value by pushing [Validate].
+
+Following is a description of each menu entry.
+
+
+                            ** Start **
+
+Simply starts  the  ROM.  If the   ROM has  not  been already loaded
+and patched, the process might take some time.
+
+
+                ** Start with re-patch and reload**
+
+Force  re-patching and   reloading the  ROM  into  the  MegaFlashROM
+SCC+  SD.  SofaRun  keeps  track  of  what's  happening  (last  file
+loaded/flashed and  last settings  patched), but  you might  need to
+use this  when things go wrong.
+
+
+                           ** Snapshot **
+
+If a  .MIF file  with the  same  base  name as  the ROM is available
+(for  example  KMARE.ROM  and  KMARE.MIF),   this  option  will   be
+available and the  MIF file will  be displayed. You  can concatenate
+several MIF files  together using MSX-  DOS command "copy  /B". Push
+[Validate] to display the next file or [Cancel] to cancel.
+
+
+                  ** Reset settings to default **
+
+This resets all ROM settings to the default ones.
+
+
+                        ** Save settings **
+
+This explicitly saves the settings  for this ROM. Settings are  also
+saved each time you start the ROM,  but this can be use full if  you
+want to modify settings for lots of ROMs.
+
+
+                         ** Game Master: **
+
+You can select to launch a game with Konami's Game Masters here. The
+Game   Masters   ROMs   have   to   be   named   GMASTER1.ROM   and
+GMASTER2.ROM. They must be placed in the ROMPATH directory. This can
+be defined in the SOFARUN.INI file.
+
+Game Master 2 can  only be used if  you have a MegaFlashROM  SCC+ SD
+cartridge.
+
+
+                          ** CPU mode: **
+                           (TurboR only)
+
+If you're the happy owner of a TurboR MSX, you can define which  CPU
+mode to use here.
+
+                         ** Video mode: **
+                            (MSX2 only)
+
+You can choose between 50Hz or 60Hz video modes here.
+
+
+                           ** Palette: **
+                            (MSX2 only)
+
+This allows  you to   choose between  different color   palettes for
+the game. Palettes can be  defined in the SOFARUN.INI file.  You can
+for example use the MSX1 palette to have the original look and  feel
+of a game  on an MSX2.  The "CoolColors" palette  by FRS also  looks
+very well on lots of ROMs! See the  "SOFARUN.INI" section below  for
+more details.
+
+
+                          ** SCC mode: **
+
+If you want  to play some  ROMs using SCC+,  like the Konami's  Game
+collection ones, set this to SCC+.
+
+
+                      ** Metal Gear 2 fix: **
+
+Metal Gear  2 does  not like  that the  disk and  the game ROMs  are
+placed in the same slot  on MegaFlashROM SCC+ SD. This  option fixes
+the problem by  enabling the subslots  before each disk  access, and
+re-enabling it after. This way, the Metal Gear 2 boots and can  save
+and load games from SDCard.
+
+
+                         ** MSX version: **
+                        (requires patching)
+
+You can lie about the version of your MSX here. This allows to  play
+Gradius 3 in MSX1 mode for example. Well, there's little interest in
+that, but if you are playing a game with the Game Master 2 and  want
+to use a custom palette, this might be useful: the Game Master 2  in
+MSX2 mode sets its own palette, and erases the custom palette before
+launching the ROM. This won't happen  if you set the MSX version  to
+MSX1!
+
+
+                          ** Language: **
+                        (requires patching)
+
+Sets this to  "Internatonal" to play  the ROM in  English instead of
+Japanese.
+
+
+                       ** Force SCC slot: **
+                        (requires patching)
+
+MegaFlashROM SCC+ SD  emulates both SCC  and SCC+ very  well, but if
+you are a "vintage integrist", you  can set this to "Yes" to  use an
+SCC  or SCC+  cartridge instead.  If you're  the happy  owner of  a
+Snatcher or SD Snatcher SCC+  cartridge, these can be used  for both
+SCC and SCC+ games.
+
+
+                          ** SCC slot: **
+                        (requires patching)
+
+This specifies  the slot  to use  when "Force  SCC slot" is enabled.
+You'll usually set this value in the default settings only.
+
+
+                           ** JoyMega: **
+                        (requires patching)
+
+If you have a JoyMega adapter and a Megadrive joypad, you can choose
+between different configurations here. Some "generic" configurations
+are provided  in the  default SOFARUN.INI  file, but  you can add as
+many configurations as you want in this file. See the  "SOFARUN.INI"
+section below for more details.
+
+The 3 buttons configurations will be a bit faster compared to the  6
+buttons one, but only [A] and [Start] buttons are available.
+
+
+                  ** JoyMega disable keyboard: **
+                        (requires patching)
+
+If you enable this, the keyboard  will not be read and be  inactive.
+As reading the JoyMega and converting buttons to keys takes a while,
+this might speeds things up a  bit. Use this if you experience  some
+slowdowns when JoyMega is enabled.
+
+                             ** Back **
+
+Returns to the ROM browser.
+
+
+
+                          The "Main" menu
+                          ===============
+
+This  menu  is  invoked  by pushing  [Cancel]  in  the  ROM browser.
+Following is a description of each menu entry.
+
+
+                    ** Edit default settings **
+
+You'll see the same  settings are as the  one for the ROMs.  You can
+change them, they  will be used  in each specific ROM  if nothing is
+defined.
+
+There's just a new option  here: "Save default settings". If  you do
+not choose to save your settings, they will be kept for the  current
+session and next game started, but will be lost after that.
+
+
+                      ** Display all files: **
+
+Toggles displaying all files or only .ROM files. You can use this to
+check your hard  disk or SDCard  for other files.
+
+Note  that  nothing  happens  if  you  click  on  non-ROM  file.  An
+interesting future extension of SofaRun  would be to launch .BAT  or
+.DSK files (while keeping the "settings" and "snapshots" features).
+
+
+                         ** Quit SofaRun **
+
+Returns to MSX-DOS 2.
+
+
+                         ** Bytes free: **
+
+This  displays   the  memory   available  for  the  ROM  browser. It
+changes depending  on  the number of   ROMs stored  in  the  current
+directory. Up to 2,000 ROMs should be supported.
+
+
+                             ** Back **
+
+Returns to the ROM browser.
+
+
+
+                        The SOFARUN.INI file
+                        ====================
+
+You can setup different things in this file. As an example, here  is
+the default SOFARUN.INI file provided with SofaRun:
+
+--------------------------------------------------------------------
+
+# Path searched for GMASTER1.ROM and GMASTER2.ROM. If there's a  GM1
+# or GM2 subdirectory in there,  SofaRun will use them depending  on
+# the Game Master version used.
+
+ROMPATH=A:\ROMS\KONAMI
+
+
+# Path where your ROM or Game Masters saves will be placed
+
+SAVEPATH=A:\SAVES
+
+
+# JoyMega configurations
+#
+# Format is j<name>=<mode>{<button><autofire><keys_sequence>;}*.
+#
+# <name> is the name displayed in SofaRun.
+#
+# <type> can be 3 or 6. A JoyMega pad can be used in 3 or 6  buttons
+# mode.  3 buttons mode is  faster but only [Start] and  [A] buttons
+# are available.
+#
+# <button> can by X, Y, Z, A,  M or S in 6 buttons mode, but only  A
+# or  S in 3 buttons mode.
+#
+# <autofire> specifies the autofire delay for the specified  button.
+# Set this to 0 for no auto-fire. Finding a good auto-fire value  is
+# not so easy, this setting  is very game-specific. Do not  set this
+# too low, because the ROM might  think that the buttons  is  always
+# pressed  if it does  not check it  too frequently.
+#
+# <key_sequences> is a list of keyboard keys that will be  "pressed"
+# when  the  specified  button  is  pressed.  Several  keys  can  be
+# specified,  they  will be  pressed  together. This  allows  you to
+# combine [F1] and [F5] keys  on the same JoyMega button  for Konami
+# games. But beware, Parodius for example does not like it: you have
+# to  press [F1]  and only  [F1] to  pause the  game (that's  why  a
+# specific "Parodius" setting is provided).  A keycode is made of  2
+# digits, that can be retrieved in the table below (row first,  then
+# column). For example, the key code of the [Space] key is 80.
+#
+#       bit 7  bit 6  bit 5  bit 4  bit 3  bit 2  bit 1  bit 0
+#row 0     7      6      5      4      3      2      1      0
+#row 1    ; :    ] }    [ {     \     = +    - _     9      8
+#row 2     B      A    DEAD    / ?    . >    , <    ` ~    ' "
+#row 3     J      I      H      G      F      E      D      C
+#row 4     R      Q      P      O      N      M      L      K
+#row 5     Z      Y      X      W      V      U      T      S
+#row 6    F3     F2     F1    CODE   CAPS   GRAPH   CTRL  SHIFT
+#row 7    RET  SELECT   BS    STOP    TAB    ESC    F5     F4
+#row 8   RIGHT  DOWN    UP    LEFT    DEL    INS    HOME  SPACE
+#row 9   NUM4   NUM3   NUM2   NUM1   NUM0   NUM/    NUM+  NUM*
+#row 10  NUM.   NUM,   NUM-   NUM9   NUM8   NUM7    NUM6  NUM5
+
+jGeneric (3Btns)=3S0657174;A066;.
+jGeneric (6Btns)=6Z080;Y067;X066;S06574;M071;A070;.
+jAutofire 1 (3Btns)=3S0657174;A180;.
+jAutofire 2 (3Btns)=3S0657174;A280;.
+jAutofire 3 (3Btns)=3S0657174;A380;.
+jGoonies (3Btns)=3S065;A085;.
+jParodius (3Btns)=3S065;A071;.
+jM.O.G. (6Btns)=6S066;A065;Y08577;X280;Z242;M061;.
+jM.O.G. Tototek (6Btns)=6S066;Z065;X08577;A380;Y342;M061;.
+
+
+# Palette configurations
+#
+# Format is p<name>=<color_code>*16
+#
+# <name> is the name displayed in SofaRun.
+#
+# <color_code>  is composed  of 3  digits between  0 and  7, in  RGB
+# order. For example 700 is red, 070 is green, 007 is blue, and  777
+# is white.
+
+pCoolColors=  000 000 253 364 125 236 521 357 632 742 762 774 142 524 555 777
+pMSX1=        000 000 252 363 225 437 521 267 632 743 662 664 141 535 666 777
+pMSX2=        000 000 161 373 117 237 511 267 711 733 661 664 141 625 555 777
+pGray scales= 000 000 444 555 222 333 222 555 333 444 555 666 333 444 666 777
+pGreen scales=000 000 040 050 020 030 020 050 030 040 050 060 030 040 060 070
+
+--------------------------------------------------------------------
+
+
+
+                               Thanks
+                               ======
+
+Thanks to FRS  for his help  on JoyMega and  the CoolColors palette,
+Manuel Pazos for  the MegaFlashROM  cartridges and  his help on  how
+to program it, and Nestor Soriano for Nextor!
