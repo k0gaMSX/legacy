@@ -27,4 +27,7 @@ extern DIR * opendir (char * name);
 extern struct dirent * readdir (DIR * dir);
 extern int closedir (DIR * dir);
 extern void rewinddir (DIR * dir);
+extern int mkdir (char *);
+extern int rmdir (char *);
+
 
