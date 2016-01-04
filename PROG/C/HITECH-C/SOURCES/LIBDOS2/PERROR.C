@@ -23,13 +23,13 @@ void perror(char * s)
   
 #asm
 global bDos
-  ld c,066h ; _EXPLAIN
-  ld b,(ix+-66) ; my_errno
   push ix
   pop hl
   ld de,-64
   add hl,de
   ex de,hl
+  ld c,066h ; _EXPLAIN
+  ld b,(ix+-66) ; my_errno
   call bDos
 #endasm
   ps(err_text);
