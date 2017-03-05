@@ -1,0 +1,360 @@
+
+------------------------------
+MSX BLACK TYPER Interface 1.0
+2016 Armando Pérez Abad
+e-mail: majingazetto@gmail.com
+------------------------------
+
+
+--------------- ÍNDICE -------------------
+
+
+1.- INTRODUCCION/CARACTERÍSTICAS.
+
+2.- REQUISITOS DEL SISTEMA.
+
+3.- INSTALACION (CON CARTUCHO EXTERNO). 
+
+4.- INSTALACION (SIN CARTUCHO EXTERNO).
+
+    4.1.- MSX2USB.ROM
+
+5.- FUNCIONAMIENTO MSX2USB.
+
+    5.1 MODO KEYBOARD ONLY.
+    5.2 MODO GAMEPAD ONLY.
+    5.3 MODO MULTIDEVICE (GAMEPAD + KEYBOARD)
+
+6.- MAPEO DEL TECLADO. 
+    
+    6.1. TECLAS ESPECIALES.
+
+
+--------------- ÍNDICE -------------------
+
+
+
+
+1.- INTRODUCCION/CARACTERÍSTICAS. 
+
+BLACK TYPER es un interfaz y conjunto de programas gracias a los cuales una
+computadora MSX puede ser utilizada como teclado y/o gamepad compatible USB. 
+
+Gracias al interface podremos darle vida a ese viejo computador MSX al que no le
+damos utilizad, brindándonos la posibilidad de revivir, en un sistema actual, las mismas
+experiencias que disfrutamos con nuestra primera computadora. Pero no solo eso,
+podremos utilizarlo en una gran variedad de dispositivos:
+
+    * Mini ordenadores de placa única, como Raspberry Pi. 
+    * Tablets y Smartphones.
+    * Consolas (Playstation, Wii, Xbox)
+    * Smart TVs. 
+    * Cualquier dispositivo que soporte un teclado externo USB. 
+
+
+Las características principales de BLACK TYPER son:
+    
+    * Compatible con cualquier modelo de MSX. 
+
+    * Soporte de HID Boot Protocol y HID Report Protocol en modo Keyboard Only.
+
+    * Protocolo de comunicación asíncrono, no necesita sincronización inicial
+    con el MSX.  
+
+    * Modos de funcionamiento, Keyboard Only, Gamepad Only y combo
+    (multidispositivo) Keyboard + Gamepad
+
+    * Soporte para joysticks MSX.
+
+
+
+2.- REQUISITOS DEL SISTEMA.
+
+Para la utilización de BLACK TYPER serán necesarios estos requerimientos:
+
+    - MSX con puerto de impresora funcional. 
+
+    - Programa MSX2USB. 
+
+    - Slot/Subslot libre, si ejecutamos el programa desde un cartucho externo
+    (se vende por separado). (*)
+
+    - Reproductor de cassette, unidad de disco o cartucho flash, para la carga
+    y ejecución del programa (en caso de no disponer del cartucho externo). (**)
+
+    - Cable USB A-TO-B, para la conexión del interface al dispositivo destino
+    (no incluído). (***)
+
+
+(*)     El programa MSX2USB puede ser adquirido separadamente en formato cartucho.
+
+(**)    Necesario uno de ellos para la carga del programa MSX2USB, en caso no de
+utilizar cartucho externo.
+
+(***)   El cable para la conexión del interfaz con el dispositivo no está
+incluído, ni se vende por separado. No presenta dificultad comprarlo en
+cualquier tienda de informática, electrónica o gran almacén. 
+
+
+
+3.- INSTALACION (CON CARTUCHO EXTERNO). 
+
+
+    1) Asegurese que su computadora MSX está apagada.
+
+    2) Conecte el puerto "Centronics", marcado en el interfaz con la etiqueta
+    "MSX", al puerto de impresora de su computadora MSX.
+
+
+    3) Conecte, con un cable USB A-TO-B, por un extremo al interfaz en el
+    conector etiquetado "Device", y el otro extremo al dispositivo en el cual
+    queremos utilizar el MSX como teclado. El LED debería de empezar a
+    parpadear. 
+
+    4) Inserte el cartucho externo en un slot libre.
+
+    5) Encienda su MSX. 
+
+
+En unos instantes podrá utilizar su computadora MSX como teclado usb (o gamepad,
+según modo de configuración). 
+
+
+
+
+4.- INSTALACION (SIN CARTUCHO EXTERNO).
+
+La instalación, sin cartucho externo, requiere que ejecutemos el programa
+MSX2USB (incluido en el cartucho externo) en la computadora MSX que deseemos
+utilizar. 
+
+El programa se presenta en diferentes formatos, para garantizar que puede ser
+cargado en cualquier modelo de ordenador. 
+
+
+
+4.1.- MSX2USB.ROM
+
+Para utilizar el programa MSX2USB directamente necesitaremos de un MSX dotado de
+unidad de disco, MSX-DOS 1.0 y el programa ODO
+(http://msxbanzai.tni.nl/dev/ODOV04.LZH). 
+
+Para su ejecución:
+
+    - Inserte, en su unidad de disco, un disco con arranque MSX-DOS 1.0 o
+    superior, ODO.COM y el programa MSX2USB.ROM.
+
+    - Desde la linea de comando ejecute: ODO MSX2USB.ROM
+   
+
+
+5.- FUNCIONAMIENTO MSX2USB.
+
+ 
+El programa MSX2USB es el encargado de enviar al interface los comandos y/o
+pulsaciones de teclas/joysticks ejecutados en su computadora MSX. Dependiendo el
+modo utilizado, MSX2USB enviará al interface la información adecuada. 
+
+
+
+5.1 MODO KEYBOARD ONLY.
+
+En el modo "keyboard only", el MSX se comporta como un teclado standard USB.
+Además de esto, se añaden los movimientos/pulsaciones de un joystick conectado
+en cualquiera de los 2 puertos del MSX. 
+
+
+Estos son los datos recibidos, a través del puerto USB, en la máquina destino:
+
+
+                7     6     5     4     3     2     1     0
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    0       |               REPORT ID  = 1                  |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    1       |               MODIFIER BYTE                   |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    2       |                 RESERVED                      |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    3       |                KEYSTROKE 1                    |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    4       |                KEYSTROKE 2                    |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    5       |                KEYSTROKE 3                    |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    6       |                KEYSTROKE 4                    |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+
+                    
+                    MODE KEYBOARD ONLY, TWO MORE KEYSTROKES
+
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    7       |                KEYSTROKE 5                    |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    8       |                KEYSTROKE 6                    |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+
+
+
+El mapeo de los joysticks será el siguiente:
+
+    - UP                        : <CURSOR UP>
+    - DOWN                      : <CURSOR DOWN>
+    - LEFT                      : <CURSOR LEFT>
+    - RIGHT                     : <CURSOR RIGHT>
+    - BUTTON 1                  : <SPACE>
+    - BUTTON 2                  : <N>
+
+
+
+Para que BLACK TYPER funcione en modo "Keyboard Only" mantendremos pulsada la
+tecla <SPACE>, *únicamente* durante el arranque del programa MSX2USB.
+
+La configuración será guardada en el interface Black Typer, y utilizada por
+defecto en la siguiente ejecución.
+
+
+
+5.2 MODO GAMEPAD ONLY.
+
+En este modo, Black Typer se comportará como un joystick/pad USB. Aquí podremos
+ver los bytes enviados al dispositivo destino:
+
+                7     6     5     4     3     2     1     0
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    0       |           REPORT ID  = 2                      |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    1       |              JOYSTICK X AXIS                  |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    2       |             JOYSTICK Y AXIS                   |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    3       | BT  | BC  |  BX | BS  |    HAT SWITCH         |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+    4       | R3  | L3  |  O2 | O1  | R2  | L2  | R1  | L1  |
+            +-----+-----+-----+-----+-----+-----+-----+-----+
+
+[] Joystick en cualquier port:
+
+
+    - UP                        : HAT (D-PAD) -  JOYSTICK -Y AXIS
+    - DOWN                      : HAT (D-PAD) -  JOYSTICK +Y AXIS
+    - LEFT                      : HAT (D-PAD) -  JOYSTICK -X AXIS
+    - RIGHT                     : HAT (D-PAD) -  JOYSTICK +X AXIS
+    - BUTTON 1                  : BS BUTTON
+    - BUTTON 2                  : BX BUTTON
+
+[] Keyboard:
+
+    - CURSOR                    : AXIS JOYSTICK
+    - CTRL, CODE, GRAPH         : BUTTON 2 (BX)
+    - SPACE, SHIFT, TAB         : BUTTON 1 (BS)
+    - BS                        : BUTTON 3 (BC)
+    - SELECT                    : BUTTON 4 (BT)
+    - F1                        : L1 BUTTON
+    - F2                        : L2 BUTTON
+    - F4                        : R2 BUTTON
+    - F5                        : R1 BUTTON
+    - A,W,S,D                   : HAT SWITCH
+    - RETURN                    : O1
+
+
+
+Para que BLACK TYPER funcione en modo "GamePad Only" mantendremos pulsada la
+tecla <CTRL>, *únicamente* durante el arranque del programa MSX2USB.
+
+La configuración será guardada en el interface Black Typer, y utilizada por
+defecto en la siguiente ejecución.
+
+
+
+5.3 MODO MULTIDEVICE (GAMEPAD + KEYBOARD)
+
+
+En este modo, Black Typer se comportará como un keyboard standard + joystick/pad
+USB. Es decir, un combo usb. El dispositivo host destino recibirá datos de ambos
+dispositivos. 
+
+
+El mapeo de teclas y joysticks es exactamente el mismo que el explicado en los
+puntos 5.1 y 5.2. Ahora bien, cuando, por ejemplo, pulsemos la tecla <CURSOR UP>
+el dispositivo destino recibirá dos datos:
+    
+    - Uno con el identificador de tecla <CURSOR UP>, para teclado.
+    - Los datos equivalentes a AXIS X del joystick analogico simulado + HAT
+    (D-PAD).
+
+
+Como esto podría acarrear problemas, de cara al funcionamiento de algunos
+programas, es posible evitar que las pulsaciones en el teclado se codifiquen
+como datos para el joystick/gamepad. Para ello solo hemos de mantener pulsado,
+en el arranque de MSX2USB la tecla <TAB>
+
+
+
+Para que BLACK TYPER funcione en modo multidispositvo mantendremos pulsada la
+tecla <CTRL> + <SPACE>, durante el arranque del programa MSX2USB.
+
+La configuración será guardada en el interface Black Typer, y utilizada por
+defecto en la siguiente ejecución.
+
+
+
+
+6.- MAPEO DEL TECLADO. 
+
+Quizás la característica más confusa de Black Typer es como se mapea el teclado
+del MSX, respecto al teclado configurado en la máquina destino. 
+
+La explicación es muy sencilla, pero puede ser confusa de entender: Black Typer
+entiende el teclado del MSX como un teclado raw standard. Esto quiere decir que
+*la tecla dibujada* en el teclado MSX *no tiene por qué corresponder* con la
+tecla que obtendermos en el dispositivo destino al pulsar. 
+
+Por poner un ejemplo sencillo: Si nuestro teclado MSX es QWERTY y en nuestro
+dispositivo destino tenemos el teclado configurado como Frances-AZERTY, al
+pulsar la tecla <Q> en el MSX, lo que obtendremos en pantalla será una <A>. 
+
+Así pues, si tenemos configurado nuestro dispositivo como un teclado es-es, y el
+MSX es japonés la letra <ñ> la conseguiremos pulsando <;> que es el sitio FISICO
+donde se encontraría en un teclado español. 
+
+
+6.1.- TECLAS ESPECIALES. 
+
+Dado que el número de teclas de un teclado MSX no se corresponde con un teclado
+standard USB (es inferior) se han habilitado atajos de teclado para obtener las
+teclas que no están disponibles en MSX. 
+
+
+    +-----+-----+-----+-----+-----+-----+-----+
+    |  TECLADO USB    |         MSX           |
+    +-----+-----+-----+-----+-----+-----+-----+
+    |     <F6>        |    <SELECT + F1>      |
+    +-----+-----+-----+-----+-----+-----+-----+
+    |     <F7>        |    <SELECT + F2>      |
+    +-----+-----+-----+-----+-----+-----+-----+
+    |     <F8>        |    <SELECT + F3>      |
+    +-----+-----+-----+-----+-----+-----+-----+
+    |     <F9>        |    <SELECT + F4>      |
+    +-----+-----+-----+-----+-----+-----+-----+
+    |     <F10>       |    <SELECT + F5>      |
+    +-----+-----+-----+-----+-----+-----+-----+
+    |     <F11>       |    <CODE + F1>        |
+    +-----+-----+-----+-----+-----+-----+-----+
+    |     <F12>       |    <CODE + F2>        |
+    +-----+-----+-----+-----+-----+-----+-----+
+    | <VOLUME UP>     | <SELECT + C. UP>      |
+    +-----+-----+-----+-----+-----+-----+-----+
+    | <VOLUME DOWN>   | <SELECT + C. DOWN>    |
+    +-----+-----+-----+-----+-----+-----+-----+
+    |    <MUTE>       |  <SELECT + STOP>      |
+    +-----+-----+-----+-----+-----+-----+-----+
+    |  <PREV TRACK>   |  <SELECT + C. LEFT>   |
+    +-----+-----+-----+-----+-----+-----+-----+
+    |  <NEXT TRACK>   |  <SELECT + C. RIGHT>  |
+    +-----+-----+-----+-----+-----+-----+-----+
+    |  <PLAY/PAUSE>   |  <SHIFT + STOP>       |
+    +-----+-----+-----+-----+-----+-----+-----+
+    |  <GUI KEY>      |       <CODE>          |
+    +-----+-----+-----+-----+-----+-----+-----+
+    |  <ALT KEY>      |      <GRAPH>          |
+    +-----+-----+-----+-----+-----+-----+-----+
