@@ -1,0 +1,111 @@
+Verbeterde fouten en uitbreidingen in Compass #1.1 t.o.v. Compass #1.0:
+----------------------------------------------------------------------
+
+
+ALGEMEEN:
+--------
+
+- Compass kan nu op 2 manieren verlaten worden. M.b.v. de SHELL-optie ([SHIFT]
++[ESC] of in systemmenu) kan Compass verlaten worden, waarna weer teruggekeerd
+kan worden met behulp van [SHIFT]+[ESC] of "CMD COMPASS". De QUIT-optie ([CTRL]
++[Q] of in systemmenu) sluit Compass geheel af en geeft al het aangevraagde
+geheugen terug aan de memorymanagers.
+- Beperking in geheugenschakeling: 1 blok van Compass (2e blok) MOET in de
+primaire mapper geschakeld worden. Dit is een gevolg van de beperkingen van
+DOS m.b.t. geheugenschakeling, waardoor Compass op sommige computers met 2 of
+meer mappers niet goed werkte.
+- indien u Compass nu opstart met bijvoorbeeld "COMPASS NAME.ASM" wordt Compass
+gestart, waarna NAME.ASM in sourcebuffer 1 wordt geladen.
+- Alle pulldownmenu's hebben nu achter hun opties de bijbehorende shortcuts
+staan. Zo kunt U dus op een snelle manier de shortcuts onthouden / opzoeken.
+- De loader van Compass is veel groter geworden, omdat een aantal routines van
+COMPASS.DAT verplaatst zijn naar COMPASS.COM. Onder andere alle
+geheugenroutines zijn verplaatst, waardoor Compass zich nu direct veilig in de
+beschikbare geheugenblokken nestelt.
+- Indien U de muis in de editor wilt gebruiken om door Uw tekst te scrollen,
+dient U nu de linker muisknop daarbij in te drukken. Hierdoor bestaat niet het
+gevaar van per ongeluk tegen de muis stoten.
+
+
+
+DISKDRIVE:
+---------
+
+- Hoeveelheid vrije ruimte (kB) werd van de verkeerde drive gegeven. Opgelost.
+- Onder dos 1 kwamen bij het selecteren van een bestand soms 2 punten in de
+bestandsnaam te staan. Opgelost.
+- "Binair file" veranderd in "Binary file".
+- Bij het saven van een assemblerfile werd de header soms niet correct naar
+disk geschreven. Dit gebeurde pas indien men geprobeerd had om een niet-
+assemblerfile als assemblerfile in te laden. Opgelost.
+- Op sommige MSX2-computers werd bij gebruik van [CTRL]+[5/6] de verticale
+beeldhoogte verlaagd naar 192 i.p.v. 212. Opgelost.
+- Compass kon niet in een path-instructie opgenomen worden, omdat Compass
+zichzelf niet kon vinden. Opgelost, Compass maakt nu gebruik van het "PROGRAM"-
+environment item, en maakt een eigen environment item aan ("COMPASS"). Dit
+heeft ook tot gevolg dat bij het saven van installations geen path meer wordt
+gevraagd.
+- Bij het saven van installations werd het opgegeven path niet juist gebruikt.
+Opgelost, aangezien er nu niet meer om een path wordt gevraagd (zie vorige
+punt).
+- Bij het laden van een niet ascii-file als ascii liep Compass vast. Opgelost,
+nu een melding indien het geen ascii-file betreft.
+- Per sourcebuffer is er nu een path en filenaam (voor ASM files !)
+gereserveerd, zodat U slechts van buffer hoeft te wisselen om de juiste
+filenaam en path te krijgen.
+
+
+
+ASSEMBLER:
+---------
+
+- assembleren kan onderbroken worden met behulp van [ESC].
+- indien [SHIFT]+[F1...F5] werd ingedrukt zonder van te voren een regelnummer
+en buffer op te slaan m.b.v. [CTRL]+[F1...F5] ging het fout. Opgelost.
+- assembleren zonder "ORG"-instructie zette de data op adres #0000 in het
+geheugen, terwijl Compass aangaf dat de data op adres #0100 terecht kwam.
+Opgelost, de data gaat nu naar #0100 in het geheugen.
+- bij het vervangen (replace) van tekst traden problemen op indien de lengte
+van het vervangwoord kleiner was dan de lengte van het originele woord.
+Opgelost.
+- bij Relocatable file ontbrak af en toe wat verplaatsbare informatie.
+Opgelost, foutje zat in de calculator.
+- errors, ontstaan bij het assembleren, werden soms niet goed gewist bij het
+scrollen door de errorlijst (laatste 3 tekens bleven staan). Opgelost.
+- bij het selecteren van een label in de labellijst m.b.v. [SPATIE] werd dit
+label niet gevonden in de source indien UPPER ON staat. Opgelost.
+- editor maakt nu gebruik van 160 tekens per regel. Dit houdt in dat er
+gebruik wordt gemaakt van scrollroutines. Bovendien zijn veel routines
+aangepast zodat alles met 160 tekens werkt.
+- Bij het assembleren wordt automatisch de extensie ".COM", ".REL" of ".TSR"
+toegevoegd. Uiteraard blijft de mogelijkheid bestaan de file anders te noemen.
+- Nieuw commando toegevoegd: LOOP en ENDLOOP. Hiermee kunt U op een labelloze
+manier loops in uw programma voegen. Voorbeeld:
+
+  LOOP B,5	;BC,64000  A,2  H,7  IX,90  enz....
+  ........
+  ENDLOOP	;springt terug naar het adres van de instructies op de puntjes
+
+wordt geassembleerd als:
+
+  LD B,5	;BC,64000 ......
+  ......
+  DJNZ ..	;DEC BC  JR NZ,..     DEC A  JR NZ,..  enz....
+
+
+
+DEBUGGER:
+--------
+
+- de opcode van "LD (IX+d1),d2" werd door de debugger vertaald in
+"LD (IX+d1),d1". Opgelost.
+- maakt nu gebruik van "LD (IX+..." en "LD (IX-...)".
+- windows die gebruikt werden weken sterk af van de standaard Compass-windows.
+Aangepast.
+- bij "SET BREAKPOINT" wordt automatisch het huidige adres ingevuld. Uiteraard
+kan er alsnog voor een ander adres worden gekozen.
+- bij het wissen van een verboden OUT werd soms de overgebleven lijst aangetast
+(2 x zelfde OUT-poort). Opgelost.
+- disassembleren naar sourcebuffer maakt nu gebruik van de labelbuffer, zodat
+er veel meer ruimte voor labels is.
+

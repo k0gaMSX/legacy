@@ -1,0 +1,1155 @@
+MSX SYSTEEM-VARIABELEN (&hF380-&hFFFF)             COMPASS v1.0 by COMPJOETANIA
+-------------------------------------------------------------------------------
+
+Samensteller: Compjoetania, Eric van Beurden
+Bron        : Diversen bronnen
+Versie      : #1.00
+
+
+HULPROUTINE GEBIED
+------------------
+Het  volgende gebied bevat enkele machinetaal routines die door het Operating
+System gebruikt  worden voor  het bereiken  van andere sloten dan de huidige.
+Deze routines worden vanuit ROM aangeroepen als de te bereiken pagina zich in
+hetzelfde adresbereik bevindt als de ROM.
+
+F380 RDPRIM  (5):Routine gebruikt  door de  BIOS routine  RDSLT (&H000C). In
+                 register A staat de waarde waarmee het Primair Slot register
+                 geladen  wordt. In  register D wat er eerst in stond. In re-
+                 gister E komt de gelezen byte.
+
+         RDPRIM: OUT  (&HA8),A    ;schakel ander Primair Slot in
+                 LD   E,(HL)      ;lees geheugen
+                 JR   WRPRM1      ;schakel vorige Primair Slot in
+
+F385 WRPRIM  (7):Routine gebruikt door de BIOS routine WRSLT (&H0014). In re-
+                 gister A  staat de waarde waarmee het Primair Slot register
+                 geladen  wordt. In  register D wat er eerst in stond. In re-
+                 gister E komt de gelezen byte.
+
+         WRPRIM: OUT  (&HA8),A    ;schakel ander Primair Slot in
+                 LD   ( HL),E     ;schrijf naar geheugen
+         WRPRM1: LD   A,D         ;haal vorige Slot-instelling terug
+                 OUT  (&HA8),A    ;schakel vorige Primaire Slot in
+                 RET
+
+F38C CLPRIM (14):Routine gebruikt door de BIOS routine CALSLT (&H001C). In re-
+                 gister A  staat de waarde waarmee het Primair Slot register
+                 geladen  wordt. De  huidige instelling staat op de stack van
+                 de Z80.  Het adres dat aangeroepen moet worden staat in re-
+                 gisterpaar IX.
+
+         CLPRIM: OUT  (&HA8),A    ;schakel nieuw Primair Slot in
+                 EX   AF,AF'      ;naar AF voor CALL
+                 CALL CLPRM1      ;voer uit
+                 EX   AF,AF'      ;naar AF'
+                 POP  AF          ;haal vorige instelling terug
+                 OUT  (&HA8),A    ;schakel vorige Primair Slot in
+                 EX   AF,AF'      ;naar AF
+                 RET
+         CLPRM1: JP   (IX)
+
+F39A USRTAB  (2):USR 0 (x) Werkgebied van het DEFUSR statement. USRTAB is een
+F39C   "     (2):USR 1 (x) tabel van beginadressen van machinetaal routines.
+F39E   "     (2):USR 2 (x) De adressen in de tabel zijn de adressen waarnaar
+F3A0   "     (2):USR 3 (x) de USR functie wijst. Na het opstarten bevatten
+F3A2   "     (2):USR 4 (x) alle adressen &H475A. Een sprong naar dat adres
+F3A4   "     (2):USR 5 (x) levert namelijk de foutmelding 'SYNTAX ERROR' op.
+F3A6   "     (2):USR 6 (x) Zolang de adressen niet van nieuwe waardes zijn
+F3A8   "     (2):USR 7 (x) voorzien blijven de USR functie de foutmelding ge-
+F3AA   "     (2):USR 8 (x) ven.
+F3AC   "     (2):USR 9 (x)
+
+
+SCHERMPARAMETER GEBIED
+----------------------
+Het volgende  gebied bevat  allerlei gegevens  van het Operating System. Door 
+sommige  waardes te  veranderen kunnen  soms interessante  resultaten bereikt 
+worden.
+
+F3AE LINL40  (1):Screen width in screen 0, default=39. Deze word in LINLEN ge-
+                 zet als men met het SCREEN statement modus 0 insteld.
+F3AF LINL32  (1):Screen width in screen 1, default=29. Deze word in LINLEN ge-
+                 zet als men met het SCREEN statement modus 1 insteld.
+F3B0 LINLEN  (1):Screen width van het huidige scherm, default=39. Deze kan van
+                 uit BASIC d.m.v. het WIDTH statement verander worden.
+F3B1 CRTCNT  (1):Aantal lijnen per pagina in screen 0 en 1, default=24
+F3B2 CLMLST  (1):Aantal posities van Tab kolommen op een scherm, default=14
+F3B3 TXTNAM  (2):Base  0 > Name table              screen 0
+F3B5 TXTCOL  (2):Base  1 > N.V.T. in screen 0
+F3B7 TXTCGP  (2):Base  2 > Pattern generator table screen 0
+F3B9 TXTATR  (2):Base  3 > N.V.T. in screen 0
+F3BB TXTPAT  (2):Base  4 > N.V.T. in screen 0
+F3BD T32NAM  (2):Base  5 > Name table              screen 1
+F3BF T32COL  (2):Base  6 > Colour table            screen 1
+F3C1 T32CGP  (2):Base  7 > Pattern generator table screen 1
+F3C3 T32ATR  (2):Base  8 > Sprite attribute table  screen 1
+F3C5 T32PAT  (2):Base  9 > Sprite pattern table    screen 1
+F3C7 GRPNAM  (2):Base 10 > Name table              screen 2
+F3C9 GRPCOL  (2):Base 11 > Colour table            screen 2
+F3CB GRPCGP  (2):Base 12 > Pattern generator table screen 2
+F3CD GRPATR  (2):Base 13 > Sprite attribute table  screen 2
+F3CF GRPPAT  (2):Base 14 > Sprite pattern table    screen 2
+F3D1 MLTNAM  (2):Base 15 > Name table              screen 3
+F3D3 MLTCOL  (2):Base 16 > Colour table            screen 3
+F3D5 MLTCGP  (2):Base 17 > Pattern generator table screen 3
+F3D7 MLTATR  (2):Base 18 > Sprite attribute table  screen 3
+F3D9 MLTPAT  (2):Base 19 > Sprite pattern table    screen 3
+F3DB CLIKSW  (1):Klik na toetsaanslag, 1=aan 0=uit, screen,,X,,,
+F3DC CSRY    (1):Y-positie van de cursor in text mode, bovenste regel is 1
+F3DD CSRX    (1):X-positie van de cursor in text mode, meest linkse kolom is 1
+F3DE CNSDFG  (1):Functietoetsen weergave, 1=aan 0=uit
+F3DF RG0SAV  (1):Copy inhoud VDP register # 0
+F3E0 RG1SAV  (1):Copy inhoud VDP register # 1
+F3E1 RG2SAV  (1):Copy inhoud VDP register # 2
+F3E2 RG3SAV  (1):Copy inhoud VDP register # 3
+F3E3 RG4SAV  (1):Copy inhoud VDP register # 4
+F3E4 RG5SAV  (1):Copy inhoud VDP register # 5
+F3E5 RG6SAV  (1):Copy inhoud VDP register # 6
+F3E6 RG7SAV  (1):Copy inhoud VDP register # 7
+F3E7 STATFL  (1):Copy inhoud VDP status register S#0
+F3E8 TRGFLG  (1):Bevat de status van de joystick vuurknoppen (1=niet inge-
+                 drukt). De bits zijn als volgt:
+
+                 bit7  :stick 2, knop 2 (strig(4))
+                 bit6  :stick 2, knop 1 (strig(2))
+                 bit5  :stick 1, knop 2 (strig(3))
+                 bit4  :stick 1, knop 1 (strig(1))
+                 bit3-1:ongebruikt
+                 bit0  :spatiebalk (strig(0))
+
+F3E9 FORCLR  (1):Voorgrond kleur. Deze kan door het 'COLOR' statement veran-
+                 derd worden
+F3EA BAKCLR  (1):Achtergrond kleur. Deze kan door het 'COLOR' statement veran-
+                 derd worden
+F3EB BDRCLR  (1):Border kleur. Deze kan door het 'COLOR' statement veranderd
+                 worden
+F3EC MAXUPD  (3):Nodig voor een jump via "LINE" naar de BIOS routines RIGHTC
+                 (&HFC), LEFTC (&HFF), UPC (&H102) en DOWNC (&H108). De 3 by-
+                 tes bevatten de volgende opcodes:
+                   &HF3EC= C3  ;JP
+                   &HF3ED= 00  ;Wordt ingevuld door de LINE routine
+                   &HF3EE= 00  ;Wordt ingevuld door de LINE routine
+F3EF MINUPD  (3):Nodig voor een jump via "LINE" naar de BIOS routines RIGHTC
+                 (&HFC), LEFTC (&HFF), UPC (&H102) en DOWNC (&H108). De 3 by-
+                 tes bevatten de volgende opcodes:
+                   &HF3EF= C3  ;JP
+                   &HF3F0= 00  ;Wordt ingevuld door de LINE routine
+                   &HF3F1= 00  ;Wordt ingevuld door de LINE routine
+F3F2 ATRBYT  (1):Attribuut byte voor kleur, gebruikt door de BIOS routines
+                 SETC (&H120) en NSETCX (&H123)
+F3F3 QUEUES  (2):Beginadres van de queue-tabel, die bevat de beschrijving van
+                 4 queues: 3 geluids en de RS232 queue. Default=&HF9F5 QUETAB
+F3F5 FRCNEW  (1):Geeft aan hoe gelezen moet worden, 0=CLOAD  255=CLOAD?
+F3F6 SCNCNT  (1):Interruptteller (0/1 bij MSX2, tot 3 bij MSX1) of bij de VDP
+                 interrupt tevens het toetsenbord gescand wordt. Scanning bij
+                 0 op toetsindruk
+F3F7 REPCNT  (1):Repeat  snelheid van  de continue toetsindruk door de inter-
+                 rupt (0/13). Als OLDKEY (&HFBDA) en NEWKEY (&HFBE5) verschil-
+                 len wordt REPCNT weer op 13 gezet. Als REPCNT 0 bereikt wordt
+                 toetst herhaald
+F3F8 PUTPNT  (2):Adres van de eerstvolgende positie in KEYBUF waar een karak-
+                 ter  geplaatst kan worden. Elke keer als er een teken aan de
+                 invoerbuffer wordt  toegevoegd , wordt PUTPNT opgehoogt. Als
+                 PUTPNT gelijk is aan GETPNT (&HF3FA) dan is de invoerbuffer
+                 vol. De waarde van PUTPNT ligt in KEYBUF (FBF0-FC17)
+F3FA GETPNT  (2):Adres van het eerste teken in de invoerbuffer van de toetsen-
+                 bord dat nog niet uitgelezen is. Wordt opgehoogd wanneer er
+                 een  teken uit  de invoerbuffer wordt gelezen. De waarde van
+                 GETPNT ligt altijd binnen het gebied van KEYBUF (FBF0-FC17)
+F3FC CS120   (5):Cassette parameters voor 1200 baud. De bytes zijn als volgt:
+
+                   byte 1 Duur van laag signaal bij uitvoer 0, default=83
+                    "   2 Duur van hoog signaal bij uitvoer 0, default=92
+                    "   3 Duur van laag signaal bij uitvoer 1, default=38
+                    "   4 Duur van hoog signaal bij uitvoer 1, default=45
+                    "   5 Duur van synchronisatieblok, default=15
+
+F401 CS240   (5):Cassette parameters voor 2400 baud. De bytes zijn als volgt:
+
+                   byte 1 Duur van laag signaal bij uitvoer 0, default=37
+                    "   2 Duur van hoog signaal bij uitvoer 0, default=45
+                    "   3 Duur van laag signaal bij uitvoer 1, default=14
+                    "   4 Duur van hoog signaal bij uitvoer 1, default=22
+                    "   5 Duur van synchronisatieblok, default=31
+
+F406 LOW     (2):Cassette parameter  voor instelling  van de  signaalduur bij
+                 uitvoer 0, voor de huidige snelheid van het cassettesysteem.
+                 De waarde is gelijk aan de eerste 2 bytes van CS120 (&HF3FC)
+                 of CS240 (&HF401)
+F406 HIGH    (2):Cassette parameter  voor instelling  van de  signaalduur bij
+                 uitvoer 1, voor de huidige snelheid van het cassettesysteem.
+                 De waarde is gelijk aan de byte 3 en 4 van CS120 (&HF3FC) of
+                 CS240 (&HF401)
+F40A HEADER  (1):Cassette parameter voor de lengte van het synchronisatieblok
+                 voor de huidige snelheid van het cassettesysteem. De waarde
+                 is gelijk aan de 5 byte van CS120 (&HF3FC) of CS240 (&HF401)
+F40B ASPCT1  (2):Verhouding horizontaal/verticaal bij het 'CIRCLE' statement
+                 vermenigvuldigd met 256. Als  ASPCT2 (&HF40D) < &H200 dan is
+                 ASPCT2 het aantal verticale punten per 256 horizontale pun-
+                 ten van de straal.
+F40D ASPCT2  (2):Verhouding horizontaal/verticaal bij het 'CIRCLE' statement
+                 vermenigvuldigd met 256. De waarde van F40C in ongebruikt!
+                 Als ASPCT2 groter is dan &h00FF is de waarde van F40B het
+                 aantal horizontale punten per 256 verticale punten van de
+                 straal.
+F40F ENDPRG  (5):Gebruikt  door het 'RESUME' statement. ENDPRG bevat een na-
+                 maakeinde van  het BASIC programma ten  behoeven van RESUME
+                 NEXT. Als er een fout in de hoofdlus van de BASIC interpreter
+                 een fout ondekt wordt voordat er in KBUF (&HF41F) gecodeerde
+                 programmatekst aanwezig is  dan kan men indien een 'ON ERROR
+                 GOTO' statement in werking is door middel van het 'RESUME'
+                 statement eindigen op deze regel.
+F414 ERRFLG  (1):Wordt gebruikt door de foutverwerkingsroutine van de inter-
+                 preter om het nr. van de ondekte fout te bewaren, default=0
+F415 LPTPOS  (1):Printerkop  positie (LPOS in BASIC), wordt door de 'LPRINT'
+                 routine gebruikt.
+F416 PRTFLG  (1):Switch die  aangeeft of  uitvoer van  de BIOS routine OUTDO
+                 (&H18) naar het scherm (0) of printer (1) plaats vindt.
+F417 NTMSXP  (1):Geeft  aan of er een MSX printer is aangesloten? Deze switch
+                 wordt gebruikt door de BIOS routine OUTDO (&H18). Als er wel
+                 een MSX printer(0) is dan wordt bij het grafisch printen
+                 (vooraf gegaan door een grafische header) de karakters als
+                 grafische karakters verstuurd. Is er geen MSX printer aange-
+                 sloten dan worden de karakters (die niet in een standaard
+                 ASCII-tabel staan) vervangen door spaties. NTMSXP kan door
+                 het 'SCREEN' statement veranderd worden. SCREEN,,,,X
+F418 RAWPRT  (1):Geeft aan of bij het printen de TAB sprongen en de speciale
+                 MSX  tekens eerst vervangen moeten worden door spaties. Deze
+                 switch wordt gebruikt door de BIOS routine OUTDO (&H18). Als
+                 de raw mode uit staat (0) dan  worden grafische headers, enz
+                 vervangen door spaties. In de raw mode (1) wordt alles ver-
+                 stuurd zoals het is.
+F419 VLZADR  (2):Adres van teken dat door het BASIC statement 'VAL("")' tij-
+                 delijk door een O is vervangen.
+
+
+WERKGEBIED VOOR DE BASIC INTERPRETER
+------------------------------------
+Het volgende gebied wordt door de BASIC interpreter gebruikt om het programma
+verloop te  besturen. D.W.Z.  het programma wordt onleed in regels, de regels
+in statements  en voor het uitvoeren van de statements moet men de juiste pa-
+rameters berekenen.
+
+F41B VLZDAT  (1):Waarde van het door VLZADR aangegeven teken
+F41C CURLIN  (2):Regelnummer waar de interpreter op het moment mee werkt. In
+                 de directe  modus (als  er geen  BASIC programma uitgevoerd
+                 wordt) is CURLIN gelijk aan &HFFFF.
+F41E KBFMIN  (1):Dient als loos voorvoegsel van de gecodeerde tekst in KBUF.
+                 Het heeft dezelfde functie als ENDPRG, het wordt namelijk ge-
+                 bruikt als er een fout ondekt wordt bij de verwerking van een
+                 direct statement. De inhoud is ":"
+F41F KBUF  (318):Werkbuffer voor het coderen van regels die in de directe mo-
+                 dus ingetypt zijn. Deze regels worden opgevat als BASIC sta-
+                 ments  of programmaregels. Als er een direct statement wordt
+                 uitgevoerd dan vormt de inhoud van KBUF de programmatekst
+F55D BUFMIN  (1):Dient  als loos voorvoegsel voor de tekst in BUF. Het wordt
+                 gebruikt om de 'INPUT'routine te synchroniseren, wanneer die
+                 de tekst van de input begint te analyseren. De inhoud: ","
+F55E BUF   (259):Wanneer in directe modus of bij een 'INPUT-' of 'LINE INPUT-'
+                 statement  een RETURN wordt gegeven dan komen de ASCII-codes
+                 van de ingevoerde regel in BUF te staan. De tekst wordt door
+                 de routine 'INLIN' van het toetstenbord ingelezen.
+F55E         (4):Gebruikt door BUF
+F562        (15):Bevat een copy van de actuele inhoud van het VDP register #32
+                 tot en met register #46. De inhoud is als volgt:
+
+                   F562 SX     :VDP R# 32, Source X Low
+                   F563 SX     :VDP R# 33, Source X High
+                   F564 SY     :VDP R# 34, Source Y Low
+                   F565 SY     :VDP R# 35, Source Y High
+                   F566 DX     :VDP R# 36, Dest. X Low
+                   F567 DX     :VDP R# 37, Dest. X High
+                   F568 DY     :VDP R# 38, Dest. Y Low
+                   F569 DY     :VDP R# 39, Dest. Y High
+                   F56A NX     :VDP R# 40, Nr of dots X Low
+                   F56B NX     :VDP R# 41, Nr of dots X High
+                   F56C NY     :VDP R# 42, Nr of dots Y Low
+                   F56D NY     :VDP R# 43, Nr of dots Y High
+                   F56E CDUMMY :VDP R# 44, Color register
+                   F56F ARG    :VDP R# 45, Argument register
+                   F570 L_OP   :VDP R# 46, Command  register
+
+F571       (239):Gebruikt door BUF
+F660 ENDBUF  (1):Einde van BUF
+F661 TTYPOS  (1):Teletype position, bevat actuele positie cursor bij "PRINT"
+F662 DIMFLG  (1):Vlag die door het 'DIM' statement gewijzigd wordt om de wer-
+                 king van het variabelen zoeken te sturen.
+F663 VALTYP  (1):Bevat de code van het type variabele dat momenteel in DAC
+                 (&HF7F6) staat:  2= integer
+                                  3= string
+                                  4= enkele precisie
+                                  8= dubbele precisie
+F664 DORES   (1):Vlag die aangeeft of sleutelwoorden gecodeerd moeten worden.
+                 Als de sleutelwoorden wel (0) gecodeerd mogen worden dan wor-
+                 den keywords die na een 'DATA' token niet tussen aanhalings-
+                 tekens staan in tokens omgezet, anders (1) gebeurt dat niet.
+F665 DONUM   (1):Vlag die aangeeft of getallen achter de keywords 'GOTO',
+                 'GOSUB','THEN',enz. gecodeerd moeten worden. Mogelijke waar-
+                 des zijn:   00= getal coderen als constante
+                             01= getal coderen als regelnummer
+                             FF= getal niet coderen
+F666 CONTXT  (2):Gebruikt door routine CHRGTR om adres in op te slaan van een
+                 karakter,  dat in de programma tekst volgt op een nummerieke
+                 constante.
+F668 CONSAV  (1):Gebruikt door routine CHRGTR om token in op te slaan van een
+                 numerieke constante, die in de programmatekst werd gevonden.
+                 De waarde staat in CONLO (&HF66A).
+F669 CONTYP  (1):Gebruikt  door CHRGTR  om het  type van  de waarde in CONLO
+                 (&H66A) op te slaan. Voor mogelijke waarde zie VALTYP &HF663
+                 Omdat CONTYP betrekking heeft op getalconstanten kan de waar-
+                 de 3 niet voorkomen!
+F66A CONLO   (8):Wordt gebruikt door routine CHRGTR om waarde in op te slaan
+                 van een numerieke constante die in de programma tekste werd
+                 gevonden. De waarde beslaat zoveel bytes als nodig is.
+F672 MEMSIZ  (2):Het topadres van de string opslagruimte. Kan gewijzigd worden
+                 door de statements 'CLEAR' en 'MAXFILES'.
+F674 STKTOP  (2):Topadres van de Z80 stack. De standaard waarde MEMSIZ-200 kan
+                 gewijzigd worden door de statements 'CLEAR' en 'MAXFILES'.
+F676 TXTTAB  (2):Laagste adres van het BASIC programmeergebied. Default=&H8001
+F678 TEMPPT  (2):Volgende vrije positie string-descriptor in TEMPST (&HF67A).
+F67A TEMPST (30):Werkgebeid voor evaluatie  van string-uitdrukkingen.  Er is
+                 plaats  voor 10  string-descriptoren (van  elk 3 bytes). Hij
+                 werkt als een stack, routines die een string produceren PUSH-
+                 en een signalement en routines die strings gebruiken POPpen
+                 het.
+F698 DSCTMP  (3):Werkgebeid voor  evaluatie van  string-uitdrukkingen. Hier
+                 wordt de string tijdelijk opgeslaan tijdens de opmaak van het
+                 signalement voor TEMPST (&HF67A).
+F69B FRETOP  (2):Bevat de eerstvolgende lege plaats in de stringgeheugen. Is
+                 dit leeg, dan is FRETOP gelijk aan MEMSIZ.
+F69D TEMP3   (2):Tijdelijk opslag gebied voor administratie van de interpreter
+F69F TEMP8   (2):Tijdelijke opslag voor de 'garbage collection'
+F6A1 ENDFOR  (2):Adres van eerste byte in BASIC code na het laaste uitgevoerde
+                 'FOR' statement.
+F6A3 DATLIN  (2):Bevat regelnummer waar de uitlezing van 'DATA' plaats vindt.
+F6A5 SUBFLG  (1):Vlag die aangeeft of een variabele ook een element van een
+                 rij mag zijn. Dit mag bv. niet bij een lusvariabele van een
+                'FOR' statement. Wordt gewijzigd door verwerkings routine van
+                 'ERASE','FOR','DEF FN','FN'. Waarde: 0= Rij toegestaan
+                                                      1= Rij niet toegestaan
+F6A6 FLGINP  (1):Vlag dient voor routines die Input- (0) of Read- (255) state-
+                 ments moeten verwerken.
+F6A7 TEMP    (2):Tijdelijk opslag gebied voor administratie van de interpreter
+F6A9 PTRFLG  (1):Vlag die aangeeft of er regelnummer-constanten in de code
+                 voor het BASIC programma staan die omgezet zijn in adres
+                 pointers. &H0D=wel adrespointers &H00=geen adres pointers
+F6AA AUTFLG  (1):Autolinenummering in werking? 0 =ja  1 =nee
+F6AB AUTLIN  (2):Huidige regel nr. waar 'AUTO' mee werkt
+F6AD AUTINC  (2):Huidige step waarde waar 'AUTO' mee werkt
+F6AF SAVTXT  (2):Bevat het adres van het eerste byte van het statement dat op
+                 dit moment uitgevoerd wordt. Dit dient voor de foutverwer-
+                 kingsroutine! Het adres wordt door de verwerkingslus van de
+                 interpreter  in SAVTXT  gezet. Als er een fout optreed wordt
+                 met dit variabele ERRTXT klaar gemaakt voor de 'RESUME' rou-
+                 tine en OLDTXT voor de 'CONT' routine.
+F6B1 SAVSTK  (2):Bevat de waarde die de SP had voordat de uitvoering van het
+                 huidige statement begon. Dit dient voor de foutverwerkingslus
+F6B3 ERRLIN  (2):Regelnummer waarin voor het laatst een fout is opgetreden
+F6B5 DOT     (2):Bevat het nummer van de laatst behandelde regel. Dit wordt er
+                 door de hoofdlus en de foutverwerkingsroutine ingezet! Het
+                 wordt hier opgehaald als in een statement het "."-teken als
+                 parameter wordt gebruikt.
+F6B7 ERRTXT  (2):Bevat het adres van het eerste byte van het statement waar
+                 het laast een fout opgetreden is. Als er een fout optreed dan
+                 wordt ERRTXT gelijk gesteld aan SAVTXT (&HF6AF). Hier haalt
+                 'RESUME' het adres op.
+F6B9 ONELIN  (2):Bevat het adres van de regel nr. waar volgens 'ON ERROR GOTO'
+                 na een fout naartoe gesprongen moet worden.
+F6BB ONEFLG  (1):Vlag die aangeeft of de interpreter op dit moment bezig is
+                 met een niet afgeronde fout-opvangroutine. Waarde zijn:
+                  00= niet ingeschakelt
+                  FF= wel ingeschakelt
+F6BC TEMP2   (2):Tijdelijke opslag van administratie van de interpreter.
+F6BE OLDLIN  (2):Bevat het nummer van de regel waarop het programma stopte.
+                 Deze inhoud wordt bep. door de 'END' routine of door de
+                 'STOP' routine. Een 'CONT' zal hiervan gebruik maken om het
+                 het programma voort te zetten.
+F6C0 OLDTXT  (2):Adres van het eerste statement dat als gevolg van een pro-
+                 gramma onderbreking niet is uitgevoerd. Een 'CONT' zal hier-
+                 van gebruik maken om het programma voort te zetten.
+F6C2 VARTAB  (2):Bevat het adres van de eerste byte in het variabelengeheugen
+F6C4 ARYTAB  (2):Bevat het adres van de eerste byte in het arraygeheugen
+F6C6 STREND  (2):Bevat het eindadres +1 van de array opslagruimte
+F6C8 DATPTR  (2):Adres waar bij het volgende 'READ' statement naar data ge-
+                 zocht wordt. Wordt bijgesteld door 'RESTORE' of 'READ'.
+F6CA DEFTBL (26):Bevat een tabel met de standaard variabele type. Elke byte
+                 komt overeen met een letter. Als in een variabelenaam in een
+                 BASIC programma geen type aanduiding (%,!,#,$) gegeven is,
+                 geeft de bijbehorende byte in DEFTBL het type van de variabe-
+                 le aan. Zie VALTYP (&HF663) voor types. Standaard staan alle
+                 waardes op dubbele precisie (8). Dit gebeurt ook door een
+                 'NEW' of 'CLEAR' statement. Zij worden elk gewijzigd door de
+                 groep 'DEF'-statements.
+F6E4 PRMSTK  (2):Bevat het startadres van het vorige parameterblok van een
+                 'FN'-statement op de stack van de Z80. Dit is voor uitvoering
+                 van zelf gedefinieerde functies. Hij wordt gebruikt tijdens
+                 de 'garbage collection' om op de stack van blok tot blok te
+                 kunnen springen.
+F6E6 PRMLEN  (2):Bevat de lengte van het 'FN'-parameterblok dat momenteel in
+                 PARM1 staat. Dit is voor zelf gedefinieerde functies.
+F6E8 PARM1 (100):Bevat de actuele definities van variabelen die voorkomen in
+                 de parameterlijst van de functie die op dit moment geeval-
+                 ueerd wordt.
+F74C PRMPRV  (2):Gebruikt voor uitvoering van zelf gedefinieerde functies. Het
+                 bevat de vorige waarde van PRMSTK (&HF6E4). Het is in feite
+                 een  constante, die ervoor zorgt dat de 'garbage collection'
+                 altijd begint met het huidige parameterblok, voor dat de
+                 blokken op de stack doorzocht worden.
+F74E PRMLN2  (2):Gebruikt voor uitvoering van zelf gedefinieerde functies. Het
+                 geeft het aantal geldige bytes in het gebied PARM2 (&HF750).
+F750 PARM2 (100):Gebruikt voor uitvoering van zelf gedefinieerde functies. Het
+                 wordt gebruikt voor het bereken van de waarden die in PARM1
+                 (&HF6E8) komen te staan.
+F7B4 PRMFLG  (1):Gebruikt voor uitvoering van zelf gedefinieerde functies. Het
+                 is een vlag die aangeeft of bij het zoeken naar een variabele
+                 naam het parameterblok in PARM1 (&HF6E8) al doorzocht is. Mo-
+                 gelijke waarde zijn:  0= nog niet doorzocht
+                                       1= wel doorzocht
+F7B5 ARYTA2  (2):Bevat het adres van de eerste byte van het geheugenblok waar
+                 al gezocht is naar een variabelenaam.
+F7B7 NOFUNS  (1):Vlag die aangeeft of er op dit moment een geldig parameter-
+                 blok in PARM1 (&HF6E8) bevindt. De vlag wordt gewijzigd door
+                 de 'FN'-functie routine. Mogelijke waardes zijn:
+                     0= geen geldig blok
+                     1= wel een geldig blok
+F7B8 TEMP9   (2):Hulpgeheugen voor het doorlopen van parameterblokken op de
+                 stapel bij een 'garbage collection'.
+F7BA FUNACT  (2):Teller van de nestingsdiepte van de functie die op dit moment
+                 wordt geevalueerd.
+F7BC SWPTMP  (8):Werkgebied voor de waarde van de eerste variabele in een SWAP
+                 statement op te slaan.
+F7C4 TRCFLG  (1):Vlag die aangeeft of de trace functie is ingeschakelt. Moge-
+                 lijke waarde zijn:  0= niet ingeschakelt
+                                    >0= ingeschakelt
+F7C5 FBUFFR (43):Buffer voor tekst die tijdens de omzetting van numerieke out-
+                 put geproduceerd wordt.
+F7F0 DECTMP  (2):Gebruikt door routine die getallen met dubbele precisie deelt
+                 als tijdelijke opslagruimte.
+F7F2 DEMTM2  (2):Gebruikt door routine die twee getallen met dubbele precisie
+                 deelt als tijdelijke opslagruimte.
+F7F4 DECCNT  (2):Gebruikt door routine die twee getallen met dubbele precisie
+                 deelt, gebruikt om het aantal van nul verschillende bytes in
+                 de mantisse van de tweede operand te bevatten.
+F7F6 DAC    (16):Variabele opslag, soort in VALTYP (F663), zie 'MATHPACK.TXT'
+F806 HOLD8  (48):Gebruikt door routine die twee getallen met dubbele precisie
+                 vermenigvuldigt om de veelvouden van de eerste operand in op
+                 te slaan.
+F836 HOLD2   (8):Werkgebied bij het uitvoeren van numerieke operatoren.
+F83E HOLD    (9):Werkgebied bij het uitvoeren van numerieke operatoren.
+F847 ARG    (16):Variabele opslag, altijd dub. precisie, zie 'MATHPACK.TXT'
+F857 RNDX    (8):Laatst opgeleverde random getal in dubbele precisie.
+
+
+WERKGEBIED VOOR HET FILE-SYSTEEM
+--------------------------------
+Het volgende gebied wordt gebruikt om allerlei gegevens van het file systeem
+in op te slaan.
+
+F85F MAXFIL  (1):Bevat het aantal file-buffers dat momenteel gereserveerd is
+                 min 1 (er blijft altijd een file-buffer voor het laden en
+                 wegschrijven van files). Tevens het maximum aantal files die
+                 tegelijk open mogen zijn. De geldige filenummers lopen van 1
+                 tot MAXFIL. Het kan gewijzigd worden door 'MAXFILES'.
+F860 FILTAB  (2):Bevat het adres van de file informatietabel. Deze tabel bevat
+                 de beginadressen van alle FCB's.
+F862 NULBUF  (2):Bevat het beginadres van de eerste filebuffer (de tekst van
+                 de FCB van de file met nummer 0).
+F864 PTRFIL  (2):Beginadres FCB van de actuele file bij file I/O
+F866 RUNFLG  (?):Vlag die aangeeft of een file die geladen wordt een BASIC
+                 programma bevat dat meteen uitgevoerd moet worden. Mogelijke
+                 waardes zijn:  00= niet uitvoeren
+                                FF= wel uitvoeren
+      Opmerking: RUNFLG wordt ook gebruikt als werkgebied bij het uitlezen van
+                 aangesloten peddels en bij het inkleuren van een grafisch
+                 scherm. RUNFLG overlapt het gebied FILNAM!
+F866 FILNAM (11):Bevat de naam van de file waarop een of andere actie wordt
+                 uitgevoerd. De eerste 8 tekens zijn de filenaam, de laatste
+                 3 tekens zijn de extensie.
+F871 FILNM2 (11):Bevat een tweede naam van een file voor acties die twee namen
+                 tegelijk nodig hebben, zoals het BASIC statement 'NAME'.
+F87C NLONLY  (1):Vlag die aangeeft of op dit moment een BASIC programma gela-
+       ??        den wordt. Mogelijk waarden zijn: 0= geen BASIC programma
+                                                   1= wel een BASIC programma
+F87D SAVEND  (2):Bevat het eindadres van een blok dat geBSAVE'd  moet worden
+                 als  het om  gewoon geheugen  gaat. Als het om Videogeheugen
+                 gaat dan bevat SAVEND &H4BE8 + het beginadres van het wegge-
+                 schreven gedeelte.
+F87F FNKSTR(160):De huidige inhoud van funktietoetsen 1-10. Per funktietoets
+                 zijn er 16 bytes beschikbaar. De tekst is gecodeerd volgens
+                 de ASCII-tabel, en moet eindigen op een byte met waarde 0. De
+                 inhoud van de funktietoetsen kan veranderd worden door het
+                 'KEY' statement.
+
+
+WERKGEBIED VOOR SCHERMROUTINES
+------------------------------
+Het volgende gebied wordt gebruikt om gegevens op te slaan over de instellin-
+gen van de VDP en er is ruimte voor tijdelijke opslag van parameter voor gra-
+fische routines.
+
+F91F CGPNT   (3):Bevat het beginadres van de standaard ASCII-patroontabel.
+                 &HF91F bevat het Slot ID en &HF920 bevat het adres van de ta-
+                 bel. Deze tabel wordt bij elke wisseling van het scherm naar
+                 een tekstmodus in de patroontabel van de VDP gezet.
+F922 NAMBAS  (2):Actuele beginadres Name table
+F924 CGPBAS  (2):Actuele beginadres Pattern generator table
+F926 PATBAS  (2):Actuele beginadres Sprite pattern table
+F928 ATRBAS  (2):Actuele beginadres Sprite attribute table
+F92A CLOC    (2):Adres in het Vram van de cursur
+F92C CMASK   (1):Masker voor de byte aangeduid in CLOC
+F92D MINDEL  (2):Gebruikt door de 'LINE'-routine om het minimale verschil in
+                 op te slaan tussen de eindpunten van een lijn.
+F92F MAXDEL  (2):Gebruikt door de 'LINE'-routine om het maximale verschil in
+                 op te slaan tussen de eindpunten van een lijn.
+F931 ASPECT  (2):Gebruikt bij het uitvoeren van het 'CIRLE'-statement. Het is
+                 het verhoudingsgetal tussen het aantal punten van de straal
+                 in horizontale en verticale richting. Als ASPECT gelijk is
+                 aan 256 dan worden ASPCT1 en ASPCT2 gebruikt voor de verhou-
+                 ding. Als ASPECT<256 dan geeft ASPECT het aantal punten in de
+                 ene richting, per 256 punten in de andere richting. Wat de
+                 'ene' en de 'andere' richting zijn wordt aangegeven door
+                 CSCLXY (&HF941).
+F933 CENCNT  (2):Gebruikt bij het uitvoeren van het 'CIRCLE'-statement. Het
+                 bevat de afstand, gemeten in aantal punten vanaf de oorsprong
+                 van het verste eindpunt van het cirkeldeel dat getekend moet
+                 worden. De waarde ligt tussen de waarde van CSTCNT (&HF93F)
+                 en de waarde van CNPNTS (&HF936).
+F935 CLINEF  (1):Gebruikt bij het uitvoeren van het 'CIRCLE'-statement. Vlag
+                 die aangeeft of het begin- en/of eind-punt van de getekende
+                 circel met het middelpunt moeten worden verbonden. De bits
+                 hebben de volgende betekenis:
+                    bit 7    -eindpunt wel/niet verbinden, 1=wel
+                    bit 6-1  -ongebruikt
+                    bit 0    -beginpunt wel/niet verbinden, 1=wel
+F936 CNPNTS  (2):Gebruikt bij het uitvoeren van het 'CIRCLE'-statement. Hier
+                 staat hoeveel punten een segment van 45 graden omvat.
+F938 CPLOTF  (1):Gebruikt bij het uitvoeren van het 'CIRCLE'-statement. Het
+                 geeft aan of de cirkel getekend moet worden vanaf het punt
+                 aangegeven in CSTCNT (&HF93F) tot het punt aangegeven door
+                 CENCNT (&HF933) dan wel andersom. Waarden zijn:
+                    00= van CSTCNT naar CENCNT
+                    FF= van CENCNT naar CSTCNT
+F939 CPCNT   (2):Gebruikt bij het uitvoeren van het 'CIRCLE'-statement. Hier
+                 staat het aantal punten binnen een segment van 45 graden. In
+                 feite is het de Y-coordinaat.
+F93B CPCNT8  (2):Gebruikt bij het uitvoeren van het 'CIRCLE'-statement. Hier
+                 staan de totaal aantal geplotte punten tot op de huidige po-
+                 sitie. Dus niet alleen het deel dat getekend wordt!
+F93D CRCSUM  (2):Gebruikt bij het uitvoeren van het 'CIRCLE'-statement. Hier
+                 staat een teller voor het berekenen van het aantal punten.
+F93F CSTCNT  (2):Gebruikt bij het uitvoeren van het 'CIRCLE'-statement. Het
+                 bevat de afstand, gemeten in aantal punten vanaf de oorsprong
+                 van het dichtstbijzijnde eindpunt van het cirkeldeel dat ge-
+                 tekend moet worden. De waarde ligt tussen de 0 en de waarde
+                 van CENCNT (&HF933).
+F941 CSCLXY  (1):Gebruikt bij het uitvoeren van het 'CIRCLE'-statement. Vlag
+                 die aangeeft in welke richting de elliptische afplatting moet
+                 gebeuren.  &H00= Y-as,  &H01= X-as.
+F942 CSAVEA  (2):Bevat de waarde van CLOC (&HF92A). CSAVEA wordt ook gebruikt
+                 door de routine SCANR (PAINT) als tijdelijke opslagplaats.
+F944 CSAVEM  (1):Bevat de waarde van CMASK (&HF92C). CSAVEM wordt ook gebruikt
+                 door de routine SCANR (PAINT) als tijdelijke opslagplaats.
+F945 CXOFF   (2):Gebruikt bij het uitvoeren van het 'CIRCLE'-statement. Hier
+                 staat de horizontale afstand tot het middelpunt van de cirkel
+F947 CYOFF   (2):Gebruikt bij het uitvoeren van het 'CIRCLE'-statement. Hier
+                 staat de verticale afstand tot het middelpunt van de cirkel.
+F949 LOHMSK  (1):Gebruikt door de 'PAINT'-routine om de meest linkse positie
+                 van een uitstulping naar links op te slaan.
+F94A LOHDIR  (1):Gebruikt door de 'PAINT'-routine om de nieuwe werkrichting,
+                 die door een uitstulping naar links wordt vereist, op te
+                 slaan.
+F94B LOHADR  (2):Gebruikt door de 'PAINT'-routine om de meest linkse positie
+                 van een uitstulping naar links op te slaan.
+F94D LOHCNT  (2):Gebruikt door de 'PAINT'-routine om de grootte van een uit-
+                 stulping naar links op te slaan.
+F94F SKPCNT  (2):Gebruikt door de 'PAINT'-routine om het aantal pixels in op
+                 te slaan, die overgeslagen mogen worden, zoals dat door de
+                 routine SCANR werd berekend.
+F951 MOVCNT  (2):Gebruikt door de 'PAINT'-routine om het aantal bewegingen in
+                 op te slaan dat door de routine SCANR werd berekend.
+F953 PDIREC  (1):Gebruikt door de 'PAINT'-routine om er de huidige richting in
+                 op te slaan. &H40= omlaag, &HC0= omhoog, &H0= stoppen
+F954 LFPROG  (1):Gebruikt door de 'PAINT'-routine. Het geeft aan (1) als er
+                 naar links wordt gewerkt.
+F954 RTPROG  (1):Gebruikt door de 'PAINT'-routine. Het geeft aan (1) als er
+                 naar rechts wordt gewerkt.
+F956 MCLTAB  (2):Bevat een beginadres van een sprongtabel voor subcommando's
+                 die in een string verwerkt zijn. De macro-ontleder wordt voor
+                 het  'DRAW'- en  'PLAY'-statement gebruikt. Bij elk van deze
+                 is de tabel die gebruikt wordt anders. De tabel voor 'DRAW'
+                 staat op &H5D83 en die van 'PLAY' staat op &H752E.
+F958 MCLFLG  (1):Vlag geeft aan of de macro-ontleder voor het 'DRAW'- (00) of
+                 voor het 'PLAY'- (FF) statement gebruikt wordt.
+
+
+WERKGEBIED VOOR HET QUEUE- EN GELUIDS-SUBSYSTEEM
+------------------------------------------------
+Het volgende gebied wordt gebruikt om de queues op te slaan en om allerlei
+parameters van het geluids-subsysteem te bewaren.
+
+F959 QUETAB (24):Bevat informatie over de bestaande queues. Per queue bevat
+                 QUETAB 6 bytes. Er zijn 4 queues namelijk drie voor het ge-
+                 luids-subsysteem (VOICAQ, VOICBQ, VOICCQ) en 1 voor de RS232
+                 interface (RS2IQ). De betekenis van de bytes is als volgt:
+
+                   Byte 0    -Offset van de eerste vrije plaats in de queue
+                   Byte 1    -Offset van het eerste ongelezen byte
+                   Byte 2    -Vlag die aangeeft of er een byte teruggezet is
+                   Byte 3    -Aantal plaatsen in de queue
+                   Byte 4-5  -Beginadres van de queue
+
+                 De 3 controle blokken voor de muziek worden door de routine
+                 FICINI geinitialiseerd en daarna bijgehouden door de inter-
+                 rupt routine en de BIOS routine PUTQ (&HF9). Het controleblok
+                 voor de RS232 uitgang wordt niet gebruikt
+F971 QUEBAK  (4):Bevat 4 variabelen om een ongewenst karakter dat naar de bij
+                 behorende rij wordt teruggestuurd, op te slaan. Hoewel deze
+                 optie in de MSX ROM werd ingebouwd wordt ze momenteel niet
+                 gebruikt
+F975 VOICAC(128):1e rij, 1e stem van de play buffer
+F9F5 VOICBQ(128):2e rij, 2e stem van de play buffer
+FA75 VOICCQ(128):3e rij, 3e stem van de play buffer
+FAF5 RS2IQ  (64):4e rij, RS232 kanaal. (wordt niet gebruikt!)
+FAF5 DPPAGE  (1):Display page, screen 5 of hoger
+FAF6 ACPAGE  (1):Active page, screen 5 of hoger
+FAF7 AVCSAV  (1):AV control port save
+FAF8 EXBRSA  (1):Slot adres extended BASIC Rom (Sub-ROM)
+FAF9 CHRCNT  (1):Karakter teller kana ROM
+FAFA ROMA    (2):Karakter save voor kana
+FAFC MODE    (1):Kana conversie (mode switch/grootte van het video RAM)
+FAFD         (1):Gereserveerd
+FAFE XSAVE   (2):X-coordinaat Muis/trackball/lichtpen
+FB00 YSAVE   (2):Y-coordinaat Muis/trackball/lichtpen
+FB02 LOGOPR  (1):Logische operatie code; laagste 4 bits
+- RS232 gebied ---------------------------------------------------------------
+FB03 TOCNT   (1):Data gebied voor de RS232 driver
+FB04 RSFCB   (1):Adres van de RS232 (laag)
+FB05   "     (1):Adres van de RS232 (hoog)
+FB06 RSIQNL  (1):Byte data
+FB07         (1):RST &H30 (&HF7)
+FB08         (1):Byte data
+FB09         (1):          (laag)
+FB0A         (1):          (hoog)
+FB0B OLDINT  (5):Ret (&HC9), Oude interrupt
+FB10         (1):?
+FB11         (1):RST &h30 (&HF7)
+FB12         (1):Byte data
+FB13         (1):          (laag)
+FB14         (1):          (hoog)
+FB15         (1):Ret (C9)
+FB16 DEVNUM  (1):Byte offset
+FB17 DATCNT  (1):Byte data
+FB18         (1):Byte pointer
+FB19         (1):Byte pointer
+FB1A ERRORS  (1):Byte data
+FB1B FLAGS   (1):Bit boolean
+FB1C ESTBLS  (1):Bit boolean
+FB1D COMMSK  (1):Byte data
+FB1E LSTCOM  (1):Byte data
+FB1F LSTMOD  (1):Byte data
+------------------------------------------------------------------------------
+FB20         (1):
+FB21 DRVINF  (1):Aantal aangesloten drives op interface 1
+FB22   "     (1):Slotadres  van disk interface 1
+FB23   "     (1):Aantal aangesloten drives op interface 2
+FB24   "     (1):Slotadres  van disk interface 2
+FB25   "     (1):Aantal aangesloten drives op interface 3
+FB26   "     (1):Slotadres  van disk interface 3
+FB27   "     (1):Aantal aangesloten drives op interface 4
+FB28   "     (1):Slotadres  van disk interface 4
+FB29/FB34   (11):
+FB35 PRSCNT  (1):Gebruikt door het 'PLAY' statement om de administratie bij te
+                 houden van de strings die ontleed zijn. Nadat elk van de drie
+                 operands ontleed zijn wordt ook bit 7 geset om te voorkomen
+                 dat de BIOS routine STRTMS herhaald wordt aangeroepen.
+                   Bit 7    -Nog maar 1 keer ontleed, 1= nee
+                   Bit 6-2  -Ongebruikt
+                   Bit 1-0  -Aantal ontlede operands, bereik:0-3
+FB36 SAVSP   (2):Gebruikt door het 'PLAY' statement om de inhoud van de Z80
+                 Stack Pointerin op te slaan vooradat de controle wordt over
+                 gedragen aan de macro ontleder. Op het einde van de ontleding
+                 wordt de inhoud van dit variabele vergeleken met de Stack
+                 Pointer van de Z80, om te controleren of er nog data op de
+                 stonden, die daar werden gezet na het voortijdig afbreken van
+                 de ontledingsroutine omdat de muziekrij vol was.
+FB38 VOICEN  (1):Gebruikt door het 'PLAY' statement om het nummer van de stem
+                 waarvoor op dit moment een string ontleed wordt in op te
+                 slaan. De waarden 0, 1 en 2 komen overeen met de kanalen A, B
+                 en C van de PSG.
+FB39 SAVVOL  (2):Gebruikt door het 'PLAY' statement om het volume op te slaan
+                 van een stem terwijl die rust heeft.
+FB3B MCLLEN  (1):Gebruikt door de macro ontleder van 'PLAY' of 'DRAW' om de
+                 lengte van de string in op te slaan die op het moment wordt
+                 ontleed.
+FB3C MCLPTR  (2):Gebruikt door de macro ontleder van 'PLAY' of 'DRAW' om het
+                 beginadres van de string in op te slaan die op het moment
+                 wordt ontleed.
+FB3E QUEUEN  (1):Gebruikt door de interrupt routine om het nummer van de mu-
+                 ziekrij in op te slaan die op dat moment verwerkt wordt. De
+                 waarden 0, 1 en 2 komen overeen met de kanalen A, B en C van
+                 de PSG.
+FB3F MUSICF  (1):Vlag die aan de interrupt routine door geeft of een bepaalde
+                 muziekrij verwerkt dient te worden. De vlag word geset door
+                 de STRTMS routine. Bit 0, 1 en 2 komen overeen met VOICAQ,
+                 VOICBQ en VOICCQ, de bits 3-7 zijn ongebruikt.
+FB40 PLYCNT  (1):Gebruikt door het 'PLAY' statement voor een teller die bij-
+                 houd hoeveel 'PLAY' statements waarvan de strings ontleed
+                 zijn in de geluidsqueue gezet zijn maar nog niet zijn uitge-
+                 voerd.
+FB41 VCBA   (37):Gebruikt door het 'PLAY' statement en door het geluidssysteem
+                 VCB (Voice Control Block) van stem A van de PSG. De 'PLAY'-
+                 routine heeft dit blok met parameters nodig om kanaal A te
+                 besturen. De gebieden zijn:
+
+                 offset  naam  lengte doel
+                   0    METREX   2    Interrupt teller
+                   2    VCXLEN   1    MCLLEN voor deze stem
+                   3    VCXPRT   2    MCLPTR voor deze stem
+                   5    VCXSTP   2    Stapelwijzer
+                   7    QLENGX   1    Aantal bytes voor queue
+                   8    NTICSX   2    Nieuwe tellerwaarde
+                  10    TONPRX   2    Toonhoogte-instelling
+                  12    AMPLTX   1    Amplitude-instelling
+                  13    ENVPRX   2    Snelheid van volumeverloop
+                  15    OCTAVX   1    Octaaf-instelling
+                  16    NOTELX   1    Nootlengte-instelling
+                  17    TEMPOX   1    Tempo-instelling
+                  18    VOLUMX   1    Volume
+                  19    ENVLPX   1    Vorm van Volumeverloop
+                  33    MCLSTX        Ruimte om stack te bewaren
+                  36    MCLSEX        Begin stack
+
+                 De stack waarvan gesproken wordt, is de plaats waar de byte-
+                 waarden worden klaargemaakt die op de queue van deze stem ge-
+                 zet gaan worden.
+FB66 VCBB   (37):Gebruikt door het 'PLAY' statement en door het geluidssysteem
+                 VCB (Voice Control Block) van stem B van de PSG. De indeling
+                 is net als die van VCBA.
+FB8B VCBC   (37):Gebruikt door het 'PLAY' statement en door het geluidssysteem
+                 VCB (Voice Control Block) van stem C van de PSG. De indeling
+                 is net als die van VCBA.
+
+
+INSTELLINGEN VOOR DE SCHERMEDITOR EN HET INTERRUPT-SYSTEEM
+----------------------------------------------------------
+Het volgende gebied is voor schakelaars van de scherm editor en het interrupt
+systeem.
+
+FBB0 ENSTOP  (1):Vlag die aangeeft of de software reset is ingeschakeld. Als
+                 die is ingeschakeld, dan heeft het tegelijk indrukken van de
+                 CTRL-, SHIFT-, CODE- en GRAPH-toets het gevolg dat BASIC op-
+                 nieuw wordt opgestart. Het huidige BASIC programma gaat hier-
+                 door niet verloren! Mogelijke waarden:
+                   0= Niet ingeschakeld
+                   1= Ingeschakeld
+FBB1 BASROM  (1):Vlag die aangeeft of de BIOS routines ISCNTC (&HBA) en INLIN
+                 (&HB1) moeten reageren op het indrukken van de CTRL-STOP
+                 toetsen. Dit dient om te voorkomen dat een BASIC programma in
+                 ROM, dat werd gevonden tijdens de initialisatie na het op-
+                 starten, onderbroken wordt. Mogelijke waarden:
+                   0= Wel te onderbreken
+                   1= Niet te onderbreken
+FBB2 LINTTB (24):Tabel die per regel van het scherm onthoudt of de tekst op
+                 die regel overloopt in de volgende regel. Deze informatie
+                 wordt gebruikt door de schermeditor (INLIN (&HB1)) om een
+                 onderscheid te maken tussen een logische regel en een regel
+                 op het scherm. Mogelijke waarden:
+                   0= loopt over
+                  >1= loopt niet over
+FBCA FSTPOS  (2):Gebruikt om de coordinaten van de cursor te bewaren op het
+                 moment dat de BIOS routines INLIN (&HB1) en QINLIN (&HB4) de
+                 besturing overdragen aan de scherm editor. De waarde op dat
+                 moment van CSRY (&HF3DC) komt in FBCA te staan en de waarde
+                 van CSRX (&HF3DD) komt in FBCB. Hiermee wordt aangegeven hoe-
+                 ver terug moet worden gelezen als een van de BIOS routines
+                 de besturing weer overneemt na een return.
+FBCC CURSAV  (1):Bevat het karakter dat onder de cursor staat.
+FBCD FNKSWI  (1):Vlag die aangeeft welke functietoetsen op het scherm worden
+                 getoond. Deze vlag wordt gebruikt door de BIOS routine CHSNS
+                 De waarde van FNKSWI zijn alleen geldig af de functietoetsen
+                 zijn ingeschakelt d.m.v. CNSDFG (&HF3DE). Mogelijke waarden:
+                   0= Functietoets 6 t/m 10
+                   1= Functietoets 1 t/m 5
+FBCE FNKFLG (10):Gebruikt door de interrupt routine om te bepalen of een fun-
+                 tietoets in werking werd gesteld door een 'KEY (n) ON' sta-
+                 tement. Dit om te bepalen of (enkel tijdens de loop van een
+                 programma) een tekst afgedrukt moet worden ofwel de bijbeho-
+                 rende plaats in TRPTBL (&HFC4C) aangepast moet worden. Moge-
+                 lijke waarden per byte voor een functietoets:
+                   0= Interrupt uitgeschakeld
+                   1= Interrupt ingeschakeld
+FBD8 ONGSBF  (1):Gebruikt door de interrupt routine als teller van het aantal
+                 interrupts voor een of andere gebeurtenis, maar waarop nog
+                 niet is gereageerd d.m.v. een ON interrupt GOSUB statement.
+                 Hier wordt gekeken of er nog interrupts zijn die nog afge-
+                 werkt moeten worden zonder dat daarvoor TRPTBL (&HFC4C) door-
+                 zocht hoeft te worden.
+FBD9 CLIKFL  (1):Vlag die aangeeft of er voor de laatste toetsaanslag al een
+                 klik  is gegenereerd  om te voorkomen dat voor een toets die 
+                 twee ASCII codes genereert (zoals de functietoetsen) tweemaal
+                 een klik wordt gegeven. Mogelijke waarden:
+                  &H00= Geen klik
+                  &H0F= Wel een klik
+FBDA OLDKEY (11):Gebruikt door de interrupt routine om de oude toestand van
+                 de matrix van het toetsenbord in op te slaan. NEWKEY (&HFBE5)
+                 wordt eerst naar OLDKEY verplaatst en dan wordt de toetsen-
+                 bord matrix opnieuw gescand en in NEWKEY gezet. Daarna worden
+                 NEWKEY en OLDKEY met elkaar vergeleken en als bepaalde toet-
+                 sen voldoende tijd hetzelfde zijn dan wordt die toets her-
+                 haald afgedrukt op het scherm. Zie ook REPCNT (&HF3F7).
+FBE5 NEWKEY (11): 0=> 7       6      5      4      3      2      1      0
+            FBE6: 1=> ;       ]      [      \      =      -      9      8
+  Dit is    FBE7: 2=> B       A      ACCENT /      .      ,      `      '
+    de      FBE8: 3=> J       I      H      G      F      E      D      C
+  Europese  FBE9: 4=> R       Q      P      O      N      M      L      K
+   versie   FBEA: 5=> Z       Y      X      W      V      U      T      S
+            FBEB: 6=> F3      F2     F1     CODE   CAPS   GRPH   CTRL   SHIFT
+            FBEC: 7=> RET     SEL    BS     STOP   TAB    ESC    F5     F4
+            FBED: 8=> RIGHT   DOWN   UP     LEFT   DEL    INS    HOME   SPACE
+            FBEE: 9=> 4       3      2      1      0      /      +      *
+            FBEF:10-> .       ,      -      9      8      7      6      5
+FBF0 KEYBUF (40):Bevat de toetsenbordbuffer. Elke teken dat via het toetsen-
+                 bord wordt ingevoerd, komt in deze buffer te staan. De buffer
+                 wordt uitgelezen door de BIOS routine CHGET (&H9F). Elke keer
+                 dat invoer van het toetsenbord verwacht wordt, wordt deze
+                 routine aangeroepen. Deze buffer is als een cirkelvormige rij
+                 georganiseerd, die wordt beheerd door PUTPNT (&HF3F8) en
+                 GETPNT (&HF3FA), en daarom heeft KEYBUF geen vast startadres.
+FC18 LINWRK (40):Bevat de laatst ingetypte volledige regel voor de BIOS.
+FC40 PATWRK  (8):Patroon buffer  voor een ASCII-teken. PATWRK wordt gebruikt
+                 om een ASCII teken naar een grafisch scherm te schrijven.
+FC48 BOTTOM  (2):Bevat het adres van het laagste adres in het RAM dat door de
+                 de interpreter gebruikt kan worden. Dit adres wordt bij de
+                 initialisatie ingesteld en daarna niet meer veranderd.
+FC4A HIMEM   (2):Bevat het adres van het byte na het hoogste adres in RAM dat
+                 nog door de interpreter gebruikt wordt. Stringruimte, file-
+                 buffers en de stack bevinden zich nog onder dit adres. Dit
+                 adres wordt bij de initialisatie ingesteld en kan daarna
+                 alleen nog veranderd worden door het 'CLEAR' statement.
+FC4C TRPTBL (78):Tabel met gegevens voor de interrupt faciliteiten van de MSX
+                 computer. De elementen zijn 3 bytes groot. Er is een element
+                 voor elk mogelijke interrupt. De eerste byte van elk element
+                 geeft de huidige instelling van de interrupt faciliteit be-
+                 horende bij dat element. De betekenis van de bits van het
+                 eerste byte zijn:
+
+                  Bit 7-3 -Ongebruikt
+                  Bit 2   -Interrupt opgetreden ja/nee  1= ja
+                  Bit 1   -Interrupt STOP ja/nee        1= ja
+                  Bit 0   -Interrupt OFF ja/nee         1= nee
+
+                  De bytes worden ingevult en aangepast door de interrupt ver-
+                  werker, de interrupt routine van de verwerkingslus en de
+                  'DEVICE ON/OFF/STOP' routine en de 'RETURN' routine.
+
+                  De twee volgende bytes van elk element bevat het beginadres
+                  van de regel in het BASIC programma waarnaar toe moet worden
+                  gesprongen in het geval dat er een bijbehorende interrupt
+                  optreed. Deze bits worden ingevult door de 'ON DEVICE GOSUB'
+                  routine.
+
+                  Het verband tussen de elementen en de bijbehorende interrupt
+                  is als volgt:
+
+                  0 FC4C :Functietoets  1
+                  1 FC4F :Functietoets  2
+                  2 FC52 :Functietoets  3
+                  3 FC55 :Functietoets  4
+                  4 FC58 :Functietoets  5
+                  5 FC5B :Functietoets  6
+                  6 FC5E :Functietoets  7
+                  7 FC61 :Functietoets  8
+                  8 FC64 :Functietoets  9
+                  9 FC67 :Functietoets 10
+                 10 FC6A :Stop toets
+                 11 FC6D :Sprite botsing
+                 12 FC70 :Spatiebalk (STRIG 0)
+                 13 FC73 :Joystick 1, knop 1 (STRIG 1)
+                 14 FC76 :Joystick 2, knop 1 (STRIG 2)
+                 15 FC79 :Joystick 1, knop 2 (STRIG 3)
+                 16 FC7C :Joystick 2, knop 2 (STRIG 4)
+                 17 FC7F :Interval
+
+                 De elementen met nummers 18-25 zijn in het huidige MSX-sys-
+                 teem ongebruikt.
+FC9A RTYCNT  (1):Gereserveerd
+FC9B INTFLG  (1):Vlag die bijhoud of de 'CTRL/STOP' of de 'STOP' toets inge-
+                 drukt wordt. Mogelijke waarden:
+                  0= Niets ingedrukt
+                  3= CTRL/STOP ingedrukt
+                  4= STOP ingedrukt
+FC9C PADY    (2):Y-coordinaat van een aangesloten grafisch tablet (PAD)
+FC9D PADX    (2):X-coordinaat van een aangesloten grafisch tablet (PAD)
+FC9E JIFFY   (2):Bevat de waarde van de software-klok die bij elke interrupt
+                 van de VDP met 1 wordt opgehoogd. De inhoud kan uitgelezen of
+                 gewijzigd worden door de 'TIME' functie of de 'TIME' state-
+                 ment.
+FCA0 INTVAL  (2):Bevat de duur van het interval dat door de 'ON INTERVAL' rou-
+                 tine werd ingesteld. Het wordt gebruikt om INTCNT (&HFCA2)
+                 opnieuw te initialiseren wanneer deze de waarde 0 heeft be-
+                 reikt.
+FCA2 INTCNT  (2):Bevat de teller van de 'ON INTERVAL' functie. Deze wordt elke
+                 VDP interrupt verlaagd. Als de waarde op 0 komt dan krijgt
+                 hij de waarde die in INTVAL (&HCA0) staat en als de functie
+                 in werking is dan wordt er een interrupt gegeven. Opm. Het
+                 aftellen gaat altijd door ook als het 'INTERVAL ON' statement
+                 niet in werking is!
+FCA4 LOWLIM  (1):Gebruikt door het cassettesysteem om de minimale toegelaten
+                 duur van het startbit in op te slaan, die door de BIOS rou-
+                 tine TAPION (&HE1) wordt bepaald bij het inlezen van een kop-
+                 blok van een cassette.
+FCA5 WINWID  (1):Gebruikt door het cassettesysteem om de tijdsduur in op te
+                 slaan die het verschil zal uitmaken tussen een laag- en hoog-
+                 cyclus. De duur wordt bepaalt door de BIOS routine TAPEION
+                 (&HE1).
+FCA6 GRPHED  (1):Vlag die aangeeft of het vorige teken dat naar het scherm
+                 geschreven werd, een extensieteken voor grafische tekens was
+                 (ASCII code 1). Mogelijke waarden:
+                   0= Was geen extensie-teken
+                   1= Was extensie-teken
+FCA7 ESCCNT  (1):Vlag die aangeeft of het vorige teken dat naar het scherm
+                 geschreven werd, het escape teken was (ASCII code 27). Dit
+                 voor de routines die voor de BIOS routine CHGET (&H9F) de
+                 ESC-groepen verwerken om zo de parameters van de ESC code te
+                 tellen. Mogelijke waarden:
+                   00= Was geen escape-teken
+                   FF= Was escape-teken
+FCA8 INSFLG  (1):Vlag die aangeeft of de tekens die naar het scherm geschreven
+                 worden, tussen de andere tekens op de regel gevoegd worden,
+                 of de andere tekens moet overschrijven. Mogelijke waarden:
+                   00= Overschrijven
+                   FF= Tussenvoegen (INSert mode)
+FCA9 CSRSW   (1):Vlag die aangeeft of de cursor op het scherm wordt getoond.
+                 Als de cursor niet getoond moet worden dan wordt hij alleen
+                 getoond als de BIOS routine CHGET (&H9F) invoer verwacht.
+                 Anders wordt de cursor permanent op het scherm gezet door
+                 CHGET. Opm.: De instelling kan ook worden verzorgd met de
+                 escape-sequences 'x5' en 'y5'. Mogelijke waarden:
+                   0= Niet tonen
+                   1= Wel tonen
+FCAA CSTYLE  (1):Vlag die aangeeft in welke vorm de cursor wordt getoond. Dit
+                 heeft alleen effect als de cursor aan staat d.m.v. CSRSW
+                 (&HFCA9). Het indrukken van de INS toets zorgt ervoor dat de
+                 instelling omgedraaid wordt. Opm.: De instelling kan ook wor-
+                 den verzorgd door de escape-sequences 'x4' en 'y4'. Mogelijke
+                 waarden:
+                   00= Blok
+                   01= Half blok
+FCAB CAPST   (1):Vlag die aangeeft af de CAPS-LOCK toets actief is. Door het
+                 indrukken van de CAPS-toets wordt de instelling van CAPST om-
+                 gedraaid. Mogelijke waarden:
+                   00= Niet actief (kleine letters)
+                   80= Blijvend aan!?
+                   FF= Wel actief (hoofd letters)
+FCAC KANAST  (1):Gebruikt om het indrukken van de zogenaamde 'dode toets' te
+                 registreren. Deze toets kan gebruikt worden om geaccentueerde
+                 versies van klinkers te bereiken. Wanneer de dode toets wordt
+                 ingedrukt, eventueel gecombineerd met de SHIFT- of CODE-toets
+                 krijgt  KANAST een  waarde ongelijk aan 0. Als direct daarna
+                 klinker wordt ingetypt (eventueel een hoofdletter), wordt van
+                 die klinker de geaccentueerde versie genomen, mits deze in de
+                 ASCII  tabel van de MSX computer voorkomt. Bij het indrukken
+                 van elke andere toets dan de dode toets wordt KANAST weer op
+                 0 gezet. Mogelijke waarden:
+
+                  0= Geen dode toets > Normaal
+                  1= Dode toets > Accent grave
+                  2= SHIFT + dode toets > Accent aigu
+                  3= CODE + dode toets > Accent circumflex
+                  4= SHIFT + CODE + dode toets > Trema
+
+                 In de Japanse versie van de MSX-computer wordt KANAST ge-
+                 bruikt om de status van de KANA-LOCK in op te bergen; dit is
+                 een omschakeling naar een ander soort letterteken!
+FCAD KANAMD  (1):Gebruikt om het lettertype te bepalen. Opm.: Wordt alleen in
+                 Japanse MSX-computers gebruikt!
+
+
+ALLERLEI
+--------
+Het volgende gebied hoort bij eerdere groepen die al aan de orde zijn geweest.
+
+FCAE FLBMEM  (1):Vlag die tijdens het laden van een file aangeeft of de file
+                 een BASIC programma is, zodat het huidige BASIC programma uit
+                 het geheugen verwijderd moet worden. Mogelijke waarden:
+                   0= Is een BASIC programma
+                  >0= Is geen BASIC programma
+FCAF SCRMOD  (1):Gebruikt om de huidige scherm mode in op te slaan. (0-12)
+FCB0 OLDSCR  (1):Gebruikt om de vorige scherm mode in op te slaan. (0-12)
+FCB1 CASPRV  (1):Gebruikt bij het lezen van een invoer file van cassette. Hier
+                 wordt eerst gekeken voordat een teken uit de buffer gelezen
+                 wordt. Als er geen 0 staat dan inhoud ervan asl eerste byte
+                 van de invoer beschouwd.
+*  Turbo R      :Op de Turbo R wordt CASPRV gebruikt door de interrupt routine
+                 om de stands van de leds (R800, pauze, enz.) in op te slaan.
+                 De cassette ingang is immers verwijderd!
+FCB2 BRDATR  (1):Gebruikt door het 'Paint' statement om de grenskleur in op te
+                 slaan. De waarde komt van de BIOS routine PNTINI (&H129) en
+                 wordt gebruikt door de BIOS routines SCANR (&H12C) en SCANL
+                 (&H12F). BRDATR wordt in scherm modus 2 altijd gelijk gemaakt
+                 aan  de  kleur  waarmee getekend  wordt, bewaard  in ARTBYT
+                 (&HF3F2)
+FCB3 GXPOS   (2):Gebruikt om de X-coordinaat van de laatst bereikte plaats op
+                 het grafische scherm bij het uitvoeren van een grafisch com-
+                 mando. Tevens het startpunt voor het volgende commando.
+FCB5 GYPOS   (2):Gebruikt om de Y-coordinaat van de laatst bereikte plaats op
+                 het grafische scherm bij het uitvoeren van een grafisch com-
+                 mando. Tevens het startpunt voor het volgende commando.
+FCB7 GRPACX  (2):Werkruimte om de X-coordinaat samen te stellen.
+FCB9 GRPACY  (2):Werkruimte om de Y-coordinaat samen te stellen.
+FCBB DRWFLG  (1):Vlag voor het uitvoeren van het 'DRAW' statement. Het geeft
+                 aan het volgende DRAW subcommando uitgevoerd moet worden. De
+                 bits van DRWFLG hebben de volgende betekenis:
+                   Bit 7   Lijn tekenen 1= Nee, ingesteld met subcommando N
+                   Bit 6   Cursor bewegen 1= Nee, ingesteld met subcommando B
+                   Bit 5-0 Ongebruikt
+FCBC DRWSCL  (1):Gebruikt bij het uitvoeren van het 'DRAW' statement. Schaal-
+                 verhouding tussen opgegeven en werkelijke lengte. Bij het
+                 uitvoeren van DRAW subcommando's worden alle opgegeven leng-
+                 tes vermeningvuldigd met DRWSCL/4. Als DRWSCL= 0, dan wordt
+                 de  lengte niet  omgezet (hetzelfde  effect als  DRWSCL=4).
+                 DRWSCL wordt ingesteld met subcommando S.
+FCBD DRWANG  (1):Gebruikt bij het uitvoeren van het 'DRAW' statement. Rotatie
+                 hoek voor alle DRAW subcommando's waarin een richting is op-
+                 gegeven. De richting wordt geroteerd om een hoek die afhanek-
+                 lijk is van de waarde van DRWANG. Mogelijke waarden zijn:
+
+                   0= Geen rotatie
+                   1= 90 graden rotatie
+                   2= 180 graden rotatie
+                   3= 270 graden rotatie
+
+                 De rotaties zijn opgegeven tegen de klok in. DRWANG wordt in-
+                 gesteld met subcommando A.       
+FCBE RUNBNF  (1):Vlag die aangeeft of na het uitvoeren van het BLOAD statement
+                 de  inhoud van de geladen file moet worden beschouwd als een 
+                 machinetaal programma  dat direct  na het laden aangeroepen 
+                 moet worden. Mogelijke waarden:
+
+                   0= Niet uitvoeren
+                  >0= Wel uitvoeren
+
+                 Het uitvoeren gebeurt door het executieadres aan te roepen
+                 dat met de file mee is weggeschreven.
+FCBF SAVENT  (2):Gebruikt door het 'BSAVE' en 'BLOAD' statement. Als er een
+                 gedeelte van het VRAM wordt ingelezen of weggeschreven, bevat
+                 SAVENT de lengte in bytes van het betreffende gedeelte. Als
+                 er een gedeelte van het RAM wordt geladen of weggeschreven,
+                 bevat SAVENT het beginadres van het betreffende gedeelte.
+
+
+OPSLAG VOOR SLOT INFORMATIE
+---------------------------
+Het volgende gebied wordt gebruikt om het slotsysteem te beheren. Daarvoor
+worden allerlei instellingen van het slotsysteem opgeslagen, en wordt per slot
+wat werkgeheugen gereserveerd.
+
+FCC1 EXPTBL  (4):Bevat informatie of een primaire slot uitgebreid is. Als het
+                 slot niet geexpandeerd is staat er &H00 en anders &H80:
+
+                   &HFCC1 :Slot 0
+                   &HFCC2 :Slot 1
+                   &HFCC3 :Slot 2
+                   &HFCC4 :Slot 3
+
+FCC5 SLTTBL  (4):Bevat de slot selectie registers van een expandedslot. De
+                 waarde is alleen van belang als in EXPTBL (&HFCC1) blijkt dat
+                 het slot is geexpandeerd.
+
+                   &HFCC3 :Slot 0
+                   &HFCC6 :Slot 1
+                   &HFCC7 :Slot 2
+                   &HFCC8 :Slot 3
+
+FCC9 SLTATR (64):Bevat de attributen van de uitbreidings ROMs die gevonden
+                 werden tijdens de initialisatie, bij het zoeken naar ROM. De
+                 karakteristieken van elke ROM van 16kB worden in 1 byte opge-
+                 slagen. De opslag gebeurt als volgt:
+
+                   Bit 7=   Basic programma, 1= Ja
+                   Bit 6=   apparaat (device) uitbreiding, 1= Ja
+                   Bit 5=   Statement uitbreiding, 1= Ja
+                   Bit 4-0= Ongebruikt
+
+                 Er zijn 4 primaire sloten met maximaal 4 secundaire sloten
+                 met elk maximaal 4 pagina's, totaal 4*4*4=64 pagina's. Het
+                 adres van het byte behorende bij een zekere pagina volgt de
+                 formule:
+
+                 ADRES = &HFCC9 + 16x prim.slot + 4x sec.slot + pagina
+
+                 Als het primaire slot niet is uitgebreid dan moet voor het
+                 secundaire slotnummer 0 genomen worden.
+
+           Opm.: De bytes die overeenkomen met pagina 0 (&H0000/&H3FFF) en
+                 pagina 3 (&HC000/&HFFFF) altijd 0 zijn, omdat alleen pagina 1
+                 (&H4000/&H7FFF) en pagina 2 (&H8000/&HBFFF) worden onderzocht
+                 De  MSX standaard  schrijft voor  dat uitbreidings ROM's die
+                 machinetaal bevatten, op pagina 1 gezet worden, en ROMs die
+                 BASIC programma's bevatten op pagina 2.
+
+FD09 SLTWRK(128):Bevat per mogelijk geinstalleerde pagina 2 bytes voor werkge-
+                 heugen. Het adres van het werkgeheugen van een zekere pagina
+                 volgt uit de volgende formule:
+
+                 ADRES = &HFD09 + 32x prim.slot + 8x sec.slot + 2x pagina
+
+                 Voor deze formule gelden dezelfde opmerkingen als bij SLTATR
+
+
+PARAMETER OPSLAG VOOR AANROEPEN VAN ROM PAGINA'S
+------------------------------------------------
+Het volgende  gebied bevat  opslagplaatsen voor het overdragen van parameters
+bij het aanroepen van ROM pagina's die uitbreidingen voor de MSX bevatten.
+
+FD89 PROCNM (16):Gebruikt als opslagplaats voor de apparaat naam bij het aan-
+                 roepen van een ROM pagina die een apparaat uitbreiding bevat.
+FD99 DEVICE  (1):Gebruikt als opslagplaats voor het apparaatnummer om het be-
+                 doelde apparaat bij het aanroepen van een ROM pagina die een
+                 apparaat uitbreiding bevat. Mogelijke waarden: ID nummers 0-3
+                   0= Geen device routine in cartidge
+
+
+MSX HOOKS
+---------
+Het volgende gebied bevat de MSX hooks. Elke hook is 5 bytes lang (113 * 5 =
+565 bytes). Zie voor verdere informatie 'HOOKS.TXT'
+
+FD9A hooks (565):De MSX-HOOKS (113 hooks * 5 bytes), zie 'HOOKS.TXT'
+
+
+OVERIGE
+-------
+Het volgende gebied bevat over verschillende dingen informatie.
+
+FFCF/FFE6   (24):
+FFE7 EXTVDP (15):Bevat een copy van de actuele inhoud van het VDP register #8
+                 tot en met register #23. De inhoud is als volgt:
+
+                   FFE7 :VDP R#  8
+                   FFE8 :VDP R#  9
+                   FFE9 :VDP R# 10
+                   FFEA :VDP R# 11
+                   FFEB :VDP R# 12
+                   FFEC :VDP R# 13
+                   FFED :VDP R# 14
+                   FFEE :VDP R# 15
+                   FFEF :VDP R# 16
+                   FFF0 :VDP R# 17
+                   FFF1 :VDP R# 18
+                   FFF2 :VDP R# 19
+                   FFF3 :VDP R# 20
+                   FFF4 :VDP R# 21
+                   FFF5 :VDP R# 22
+                   FFF6 :VDP R# 23
+
+FFF7 ROMSLT  (1):Slotadres van het Main-Rom
+FFF8/FFF9    (2):(#17A6, GT rom)
+FFFA         (1):Copy inhoud VDP register # 25, MSX 2+
+FFFB         (1):Copy inhoud VDP register # 26, MSX 2+
+FFFC         (1):Copy inhoud VDP register # 27, MSX 2+
+FFFD         (2):Tijdelijke opslag stack pointer o.a. BIOS routine &h0000
+FFFF         (1):Secundair slot selectieregisters
+==============================================================================
+

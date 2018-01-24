@@ -1,0 +1,205 @@
+;adressen die vast liggen in de diskrom
+
+                  04034H  ; 
+                  04078H  ; 
+                  0408FH  ; 
+                  041EFH  ;0C get version number 
+                  0436CH  ;13 delete file 
+                  04392H  ;17 rename file 
+                  04462H  ;0D open file 
+                  0456FH  ;10 close file 
+                  0461DH  ;16 create file 
+                  046BAH  ;2F absolute disk read 
+                  04720H  ;30 absolute disk write 
+                  04775H  ;14 sequential read 
+                  0477DH  ;15 seguential write 
+                  04788H  ;21 random read 
+                  04793H  ;22 random write 
+                  047B2H  ;27 random block read 
+                  047BEH  ;26 random block write 
+                  047D1H  ;28 random write with zero fill  
+                  04FB8H  ;11 search first 
+                  05006H  ;12 search next 
+                  0501EH  ;23 get file size 
+                  0504EH  ;18 get login vector 
+                  05058H  ;1A set dma 
+                  0505DH  ;1B get allocation 
+                  0509FH  ;0D disk reset 
+                  050A9H 
+                  050C4H  ;19 get default drive name 
+                  050C8H  ;24 set random record 
+                  050D5H  ;0E select disk 
+                  050E0H  ;0A buffered input 
+                  05183H 
+                  0535DH 
+                  053A7H  ;02 console output 
+                  0543CH  ;0B console status 
+                  05445H  ;01 console input 
+                  0544EH  ;08 direct input (check) 
+                  05454H  ;06 direct console i/o 
+                  05462H  ;07 direct input (no check) 
+                  05465H  ;05 lst output 
+                  0546EH  ;03 aux input 
+                  05474H  ;04 aux output 
+                  0553CH  ;2A get date 
+                  05552H  ;2B set date 
+                  055DBH  ;2C get time 
+                  055E6H  ;2D set time 
+                  055FFH  ;2E set/reset verify flag 
+
+                  0F1C9H  ;09 string output 
+
+
+********************************************************************************
+
+
+I'll try to make a doc on the 'undocumented' FCB entries in the diskROM too
+when i've got the time (right now it's all consumed by the MSX emulator
+project).
+
+
+                                           The MSX disk routines 
+                                           ===================== 
+
+Author:  Albert Siersema
+                  FidoNet  : Albert Siersema at 2:282/517 
+                  InterNet : appie@prgbbs.idn.nl (subdue to change) 
+                  SnailMail: Sloep 303 
+                          9732 CT Groningen 
+                          The Netherlands 
+                  BBS      : Filosoft/PROGRAMMERS BBS 
+                          +31-50-412288 or +31-50-426071 
+Version: 1.0
+Date   : 9 Oct 1994
+
+
+Definition: MSX-DOS are the routines in the diskROM, not the MSXDOS.SYS and
+                  COMMAND.COM files to run the MS-DOS clone for MSX. 
+
+The MSX has the same file system as MS-DOS. This documentation does not
+include a description of the FAT based MS-DOS file system.
+
+Following applies to MSX-DOS version 1.x. ROMs with DOS 2.x work different
+as far as we know. We experimented with DOS 2.3x but haven't gotten any
+results upto know. All knowledge about DOS 2.x is welcome though !
+
+The routines:
+ DRIVES         Return number of connected drives
+ DSKIO          Sector(s) read/write
+ DSKCHG         Check disk change status
+ GETDPB         Get Drive Parameter Block
+ CHOICE         Get FORMAT choice string
+ DSKFMT         (low level) Format a disk: physically and logically
+
+Not described in here and not necessary for an MSX emulator:
+ INIHRD         Init hardware
+ INIENV         Initialize environment
+ OEMSTATEMENT   New statements
+
+
+DISKIO (#4010)
+--------------
+Input:  [F]     carry set for write
+                          carry reset for read 
+                  [A]     Drive number (0=A:) 
+                  [B]     Number of sectors to write 
+                  [C]     Media descriptor 
+                  [DE]    Logical sector number (starts at 0) 
+                  [HL]    Transfer address 
+
+Output: [F]     carry set on error
+                          carry reset on success 
+                  [A]     If error: errorcode 
+                  [B]     Number of sectors transferred (always) 
+
+Error codes in [A] can be:
+                  0       Write protected 
+                  2       Not ready 
+                  4       Data (CRC) error 
+                  6       Seek error 
+                  8       Record not found 
+                  10      Write fault 
+                  12      Other errors 
+
+
+DSKCHG (#4013)
+--------------
+Input:  [A]     Drive number (0=A:)
+                  [B]     Media descriptor 
+                  [C]     Media descriptor 
+                  [HL]    Base address of DPB 
+
+Output: [F]     carry set on error
+                          carry reset on success 
+                  [A]     If error: errorcode (see DSKIO) 
+                  [B]     if success: 1=disk unchanged, 0=Unknown, -1=DIsk chang
+
+Note:   If the disk has been changed or may have been changed (unknown) read
+                  the boot sector or the FAT sector for a disk media descriptor 
+                  transfer a new DPB as with GETDPB 
+
+
+GETDPB (#4016)
+--------------
+Input:  [A]     Drive number
+                  [B]     First byte of FAT (media descriptor) 
+                  [C]     Media descriptor 
+                  [HL]    Base address of DPB 
+
+Output: [HL+1] .. [HL+18] = DPB for specified drive
+
+Note:   DPB consists of
+
+Name   Offset Size Description
+----------------------------------------------------------------------------
+MEDIA    0     1   Media type (F8..FF)
+SECSIZ   1     2   Sector size (must be 2^n)
+DIRMSK   3     1   (SECSIZE/32)-1
+DIRSHFT  4     1   Number of one bits in DIRMSK
+CLUSMSK  5     1   (Sectors per cluster)-1
+CLUSSHFT 6     1   (Number of one bits in CLUSMSK)+1
+FIRFAT   7     2   Logical sector number of first FAT
+FATCNT   8     1   Number of FATs
+MAXENT   A     1   Number of directory entries (max 254)
+FIRREC   B     2   Logical sector number of first data
+
+
+********************************************************************************
+
+
+Oke... here it is. I've created it VERY fast so there could be some errors and
+not all routines are present, but the necessary ones are.
+
+This is a very fast composed list of the addresses of the BDOS routines in
+a MSXDOS1 ROM (like those that can be found in nearly all MSX-1 and -2
+machines if they have a disk drive).
+
+Check out the MSX-DOS 2 references for a list of all BDOS entries and their
+parameters. These references can be found at nic.funet.fi (DOS2FUNC.* etc).
+
+Address  BDOS function   Meaning
+-------  -------------   -----------------------------------------------------
+05058h   01ah            Set DMA address
+0504eh   018h            Get Login Vector
+050D5h   0eh             Select Disk
+0505Dh   01bh            Get Allocation
+
+ Below are all routines that have an FCB as input
+
+04FB8h   011h            Search First (or Find First)
+05006h   012h            Search Next (or Find Next)
+04462h   0fh             Open File
+0456Fh   010h            Close File
+047b2h   027h            Random Block Read
+050c8h   024h            Set Random Record
+04788h   021h            Random Read
+0501eh   023h            Get File Size
+0436Ch   013h            Delete File
+04775h   014h            Sequential Read
+0477Dh   015h            Sequential Write
+0461Dh   016h            Create File
+04392h   017h            Rename File
+04793h   022h            Random Write
+047BEh   026h            Random Block Write
+047D1h   02bh            Block Write With Zero Fill
+

@@ -1,0 +1,326 @@
+                         *** DOS2 ***
+
+                 Warning! These addresses can be incompatibel.
+
+Maarten "The Arithmetic Master" Verheijdt & Vincent "Hacker" van Dam, 94/05/16
+
+Adres   Remarks
+==============================================================================
+0005    BDOS entry
+
+005C    Allocate a 16k segment (memmory management)
+        Input: [ A] - 0 = user segment
+                      1 = system segment
+               [ B] - 0 = primary mapper
+                    - FxxxSSPP = slot adress (primary mapper, if 0)
+                       xxx=000 = allocate specified slot only
+                       xxx=001 = allocate other slots than specified
+                       xxx=010 = try to allocate specified slot and, if it
+                         failed, try another slot (if any)
+                       xxx=011 = try to allocate other slots than specified
+                         and, if it failt, try specified slot
+        Output: carry set = no free segment, else
+                [ A] = segment number
+                [ B] = slot adress of mapper slot (0 if called as [B]=0
+
+005F    Free a 16k segment (memmory management)
+        Input: [ A] - segment number to free
+               [ B] - 0  = primary mapper
+                      0! = other is specified mapper (slot adres)
+        Output: carry set = error
+
+01CB    Performs a malloc in the DOS2 buffer segment
+        Input: [HL] - Number of bytes to reserve
+        Output:[HL] - Address of allocated buffer
+               [ A] - Error code (00=no error)
+        Remark: DOS actualy allocates HL+2 bytes. The start address of the
+                buffer - 2 contains the length of the buffer + 2.
+
+0EC8    BDOS routine (#6F), get version number (see FUNCTION.DOC)
+
+2D0F    Performs a de-malloc in the DOS2 buffer segment
+        Input: [HL] - Address of buffer ([HL]-2/[HL]-1 must contain the length)
+        Output: < unknown >
+
+4010    SCSI sector i/o (logical)
+        [HL] = DMA adress
+        [DE] = sector
+        [B]  = sectors
+        [C]  = media descipter (F0 = hard drive)
+        [A]  = drive number
+        Carry= set for write, reset for read
+
+        Out: Carry set = error
+              [B] = remaining sectors
+              [A] = error code
+                     0 - write protected
+                     2 - not ready
+                     4 - CRC error
+                     6 - seek error
+                     8 - record not found
+                    10 - write fault
+                    12 - disk error
+                    18 - not a dos disk
+                    20 - incompatible disk
+                    22 - unformatted disk
+                    24 - disk change (no message because trapped internally?)
+                    26 - user error 10
+                   rest- disk error
+
+        * If there is no SCSI driver: Out: [A]  = 0C
+                                   Carry= set
+
+4013    SCSI disk change
+        [A]  = drive number
+        [B]  = 0
+        [C]  = media descripter (F0 = hard drive)
+        [HL] = base adress of DPB
+
+        Out: Carry set = error; [A] = return error code (see SCSI i/o)
+             [B] = 1 (disk unchanged)
+                   0 (unknown)
+                  -1 (disk changed)
+
+        * If there is no SCSI driver: Out: [A]  = 0C
+                                   Carry= set
+
+4016    SCSI get Drive parameter block
+        [A]  = drive number
+        [HL] = base adress of DPB
+        [B]  = first byte of FAT
+        [C]  = media descripter (F0 = hard drive)
+
+        Out: [HL+1] ... [HL+18] = DPB
+
+        * If there is no SCSI driver: Out: [A]  = 0C
+                                   Carry= set
+
+4019    SCSI
+        Used for SCSI format?
+
+        * If there is no SCSI driver: Out: [HL]= 6ED1
+
+401C    SCSI format
+        [A]  = 1..9 (as specified in CHODAT=4019?)
+        [D]  = drive number (0-based)
+        [HL] = begin adress of work area
+        [BC] = length of work area
+
+        Out: [A] = error code
+                    0 - write protected
+                    2 - not ready
+                    4 - CRC error
+                    6 - seek error
+                    8 - record not found
+                   10 - write fault
+                   12 - bad parameter
+                   14 - insufficient memmory
+                   16 - other errors
+
+        * If there is no SCSI driver: Out: [A] = 10, carry set
+
+401F    nothing (RET)
+4022    Jump to BASIC
+4025    Format routine (with questions)
+4029    Stop drive(s)
+
+402D    Where Am I (calculates slot number of DOS2)
+        in: <none>
+        out: [A] - slot number
+
+4030    Out: [HL]=[F34B]=highest available ram adress
+
+40FF    (in DOS2 ROM) Current block. The 64Kb DOS2 ROM system is divided into
+        16Kb ROM segments. These segments can be swappen only in page 1.
+        The legal segment numbers are 0,1,2 and 3.
+Bank-2
+------
+4FC8    BDOS-routine (6F = Get MSX-DOS version number)
+
+6000    Swap address (for ROM banks).
+
+
+F1E5    Jumps to interrupt handler (only when processing BDOS functions)
+F1E8    See BIOS #0C (only when processing BDOS functions)
+F1EB    See BIOS #14 (only when processing BDOS functions)
+F1EE    See BIOS #1C (only when processing BDOS functions)
+F1F1    See BIOS #24 (only when processing BDOS functions)
+F1F4    See BIOS #30 (only when processing BDOS functions)
+F1F7    Switch to 'DOS-mode' (=page 0 & 2 system segments)
+F1FA    Switch to 'user-mode'
+F1FD    Select DOS system segment on page 0
+
+        Mapper Support Routines
+F200    Allocate a 16k segment
+F203    Free a 16k segment
+F206    Read byte from address A:HL to A
+F209    Write byte from E to address A:HL
+F20C    Inter-segment call.  Address in IYh:IX
+F20F    Inter-segment  call.  Address  in  line  after  the  call instruction
+F212    Put segment into page (HL)
+F215    Get current segment for page (HL)
+F218    Put segment into page 0
+F21B    Get current segment for page 0
+F21E    Put segment into page 1
+F221    Get current segment for page 1
+F224    Put segment into page 2
+F227    Get current segment for page 2
+F22A    Not supported  since page-3  must never  be changed
+F22D    Get current segment for page 3
+
+F23C    Current logical drive (1-based)
+F23D    Current DMA address
+F252    BDOS-Hook. Before handling a BDOS function, this hook is called.
+        Page 0 -> map block (F2D0), Page 2 -> map block (F2CF)
+F261    BDOS-Hook. Called by BDOS function #02
+
+MSXDOS2.SYS v2.33
+-----------------
+F2B3    Adress own TPA
+F2B6    flags: b7: REBOOT    : 0-off
+                               1-on
+               b6: BUSRESET  : 0-on
+                               1-off
+               b5: RESET     : 0-off
+                               1-on
+               b4: Own TPA   : 0-yes (F2B3 contains start-adress of own TPA)
+                               1-no
+               b3: VDP speedy: 0-on
+                               1-off
+               b2: reserved
+               b1: reserved
+               b0: reserved
+
+F2B7    Config version number (currently #10=v1.0)
+
+F2C0    second hook interrupt routine (5 bytes) (used by diskROM)
+
+F2C5    Contains adress of mappertable
+F2C7    Current map block in Page 0
+F2C8    Current map block in Page 1
+F2C9    Current map block in Page 2
+F2CA    Current map block in Page 3 (can't be changed -> system crash!)
+
+F2CB    Copy of F2C7 during BDOS routines
+F2CC    Copy of F2C8 during BDOS routines
+F2CD    Copy of F2C9 during BDOS routines
+F2CE    Copy of F2CA during BDOS routines (not used during BDOS routines)
+
+F2CF    Highest map block in primairy mapper. During BDOS routines selected on
+        Page 2.This is the buffer-segment
+F2D0    Highest map block - 1 in primairy mapper. During BDOS routines selected
+        on Page 0.This is the code-segment
+F2D5    Second EXTBIO hook. (End FFCA-routine in DOS2 kernel)
+F2DA    Address of second ROM BDOS function handler
+F2DE    Address in DOS2 ROM for BDOS function handler
+F2E6    Used by DOS2 ROM and MSXDOS2.SYS as temporary buffer for IX (2 bytes)
+F2E8    Used by DOS2 ROM and MSXDOS2.SYS as temp buffer for user Stack Pointer
+F2EA    Same as F2EB, but for primairy slots
+F2EB    Secundairy slot status when BDOS function handler was executed
+F2EC    Disk check status, 00=off FF=on
+
+F2FB    Points to temporary buffer for 'Explain Error Code' function
+F2FD    Drive from which MSXDOS2.SYS will be loaded (1=A:, 2=B: etc.)
+F2FE    Points to top of DOS stack buffer
+F300    Verify flag, 00=off FF=on
+F30D    Disk verify flag (00=off FF=on)
+F313    DOS 2 ROM version. eg. #22 -> v2.2x
+F33D    LEN (BASIC random acces files)
+F341    RAM slot no. for Page 0
+F342    RAM slot no. for Page 1
+F343    RAM slot no. for Page 2
+F344    RAM slot no. for Page 3
+F377    InterCall. Jumps to (HL) in system segment on page 0
+F37A    Entry of second BDOS function handler (jumps to sys segment on page 0)
+F37D    BASIC entry of BDOS function handler
+F398    JP      (IX) - Used by memmory management
+ F399   JP      (HL)
+
+==============================================================================
+
+
+                *** known addresses in DOS2 buffer segment ***
+
+Adres   Remarks
+==============================================================================
+BA1A    Drive assignment table. Address+drive number = drive assignment
+        The drive number is 1-based, so the table actualy starts at #BA1B
+BA23    Table with pointers to Drive Info Blocks (DIB)
+        map of Drive Info Block:
+        x+00    Slot no. of drive handler
+        x+01
+        x+02  \ Address of Drive Parameter Block (DPB)
+        x+03  /
+        x+04
+        x+05
+        x+06
+        x+07
+        x+08
+        x+09
+        x+10
+        x+11
+        x+12
+        x+13  \ Bytes per sector
+        x+14  /
+        x+15
+        x+16    No of directory sectors
+        x+17    No of FAT sectors
+        x+18  \ First root sector number
+        x+19  /
+        x+20  \ First data sector number
+        x+21  /
+        x+22  \ Maximum cluster number
+        x+23  /
+        x+24  - Dirty disk flag
+        x+25  \         2nd byte
+        x+26  | Volume ID code  1st byte
+        x+27  |         4th byte
+        x+28  /         3rd byte
+        x+29    Media byte (F0,F8,F9,FF)
+        x+30
+BB84    Address temporary buffer for line input (BDOS function #0A)
+BB89    Redirection state (see BDOS function #70)
+BB8B    Current tab position (number of spaces to be printed). Value 0..7
+BBF8    Begin address of "buffers" chain (adjusted by "BUFFERS=xx")
+        Buffer header:
+        x-02 \ Length of this buffer (probably #020D)
+        x-01 /
+        x+00 \ Address of next buffer
+        x+01 /
+        x+02
+        x+03
+        x+04
+        x+05
+        x+06
+        x+07
+        x+08
+        x+09 \ Address of DIB where data in buffer belongs to
+        x+10 /
+        x+11 - start data
+BBFD    Previous error code
+BE00    Begin address ramdisk table
+        x+0  Ramdisk Size (counted in segments) multiply by 16 to obtain Kb's
+        x+1  /
+        x+2  Map block number
+        x+3  Slot number of map block
+        x+4  Second map block number
+        x+5  Second slot number of map block
+                map block number runs from highest to lowest number
+                slot number runs from highest to lowest number
+
+
+MSXDOS2.SYS v2.33 (Own TPA.)
+----------------------------
++#0000 - reserved
++#0001 - reserved
++#0002 - reserved
++#0003 - used by VDPSPEED (old key mask)
+
++#0004
+  ...
++#001F - reserved
++#0020 - BDOS expansion and interupt expansion routines
+                (for quick keys and VDP speedy.)
+
+
+

@@ -1,0 +1,560 @@
+DISK VARIABELEN (&hF197 - &hF37F)                  COMPASS v1.0 by COMPJOETANIA
+-------------------------------------------------------------------------------
+
+Samenstellers: Ramon van der Winkel/Albert Siersema/Peter Kelders
+Bron         : ?
+Versie       : #1.00
+
+
+F197 00 DRIVE           DPB drive A:+00 Drive bij het dpb (0=A, 1=B, etc)
+F198 F9 ID                          +01 Media ID byte (0F8h/0F9h)
+F199 00 SECSIZ (L)                  +02 Sector size (200h = 512 byte)
+F19A 02 SECSIZ (H)                  +03 Idem
+F19B 0F DIRMSK (SECSIZ/32)-1        +04 (Directory registraties in 1 sector)-1
+F19C 04 DIRSHFT                     +05 Het aantal 1-bits in DIRMSK
+F19D 01 CLUSMSK                     +06 (Aantal sectoren per cluster)-1
+F19E 02 CLUSSHFT                    +07 (Aantal 1-bits in CLUSMSK)+1
+F19F 01 FIRFAT (L)                  +08 Eerste sector van de FAT
+F1A0 00 FIRFAT (H)                  +09 Idem
+F1A1 02 FATCNT                      +0A Aantal FATs
+F1A2 70 MAXENT                      +0B Het max. aantal directory registraties
+F1A3 0E FIRREC (L)                  +0C Eerste sector van het DATA gebied
+F1A4 00 FIRREC (H)                  +0D Idem
+F1A5 CA MAXCLUS (L)                 +0E Het maximum aantal cluster
+F1A6 02 MAXCLUS (H)                 +0F Idem
+F1A7 03 FATSIZ                      +10 Aantal sectoren per FAT
+F1A8 07 FIRDIR (L)                  +11 Eerste sector van de DIRectory
+F1A9 00 FIRDIR (H)                  +12 Idem
+F1AA 97 FATADR (L)                  +13 Adres van de FAT opslag in het RAM
+F1AB E5 FATADR (H)                  +14 Idem
+
+F1AC 00 DRIVE           DPB drive B +00 Drive bij het dpb (0=A, 1=B, etc)
+F1AD F9 ID                          +01 Media ID byte (0F8h/0F9h)
+F1AE 00 SECSIZ (L)                  +02 Sector size (200h = 512 byte)
+F1AF 02 SECSIZ (H)                  +03 Idem
+F1B0 0F DIRMSK (SECSIZ/32)-1        +04 (Directory registraties in 1 sector)-1
+F1B1 04 DIRSHFT                     +05 Het aantal 1-bits in DIRMSK
+F1B2 01 CLUSMSK                     +06 (Aantal sectoren per cluster)-1
+F1B3 02 CLUSSHFT                    +07 (Aantal 1-bits in CLUSMSK)+1
+F1B4 01 FIRFAT (L)                  +08 Eerste sector van de FAT
+F1B5 00 FIRFAT (H)                  +09 Idem
+F1B6 02 FATCNT                      +0A Aantal FATs
+F1B7 70 MAXENT                      +0B Het max. aantal directory registraties
+F1B8 0E FIRREC (L)                  +0C Eerste sector van het DATA gebied
+F1B9 00 FIRREC (H)                  +0D Idem
+F1BA CA MAXCLUS (L)                 +0E Het maximum aantal cluster
+F1BB 02 MAXCLUS (H)                 +0F Idem
+F1BC 03 FATSIZ                      +10 Aantal sectoren per FAT
+F1BD 07 FIRDIR (L)                  +11 Eerste sector van de DIRectory
+F1BE 00 FIRDIR (H)                  +12 Idem
+F1BF 97 FATADR (L)                  +13 Adres van de FAT opslag in het RAM
+F1C0 E5 FATADR (H)                  +14 Idem
+
+F1C1 00 Diskdrive afslag teller (00=Uit. Door deze op 01 te zetten en de hook
+                                 0FD9Fh aan te roepen, wordt de diskdrive uit
+                                 gezet, omdat de teller dan 00 wordt)
+
+F1C2 00 Idem, sub-teller
+F1C3 00 Idem, sub-teller
+F1C4 00 Actieve hardwarematige drive
+F1C5 00 Laatste track-positie van drive A voor de wisselling met drive B
+F1C6 00 Idem maar dan van drive B voor de wisselling met drive A
+F1C7 00 Actieve logische drive
+F1C8 02 Aantal drives hardwarematig aanwezig
+
+F1C9 CD,6B,F3      CALL 0F36Bh          Print tekst in [DE] tot '$'
+F1CC 1A            LD A,(DE)            Deze functie komt overeen met
+F1CD CD,68,F3      CALL 0F368h          BDOS functie nummer 9
+F1D0 13            INC DE
+F1D1 FE,24         CP "$"
+F1D3 C8            RET Z
+F1D4 CD,A8,53      CALL 053A8h          (in de diskrom)
+F1D7 18,F0         JR 0F1C9h
+
+F1D9 CD,6B,F3      CALL 0F36Bh          Verplaats data naar RAM onder de ROM
+F1DC ED,B0         LDIR
+F1DE CD,68,F3      CALL 0F368H          Rom aan
+F1E1 C9            RET
+
+F1E2 CD,6B,F3      CALL 0F36Bh          Execute in RAM
+F1E5 C3,00,00      JP Abortadres        Adres voor Abort (Abort,Retry Ignore)
+                        |      Naar dit adres wordt direct gesprongen nadat
+                        +--->  de Abort optie gekozen is. Dit kan door bij de
+                               MSXDOS vraag 'Abort, Retry or Ignore?' de A
+                               te kiezen. Als de disk-error-handler afgebogen
+                               is naar een eigen programma, dan gebeurt deze
+                               jump nadat een C=2 (=abort) terug is gegeven.
+
+F1E8 spring naar adres op pointer.
+     IN: HL adres pointer
+     OPM: schakelt eerst RAM in (F36B) en als terug DISKROM (F368)
+F1E8 11,DE,F1      LD DE,0F1DEh         JP (HL) naar een routine in het RAM
+F1EB D5            PUSH DE              Returnadres op de STACK op de ROM
+F1EC 5E            LD E,(HL)             weer aan te zetten
+F1ED 23            INC HL
+F1EE 56            LD D,(HL)            Adres ophalen
+F1EF EB            EX DE,HL
+F1F0 CD,6B,F3      CALL 0F36Bh          RAM aan
+F1F3 E9            JP (HL)
+
+F1F4 C3,04,56      JP 5604              Check filename (HL=pointer). Wordt
+                                        opgeslagen op [DE,->)
+
+F1F7 50,52,4E,20   "PRN "               Device names
+F1FB 4C,53,54,20   "LST "
+F1FF 4E,55,4C,20   "NUL "
+F203 41,55,58,20   "AUX "
+F207 43,4F,4E,20   "CON "
+
+F20B 20,20,20,20   Opslag van de filename die gevonden is zoals AUX,CON etc
+F20F 20,20,20,20
+F213 20,20,20      Extensie
+
+F216 80            Ge-NEG-t device nummer. PRN=-5, LST=-4 ... CON=-1
+F217 00
+F218 00
+F219 00
+F21A 00
+F21B 00
+F21C 00
+F21D 00
+F21E 00
+F21F 00
+F220 00
+
+F221 00,00         Ge-pack-te datum veld uit het fcb van de gevonden file
+F223 00,00         Ge-pack-te tijd veld uit het fcb van de gevonden file
+
+F225 00
+F226 00
+F227 00
+F228 00
+F229 00
+F22A 00
+
+F22B 1F Januari    Dagen per maand van dit jaar
+F22C 1C Februari
+F22D 1F Maart
+F22E 1E April
+F22F 1F Mei
+F230 1E Juni
+F231 1F Juli
+F232 1F Augustus
+F233 1E September
+F234 1F Oktober
+F235 1E November
+F236 1F December
+
+F237 00,00,00,00 Variabelen van BUFINP (BDOS functie 10)
+
+F23B 00 Printer aan (Dos : ^P) NZ=aan
+
+F23C 00
+
+F23D 79 Current DMA adres
+F23E DD
+
+F23F FE Sector nummer
+F240 01
+F241 00
+F242 01
+
+F243 97 DPB adres van de current drive
+F244 F1
+
+F245 00 Current sector inside directory (0-based)   Deze variabelen worden
+F246 00 Drive van de current directory              gebruikt door de Search
+                                                    first en next routines
+F247 00 Default drive 0=A, 1=B etc.
+
+F248 10 Dag
+F249 0B Maand
+F24A 09 Jaar (L)
+F24B 00 Jaar (H) -1980
+F24C 17 Tijd
+F24D 0E Tijd
+F24E 04 Dag van de week
+
+F24F C9 (625A) Komt van "Insert disk for drive" routine
+F250 C9        [AF] heeft de drive in CHAR vorm (41h = "A")
+F251 C9
+
+F252 C9 (41FA)
+F253 C9
+F254 C9
+
+F255 C9 (425A) Van de fix-filename routine.
+F256 C9
+F257 C9
+
+F258 C9 (42BC) Wordt door een aantal routines aangeroepen.
+F259 C9        Hiermee kan F2DC aangepast worden om bijvoorbeeld onder basic
+F25A C9        sub-dirs te zien in FILES en om ze te kunnen OPENen (altijd)
+
+F25B C9 (4317) Wordt door de DIRENT increase routine aangeroepen. Vlak hierna
+F25C C9        wordt de nieuwe DIRENT opgeslagen (nu in [AF]).
+F25D C9
+
+F25E C9 (4348) Wordt aangeroepen door de routine die de volgende directory
+F25F C9        sector gaat inladen.
+F260 C9
+
+F261 C9 (440E) Van Fix filename routine
+F262 C9
+F263 C9
+
+F264 C9 (4471) Van de OPEN routine
+F265 C9
+F266 C9
+
+F267 C9 (    )
+F268 C9
+F269 C9
+
+F26A C9 (4553) Van de GETDPB routine
+F26B C9
+F26C C9
+
+F26D C9 (45CF) Vanuit de CLOSE routine
+F26E C9
+F26F C9
+
+F270 C9 (46C5) DISKREAD        [HL]=DMA
+F271 C9        Lees sector     [DE]=Sector
+F272 C9        BDOS:2Fh        [B] =Aantal sectoren
+
+F273 C9 (470A)
+F274 C9
+F275 C9
+
+F276 C9 (4748)
+F277 C9
+F278 C9
+
+F279 C9 (4755) DISKWRT         [HL]=DMA
+F27A C9        Schrijf sector  [DE]=Sector
+F27B C9        BDOS:30h        [B] =Aantal sectoren
+
+F27C C9 (4916) Van de HL=DE*BC routine
+F27D C9
+F27E C9
+
+F27F C9 (492F) Van de BC=BC/DE; HL=rest routine
+F280 C9
+F281 C9
+
+F282 C9 (4989)
+F283 C9
+F284 C9
+
+F285 C9 (49B1)
+F286 C9
+F287 C9
+
+F288 C9 (4A36)
+F289 C9
+F28A C9
+
+F28B C9 (4A46)
+F28C C9
+F28D C9
+
+F28E C9 (4B56)
+F28F C9
+F290 C9
+
+F291 C9 (4BE2)
+F292 C9
+F293 C9
+
+F294 C9 (4C22)
+F295 C9
+F296 C9
+
+F297 C9 (4C97)
+F298 C9
+F299 C9
+
+F29A C9 (4D05)
+F29B C9
+F29C C9
+
+F29D C9 (4D8C)
+F29E C9
+F29F C9
+
+F2A0 C9 (4E48)
+F2A1 C9
+F2A2 C9
+
+F2A3 C9 (4EDB)
+F2A4 C9
+F2A5 C9
+
+F2A6 C9 (4F12)
+F2A7 C9
+F2A8 C9
+
+F2A9 C9 (4F9E)
+F2AA C9
+F2AB C9
+
+F2AC C9 (5104) Van BUFINP (BDOS 10), vlak voor de DIRIN2 call (BDOS 02)
+F2AD C9
+F2AE C9
+
+F2AF C9 (53A8) Wordt aan het begin van de CONOUT routine aangeroepen.
+F2B0 C9
+F2B1 C9
+
+F2B2 C9 (5496)
+F2B3 C9
+F2B4 C9
+
+F2B5 C9 (5523) Van de februari = 28/29 dagen bereken routine
+F2B6 C9
+F2B7 C9
+
+F2B8 00 DIRENT Current entry in de directory
+
+F2B9 44 Filename opslag
+F2BA 49
+F2BB 53
+F2BC 4B
+F2BD 52
+F2BE 4F
+F2BF 4D
+F2C0 20
+F2C1 56
+F2C2 41
+F2C3 52
+F2C4 00 Attribuut. Als bit 7 hiervan geSET is, kunnen ook de
+                   files met een niet-normal attribuut worden
+                   geopend. Deze kan geset worden door bij de
+                   BDOS open routine al bit 7 te SETten van
+                   het drive byte. (=FCB+0)
+
+F2C5 00
+F2C6 00
+F2C7 00
+F2C8 00
+F2C9 00
+F2CA 00
+F2CB 00
+F2CC 00
+F2CD 00
+F2CE 00
+F2CF 00 (2) Tijd
+F2D0 00
+F2D1 00 (2) Datum
+F2D2 00
+F2D3 00 (2) Eerste cluster (bij de eerste file is dat altijd 2)
+F2D4 00
+F2D5 00 (4) File grootte
+F2D6 00
+F2D7 00
+F2D8 00
+F2D9 00
+F2DA 00
+F2DB 00
+
+F2DC 00 If NZ dan worden files met een niet-0 attribuut ook geaccepteerd
+        (F2C4 bit 7 gaat voor !)
+
+F2DD 01
+F2DE 00
+F2DF 01
+F2E0 80
+F2E1 00 Current drive voor absolute disk read/write
+F2E2 79
+F2E3 DE
+F2E4 00
+F2E5 0A
+F2E6 00
+F2E7 00
+F2E8 00
+F2E9 01
+F2EA 02
+F2EB 00
+F2EC FC
+F2ED 00
+F2EE 06
+F2EF 00
+F2F0 06
+F2F1 00
+F2F2 00
+F2F3 00
+F2F4 00
+F2F5 0C
+F2F6 00
+F2F7 00
+F2F8 00
+F2F9 00
+F2FA 00
+F2FB 00
+F2FC 00
+F2FD 00
+F2FE 2A Net zoals F2B8, subcounter
+F2FF 01
+F300 00
+F301 00
+F302 CA
+F303 02
+
+F304 00 Store Stack Pointer (SP)
+F305 00
+
+F306 00 Default drive van MSXDOS
+
+F307 00 Opslag van DE (=FCB pointer) als [C]>11 bij de BDOS call (0F37Dh)
+F308 00
+
+F309 00 Opslag van het DPB adres door Search first en next
+F30A 00
+F30B FF Current Directory entry bij Search.
+F30C 00
+
+F30D 00 Verify flag (NZ=on)
+
+F30E 01 Datum opbouw (0 = YYMMDD, 1 = MMDDYY, 2 = DDMMYY)
+
+F30F 00 (4) Worden gebruikt door KANJI
+F310 00
+F311 00
+F312 00
+F313 00
+F314 00
+F315 00
+F316 00
+F317 00
+F318 00
+F319 00
+F31A 00
+F31B 00
+F31C 00
+F31D 00
+F31E 00
+F31F 00
+F320 00
+F321 00
+F322 00
+
+F323 AE ERRADR Op dit adres wordt een adres opgehaalt, waarnaar dan wordt
+F324 72        gesprongen als er een error optreed
+
+F325 6C CTRLCAD Net zoals bij ERRADR, maar nu als er op ^C wordt gedrukt
+F326 5C
+
+F327 3E Cursor positie  Wordt samen met F329 door de AUXINP gebruikt.
+F328 1A Idem            Er staat dan LD A,^Z
+F329 C9                              RET
+
+F32A C9
+F32B C9
+
+F32C C9 JP van AUXOUT
+F32D C9
+F32E C9
+F32F C9
+F330 C9
+
+F331 F7 RST 30h                         Uitvoer van BDOS
+F332 8F Slot ID (hier:3-3)
+F333 D3 Adres   (hier:56D3)
+F334 56
+F335 C9 RET
+
+F336 00 Toetsenbord controle. F336=NZ -> F337 heeft een teken
+F337 00                       Beide op 03 -> CTRL-STOP ingedrukt
+                              Voor sommige routines: F336<>0 -> ^S mogelijk
+
+F338 FF Clockchip indicator (NZ->Clockchip, Z->Geen clockchip)
+
+F339 00 (2) Opslag SP bij aanroep input-current-date routine (diskrom)
+F33A 00
+F33B B5 (2) Opslag HL bij aanroep aanroep clockchip routine
+F33C 05
+F33D 01
+F33E 00
+F33F 00
+
+F340 F3 REBOOT (Bij een 0 wordt door DOS alles opnieuw geinitialiseerd
+
+F341 8B Slot ID RAM, Page 0 (hier:3-2)
+F342 8B Idem         Page 1
+F343 8B Idem         Page 2
+F344 8B Idem         Page 3
+
+F345 07 Wordt gebruikt voor de bepaling van het aantal vrije buffers (x 025h)
+
+F346 00 Met DOS doorgestart? (=mag CALL SYSTEM ? NZ->Ja, Z->Nee)
+
+F347 02 Totaal aantal logische drives aangesloten
+        (wordt o.a. door CALL FORMAT gebruikt)
+
+F348 8F Slot ID van de DISKROM (hier:3-3)
+
+F349 95 HIGHMEM Alles vanaf hier tot en met F37F is door de diskrom gebruikt.
+F34A DF
+
+F34B 00 CLEAR grens MSXDOS. Dit adres wijst onder MSXDOS altijd naar het begin
+F34C 00                     van MSXDOS. COMMAND.COM wordt vanaf dit adres in-
+                            geladen.
+
+F34D 97 Pointer naar een gebied voor tijdelijke FAT sector opslag.
+F34E EF
+
+F34F 97 Pointer naar een gebied voor tijdelijke DATA sector opslag.
+F350 ED
+
+F351 97 Pointer naar een gebied voor tijdelijke DIRECTORY sector opslag.
+F352 EB
+
+F353 92
+F354 DE
+
+F355 97,F1 Adres van het DPB van drive A:
+F357 AC,F1                       drive B:
+F359 00,00                       drive C:
+F35B 00,00                       drive D:
+F35D 00,00                       drive E:
+F35F 00,00                       drive F:
+F361 00,00                       drive G:
+F363 00,00                       drive H:
+
+F365 DB IN A,(0A8H)
+F366 A8
+F367 C9 RET
+
+F368 C9 ROMUSE Schakelt de DISKROM aan onder page 1. Werkt alleen tijdens DOS
+F369 00
+F36A 00
+
+F36B C9 RAMUSE Schakelt de RAM aan onder page 1. Werkt alleen tijdens DOS
+F36C 00
+F36D 00
+
+F36E C9 Verplaats ROM naar RAM HL=source, DE=dest, BC=len. Alleen onder DOS
+F36F 00
+F370 00
+
+F371 C3 AUXINP Aux device input. Wordt hier afgebogen naar een routine de
+F372 27                          ^Z terug geeft in [AF]
+F373 F3
+
+F374 C3 AUXOUT Aux device output. Wordt hier afgebogen naar een RET.
+F375 2C
+F376 F3
+
+F377 C3 Bload
+F378 79
+F379 DE
+
+F37A C3 Bsave
+F37B 87
+F37C DE
+
+F37D C3 BDOS
+F37E 31
+F37F F3
+

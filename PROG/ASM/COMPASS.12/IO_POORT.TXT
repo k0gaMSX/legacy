@@ -1,0 +1,449 @@
+-------------------------------------------------------------------------------
+MSX I/O POORTEN (&h00 - &hFF)               COMPASS v1.0  (c) 1994 COMPJOETANIA
+-------------------------------------------------------------------------------
+
+Samensteller: Compjoetania, Eric van Beurden
+Bron        : Diversen boeken en personen (o.a. Henrik Gilvad)
+Versie      : #1.00
+
+
+De MSX I/O poorten zijn in assembly als volgt aan te sturen:
+
+Read_Poort:  IN  A,(&Hxx)               ;&Hxx = Poort nummer (0-255) 
+             BIT A,x                    ;   x = Bit nummer (0-7) om te testen 
+             JP  NZ,bitGeset
+
+Write_Poort: LD  A,&Hxx                 ;&Hxx = Data 
+             OUT (&Hxx),A               ;&Hxx = Poort nummer (0-255) 
+
+
+
+De  I/O adressen  &H00 tot  en met &H3F zijn vrij en mogen gebruikt worden om
+zelf randapperatuur aan te koppelen.
+
+00-01 x:Philips Muziek Module MIDI 6850
+        Het decoderen van de hardware adressen wordt er langzaam gedaan. Dit 
+        zijn de decoderings gebieden:
+
+         00,08,10,18     ACIA 6850 Write         Use #00 or #10
+         01,09,11,19     ACIA 6850 Write         Use #01 or #11
+         04,0C,14,1C     ACIA 6850 Read
+         05,0D,15,1D     ACIA 6850 Read
+         08-0F,18-1F     8 bit D/A Converter.    Use #A-B,#E-F, #1A-1B,#1E-1F
+
+        Dit betekend dat het niet goed samenwerkt met andere cartridges die 
+        dezelfde I/O gebieden gebruiken van #00-#1F behaleve 2,3,6,7,#12,
+        #13,#16,#17.
+00-07 x:MT modem
+08-7F x:MT modem spiegelregisters (d.m.v. jumpers)
+09-0D x:?
+0F    x:Mega RAM/ROM
+10-17 x:?
+18-19 x:Barcode reader NMS 1170/20 Philips
+            #18 R   :Bit 0-6 ASCII code, barcode cijfer of code ID
+                    :Bit 7   Status buffer (0) Barcode staat gereed, (1) Einde 
+                             barcode
+                  W :Bit 0-5 Data bits
+                     Bit 6-7 Commando bits
+            #19     :?
+20-27 x:Modem NMS 1250 Philips 2e instelling
+28-29 x:
+30-37 x:-Modem NMS 1250 Philips
+        -Modem Miniware
+        -CD ROM interface Philips
+        -Op Turbo R GT vrij!!
+        -SCSI interfaces van HSH,MAK en HG
+            #34 R   :WD33C93A 'Auxiliary Status'
+                  W :WD33C93A Adres register (registers 00-1F)
+            #35 R/W :WD33C93A Data
+            #36   W :Wanneer data naar deze poort geschreven wordt dan wordt 
+                     er een Reset pule gegenereerd op de SCSI BUS naar de SCSI
+                     chip! (Aprox 50usec.)
+            #36 R   :Op de orginele SCSI interface van HSH was een schakelblok 
+                     aanwezig met 8 schakelingen. Deze kunnen gelezen worden
+                     door deze poort.
+            #37     :Bij sommige interfaces is poort 37 gelijk aan poort 36 
+                     maar wordt alleen poort 36 gebruikt.
+38-3F x:RS232 NMS 1210 Philips
+
+
+
+De I/O adressen &H40 tot en met &HFF zijn gereserveerd voor intern gebruik
+binnen het MSX-systeem.
+
+
+ S1985 MSX engine back-up RAM (internally, 8bit x 16)
+40    1:Maker identity byte
+41    x:Adres register 00-0F
+42    x:Data register
+43-45 x:
+ S1985 MSX engine help circuit for faster PUT KANJI.
+46    x:Voor en Achtergrond kleur
+47    x:Bitpatroon voor de kleuren
+48-5F x:
+60-6F 2:Graphics 9000 (GFX9000), Video Display Processor V9990
+            #60 R/W :Poort #0   VRAM data
+            #61 R/W :Poort #1   Palet data
+            #62 R/W :Poort #2   Commando data
+            #63 R/W :Poort #3   Data register inhoud read/write
+            #64   W :Poort #4   Register write
+            #65 R   :Poort #5   Status
+            #66 R/W :Poort #6   Interrupt vlag
+            #67   W :Poort #7   Systeem controle
+            #68   W :Poort #8   Primair stand. kanji ROM laagste adres
+            #69 R/W :Poort #9   Primair stand. kanji ROM hoogste adres + data
+            #6A R   :Poort #A   Secun. stand. kanji ROM laagste adres
+            #6B R/W :Poort #B   Secun. stand. kanji ROM hoogste adres + data
+        
+        Poorten 68-6B zijn alleen op het V9990 evaluation board aanwezig, niet
+        op de GFX9000! Dit in verband met het ontbreken van een Kanji ROM op 
+        de GFX9000.
+
+            #6C-#6D :Poort #C-D Gereserveerd
+            #6F   W :SuperImpose chip V7040
+                     Bit 0 =alleen V9990 output
+                     Bit 1 =sets MIX mode.
+                     Opm.  Schrijf 0 naar #6F voor alleen GFX9000!
+
+        De poort 6F is alleen op de GFX9000 aanwezig! Op het evaluation board  
+        is namelijk geen superimpose chip aanwezig.
+70-7B x:
+7C-7D +:MSX Music, OPLL
+            #7C   W :Register
+            #7D   W :Register data
+7E-7F x:Moonsound, OPL4 Wavetable part.
+            #7E   W :Register
+            #7F R/W :Register data
+80-87 1:RS232 interface
+            #80 R/W :i-8251 gegevenstransmissie
+            #81 R/W :i-8251 commando/statusregister
+            #82 R   :toestand van de RS232-verbinding
+            #83   W :interruptmasker
+        i-8253 programmable timer
+            #84 R/W :i-8253 teller 0
+            #85 R/W :i-8253 teller 1
+            #86 R/W :i-8253 teller 2
+            #87   W :i-8253 instelling
+88-8B 2:MSX2 V9938 adaptor voor de MSX1 V9929 (neos)
+8C-8D x:Modem MSX van Sony
+8E-8F x:Gereserveerd
+90-91 2:Printer interface
+            #90   W :bit0 = strobe
+                R   :bit1 = status
+            #91   W :Code van te printen teken
+92    x:?
+93    2:Printer busdirection. De S1985 (MSX-Engine) is voorbereid op een
+        Redirectionale printerpoort! Het vereist extra externe chips maar geen
+        bestaande MSX model heeft het ooit gebruikt.
+            #93     :bit 0-1 are used to control the mode. 
+                              0 0              /PRST release 
+                              0 1              /PRST ouput 
+                              1 0              Input state or /PRS release 
+                              1 1              Output state or /PRST release 
+        Zie het S1985 MSX SYSTEM 2 Application manual pagina 13-14.
+98-9B +:Video Display Processor (VDP), type V9938, V9958
+            #98 R/W :Poort #0, Vram
+            #99 R   :Poort #1, Status register
+                  W            Register/Register data
+                  W            Vram adres
+            #9A   W :Poort #2, Palet
+            #9B   W :Poort #3, Indirect access
+9C-9F x:Gereserveerd
+A0-A2 1:General Instruments AY-3-8910 Programmabele Sound Generator (PSG)
+            3A0   W :Register
+            #A1   W :Register data (W)
+            #A2 R   :Register data (R)
+A4-A5 R:PCM, D/A converter
+            #A4   W :D/A Converter. Beide gebruikt tijdens het opnemen en af-
+                     spelen van PCM.
+                R   :Bit 0-1 Teller 16 Khz. Gebruikt door sampler
+                     Bit 2-7 Ongebruikt
+            #A5   W :Bit 0 ? Altijd gezet met bit 1, gereset tijdens sampling?
+                     Bit 1   Muting: (1) geluid aan (0) geluid uit
+                     Bit 2   Filter (1=on) meestal gebruikt tijdens sampling
+                     Bit 3   Select: (1) Mic/Jack (0) D/A Converter
+                     Bit 4   Sample/Hold: (1) stores a value which the
+                             Comperator will womper to the output of the DAC
+                             during sampling
+                     Bit 5-7 Ongebruikt
+                R   :Bit 0 ? Altijd gezet met bit 1, gereset tijdens sampling?
+                     Bit 1   Muting: (1) geluid aan (0) geluid uit
+                     Bit 2   Filter (1=on) meestal gebruikt tijdens sampling
+                     Bit 3   Select: (1) Mic/Jack (0) D/A Converter
+                     Bit 4   Sample/Hold: (1) stores a value which the
+                             Comperator will womper to the output of the DAC
+                             during sampling
+                     Bit 5-6 Ongebruikt 
+                     Bit 7   Comperator result.
+A6    R:?
+A7    R:Ledjes van Turbo R display
+            #A7   W :Bit 0   Pauze led: (0) uit, (1) aan
+                     Bit 7   Turbo led: (0) uit, (1) aan
+                R   :Bit 0   Detecteert of de PAUSE toets ingedrukt is: (1) is
+                             ingedrukt
+A8-AB 1:Intel 8255 Programmable Peripheral Interface (PPI)
+            #A8 R/W :PPI Poort A :Primary slotselect register
+            #A9 R   :PPI Poort B :Deze poort wordt gebruikt om de 8 bits rij te
+                     lezen van de op dat ogenblik afgetast rij van het keyboard
+                     Het is geconstruktureerd als een matrix van 11 rijen van
+                     elk 8 bits breed. Op de Turbo R worden alle 11 de rijen
+                     bezet. (De 11e rij is o.a. voor het uitlezen van de 
+                     interne software schakellaar die naast de reset knop zit)
+            #AA R/W :PPI Poort C :Diversen functies
+                     Bit 0-3 Bepaald welke rij op het toetsenbord (0 t/m 11)
+                             door poort B ingelezen moet worden
+                     Bit 4   Het cassettemoter bit, bepaalt de stand van het
+                             relais dat de cassettemoter schakelt: (0) aan,
+                             (1) uit
+                     Bit 5   Het cassette output bit, wordt gefilterd en
+                             verzwakt voordat het naar de DIN plug gaat, als
+                             het signaal voor de cassetterecorder. Alle
+                             cassettesignalen worden via software gegenereerd.
+                     Bit 6   Het CAPS bit, bepaalt de stand van het lampje bij
+                             de hoofdletter toets: (0) aan, (1) uit
+                     Bit 7   Bepaalt het geluid dat gemaakt wordt bij het
+                             indrukken van een toets. Het wordt verzwakt en
+                             gemengd met het signaal van de geluidsgenerator.
+                             Om een geluid voort te brengen, moet dit bit
+                             voortdurend tussen 0 en 1 heen wen weer gezet
+                             worden.
+            #AB   W :Mode register. Deze poort regelt de werking van de PPI. 
+                     De MSX hardware werd ontworpen om in een bepaalde
+                     configuratie te werken. Het wijzigen van deze poorten is
+                     dus niet nodig en zeer gevaarlijk. Men kan er de PPI 
+                     zelfs mee opblazen!
+                     Bit 0   C-direction bit bepaalt in welke richting de
+                             laagste vier bits van poort C werken: (0) output  
+                             (MSX), (1) input
+                     Bit 1   B-direction bit bepaalt de richting voor poort B:
+                             (0) output, (1) input (MSX)
+                     Bit 2   'B & C mode' bit bepaalt de manier waarop poort B 
+                             werkt en de laagste vier bits van poort C: (0)  
+                             normale werking (MSX), (1) strobe mode
+                     Bit 3   C-direction bit bepaalt in welke richting de
+                             hoogste vier bits van poort C werken: (0) output  
+                             (MSX), (1) input
+                     Bit 4   A-direction bit bepaalt de richting voor poort A:
+                             (0) output (MSX), (1) input
+                     Bit 5-6 'A & C mode' bit bepalen de werking van poort A,
+                             en de vier hoogste bits van poort C: (00) normale
+                             werking (MSX), (01) strobe mode, (10) tweerich-
+                             tings verkeer 
+                     Bit 7   Mode bit: (1) men kan door middel van bit 0-6 de 
+                             mode waarin de PPI werkt wijzigen, (0) Nu krijgt 
+                             het Mode register een hele andere functie! Deze 
+                             poort kan nu gebruikt worden om rechtstreeks een  
+                             bit van poort C te (re-)setten. De bits van de 
+                             Mode poort hebben als bit7 0 is de volgende 
+                             functie: Bit 0   Reset/set bit: (0) reset, (1) set
+                                      Bit 1-3 Bepaalt het bit van register C, 
+                                              mogelijke waarde zijn 0 t/m 7
+                                      Bit 4-6 Niet in gebruik
+                             Door de instructie OUT &hAB,&b00001100 kan het
+                             CAPS-lock lampje worden aangezet
+AC-AF 2:MSX Engine (welke ? niet S1990 of S1985!)
+B0-B3 1:HBI-55 (8255) data catridge SONY
+            #B0 R/W :Poort A adreslijn A0-A7
+            #B1 R/W :Poort B adreslijn A8-A10, A13-A15, Control, R/W
+            #B2 R/W :Poort C adreslijn A11-A12, datalijnen D0-D7
+            #B3     :Control wordt 8255 WR
+B4-B5 2:Clockchip interface (RP 5C01)
+            #B4   W :Register/block
+            #B5 R/W :Register data
+B6-B7 x:Card reader
+B8-BB 2:-Lichtpen interface Sony
+        -Barcode reader NMS 1190/20 (b8/9)
+BC-BF 2:Video controller JVC (VHD)
+C0-C1 2:MSX Audio
+            #C0   W :Register
+                R    Status register
+            #C1   W :Register data
+C2-C3 2:MSX-Audio 2e instelling
+            #C0   W :Register
+                R    Status register
+            #C1   W :Register data
+C4-C7 2:Moonsound (OPL4), het FM-gedeelte
+            #C4   W :Register
+                R    Status register
+            #C5 R/W :Register data
+            #C6   W :Register      (2.nd register block)
+            #C7 R/W :Register data (2.nd register block)
+C8-CC 2:MSX interface. De MSX interface is een  8255 interface voor 
+        communicatie tussen 2 MSX computers. Het SUBROM initialiseerd deze 
+        poorten als een 8255.
+CD-CF x:
+D0-D7 2:Floppy controller ATV (Diskdrive)
+            #D6     :in Use
+            #D7     :Motor on 
+      2:MK SCSI harddisk interface
+      R:Turbo R GT, There is a circuit in the GT which will cancell all I/O
+        to port #D0-#DF, that is probably because of the Kanji ROM's. If
+        external KanjiROM cartridges is put in the Turbo R and there is
+        differences in the ROM's then the ROM's would be in danger. This 
+        circuit is probably not in the A1ST!
+D8-D9 2:Kanji ROM 1
+            #D8   W :Adreslijnen A5-A0 LSB
+            #D9   W :Adreslijnen A5-A0 MSB
+                R   :Datalijnen D7-D0
+DA-DB 2:Kanji ROM 2 (Uitbreiding)
+            #DA   W :Adreslijnen A5-A0 LSB
+            #DB   W :Adreslijnen A5-A0 MSB
+                R   :Datalijnen D7-D0
+DC    R:Kanji ROM 24 dot (output, sets the address)
+DD    x:Font data
+DE-DF x:Gereserveerd
+E0-E2 R:MSX MIDI cartridge
+            #E0 R/W :Data
+            #E1   W :Command
+                R   :Status register
+            #E2   W :Select. I believe that this port can be used to change the
+                     port between E0-E1 and E8-E9 or perhaps just to enable it.
+                     I know that bit 0 is used but I don't know the exact
+                     function.
+E3-E5 R:Turbo R MSX-Engine S1990
+            #E3     :?
+            #E4   W :Register write
+            #E5 R/W :Data register inhoud read/write
+                        register  5: de schakellaar   00=rechts
+                                                      64=links
+                        register  6: de processor     00=R800 DRAM
+                                                      64=R800 ROM
+                                                      96=Z80
+                        register 13: ? (3 perhaps a primary slot # ?)
+                        register 14: ? (47 ?)
+                        register 15: ? (139 = 10001011, perhaps a slotID?)
+E6-E7 R:System Timer, 16-bit counter van ongeveer 250 KHz.
+            #E6 R   :LSB
+            #E7 R   :MSB
+E8-E9 R:MSX-MIDI interface (8251 chip, same as used in RS232)
+            #E8 R/W :MIDI data
+            #E9   W :Command
+                     Bit 0   MIDI out enable
+                     Bit 1   MIDI timer enable. (Interrupt enable !)
+                     Bit 2   MIDI in enable.
+                     Bit 5   Enable interrupt for received MIDI data.
+        To initialise the 8251 first write a Mode Select Byte and then
+        a Command Select Byte. After this the chip will be in the Command
+        Select mode until bit 6 (Internal Reset) is set.
+
+                 0   1  0  0   1  1  1  0  (Used for MIDI operation)
+                XWWRWWRWWRWWWRWWRWWRWWRWWY
+      W VS2VS1VEPVPENVL2VL2VB2VB1V Mode Select Byte.
+                ZWWQWWQWWQWWWQWWQWWQWWQWW[ XWWWWRWWWRWWWRWWWY
+                  V  V  V  V   V  V  V  ZWWS  0 V 1 V 0 V 1 V
+                  V  V  V  V   V  V  ZWWWWWS  0 V 0 V 1 V 1 V
+                  V  V  V  V   V  V        TWWWWUWWWUWWWUWWWS
+                  V  V  V  V   V  V        VSyncV *1V*16V*64V
+                  V  V  V  V   V  V        ZWWWWQWWWQWWWQWWW[
+                  V  V  V  V   V  V         Character Length
+                  V  V  V  V   V  V        XWWWRWWWRWWWRWWWY
+                  V  V  V  V   V  ZWWWWWWWWS 0 V 1 V 0 V 1 V
+                  V  V  V  V   ZWWWWWWWWWWWS 0 V 0 V 1 V 1 V
+                  V  V  V  V               TWWWUWWWUWWWUWWWS
+                  V  V  V  V               V 5 V 6 V 7 V 8 V Data Bits
+                  V  V  V  V               ZWWWQWWWQWWWQWWW[
+                  V  V  V  ZWWWWWWWWWWWWWWW Parity Enable. 1 = enabled.
+                  V  V  ZWWWWWWWWWWWWWWWWWW Even Parity generation / check
+                  V  V                       1 = Even parity. 0 = Odd parity
+                  V  V
+                  V  V                         Stop bits
+                  V  V                     XWWWRWWWRWWWRWWWY
+                  V  ZWWWWWWWWWWWWWWWWWWWWWS 0 V 1 V 0 V 1 V
+                  ZWWWWWWWWWWWWWWWWWWWWWWWWS 0 V 0 V 1 V 1 V
+                                           TWWWUWWWUWWWUWWWS
+                                           V---V 1 V1.5V 2 V Stop Bits
+                                           ZWWWQWWWQWWWQWWW[
+
+
+        Command Select Byte (after Mode Select Byte!)
+
+          1  Bit 0 TxEN  Transmit Enable (0) disable, (1) enable
+          1  Bit 1 DTR   DTR pin. 1: pin=0. (Active)
+          1  Bit 2 RxE   Receive Enable (0) disable, (1) enable
+          0  Bit 3 SBRK  Send Break Characters (0) Normal transmision,
+                         (1) Send Break Characters (TxD low)
+          0  Bit 4 ER    Error Reset  (1) reset flags PE,OE,FE
+          1  Bit 5 RTS   RTS pin. 1 = RTS active low.
+          0  Bit 6 IR    Internal Reset (1) returns to Mode Instruction
+          0  Bit 7 EH    Enter Hunt Mode (1) search for Sync Char. (not used)
+
+
+
+                R   :Status register
+                     Bit 0 TxRDY   (1)=ready for TX chars.
+                     Bit 1 RxRdy   (1)=Byte in receive buffer
+                     Bit 2 TxEmpty (1)=Transmitter is empty
+                                   (0)=Transmitteris sending data
+                     Bit 3 PE      (1)=Parity Error
+                     Bit 4 OE      (1)=Overrun error (data lost)
+                     Bit 5 FE      Framing error. (no Stop bit)
+                     Bit 6 SynDet  (1)=SYNC char detected in SYNC mode. (MIDI  
+                                       is ASYNC)
+                     Bit 7 DSR     input pin
+
+
+        DSR pin is connected to the 8254 TIMER interrupt output. If interrupt
+        have been disabled then we can read this bit to detect TIMER interupt.
+        The A1GT interrupt handler uses bit 7 to detect Timer interrupt and
+                                        bit 1 to detect MidiRx interrupt.
+
+EA-EB R:Used to Clear the 8254 timerinterrupt. Done by writing any value.
+EC-EF R:8254 chip. De 8254 is net als de 8253 een timer, maar heeft verbeterde
+        mogelijkheden om de timerwaardes uit te lezen en kan een hogere 
+        snelheid aan. Note: Timer 1 telt,
+        Timer 2 'interrupts'.
+            #EC R/W :Timer 0, Input Clock 4MHz. Output 8251 Clock
+            #ED R/W :Timer 1, Input Timer 2.    Geen output. (Alleen Software)
+            #EE R/W :Timer 2, Input Clock 4MHz. Output genereerd interrupts.
+            #EF   W :Command
+F0-F3 x:Gereserveerd
+F4    +:ROM/Cold start Status register
+            #F4 R/W :bit 7  Wordt gebruikt om een onderscheid te maken tussen
+                            een soft- en hardware reset. (Op de Turbo R wordt
+                            dit bit niet geinventeerd!)
+                    :bit 5  When this bit have been written then it cannot be
+                            reset again by software. It is used by the Bootup  
+                            routine to see if it should change the CPU mode.
+                            (I think)
+                    note: Due to the polarity change on Turbo R you should use
+                          the BIOS routines #17A and #17D to Read and Write !
+F5    2:System control, met deze poort kan je interne hardware disabele voor 
+        het geval dat een cartridge met dezelfde inhoud in een extern slot 
+        steek. Op een met Kanji ROM's computer (Turbo R) kun je het als volgt
+        uitproberen: Schakel de Kanji mode in (_kanji0), type OUT &hF5,0, de 
+        Kanji letters zullen nu witte blokjes zijn. Na OUT &hF5,1 is alles 
+        weer normaal. 
+            #F5   W :bit0  Kanji ROM
+                     bit1  Kanji ROM 2
+                     bit2  MSX-Audio
+                     bit3  Super Impose
+                     bit4  MSX-interface
+                     bit5  RS232c interface
+                     bit6  Lichtpen
+                     bit7  Clockchip interface
+F6-F7 2:Audio/Video control superimpose !!!!!!!!!!!!!!!!!!!
+            #F6 R/W :Colorbus control
+            #F7     :bit0  audio rechts
+                     bit1  audio links
+                     bit2  video input select
+                     bit3  video input sence (lezen)
+                     bit4  A/V control
+                     bit5  Ym control
+                     bit6  Ys control
+                     bit7  Video select
+F8    x:Opt palvers bit 8280???!!!!
+            #F8     :bit0  audio rechts
+                     bit1  audio links
+                     bit2  Gereserveerd
+                     bit3  Rc 5 int
+                     bit4  Sound
+                     bit5  Sound
+                     bit6  Gereserveerd
+                     bit7  Gereserveerd
+F9-FB x:Gereserveerd
+FC-FF 2:Memory mapper
+            #FC   W :Page 0, (&H0000-&H3FFF)
+            #FD   W :Page 1, (&H4000-&H7FFF)
+            #FE   W :Page 2, (&H8000-&HBFFF)
+            #FF   W :Page 3, (&HC000-&HFFFF)
+

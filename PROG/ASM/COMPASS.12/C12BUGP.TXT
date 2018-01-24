@@ -1,0 +1,118 @@
+File: C12Bupg.txt - 25/09/1997
+Subject: New version of Compass: version 1.2beta
+(C)1997 Compjoetania The Next Generation
+
+Compassreleases:
+1995:
+v1.0 :first version, some bugs, no shell, very good
+v1.1beta: betarelease of the second version of Compass, better than v1.0
+          Contains some VERY NASTY BUGS:
+          *does not run under DOS1
+          *no correct PUSHing in the debugger
+v1.1 :some minor bugs were removed, but the above mentioned bugs were still
+      there...
+
+1996: the 'old' Compjoetania members stopped programming for the 
+MSX-system. Except Davy Heremans; he gathered some other MSX-minded 
+people to start a new group: Compjoetania The Next Generation.
+The old members promised to give us the Compass sources so that we could 
+continue the development. 
+
+June 1997: nothing received yet...
+July 1997: Compjoetania TNG starts from scratch all over. We disassembled
+           Compass v1.1 with... Compass v1.1!!!
+August/September 1997: Now we really know how big 16kB is!......
+                       Ready to release a Compass v1.2 betaversion!
+
+This betaversion will only be available on the CD-ROM that will be made 
+by MCCM. This is a FULL FUNCTIONAL promoversion. Version 1.2 or maybe 
+v2.0 will be released at the fair in Tilburg in 1998.
+
+The differences between v1.1 and v1.2beta
+-----------------------------------------
+following bugs were removed:
+*working under MSX-DOS 1
+*Crashing when the main ramslot(=TPAslot) was not the same as when you 
+performed a 'Save Installations'. (e.g. when you placed an extra 
+memorymapper in the computer.
+*PUSHing in the debugger works fine now. The error was situated in the 
+Main Install routines.
+*When Compass was started with a succesful 'Installing saved memory:Ok' 
+under DOS2 (without Memman), all available memory (with a limit of 
+384*16kB) was not freed. This resulted in a 'Not enough memory' in the 
+shell and you couldn't use unused segments in the Memorymenu. This did 
+not happen under Memman because of the automatic uncrashing of Memman.
+Fixed.
+*Formatting under DOS1 was a disaster for people with several diskdrives. 
+This was no problem because Compass v1.1 did not work under DOS1. 
+Problems fixed.
+*Checking ROM/RAM routine is incredibly enhanced. No more crashing on 
+7MHz computers. No more wrong detection of ROMsegments because of 
+undefined databus status on some MSX computers. Compass detects now also 
+'fixed' rammodules WHATEVER their lenght is.
+*When you entered no characters when asked for (e.g. Searchfunction and 
+you typed nothing at the 'Replace'line) then the Compassprogram poked 
+some zerobytes in the program! fixed.
+*A lot of other errors which occurred in special cases like the fact that 
+segments weren't freed at startup when a compass-loaderror was encountered.
+
+Bugs not removed in v1.2beta:
+-----------------------------
+*When you press repeatedly F2 in the monitorprogram and press left and 
+right, the background will be screwed up. 
+*Sometimes a line you just edited in the assembler disappears when you 
+press Return. This is the case when you used a new label in this line 
+that you just declared in another sourcebuffer.
+*Sometimes the labelbuffer isn't cleared properly. The computer may crash 
+when asking to show the labels. 
+*All other bugs are welcome at: Jon.DeSchrijder@rug.ac.be
+*REMEMBER: THIS IS STILL A BETAVERSION. THIS VERSION MAY CONTAIN SOME 
+DANGEROUS BUGS!!!
+
+Important differences between Compass v1.1 and v1.2beta:
+--------------------------------------------------------
+Mainroutines have been totaly rewritten! The original memoryroutines at 
+startup were shit! (very slow, especially for people with large 
+memorymappers) The routines are very speady now!
+The routines for setting the automatic configuration (when doing a search 
+memory) are a lot better. Compass will try to use ramsegments in 
+non-tpaslots first. Exception is made for the second Compassprogramblock 
+and the first Labelbuffersegment. These two segments must be in the tpaslot.
+
+Compass v1.1 assumed that the tpasegments are numbered 0,1,2 and 3. 
+According to the MSX-DOS2 manual this must NOT be assumed. You must ask 
+the numbers under DOS2 with the functions GET_Pn, but on some versions 
+these routines perform a IN A,(#FC/#FD/#FE/#FF) instruction while reading 
+of the mapperregisters is ILLEGAL. (because of a hardwareproblem in the 
+MSXengine on Turbo-R computers) Under DOS2 conditions Compass v1.2beta 
+reads memorylocations #F2C7/8/9/A. These addresses do contain the right 
+numbers.
+
+Compass can run under 3 memorymanagement conditions:
+*no memorymanagement (under DOS1), Compass will use its own routines
+ TPAsegmentnumbers: 3,2,1 and 0
+*DOS2 mapper support: under DOS2 with no Memman active.
+ TPAsegmentnumbers: reading #F2C7/8/9/A at startup
+*Memman: under DOS2 with Memman active
+ TPAsegmentnumbers: special GET_TPAsegmentcode function of Memman
+ This function is available since Memman version 2.40. When running an older
+ version of Memman, numbers 3,2,1 and 0 will be used.
+
+NOTICE: when Memman is loaded under DOS1, Memman will be overwritten by 
+the Compass program!
+
+Other changes
+-------------
+*The cursor in the diskmenu starts now at 'Dir'. (People who have erased 
+a file by mistake because of pressing Return when the cursor started at 
+'Save' know why this is done)
+*The initial StackPointer in de debugger has been changed from #DE00 to 
+the REAL stackpointer (when entering Compass) minus 512 bytes.
+*Try TYPE COMPASS.DAT under Dos.
+*A 'hidden' feature! When you start Compass when pressing the [SHIFT] 
+key, Compass will allocate a maximum of nine ramsegments. In future 
+versions this number will be changeable.
+
+Have Fun!
+
+JDS 

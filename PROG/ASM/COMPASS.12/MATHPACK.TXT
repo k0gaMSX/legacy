@@ -1,0 +1,467 @@
+MATH-PACK                                          COMPASS v1.0 by COMPJOETANIA
+-------------------------------------------------------------------------------
+
+Samensteller: Waldo Ruiterman/Jan van der Meer
+Bron        : ?
+Versie      : #1.00
+Note !!     : Originele filenaam is MPNED10.TXT 
+
+
+ &&&&&&&&&&&& ---  MATH-PACK  versie #1.00  --- &&&&&&&&&&&&
+
+==============================================================
+
+MPNED10.TXT (c) 1994 MCCM/WR/JvdM
+
+Met deze tekst beogen wij een zo compleet mogelijk overzicht te geven van 
+de officiele routines van de MATH-PACK (MP) en, in een later stadium, 
+andere bruikbare aan de MP gerelateerde BASIC-routines.
+
+Dat deze file nu bestaat is voornamelijk aan Waldo Ruiterman (WR) te danken 
+die hiervoor het nodige 'koeliewerk' heeft verricht. Ik, Jan van der Meer 
+(JvdM), teken voorlopig voor de tekst.
+
+Als eerste wil ik kwijt dat je voor een goed gebruik van de MP over een 
+behoorlijke dosis machinetaal-kennis en -ervaring dient te beschikken. Ook 
+een meer dan basale kennis van het MSX-geheugenbeheer kan geen kwaad. Aan 
+de andere kant acht ik het niet onmogelijk dat een studie MP je deze 
+vaardigheden vanzelf afdwingt...
+
+Ook al is deze file dan gebaseerd op de over de MP bestaande originele, 
+Engelstalige, literatuur. Het gaat toch te ver om hier van een vertaling te 
+spreken. Dit laatste daar voornoemd origineel niet veel verder gaat dan een 
+tabelarisch overzicht met een wel zeer summiere en onduidelijke 
+beschrijving van de MP-routines.
+
+Niet dat wij, in deze eerste versie, wat dat betreft nou zoveel verder 
+komen hoor. Maar op den duur willen we dat toch zeker wel zien te bereiken. 
+Voorlopig stellen we ons tevreden met een zo compleet mogelijk overzicht 
+van de gedocumenteerde MP-routines en verwijs ik eerst naar MCM 44 voor een 
+uitleg over het oh zo lastige begin van het wegwijs worden in de op het 
+eerste gezicht vreemd aandoende MP-notaties.
+
+Dit is dan ook een pre-release en de auteurs stellen op en aanmerkingen 
+derhalve dan ook zeer op prijs.
+
+Vooreerst wil ik je dus wijzen op MCM 44 pagina 12 waar een artikel begint 
+dat in klare taal uitleg geeft over de in MP gebruikelijke notatie. Ook in 
+de MCCM's 58 en 60 wordt aandacht aan de MP besteed. Desgevraagt ben ik 
+niet te beroert om het een en ander voor je te copieren.
+
+Deze file is overigens PD en mag dus vrij verspreid worden via BBS'en of op 
+wat voor andere, niet winstgevende, manier dan ook. Wat niet mag is dat je 
+er wijzigingen in aanbrengt - hoe logisch die ook mogen lijken. Zie je een 
+fout neem dan kontact met ons op via de aan het eind van deze file vermelde 
+adressen/telefoonnummers.
+
+Verwacht geen wonderen nu je deze file eenmaal hebt. De MATH-PACK laat zich 
+nu eenmaal moeilijk temmen en dus zul je zelf ook het nodige spitwerk 
+moeten verrichten. Mijn (JvdM) ervaring is dat een pakket als WBASS2 alsook 
+MSXDEBUG zich hier bij uitstek voor leent.
+
+===============================================================
+
+De MATH-PACK (MP) is de kern voor de rekenkundige routines van MSX-BASIC. 
+De MP bestaat uit een breed scala aan reken- en wiskundige routines welke, 
+mits aan bepaalde voorwaarden is voldaan, ook vanuit een 'gewoon' 
+ml-programma zijn aan te roepen c.q. te gebruiken. In wezen is de MP dan 
+ook niet meer dan een verzameling van niet officiele BIOS-routines.
+
+Wel is het zo dat niet zelden zowel page 0 (#0000-#3FFF) alswel page 1 
+(#4000-#7FFF) gelijktijdig op de ROM dienen te staan.
+
+Bij de overgang van MSX1 naar MSX2 stonden de programmeurs van dit systeem 
+voor het probleem dat, ook al waren de MP-routines niet officieel, er toch 
+in zowel hun eigen code alswel in zeer veel MSX1 programma's er al een 
+dusdanig veelvuldig en rechtstreeks gebruik van de MP-routines was gemaakt 
+dat ze eigenlijk geen keus meer hadden. Het feit dat ze het voor elkaar 
+hebben gekregen deze routines op hetzelfde adres te houden verdient 
+bewondering. Zo zijn er ook nog diverse BASIC-routines die hun plaats 
+hebben behouden. Een programma dat hier listig gebruik van maakt is 
+MSXCALC.TSR welke bij Jos de Boer (MS-actie) is te bestellen.
+
+Bij veel MP- routines zul je de term BCD (Binary Coded Decimal) tegenkomen. 
+Dit is een manier om binair het tientallig stelsel, zoals wij dat gewoon 
+zijn, op te slaan in nibbles (4 bits ofwel een halve byte). Met deze 
+methode kun je dus twee cijfers in een byte bwijt. Bijvoorbeeld:
+
+%00100111 = 27
+
+Vanuit en door de MATH PACK (hierna MP genoemd) zijn er drie manieren om 
+getallen op te slaan. Dit kan op zijn simpelst de binaire 2-complement 
+zijn. Maar ook de meer op het tientallig stelsel gerichte, op het eerste 
+gezicht onlogische, enkele en dubbele precisie-opslag komt voor. Deze 
+laatste twee opslagmethoden vereisen nogal wat denk- en uitprobeer-werk van 
+de gebruiker om ze volledig te begrijpen.
+
+Een enkel precisie getal (6 zichtbare cijfers) is uitgedrukt in 4 bytes en 
+een dubbel precisie getal (14 zichtbare cijfers) in 8 bytes. Zie hiervoor 
+de tabellen 1 en 2.
+
+
+*** Tabel 1: BCD formaat voor uit te drukken getallen. ***
+
+                   MSB     7   6  5  4   3  2  1  0    LSB
+  _____________________ -----------------------------
+    ^             ^      |+/-|      exponent         | 0
+    |             |      |---------------------------|  
+ dubbele        enkele   | mantisse 1  | mantisse 2  | 1
+precisie       precisie  |---------------------------|
+    |             |      | mantisse 3  | mantisse 4  | 2
+    |             |      |---------------------------|  
+    |             |      | mantisse 5  | mantisse 6  | 3
+    |            _V_____ |---------------------------|  
+    |                    | mantisse 7  | mantisse 8  | 4
+    |                    |---------------------------|
+    |                    | mantisse 9  | mantisse 10 | 5
+    |                    |---------------------------|
+    |                    | mantisse 11 | mantisse 12 | 6
+    |                    |---------------------------|
+    |                    | mantisse 13 | mantisse 14 | 7
+    --------------------------------------------------    
+
+
+*** Tabel 2: voorbeelden van getalsuitdrukkingen. ***
+
+
+      Voorbeeld van een enkele precisie getal:
+
+         123456 ---> 0.123456 E+6
+
+                0    1    2    3
+              ---------------------
+         DAC: | 46 | 12 | 34 | 56 |
+              ---------------------
+
+
+      Voorbeeld van een dubbele precisie getal:
+
+         123456.78901234 ---> 0.12345678901234 E+6
+
+                0    1    2    3    4    5    6    7
+              -----------------------------------------
+        DAC: | 46 | 12 | 34 | 56 | 78 | 90 | 12 | 34 |
+              -----------------------------------------
+
+
+Een getal bestaat uit een +/- teken, een exponent en een decimaal getal. 
+Het +/- teken geeft aan of het decimale getal positief of negatief is. 0 is 
+positief en 1 is negatief. Het exponent is een binaire 2-complement 
+uitdrukking en kan worden uitgedrukt van -63 tot +63 (zie Tabel 3). Tabel 4 
+laat de geldige reeks van dubbele precisie getallen zien. 
+
+*** Tabel 3: Exponent formaat. ***
+
+   |+/- teken| <-----exponent------> |       betekenis:
+   -----------------------------------
+   |    0    |  0  0  0  0  0  0  0  |           0
+   |---------------------------------|
+   |    1    |  0  0  0  0  0  0  0  |  niet gedefinieerd  (-0 ?)
+   |---------------------------------|
+   |    x    |  0  0  0  0  0  0  0  |        E 63 (+/-)
+   |---------------------------------|
+   |    x    |  1  0  0  0  0  0  0  |        E+0
+   |---------------------------------|
+   |    x    |  1  1  1  1  1  1  1  |        E+63
+   -----------------------------------
+
+   Noot: x kan een 1 of een 0 zijn; beide zijn toegestaan.
+
+
+*** Tabel 4: Geldige reeks van dubbele precisie getallen. ***
+
+
+         0    1    2    3    4    5    6    7
+       -----------------------------------------
+   DAC:| FF | 99 | 99 | 99 | 99 | 99 | 99 | 99 |   -0.99999999999999 E+63
+       |---------------------------------------|
+   DAC:| 81 | 10 | 00 | 00 | 00 | 00 | 00 | 00 |   -0.10000000000000 E-63
+       |---------------------------------------|
+   DAC:| 00 | x  | x  | x  | x  | x  | x  | x  |    0
+       |---------------------------------------|
+   DAC:| 01 | 10 | 00 | 00 | 00 | 00 | 00 | 00 |   +0.10000000000000 E-63
+       |---------------------------------------|
+   DAC:| 7F | 99 | 99 | 99 | 99 | 99 | 99 | 99 |   +0.99999999999999 E+63
+       -----------------------------------------
+
+In de MATH-PACK zijn een drietal adressen van groot belang. Dit zijn 
+VALTYP (#F663), DAC (#F7F6...) en ARG (#F847...). De 1-byte-waarde in 
+(VALTYP) slaat niet alleen op het aantal van belang zijnde (significante) 
+bytes in (DAC..) en/of (ARG...), maar daaruitvolgend ook op waar we mee te 
+maken hebben.
+
+VALTYP is een acroniem voor 'VALeu TYPe' (waardetype). DAC en ARG staan 
+respectievelijk voor 'Decimal ACumulator (decimale opslagplaats) en 
+'ARGument' (berekeningswaarde). Neem de voornoemde uitleg van DAC en ARG 
+niet al te letterlijk op; want er is op allerlei manieren mee te goochelen.
+
+De waarde in (VALTYP) is altijd volgens onderstaand lijstje 2,3,4 of 8. De 
+waarde 3 is zoals je ziet - daar we willen rekenen - voor ons voorlopig nog 
+van geen enkel belang.
+
+Waarden in (VALTYP):
+
+2 voor een 2-byte-integer
+3 voor een stringdescriptor
+4 voor een enkel precisie getal
+8 voor een dubbel precisie getal
+
+Enkele en dubbele precisie variabelen zijn aan het begin van DAC opgeslagen 
+(dus vanaf &HF7F6) en 2-byte-integers vanaf DAC+2 (&HF7F8)!
+
+Omdat de MATH-PACK eigenlijk een verzameling van BASIC-routines is zal er 
+bij het optreden/constanteren van een fout (bijv. Niet deelbaar door nul of 
+een "overflow") gepoogt worden naar BASIC terug te keren. Om dit te 
+voorkomen zou de hook H.ERRO (&HFFB1) omgebogen moeten worden. Hier hopen 
+we later nog op terug te komen.
+
+
+@@@ Het MATH-PACK werkgebied: @@@
+
+  ---------------------------------------------------------------------------
+  | label  | adres  | lengte | betekenis                                    |
+  |-------------------------------------------------------------------------|
+  | VALTYP | &HF663 |    1   | formaat van het getal in DAC                 |
+  |        |        |        |   2 = geheel getal                           |
+  |        |        |        |   3 = string                                 |
+  |        |        |        |   4 = enkele precisie                        |
+  |        |        |        |   8 = dubbele precisie                       |
+  | DAC    | &HF7F6 |   16   | floating point accumulator in BCD formaat    |
+  | ARG    | &HF847 |   16   | argument van DAC (hulpgetal voor berekeningen|
+  ---------------------------------------------------------------------------
+
+@@@ MATH-PACK toegang: @@@
+
+    BASIC operaties:
+
+  ---------------------------------------------------------------------------
+  | label  | adres  | functie                                               |
+  |-------------------------------------------------------------------------|
+  | DECSUB | &H268C | DAC <--- DAC - ARG                                    |
+  | DECADD | &H269A | DAC <--- DAC + ARG                                    |
+  | DECNRM | &H26FA | normaliseerd DAC: overbodige nullen worden uit de man-|
+  |        |        |  tisse verwijderd; vgl. wetenschappelijke notatie:    |
+  |        |        |  bv.: 0.001234 ---> 0.1234 E-2                        |
+  | DECROU | &H273C | rondt DAC af                                          |
+  | DECMUL | &H27E6 | DAC <--- DAC * ARG                                    |
+  | DECDIV | &H289F | DAC <--- DAC / ARG                                    |
+  ---------------------------------------------------------------------------
+Noot:Deze operaties behandelen de getallen in DAC en ARG als dubbele 
+precisie. De registers worden niet bewaard!!!
+
+    Functies I:
+
+  ---------------------------------------------------------------------------
+  | label  | adres  | functie                       | wijzigt register(s)   |
+  |-------------------------------------------------------------------------|
+  | COS    | &H2993 | DAC <--- COS(DAC)             |      alle             |
+  | SIN    | &H29AC | DAC <--- SIN(DAC)             |      alle             |
+  | TAN    | &H29FB | DAC <--- TAN(DAC)             |      alle             |
+  | ATN    | &H2A14 | DAC <--- ATN(DAC)             |      alle             |
+  | LOG    | &H2A72 | DAC <--- LOG(DAC)             |      alle             |
+  | SQR    | &H2AFF | DAC <--- SQR(DAC)             |      alle             |
+  | EXP    | &H2B4A | DAC <--- EXP(DAC)             |      alle             |
+  | RND    | &H2BDF | DAC <--- RND(DAC)             |      alle             |
+  ---------------------------------------------------------------------------
+    Noot:Deze functies hebben dezelfde naam en functie als in BASIC.
+         "alle" registers zijn A,B,C,D,E,H en L.
+
+    Functies II:
+
+  ---------------------------------------------------------------------------
+  | label  | adres  | functie                       | wijzigt register(s)   |
+  |-------------------------------------------------------------------------|
+  | SIGN   | &H2E71 | A <--- teken van DAC          |        A              |
+  |        |        |        ( A<>0 ---> DAC<0 )    |      alle             |
+  | ABSFN  | &H2E82 | DAC <--- ABS(DAC)             |      A,H,L            |
+  | NEG    | &H2E8D | DAC <--- NEG(DAC)             |      A,H,L            |
+  | SGN    | &H2E97 | DAC <--- SGN(DAC)             |      A,H,L            |
+  ---------------------------------------------------------------------------
+
+    Noot:Behalve SIGN, hebben deze routines dezelfde naam en functie als in
+         BASIC. "alle" registers zijn A,B,C,D,E,H en L. Bij SGN is het
+         resultaat een 2-byte-integer.
+
+
+    Movement:
+
+  ---------------------------------------------------------------------------
+  | label  | adres  | functie          | object         | wijzigt registers |
+  |-------------------------------------------------------------------------|
+  | MAF    | &H2C4D | ARG <--- DAC     | dubb. precisie | A,B,D,E,H,L       |
+  | MAM    | &H2C50 | ARG <--- (HL)    | dubb. precisie | A,B,D,E,H,L       |
+  | MOV8DH | &H2C53 | (DE) <--- (HL)   | dubb. precisie | A,B,D,E,H,L       |
+  | MFA    | &H2C59 | DAC <--- ARG     | dubb. precisie | A,B,D,E,H,L       |
+  | MFM    | &H2C5C | DAC <--- (HL)    | dubb. precisie | A,B,D,E,H,L       |
+  | MMF    | &H2C67 | (HL) <--- DAC    | dubb. precisie | A,B,D,E,H,L       |
+  | MOV8HD | &H2C6A | (HL) <--- (DE)   | dubb. precisie | A,B,D,E,H,L       |
+  | XTF    | &H2C6F | (SP) <--> DAC    | dubb. precisie | A,B,D,E,H,L       |
+  | PHA    | &H2CC7 | ARG <--- (SP)    | dubb. precisie | A,B,D,E,H,L       |
+  | PHF    | &H2CCC | DAC <--- (SP)    | dubb. precisie | A,B,D,E,H,L       |
+  | PPA    | &H2CDC | (SP) <--- ARG    | dubb. precisie | A,B,D,E,H,L       |
+  | PPF    | &H2CE1 | (SP) <--- DAC    | dubb. precisie | A,B,D,E,H,L       |
+  | PUSHF  | &H2EB1 | DAC <--- (SP)    | enk.  precisie |     D,E           |
+  | MOVFM  | &H2EBE | DAC <--- (HL)    | enk.  precisie | B,C,D,E,H,L       |
+  | MOVFR  | &H2EC1 | DAC <--- (CBED)  | enk.  precisie |     D,E           |
+  | MOVRF  | &H2ECC | (CBED) <--- DAC  | enk.  precisie | B,C,D,E,H,L       |
+  | MOVRMI | &H2ED6 | (CBED) <--- (HL) | enk.  precisie | B,C,D,E,H,L       |
+  | MOVRM  | &H2EDF | (BCDE) <--- (HL) | enk.  precisie | B,C,D,E,H,L       |
+  | MOVMF  | &H2EE8 | (HL) <--- DAC    | enk.  precisie | A,B,D,E,H,L       |
+  | MOVE   | &H2EEB | (HL) <--- (DE)   | enk.  precisie | B,C,D,E,H,L       |
+  | VMOVAM | &H2EEF | ARG <--- (HL)    | VALTYP         | B,C,D,E,H,L       |
+  | MOVVFM | &H2EF2 | (DE) <--- (HL)   | VALTYP         | B,C,D,E,H,L       |
+  | VMOVE  | &H2EF3 | (HL) <--- (DE)   | VALTYP         | B,C,D,E,H,L       |
+  | VMOVFA | &H2F05 | DAC <--- ARG     | VALTYP         | B,C,D,E,H,L       |
+  | VMOVFM | &H2F08 | DAC <--- (HL)    | VALTYP         | B,C,D,E,H,L       |
+  | VMOVAF | &H2F0D | ARG <--- DAC     | VALTYP         | B,C,D,E,H,L       |
+  | VMOVMF | &H2F10 | (HL) <--- DAC    | VALTYP         | B,C,D,E,H,L       |
+  ---------------------------------------------------------------------------
+
+Noot: 4 registernamen tussen de haakjes zijn enkele precisie getallen die 
+aangeven: +/-teken, exponent, mantisse 1 t/m 6 van links naar rechts. Waar 
+het Object VALTYP is, is de movement (2,4,6 bytes) in overeenstemming met 
+het type in VALTYP (&HF663).
+
+    Vergelijkingen:
+
+  ---------------------------------------------------------------------------
+  | label  | adres  | object          | links  | rechts | wijzigt registers |
+  |-------------------------------------------------------------------------|
+  | FCOMP  | &H2F21 | enk.  precisie  | CBED *)| DAC    |    H,L            |
+  | ICOMP  | &H2F4D | 2-byte integer  | DE     | HL     |    H,L            |
+  | XDCOMP | &H2F5C | dubb. precisie  | ARG    | DAC    |   alle            |
+  ---------------------------------------------------------------------------
+
+    *) In C het exponent, in B,E en D de mantissen.
+
+    Noot: Het resultaat komt in het A-register, de betekenis is:
+
+             A=1        --->   links < rechts
+             A=0        --->   links = rechts
+             A=-1 (255) --->   links > rechts
+
+    Floating-point input/output:
+
+  ---------------------------------------------------------------------------
+  | label  | adres  | functie                                               |
+  |-------------------------------------------------------------------------|
+  | FIN    | &H3299 | bewaart een string die het floating-point getal in DAC|
+  |        |        |  voorstelt.                                           |
+  |-------------------------------------------------------------------------|
+  | invoer:     HL <--- startadres van de string                            |
+  |              A <--- eerste teken van de string                          |
+  | uitvoer:   DAC <--- getal                                               |
+  |              C <--- &HFF: zonder decimale punt     0: met decimale punt |
+  |              B <--- aantal cijfers achter de decimale punt              |
+  |              D <--- aantal gehele cijfers onder de tien                 |
+  ---------------------------------------------------------------------------
+
+  ---------------------------------------------------------------------------
+  | label  | adres  | functie                                               |
+  |-------------------------------------------------------------------------|
+  | FOUT   | &H3425 | Maakt het getal in DAC als een string (ongeformateerd)|
+  |        |        | Gebruikt FRCDBL.                                      |
+  | PUFOUT | &H3426 | Maakt het getal in DAC als een string (geformateerd). |
+  |        |        | Maakt (DAC..) positief.                               |
+  |-------------------------------------------------------------------------|
+  | invoer:      A <--- formaat                                             |
+  |                bit 7:  0 = ongeformateerd      1 = geformateerd         |
+  |                bit 6:  0 = zonder komma's      1 = met komma's om de    |
+  |                                                    drie cijfers.        |
+  |                bit 5:  0 = geen betekenis      1 = voorafgaande spaties |
+  |                                                    worden opgevuld met  |
+  |                                                    punten.              |
+  |                bit 4:  0 = geen betekenis      1 = een "$" wordt voor de|
+  |                                                    waarde geplakt.      |
+  |                bit 3:  0 = geen betekenis      1 = een "+" wordt voor   |
+  |                                                    een positieve waarde |
+  |                                                    gezet.               |
+  |                bit 2:  0 = geen betekenis      1 = het +/-teken komt na |
+  |                                                    de waarde.           |
+  |                bit 1:  niet gebruikt                                    |
+  |                bit 0:  0 = fixed point         1 = floating point       |
+  |              B <--- aantal cijfers voor (excl. de decimale punt).       |
+  |              C <--- aantal cijfers na   (incl. de decimale punt).       |
+  | uitvoer:    HL <--- start adres van de string.                          |
+  ---------------------------------------------------------------------------
+
+  ---------------------------------------------------------------------------
+  | label  | adres  | functie                                               |
+  |-------------------------------------------------------------------------|
+  | FOUTB  | &H371A | Maakt van de 2-byte integer in DAC+2, 3 een binair    |
+  |        |        | uitgedrukte string.                                   |
+  | FOUTO  | &H371E | Maakt van de 2-byte integer in DAC+2, 3 een octaal    |
+  |        |        | uitgedrukte string.                                   |
+  | FOUTH  | &H3722 | Maakt van de 2-byte integer in DAC+2, 3 een hexadeci- |
+  |        |        | maal uitgedrukte string.                              |
+  |-------------------------------------------------------------------------|
+  | invoer:  DAC+2 <--- 2-byte integer                                      |
+  |         VALTYP <--- 2                                                   |
+  | uitvoer:    HL <--- startadres van de string.                           |
+  ---------------------------------------------------------------------------
+
+Noot: Er zijn geen strings gereserveerd. Het startadres van de string van 
+de uitvoerroutine is normaal FBUFFR (vanaf &HF7C5). In sommige gevallen kan 
+het enigzins verschillen. Voor de integer in DAC+2 moet VALTYP (&HF663) een 
+2 zijn, zelfs in andere gevallen dan FOUTB, FOUTO en FOUTH.
+
+    Type conversie:
+
+  --------------------------------------------------------------------------
+  | label  | adres  | functie                                              |
+  |------------------------------------------------------------------------|
+  | FRCINT | &H2F8A | maakt van DAC een 2-byte integer (DAC+2, 3).         |
+  | FRCSNG | &H2FB2 | maakt van DAC een enkele precisie waarde.            |
+  | FRCDBL | &H303A | maakt van DAC een dubbele precisie waarde.           |
+  | FIXER  | &H30BE | DAC <--- SGN(DAC) * INT(ABS(DAC))                    |
+  --------------------------------------------------------------------------
+
+Noot:Na het aanroepen van een van deze routines, heeft VALTYP (&HF663) het 
+getal (2,4 of 8) van het type van DAC. Alle registers worden veranderd.
+
+    Integer operatie:
+  --------------------------------------------------------------------------
+  | label  | adres  | functie           | wijzigt registers                |
+  |------------------------------------------------------------------------|
+  | UMULT  | &H314A | DE <--- BC * DE   | A,B,C,D,E                        |
+  | ISUB   | &H3167 | HL <--- DE - HL   |   alle                           |
+  | IADD   | &H3172 | HL <--- DE + HL   |   alle                           |
+  | IMULT  | &H3193 | HL <--- DE * HL   |   alle                           |
+  | IDIV   | &H31E6 | HL <--- DE / HL   |   alle                           |
+  | IMOD   | &H323A | HL <--- DE mod HL |   alle                           |
+  |        |        | (DE <--- DE / HL) |                                  |
+  --------------------------------------------------------------------------
+
+  Noot: twee complement! Eerst 2 in (VALTYP) en erna checken!
+
+    Macht:
+  --------------------------------------------------------------------------
+  | label  | adres  | functie                   | basis | exp. | resultaat |
+  |------------------------------------------------------------------------|
+  | SGNEXP | &H37C8 | macht van enk. precisie   |  DAC  | ARG  |   DAC     |
+  | DBLEXP | &H37D7 | macht van dubb. precisie  |  DAC  | ARG  |   DAC     |
+  | INTEXP | &H383F | macht van 2-byte integer  |  DE   | HL   |   DAC     |
+  --------------------------------------------------------------------------
+
+ Noot:alle registers worden gewijzigd.
+
+  @@@ EXTRA: @@@
+
+  --------------------------------------------------------------------------
+  | label  | adres  | functie                                              |
+  |------------------------------------------------------------------------|
+  | PRTHL  | &H3412 | zet HL decimaal op het scherm.                       |
+  --------------------------------------------------------------------------
+
+Noot: Deze, wellicht meest gebruikte, MP-routine is niet officieel! Page 1 
+hoeft hierbij niet op de ROM te staan.
+
+
+Op en aanmerkingen over deze file graag sturen naar:
+
+Jan van der Meer
+Rensumaheerd 16
+9736 AA Groningen
+^/*\^ 050-417266
+
+

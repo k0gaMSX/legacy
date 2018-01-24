@@ -1,0 +1,840 @@
+MSX HOOKS (&hFD9A - &hFFCE)                        COMPASS v1.0 by COMPJOETANIA
+-------------------------------------------------------------------------------
+
+Samensteller: Compjoetania, Eric van Beurden
+Bron        : Diversen bronnen
+Versie      : #1.00
+
+
+Naam    :H_KEYI
+Adres   :&hFD9A
+Groep   :Operating System
+Aanroep :Begin van de interrupt routine, voor men test of het een VDP
+         interrupt is
+Functie :Om andere interrupts te kunnen toelaten. De RS232 maakt hier gebruik
+         van. De routine moet zelf testen of de interrupt van de juiste bron
+         afkomstig is
+
+
+Naam    :H_TIMI
+Adres   :&hFD9F
+Groep   :Operating System
+Aanroep :Op het moment dat vaststaat dat het een timer interrupt van de VDP is
+Functie :Om de VDP interrupt voor andere doeleinden te kunnen gebruiken
+
+
+Naam    :H_CHPU, CHPUt
+Adres   :&hFDA4
+Groep   :Operating System
+Aanroep :Begin BIOS routine CHPUT (&hA2)
+Functie :Om andere uitvoerapparaten dan het beeldscherm als standaard uitvoer
+         te gebruiken
+
+
+Naam    :H_DSPC, DiSPlay Cursor
+Adres   :&hFDA9
+Groep   :Operating System
+Aanroep :Begin routine die cursor op het scherm zichtbaar maakt
+Functie :Om andere uitvoerapparaten dan het beeldscherm als standaard uitvoer
+         te gebruiken
+
+
+Naam    :H_ERAC, ERAse Cursor
+Adres   :&hFDAE
+Groep   :Operating System
+Aanroep :Begin routine die de cursor van het scherm verwijderd
+Functie :Om andere uitvoerapparaten dan het beeldscherm als standaard uitvoer
+         te gebruiken
+
+
+Naam    :H_DSPF, DiSPlay Function keys
+Adres   :&hFDB3
+Groep   :Operating System
+Aanroep :Begin BIOS routine DSPFNK (&hCF) die de tekst van de functietoetsen
+         op het beeldscherm zet
+Functie :Om andere uitvoerapparaten dan het beeldscherm als standaard uitvoer
+         te gebruiken
+
+
+Naam    :H_ERAF, ERAse Function keys
+Adres   :&hFDB8
+Groep   :Operating System
+Aanroep :Begin BIOS routine ERAFNK (&hCC), die de tekst van de functietoetsen
+         van het beeldscherm verwijderd
+Functie :Om andere uitvoerapparaten dan het beeldscherm als standaard uitvoer
+         te gebruiken
+
+
+Naam    :H_TOTE, TOTExt
+Adres   :&hFDBD
+Groep   :Operating System
+Aanroep :Begin BIOS routine TOTEXT (&hD2) die het scherm in een tekstmodus
+         dwingt
+Functie :Om andere uitvoerapparaten dan het beeldscherm als standaard uitvoer
+         te gebruiken
+
+
+Naam    :H_CHGE, CHGEt
+Adres   :&hFDC2
+Groep   :Operating System
+Aanroep :Begin BIOS routine CHGET (&H9F) die een teken uit de toetsenbord
+         buffer leest
+Functie :Om andere uitvoerapparaten dan het toetsenbord als standaard uitvoer
+         te gebruiken
+
+
+Naam    :H_INIP, INIPat
+Adres   :&hFDC7
+Groep   :Operating System
+Aanroep :Begin routine die bij initialisatie van een tekstmodus de patroon-
+         tabel vult met de patronen van standaard ASCII-tekens
+Functie :Om andere tekens dan die in de ASCII-tabel als standaard te gebruiken
+
+
+Naam    :H_KEYC
+Adres   :&hFDCC
+Groep   :Operating System
+Aanroep :Begin van de routine die samengestelde toetsaanslagen (de SHIFT-,
+         CODE-, GRAPH- en/of CTRL toets samen met een andere) ontcijfert en
+         er een ASCII-code bij zoekt, die in de toetsenbord buffer wordt gezet
+Functie :Om andere toetsenbord constructies mogelijk te maken
+
+
+Naam    :H_KYEA
+Adres   :&hFDD1
+Groep   :Operating System
+Aanroep :Begin van de routine die enkelvoudige toetsaanslagen verwerkt en er
+         een ASCII-code aan toewijst die in de toetsenbord buffer wordt gezet
+Functie :Om andere toetsenbord constructies mogelijk te maken
+
+
+Naam    :H_NMI, Non Maskable Interrupt
+Adres   :&hFDD6
+Groep   :Operating system
+Aanroep :Begin BIOS routine NMI (&h66)
+Functie :Om het gebruik van NMI-interrupts mogelijk te maken
+
+
+Naam    :H_PINL, PINLin
+Adres   :&hFDD8
+Groep   :Operating system
+Aanroep :Begin van de BIOS routine PINLIN (&hAE) die de versie van de scherm 
+         editor vertegenwoordigt die in deirecte programmeermodus gebruikt 
+         wordt  
+Functie :Om een andere implementatie van de scherm-editor of een ander 
+         standaard invoerapparaat mogelijk te maken
+
+
+Naam    :H_QINL, QINLin
+Adres   :&hFDE0
+Groep   :Operating system
+Aanroep :Begin van de BIOS routine QINLIN (&hB4) die na het afdrukken van een 
+         vraagteken en een spatie de scherm-editor aanroept
+Functie :Om een andere implementatie van de scherm-editor of een ander 
+         standaard invoerapparaat mogelijk te maken
+
+
+Naam    :H_INLI, INLIn
+Adres   :&hFDE5
+Groep   :Operating system
+Aanroep :Begin van de BIOS routine INLIN (&hB1) waarin de schermeditor 
+         geimplementeerd is
+Functie :Om een andere implementatie van de scherm-editor of een ander 
+         standaard invoerapparaat mogelijk te maken
+
+
+Naam    :H_ONGO
+Adres   :&hFDEA
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :"On device gosub"
+
+
+Naam    :H_DSKO
+Adres   :&hFDEF
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van de functie "DSKO$"
+
+
+Naam    :H_SETS
+Adres   :&hFDF4
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van het "SET" statement
+
+
+Naam    :H_NAME
+Adres   :&hFDF9
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van het "NAME" statement
+
+
+Naam    :H_KILL
+Adres   :&hFDFE
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van het "KILL" statement
+
+
+Naam    :H_IPL
+Adres   :&hFE03
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van het "IPL" statement
+
+
+Naam    :H_COPY
+Adres   :&hFE08
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van het "COPY" statement
+
+
+Naam    :H_CMD, CoMmanD
+Adres   :&hFE0d
+Groep   :BASIC-sleutelwoord
+Aanroep :Als BASIC het CMD commando tegenkomt
+Functie :Het implementeren van het "CMD" statement 
+
+
+Naam    :H_DSKF
+Adres   :&hFE12
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van de functie "DSKF"
+
+
+Naam    :H_DSKI
+Adres   :&hFE17
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van het "DSKI$" statement
+
+
+Naam    :H_ATTR
+Adres   :&hFE1C
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van de functie "ATTR$"
+
+
+Naam    :H_LSET
+Adres   :&hFE21
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van het "LSET" statement
+
+
+Naam    :H_RSET
+Adres   :&hFE26
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van het "RSET" statement
+
+
+Naam    :H_FIEL
+Adres   :&hFE2B
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van het "FIELD" statement
+
+
+Naam    :H_MKI$
+Adres   :&hFE30
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van de functie "MKI$"
+
+
+Naam    :H_MKS$
+Adres   :&hFE35
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van de functie "MKS$"
+
+
+Naam    :H_MKD$
+Adres   :&hFE3A
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van de functie "MKD$"
+
+
+Naam    :H_CVI
+Adres   :&hFE3F
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van de functie "CVI"
+
+
+Naam    :H_CVS
+Adres   :&hFE44
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van de functie "CVS"
+
+
+Naam    :H_CVD
+Adres   :&hFE49
+Groep   :BASIC-sleutelwoord
+Aanroep :
+Functie :Het implementeren van de functie "CVD"
+
+
+Naam    :H_SETP
+Adres   :&hFE4E
+Groep   :DISK-BASIC aanroep
+Aanroep :Bij het opzoeken van de waarde van PTRFIL (&hF864)
+Functie :Locate FCB
+
+
+Naam    :H_SETF
+Adres   :&hFE53
+Groep   :DISK-BASIC aanroep
+Aanroep :Wanneer aan PTRFIL (&hF864) een nieuwe waarde wordt gegeven
+Functie :Locate FCB
+
+
+Naam    :H_NOFO
+Adres   :&hFE58
+Groep   :DISK-BASIC aanroep
+Aanroep :Bij een "OPEN" statement zonder FOR gedeelte
+Functie :"OPEN"
+
+
+Naam    :H_NULO
+Adres   :&hFE5D
+Groep   :DISK-BASIC aanroep
+Aanroep :Bij een operatie via file buffer 0
+Functie :"OPEN"
+
+
+Naam    :H_NTFL
+Adres   :&hFE62
+Groep   :DISK-BASIC aanroep
+Aanroep :Bij een operatie via een file buffer met een ander nummer dan 0
+Functie :Close I/O buffer 0
+
+
+Naam    :H_MERG
+Adres   :&hFE67
+Groep   :DISK-BASIC aanroep
+Aanroep :Bij het uitvoeren van een "MERGE" statement voor diskette
+Functie :"MERGE/LOAD"
+
+
+Naam    :H_SAVE
+Adres   :&hFE6C
+Groep   :DISK-BASIC aanroep
+Aanroep :Bij het uitvoeren van een "SAVE" statement voor diskette
+Functie :"SAVE"
+
+
+Naam    :H_BINS
+Adres   :&hFE71
+Groep   :DISK-BASIC aanroep
+Aanroep :Bij het uitvoeren van een "BSAVE" statement voor diskette
+Functie :"BSAVE"
+
+
+Naam    :H_BINL
+Adres   :&hFE76
+Groep   :DISK-BASIC aanroep
+Aanroep :Bij het uitvoeren van een "BLOAD" statement voor diskette
+Functie :"MERGE/LOAD"
+
+
+Naam    :H_FILE
+Adres   :&hFE7B
+Groep   :BASIC-uitbreiding
+Aanroep :Het implementeren van het "FILES" statement
+Functie :"FILES"
+
+
+Naam    :H_DGET
+Adres   :&hFE80
+Groep   :DISK-BASIC aanroep
+Aanroep :
+Functie :"GET/PUT"
+
+
+Naam    :H_FILO
+Adres   :&hFE85
+Groep   :DISK-BASIC aanroep
+Aanroep :
+Functie :Sequentiele output
+
+
+Naam    :H_INDS
+Adres   :&hFE8A
+Groep   :DISK-BASIC aanroep
+Aanroep :
+Functie :Sequentiele input
+
+
+Naam    :H_RSLF
+Adres   :&hFE8F
+Groep   :DISK-BASIC aanroep
+Aanroep :Voor het opnieuw selecteren van het vorige diskette station voor 
+         diskette-I/O
+Functie :"INPUT$"
+
+
+Naam    :H_SAVD
+Adres   :&hFE94
+Groep   :DISK-BASIC aanroep
+Aanroep :Voor het onthouden van het huidige geselecteerde diskette station
+Functie :"LOC" of "LOF" of "EOF" of "FPOS"
+
+
+Naam    :H_LOC
+Adres   :&hFE99
+Groep   :BASIC  sleutelwoord
+Aanroep :Om de functie "LOC" te implementeren
+Functie :"LOC"
+
+
+Naam    :H_LOF
+Adres   :&hFE9E
+Groep   :BASIC  sleutelwoord
+Aanroep :Om de functie "LOF" te implementeren
+Functie :"LOF"
+
+
+Naam    :H_EOF
+Adres   :&hFEA3
+Groep   :DISK-BASIC aanroep
+Aanroep :Bij het uitvoeren van de functie "EOF" voor diskette
+Functie :"EOF"
+
+
+Naam    :H_FPOS
+Adres   :&hFEA8
+Groep   :BASIC sleutelwoord
+Aanroep :
+Functie :Het implementeren van het "FPOS" statement
+
+
+Naam    :H_BAKU
+Adres   :&hFEAD
+Groep   :DISK-BASIC aanroep
+Aanroep :
+Functie :"LINEINPUT$"
+
+
+Naam    :H_PARD
+Adres   :&hFEB2
+Groep   :BASIC-interpreter
+Aanroep :Bij het ontleden van een apparaatnaam in een file aanduiding
+Functie :Devicenaam benoeming
+
+
+Naam    :H_NODE
+Adres   :&hFEB7
+Groep   :BASIC-interpreter
+Aanroep :Wanneer een file aanduiding zonder apparaatnaam wordt aangetroffen
+Functie :Devicenaam benoeming
+
+
+Naam    :H_POSD
+Adres   :&hFEBC
+Groep   :DISK-BASIC aanroep
+Aanroep :
+Functie :Devicenaam benoeming
+
+
+Naam    :H_DEVN
+Adres   :&hFEC1
+Groep   :BASIC-interpreter
+Aanroep :Bij  het opzoeken van een apparaat met een bepaalde naam
+Functie :
+
+
+Naam    :H_GEND
+Adres   :&hFEC6
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :I/O functie verzenden
+
+
+Naam    :H_RUNC
+Adres   :&hFECB
+Groep   :BASIC-interpreter
+Aanroep :Bij het terug zetten van variabele waarden tijdens het voorbereidende 
+         werk in een "RUN" statement
+Functie :RUN-CLEAR
+
+
+Naam    :H_CLEA
+Adres   :&hFED0
+Groep   :BASIC-interpreter
+Aanroep :Bij het uitvoeren van een "CLEAR" statement
+Functie :RUN-CLEAR
+
+
+Naam    :H_LOPD
+Adres   :&hFED5
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :
+
+
+Naam    :H_STKE
+Adres   :&hFEDA
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :Reset stack, autostart van de hooks
+
+
+Naam    :H_ISFL, ISFLio
+Adres   :&hFEDF
+Groep   :Operating system
+Aanroep :Begin van BIOS routine ISFLIO (&h14A)  waarin getest wordt of er op 
+         dit moment file I/O plaats vindt
+Functie :Om nieuwe in- en uitvoerappareten te implementeren
+
+
+Naam    :H_OUTD, OUTDo
+Adres   :&hFEE4
+Groep   :Operating system
+Aanroep :Begin van BIOS routine OUTDO (&h18) die een teken wegschrijft naar 
+         scherm, printer of andere uitvoerapparaten
+Functie :Om nieuwe uitvoerappareten te implementeren
+
+
+Naam    :H_CRDO
+Adres   :&hFEE9
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :CR,LF naar OUTDO
+
+
+Naam    :H_DSKC
+Adres   :&hFEEE
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :Hoofdlus line input
+
+
+Naam    :H_DOGR
+Adres   :&hFEF3
+Groep   :BASIC-interpreter
+Aanroep :Voor het uitvoeren van elke graphische functie
+Functie :Lijn trekken
+
+
+Naam    :H_PRGE
+Adres   :&hFEF8
+Groep   :BASIC-interpreter
+Aanroep :Bij het beeindigen van een BASIC programma
+Functie :Programma eind
+
+
+Naam    :H_ERRP
+Adres   :&hFEFD
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :Controle ERROR
+
+
+Naam    :H_ERRF
+Adres   :&hFF02
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :Controle ERROR
+
+
+Naam    :H_READ
+Adres   :&hFF07
+Groep   :BASIC-interpreter
+Aanroep :Als BASIC de prompt op het scherm zet
+Functie :
+
+
+Naam    :H_MAIN
+Adres   :&hFF0C
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :Hoofdlus ....
+
+
+Naam    :H_DIRD
+Adres   :&hFF11
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :Hoofdlus directe invoer
+
+
+Naam    :H_FINI
+Adres   :&hFF16
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :Hoofdlus beeindigd
+
+
+Naam    :H_FINE
+Adres   :&hFF1B
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :Hoofdlus beeindigd
+
+
+Naam    :H_CRUN
+Adres   :&hFF20
+Groep   :BASIC-interpreter
+Aanroep :Bij het coderen van een zojuist ingetypt BASIC statement
+Functie :Token vorming
+
+
+Naam    :H_CRUS
+Adres   :&hFF25
+Groep   :BASIC-interpreter
+Aanroep :Bij het coderen van een zojuist ingetypt BASIC statement
+Functie :Token vorming
+
+
+Naam    :H_ISRE
+Adres   :&hFF2A
+Groep   :BASIC-interpreter
+Aanroep :Wanneer een sleutelwoord is gevonden bij het coderen van een zojuist 
+         ingetypt BASIC statement
+Functie :Token vorming
+
+
+Naam    :H_NRFN
+Adres   :&hFF2F
+Groep   :BASIC-interpreter
+Aanroep :Wanneer een functie is gevonden bij het coderen van een zojuist 
+         ingetypt BASIC statement
+Functie :Token vorming
+
+
+Naam    :H_NOTR
+Adres   :&hFF34
+Groep   :BASIC-interpreter
+Aanroep :Wanneer een niet sleutelwoord is gevonden bij het coderen van een 
+         zojuist ingetypt BASIC statement
+Functie :Token vorming
+
+
+Naam    :H_SNGF
+Adres   :&hFF39
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :"FOR"
+
+
+Naam    :H_NEWS
+Adres   :&hFF3E
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :Runlus nieuw statement
+
+
+Naam    :H_GONE
+Adres   :&hFF43
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :Runlus uitvoeren
+
+
+Naam    :H_CHRG
+Adres   :&hFF48
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :CHRGTR routine
+
+
+Naam    :H_RETU
+Adres   :&hFF4D
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :"RETURN"
+
+
+Naam    :H_PRTF
+Adres   :&hFF52
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :"PRINT"
+
+
+Naam    :H_COMP
+Adres   :&hFF57
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :"PRINT"
+
+
+Naam    :H_FINP
+Adres   :&hFF5C
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :"PRINT"
+
+
+Naam    :H_TRMN
+Adres   :&hFF16
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :"READ/INPUT" fout
+
+
+Naam    :H_FRME
+Adres   :&hFF66
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :Expressie evaluatie
+
+
+Naam    :H_NTPL
+Adres   :&hFF6B
+Groep   :BASIC-interpreter
+Aanroep :
+Functie :Expressie evaluatie
+
+
+Naam    :H_EVAL
+Adres   :&hFF70
+Groep   :BASIC-interpreter
+Aanroep :Bij het berekenen van de waarde van een uitdrukking in een BASIC-
+         statement
+Functie :Factor evaluatie
+
+
+Naam    :H_OKNO
+Adres   :&hFF75
+Groep   :BASIC-interpreter
+Aanroep :?
+Functie :Factor evaluatie
+Opm.    :Op de Turbo R heeft deze hook een hele andere functie. Deze hook
+         wordt aangeroepen als er een MIDI signaal ontvangen wordt
+
+
+Naam    :H_FING
+Adres   :&hFF7A
+Groep   :BASIC-interpreter
+Aanroep :?
+Functie :Factor evaluatie
+
+
+Naam    :H_ISMI
+Adres   :&hFF7F
+Groep   :BASIC-interpreter
+Aanroep :Bij een toewijzing van een waarde aan een substring (MID$)
+
+
+Naam    :H_WIDT, WIDTh
+Adres   :&hFF84
+Groep   :BASIC-interpreter
+Aanroep :Bij het uitvoeren van een "WIDTH" statement
+
+
+Naam    :H_LIST
+Adres   :&hFF89
+Groep   :BASIC-interpreter
+Aanroep :Bij het uitvoeren van een "LIST" statement
+
+
+Naam    :H_BUFL
+Adres   :&hFF8E
+Groep   :BASIC-interpreter
+Aanroep :?
+Functie :Tokens vertalen
+
+
+Naam    :H_FRQI
+Adres   :&hFF93
+Groep   :BASIC-interpreter
+Aanroep :?
+Functie :Interger omzetting
+Opm.    :Op de Turbo R heeft deze hook een hele andere functie. Deze hook
+         wordt aangeroepen als de MIDI timer afloopt en weer met een getal
+         gevult moet worden.
+
+
+Naam    :H_SCNE
+Adres   :&hFF98
+Groep   :BASIC-interpreter
+Aanroep :?
+Functie :Regelnummer pointer
+
+
+Naam    :H_FRET
+Adres   :&hFF9D
+Groep   :BASIC-interpreter
+Aanroep :?
+Functie :Vrije string/geheugenruimte
+
+
+Naam    :H_PTRG
+Adres   :&hFFA2
+Groep   :BASIC-interpreter
+Aanroep :Bij het opzoeken van een variabele (detectie)
+
+
+Naam    :H_PHYD, PHYsical Disk i/o
+Adres   :&hFFA7
+Groep   :Operating System
+Aanroep :Begin BIOS routine PHYDIO (&h144), die operatios moet uitvoeren op
+         opslagapparaten zoals een diskettestation
+Functie :Om PHYDIO te implementeren
+
+
+Naam    :H_FORM, FORMat
+Adres   :&hFFAC
+Groep   :Operating System
+Aanroep :Vanuit de BIOS routine FORMAT (&h147) die opslagapparaten zoals een
+         diskettestation moet initialiseren
+Functie :Om FORMAT te implementeren
+
+
+Naam    :H_ERRO, ERROr
+Adres   :&hFFB1
+Groep   :BASIC-interpreter
+Aanroep :Vanuit de foutafhandelings routine
+Werking :Foutcode staat in Register E
+
+
+Naam    :H_LPTO, LPTOut
+Adres   :&hFFB6
+Groep   :Operating System
+Aanroep :Begin BIOS routine LPTOUT (&hA5), de routine die een teken naar de
+         printer stuurt
+Functie :Om speciale printers te kunnen aansturen. Eventueel met andersoortige 
+         aansluitingen
+
+
+Naam    :H_LPTS, LPTStt
+Adres   :&hFFBB
+Groep   :Operating System
+Aanroep :Begin BIOS routine LPTSTT (&hA8), de routine die de instelling van
+         de printer onderzoekt
+Functie :Om speciale printers te kunnen aansturen. Eventueel met andersoortige 
+         aansluitingen
+
+
+Naam    :H_SCRE, SCREen
+Adres   :&hFFC0
+Groep   :BASIC-interpreter
+Aanroep :Bij het uitvoeren van een SCREEN statement
+
+
+Naam    :H_PLAY, PLAY
+Adres   :&hFFC5
+Groep   :BASIC-interpreter
+Aanroep :Bij het uitvoeren van het "PLAY" statement, ook MSX-Music en MSX-MIDI
+
+
+Naam    :H_BEXT, Bios EXTern
+Adres   :&hFFCA
+Groep   :Operating System
+Aanroep :Door DOS2.xx, Kanji, Memman
+Functie :Het installeren van apparaat uitbreidingen die extra Operating System 
+         routines bevatten.
+Werking :-
+
+------------------------------------------------------------------------------
+

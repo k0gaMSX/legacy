@@ -1,0 +1,2122 @@
+-------------------------------------------------------------------------------
+BIOS ROUTINES (&h0000 - &h4000)              COMPASS v1.0 (c) 1994 COMPJOETANIA
+-------------------------------------------------------------------------------
+
+Samensteller: MCCM & Compjoetania, Eric van Beurden
+Bron        : Diversen bronnen
+Versie      : #1.00
+
+
+Alle BIOS routines kunnen in assembly als volgt worden aangeroepen:
+
+ CALL &Hxxxx        ;xxxx = het adres van de routine
+
+
+
+Naam    :CHKRAM
+Adres   :&H0000 (RST 0)
+Functie :Loopt alle sloten af, op zoek naar RAM pagina's in het adresbereik
+         &H8000-&HFFFF. Het grootste aaneensluitende blok RAM-geheugen wordt
+         geselecteerd als 'permanent' geheugen waarin programma's, en het
+         werkgebeid van BASIC en het operating system worden opgeslagen. Daar-
+         na worden de pagina's in het adresbereik &H4000-&HBFFF onderzocht of
+         het ROM pagina's zijn met een apparaatnaam uitbreiding, een statement
+         uitbreiding, een ML programma of een BASIC programma. Daarna worden
+         de initialisatieroutines van de gevonden ROM-pagina's uitgevoerd en
+         als laatste wordt de BASIC interpreter aangeroepen
+Param.  :Geen
+Result. :Geen
+Wijzig. :Alle registers
+Opm.    :Wanneer dit gebeurd is, moet een sprong naar INIT gemaakt worden voor
+         verdere initialisatie
+
+
+Naam    :CGTABL
+Adres   :&H0004 (2 bytes)
+Functie :Pointer naar tekenpatroontabel. Het wordt bij de initialisatie ge-
+         bruikt om CGPNT (&HF91F) een waarde te geven
+Opm.    :Dit is geen BIOS routine!
+
+
+Naam    :VDP.DR
+Adres   :&H0006 (1 byte)
+Functie :I/O adres van leespoort VDP. Staat &H98 in het huidige systeem
+Opm.    :Dit is geen BIOS routine!
+
+
+Naam    :VDP.DW
+Adres   :&H0007 (1 byte)
+Functie :I/O adres van schrijfpoort VDP. Staat &H98 in het huidige system
+Opm.    :Dit is geen BIOS routine!
+
+
+Naam    :SYNCHR
+Adres   :&H0008 (RST 1)
+Functie :Syntax controle in BASIC tekst. Restultaat is syntax error of sprong
+         naar CHRGTR (&H0010)
+Param.  :HL= Pointer naar volgend BASIC teken
+Result. :HL= Bijgewerkte pointer
+         A = Bevat teken
+         Carry = 1 bij getal
+         Zero  = 1 bij einde statement
+Wijzig. :AF,HL
+Opm.    :Deze BIOS routine heeft weinig nut voor een ML programmeur
+
+
+Naam    :RDSLT
+Adres   :&H000C
+Functie :Selecteert het gewenste slot en leest de gewenste geheugenadres uit
+Param.  :A = FxxxSSPP
+           F = 1 als secondair slotnr. wordt opgegeven, anders 0
+           SS= Secondair slotnummer (0-3)
+           PP= Primair slot (0-3)
+         HL= Te lezen adres
+Result. :A = Inhoud van het gelezen adres
+Wijzigt :AF,DE,C
+Opm.    :Deze  BIOS routine  zet de interrupt automatisch uit, maar niet meer
+         aan. Een poging om page 3 van een slot te selecteren met deze routine
+         zorgt ervoor dat de computer hangt!
+
+
+Naam    :CHRGTR
+Adres   :&H0010 (RST 2)
+Functie :Haalt het volgende teken of token van de BASIC-tekst. Wordt aange-
+         roepen door &H0008 (RST 1)
+Param.  :HL= Pointer naar het volgende BASIC teken
+Result. :HL= Bijgewerkte pointer
+         A = Bevat teken
+         Carry 1= bij getal
+         Zero  1= bij einde statement
+Wijzigt :AF, HL
+Opm.    :Deze BIOS routine heeft weinig nut voor een ML programmeur
+
+
+Naam    :WRSLT
+Adres   :&H0014
+Funktie :Selekteert het gewenste slot zoals aangegeven door de waarde in [A]
+         en schrijft [E] het naar het geheugen op adres [HL]
+Param.  :A = FxxxSSPP
+           F = 1 als secondair slotnr. wordt opgegeven, anders 0
+           SS= Secondair slotnummer (0-3)
+           PP= Primair slot (0-3)
+         HL= Te beschrijven adres
+         E = Te schrijven data
+Result. :Geen
+Wijzig. :AF, BC, D
+Opm.    :Deze  BIOS routine  zet de interrupt automatisch uit, maar niet meer
+         aan. Een poging om page 3 van een slot te selecteren met deze routine
+         zorgt ervoor dat de computer hangt!
+
+
+Naam    :OUTDO
+Adres   :&H0018 (RST 3)
+Funktie :Schrijft een teken waarvan de ASCII code in [A] staat naar een gese-
+         lecteerde uitvoer (scherm, printer, diskfile). Als er naar het
+         scherm wordt geschreven dan wordt CHPUT (&H00A2) gebruikt
+Param.  :A = Te schrijven ASCII code
+         PTRFIL (&HF864)= Uitvoer naar diskfile?
+         RAWPRT (&HF418)= 0 bij printen via BIOS routine OUTDLP (&H014D) an-
+                          ders wordt het teken direct via LPTOUT (&H00A5)
+                          naar de printer gestuurd
+         PRTFLG (&HF416)= Uitvoer naar printer?
+Result. :Geen
+Wijzig. :Geen
+Opm.    :Nadat deze routine [AF] op de stack heeft gepushed roept hij de hook
+         H_OUTD (&HFEE4) aan voordat hij verder gaat.
+
+
+Naam    :CALSLT
+Adres   :&H001C
+Funktie :Voert inter-slot aanroep uit naar opgegeven adres
+Param.  :IY= FxxxSSPP
+           F = 1 als secondair slotnr. wordt opgegeven, anders 0
+           SS= Secondair slotnummer (0-3)
+           PP= Primair slot (0-3)
+         IX= Het aan te roepen adres
+Result. :Geen
+Wijzig. :Geen
+Opm.    :Deze BIOS routine zet de interrupt automatisch uit, maar niet meer
+         aan. Een poging om page 3 van een slot te selecteren met deze routine
+         zorgt ervoor dat de computer hangt! Parameters kunnen nooit worden
+         doorgegeven via het alternatieve set van de Z-80, of [IX] en [IY]
+
+
+Naam    :DCOMPR
+Adres   :&H0020 (RST 4)
+Funktie :Vergelijkt de inhoud van HL met DE
+Param.  :HL, DE
+Result. :Carry 1= HL <  DE
+         Carry 0= HL >= DE
+         Zero  1= HL =  DE
+Wijzig. :AF
+Opm.    :De BIOS routine ziet er als volgt uit:
+            LD   A,H
+            SUB  D
+            RET  NZ
+            LD   A,L
+            SUB  E
+            RET
+
+
+Naam    :ENASLT
+Adres   :&h0024
+Funktie :Selekteert het gewenste slot aangegeven door [A] en schakelt het
+         permanent in
+Param.  :A = FxxxSSPP
+           F = 1 als secondair slotnr. wordt opgegeven, anders 0
+           SS= Secondair slotnummer (0-3)
+           PP= Primair slot (0-3)
+         HL= Bestemmings adres in geheugen.
+Result. :Geen
+Wijzig. :AF, BC, DE, HL
+Opm.    :Deze BIOS routine zet de interrupt automatisch uit, maar niet meer
+         aan. Een poging om page 3 van een slot te selecteren mislukte met de 
+         routines RDSLT, WRSLT en CALSLT. Met deze routine en het volgende
+         stukje ML kan dat wel!
+
+               CALL &H0138     ;Lees het primary slot select register
+               PUSH AF         ;Sla het op
+               LD   HL,&HD000  ;Het geheugen adres dat gelezen moet worden
+               PUSH HL         ;Sla dit adres op
+               LD   A,3        
+               DI              ;Interrupts moeten uitstaan!
+               CALL &H0024     ;Schakel slot3, page3
+               POP  HL         ;Herstel het adres
+               LD   H,(HL)     ;Haal inhoud op
+               POP  AF
+               CALL &H013B     ;Herstel system van page 3
+               EI
+               LD   A,H        ;Zet de verlangde waarde in A
+               RET
+
+         Een gelijkwaardige manier kan gebruikt worden om te schrijven of een
+         subroutine in page 3 van een anders slot te gebruiken. 
+
+
+Naam    :GETYPR
+Adres   :&h0028 (RST 5)
+Funktie :Wordt gebruikt door de BASIC interpreter. Deze routine bepaald het
+         type van de laatst geevalueerde expressie. Dit type is in VALTYP te
+         vinden
+Param.  :VALTYP (&HF663)
+Result. :Dubbele precisie = Carry 0
+         String           = Carry 1  Zero 1  Sign 0
+         Integer          = Carry 1  Zero 0  Sign 1
+         Enkele precisie  = Carry 1  Zero 0  Sign 0
+Wijzig. :AF
+Opm.    :Geen
+
+
+De volgende 5 bytes zijn gereserveerd om informatie over de MSX op te slaan:
+---------------------------------------------------------------------------
+
+Naam    :IDBYT1
+Adres   :&h002B (2 bytes)
+Functie :Ter identifikatie van de MSX machine. Deze bytes geven de juiste in-
+         formatie over uw type MSX computer
+Waarde  :&H002B  :bit3=   Soort karaktergenerator: 0=Japans
+                                                   1=Internationaal (ASCII)
+                                                   2=Koreaans
+                  bit4+5= Datum formaat: 0= y-m-d
+                                         1= m-d-y
+                                         2= d-m-y
+                  bit6=   Interrupt freqentie: 1= 50 Hertz
+                                               2= 60 Hertz
+
+
+         &H002C  :bit3= Soort toetsenbord: 0= Japans
+                                           1= Internationaal (QWERTY)
+                                   2= Frans (AZERTY)
+                                           3= UK
+                                           4= Duits (DIN)
+                  bit4/7= Versie van BASIC
+Opm.    :Dit is geen BIOS routine!
+
+
+Naam    :IDBYT2
+Adres   :&h002D (1 byte)
+Functie :Versie nummer van de MSX computer
+Waarde  :0= MSX 1
+         1= MSX 2
+         2= MSX 2+
+         3= MSX TURBO R
+Opm.    :Dit is geen BIOS routine!
+
+
+Naam    :IDBYT3
+Adres   :&H002E (1 byte)
+Functie :Aanwezigheid van MSX MIDI
+Waarde  :0= Geen MSX MIDI aanwezig
+         1= MSX MIDI aanwezig
+Opm.    :Dit is geen BIOS routine!
+
+
+Naam    :IDBYT4
+Adres   :&H002F (1 byte)
+Functie :Geen
+Waarde  :0
+Opm.    :Dit is geen BIOS routine!
+
+
+Naam    :CALLF
+Adres   :&H0030 (RST 6) 
+Funktie :Voert far-call (inter-slot call) uit. Deze routine werkt via CALSLT 
+         (&h001C). Eerst worden de waarden van het bestemmingsslot en het 
+         -adres gelezen door het terugkeeradres van de stack te halen en op te 
+         hogen; deze waarden worden in IY respectievelijk IX gezet. Het 
+         terugkeeradres wordt opgehoogd terug op de stapel gezet, zodat het 
+         wijst naar het eerste byte van het bestemmingsadres. Als dit alles 
+         gebeurd is, wordt CALSLT aangeroepen. Bij terugkeer uit de routine 
+         zijn de sloten net weer zo ingesteld als bij aanroep. De manier van
+         aanroepen is als volgt:     RST6
+                                     DEFB bestemming slot, zie CALSLT
+                                     DEFW bestemming adres
+         Als men er een RET instructie aan toevoegt dan is het uitermate 
+         handig om deze manier van aanroepen te gebruiken in een hook.
+Param.  :Geen
+Result. :Afhankelijk van aangeroepen routine
+Wijzig. :AF
+Opm.    :Deze routine schakelt de interrupt uit, maar niet meer aan!
+
+Naam    :KEYINT
+Adres   :&H0038 (RST 7)
+Funktie :Voert hardware-interrupt procedures uit. Het MSX systeem werkt
+         normaal onder interrupt mode 1. Deze routine wordt elke interrupt
+         aangeroepen. Interrupt doen zich elke 0.02s voor in de 50 Hz mode.
+         De interrupt routine pushed eerst alle (schaduw-) registers op de
+         stack. Nu worden op de Turbo R GT de MIDI interrupts gecontroleerd.
+         Daarna wordt de hook H_KEYI (&hFD9A) aangeroepen. Als van deze hook 
+         wordt teruggekeerd dan wordt er gecontroleerd of het geen VDP
+         interrupt (50/60 Hz.). Nu worden er allerlei dingen gedaan: o.a. de
+         interrupt teller verlaagt, JIFFY (&HFC9E) wordt verhoogt, de
+         muziekwachtrijen worden geupdate, de joystick wordt gecontroleerd,
+         er wordt een toetsenbordscan uitgevoerd, enz. Nadat al deze dingen 
+         zijn gebeurt worden alle (schaduw-)registers gepoped en er wordt 
+         teruggekeerd naar het huidige programma.
+Param.  :Geen
+Result. :Geen
+Wijzig. :Interrupt systeemvariabelen
+
+
+Routines voor I/O initialisatie:
+--------------------------------
+
+Naam    :INITIO
+Adres   :&H003B
+Funktie :Voert initialisatie van randapparatuur uit. Ondermeer de PSG en de 
+         printer geinitialiseerd. Met initialisatie van apperatuur worden alle 
+         acties verstaan die nodig zijn voordat er goed gebruik van de 
+         apparatuur kan worden gebruikt. De initialisatie hoeft normaal 
+         gesproken maar 1 keer te gebeuren
+Param.  :Geen
+Result. :Geen
+Wijzig. :Alle registers
+
+
+Naam    :INIFNK
+Adres   :&H003E
+Funktie :Initialiseert funktietoets teksten met hun standaard inhoud
+Param.  :Geen
+Result. :Geen
+Wijzig. :Alle registers en o.a. FNKSTR (&HF87F)
+
+
+Routines om de VDP (Video Display Processor) aan te sturen:
+----------------------------------------------------------
+
+Naam    :DISSCR
+Adres   :&H0041
+Funktie :Schakelt het beeldscherm uit. Het beeld krijgt de kleur van de border.
+         Alles wordt nog naar het scherm gestuurd maar zal pas na een ENASCR
+         (&H0044) of het verwisselen van schermmode zichtbaar zijn. Het 
+         uitzetten van het beeld gebeurd door middel van het zetten van bit 6
+         van VDP register #1.
+Param.  :Geen
+Result. :Geen
+Wijzig. :AF, BC
+
+
+Naam    :ENASCR
+Adres   :&H0044
+Funktie :Schakelt het beeldscherm aan nadat het uit is gezet met DISSCR
+         (&H0041)
+Param.  :Geen
+Result. :Geen
+Wijzig. :AF, BC
+
+
+Naam    :WRTVDP
+Adres   :&H0047
+Funktie :Schrijft naar een VDP register
+Param.  :C = Nummer van het register
+         B = De te schrijven data
+Result. :Geen
+Wijzig. :AF, BC, De geheugen locatie dat een copie van register C bevat, heeft
+         de waarde van register B. De registers van de VDP zijn Write Only dus 
+         je kunt in het geheugen kijken wat de huidige waarde van een VDP 
+         register is:  RG0SAV (&hF3DF) R#  0   t/m   RG7SAV (&hF3E6) R#  7
+                       STATFL (&hF3E7) Status R# 0
+                       SX     (&hF562) R# 32   t/m   L_OP   (&hF570) R# 46 
+                       EXTVDP (&hFFE7) R#  8   t/m   ------ (&hFFF6) R# 23
+                       ------ (&hFFFA) R# 25   t/m   ------ (&hFFFC) R# 27
+
+
+Naam    :RDVRM
+Adres   :&H004A
+Funktie :Leest het Video RAM dat door registerpaar [HL] geadresseerd wordt. 
+         Bij terugkeer van deze routine is het leesadres van de VDP HL+1.
+Param.  :HL= Adres in VRAM
+Result. :A = Inhoud van VRAM adres
+Wijzig. :AF
+Opm.    :De waarde van de vlaggen zegen na deze routine niets over de waarde
+         register A. Deze routine roept SETRD (&h0050) aan om de VDP klaar te  
+         zetten.
+
+*******************************************************************************
+
+
+TOT EN MET HIER IS ALLES BIJGEWERKT !!!!!!   DE REST VOLGT NOG ALHOEWEL ER AL 
+WEL 6 BIOS ROUTINES VOOR DE TURBO R ZIJN TOEGEVOEGD.
+
+
+
+
+Naam    :WRTVRM
+Adres   :&H004D
+Funktie :Schrijft naar het Vidio RAM geadresseerd door [HL]. Bij terugkeer van 
+         deze routine is het schrijfadres van de VDP HL+1.
+Param.  :HL= Adres in VRAM
+         A = Te schrijven data
+Result. :Geen
+Wijzig. :AF
+Opm.    :Deze routine roept SETWRT (&h0053) aan om de VDP klaar te zetten.
+
+Naam    :SETRD
+Adres   :&H0050
+Funktie :Maakt de VDP gereed om te lezen
+Param.  :HL
+Result. :Geen
+Wijzig. :AF
+
+
+Naam    :SETWRT
+Adres   :&H0053
+Funktie :Maakt de VDP gereed om te schrijven
+Param.  :HL
+Result. :Geen
+Wijzig  :AF
+
+
+Naam    :FILVRM
+Adres   :&H0056
+Funktie :Vult de VRAM met een bepaalde waarde
+Param.  :HL: beginadres (VRAM!)
+         BC: aantal bytes om te vullen
+         A: vul-byte
+Result. :Geen
+Wijzig. :AF, BC
+
+
+Naam    :LDIRMV
+Adres   :&H0059
+Funktie :Kopieer blok VRAM naar geheugen
+Param.  :Startadres in [HL], bestemming in [DE],
+         lengte in [BC]
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam    :LDIRVM    
+Adres   :&H005C
+Funktie :Kopieer blok geheugen naar VRAM
+Param.  :Startadres in [HL],Bestemming in [DE],
+         lengte in [BC]
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam    :CHGMOD
+Adres   :&H005F
+Funktie :Stelt de VDP mode in volgens de SCRMOD
+Param.  :SCRMOD (0..3)
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam    :CHGCLR
+Adres   :&H0062
+Funktie :Verandert de schermkleur
+Param.  :Voorgrondkleur in FORCLR
+         Achtergrondkleur in BAKCLR
+         Randkleur in BDRCLR
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam    :NMI
+Adres   :&H0066
+Funktie :Deze routine wordt aangeroepen bij het optreden van een Non Maskable  
+         Interrupt. In het standaard MSX systeem wordt deze interrupt niet
+         gebruikt. Er is wel in voorzien d.m.v. de hook H_NMI (&hFDD6). De
+         routine NMI wordt afgesloten met een RETN instructie inplaats van een
+         gewone RET instructie.
+Param.  :Geen
+Result. :Geen
+Wijzig. :Geen
+
+
+Naam    :CLRSPR
+Adres   :&H0069
+Funktie :Initialiseert alle sprites
+         Sprite patronen worden geleegd, sprite
+         namen worden gelijk gemaakt met sprite
+         vlak-nummers, sprite kleuren worden gelijk
+         gemaakt aan voorgrond kleuren, vertikale
+         posities worden gesteld op 209
+Param.  :SCRMOD
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam    :INITXT
+Adres   :&H006C
+Funktie :Initialiseert het scherm voor (40*24)
+         tekstmodes en stelt de VDP in
+Param.  :TXTNAM, TXTCGP
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam    :INITR32
+Adres   :&H006F
+Funktie :Initialiseert het scherm voor tekstmodes
+         (32*24) en stelt de VDP in
+Param.  :T32NAM, T32CGP, T32COL, T32ATR, T3PAT
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam    :INIGRP
+Adres   :&H0072
+Funktie :Initialiseert het scherm voor hoge resolu-
+         tie modes en stelt de VDP in
+Param.  :GRPNAM, GRPCGP, GRPCOL, GRPATR, GRPPAT
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam    :INIMLT
+Adres   :&H0075
+Funktie :Initialiseert het scherm voor multicolor
+         modes en stelt de VDP in
+Param.  :MLTNAM, MLTCGP, MLTCOL, MLTATR,MLTPAT
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam    :SETTXT
+Adres   :&H0078
+Funktie :Stelt de VDP in voor (40*24) tekst modes
+Param.  :TXTNAM, TXTCGP
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam    :SETT32
+Adres   :&H007B
+Funktie :Stelt de VDP in voor (32*24) tekstmode
+Param.  :T32NAM, T32CGP, T32COL, T32ATR, T32PAT
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam    :SETGRP
+Adres   :&H007E
+Funktie :Stelt de VDP in voor hoge-resolutie modes
+Param.  :GRPNAM, GRPCGP, GRPCOL, GRPATR, GRPPAT
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam    :SETMLT
+Adres   :&H0081
+Funktie :Stelt de VDP in voor multicolor modes
+Param.  :MLTNAM, MLTCGP, MLTCOL, MLTATR, MLTPAT
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam    :CALPAT
+Adres   :&H0084
+Funktie :Geeft adres van sprite patroon tabel
+Param.  :Sprite ID in [Acc]
+Result. :Adres in [HL]
+Wijzig. :AF, DE, HL
+
+
+Naam    :CALATR
+Adres   :&H0087
+Funktie :Geeft tabel van sprite attributen
+Param.  :Sprite ID in [Acc]
+Result. :Adres in [HL]
+Wijzig. :AF, DE, HL
+
+
+Naam    :GSPSIZ
+Adres   :&H008A
+Funktie :Geeft de huidige sprite afmeting
+Param.  :Geen
+Result  :Sprite afmeting (aantal bytes) in [Acc]
+         Zet de carry vlag als 16*16 sprite in
+         gebruik is, zoniet dan wordt carry vlag
+         gereset
+Wijzig. :AF
+
+
+Naam    :GRPPRT
+Adres   :&H008D
+Funktie :Drukt een teken af op het grafische scherm. De codes &h00-&h1F in 
+         register A stellen hierbij de grafische extensie codes voor.
+Param.  :A               : ASCII code
+         SCRMOD (&hFCAF) : Scherm mode
+Result. :Geen
+Wijzig. :Geen
+
+          
+Routines om de PSG aan te sturen:
+---------------------------------
+
+Naam:     GICINI
+Adres:    0090h
+Funktie:  Initialiseert PSG en vaste gegevens voor
+          het PLAY kommando
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  Alles
+
+
+Naam:     WRTPSG
+
+Adres:    0093h
+Funktie:  Schrijft data naar het PSG register
+Param.:   Register nummer in [Acc], data in [E]
+Result.:  Geen
+Wijzig.:  Geen
+
+
+Naam:     RDPSG
+
+Adres:    0096h
+Funktie:  Leest data uit het PSG register
+Param.:   Register nummer in [Acc]
+Result.:  Data in [Acc]
+Wijzig.:  Geen
+
+
+Naam:     STRTMS
+
+Adres:    0099h
+Funktie:  Kontroleert/start achtergrond taken voor
+          PLAY
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  Alles
+
+
+Routines om het toetsenbord/beeldscherm aan te sturen:
+------------------------------------------------------
+
+Naam    :CHSNS
+Adres   :&h009C
+Funktie :Kontroleert de inhoud van de toetsenbordbuffer
+Param.  :Geen
+Result. :Z-vlag = 0 indien er een karakter in de buffer aanwezig is
+Wijzig. :AF
+
+
+Naam    :CHGET
+Adres   :&h009F
+Funktie :Leest een teken uit de toetsenbordbuffer. Als de buffer leeg is wordt 
+         er gewacht tot er een teken in komt. Het indrukken van de STOP toets 
+         tijdens deze routine wordt onderdrukt.
+Param.  :Geen
+Result. :A  = ASCII-code
+Wijzig. :AF, (+ BC op turbo R!)
+
+
+Naam:     CHPUT
+
+Adres:    00A2h
+Funktie:  Stuurt teken naar console (scherm)
+Param.:   Tekenkode wordt uitgevoerd in [Acc]
+Result.:  Geen
+Wijzig.:  Geen
+
+
+Naam:     LPTOUT
+
+Adres:    00A5h
+Funktie:  Stuurt een teken naar de printer
+Param.:   Karakterkode wordt uitgevoerd in [Acc]
+Result.:  Carry vlag wordt gezet indien afgebroken
+Wijzig.:  F
+
+
+Naam:     LPTSTT
+
+Adres:    00A8h
+Funktie:  Kontroleert de printer status
+Param.:   Geen
+Result.:  255 in [Acc] en z vlag reset indien de
+          printer klaar is, 0 en Z vlag indien dit
+          niet het geval is
+Wijzig.:  AF
+
+
+Naam;     CNVCHR
+
+Adres:    00ABh
+Funktie:  Kontroleert op grafisch voorloop byte en
+          konverteert kodes
+Param.:   Karakterkode in [Acc]
+Result.:  Carry vlag reset: grafische voorloop byte
+          Carry en Zero vlag gezet; gekonverteerde
+          grafische kode
+          Indien Carry vlag gezet, Zero vlag
+          gereset, niet gekonverteerde kode
+Wijzig.:  AF
+
+
+Naam:     PINLIN
+
+Adres:    00AEh
+Funktie:  Accepteert een regel van toetsenbord-
+          beeldscherm tot een CR of STOP wordt
+          ingetypt, en slaat de regel op in een
+          buffer
+Param.:   Geen
+Result.:  Adres van buffer top-1 in [HL], carry vlag
+          wordt gezet indien STOP wordt ingevoerd
+Wijzig.:  Alles
+
+
+Naam:     INLIN
+
+Adres:    00B1h
+Funktie:  Zelfde als PINLIN, behalve wanneer AUTFLG
+          wordt gezet
+Param.:   Geen
+Result.:  Adres van buffer top-1 in [HL], carry vlag 
+          wordt gezet indien STOP wordt ingevoerd
+Wijzig.:  Alles
+
+
+Naam:     QINLIN
+
+Adres:    00B4h
+Funktie:  Print een '?' en een spatie en valt dan
+          door naar de INLIN routine
+Param.:   Geen
+Result.:  Adres van buffer top-1 in [HL], carry vlag
+          wordt gezet indien STOP is ingevoerd
+Wijzig.:  Alles
+
+
+Naam:     BREAKX
+
+Adres:    00B7h
+Funktie:  Kontroleert de status van de Control-STOP
+          toetskombinatie
+Param.:   Geen
+Result.:  Carry vlag wordt geplaatst indien
+          ingedrukt
+Wijzig.:  AF
+Opm.:     Deze routine wordt gebruikt om de Control-
+          STOP te kontroleren indien de interrupts
+          niet werken
+
+
+Naam:     ISCNTC
+
+Adres:    00BAh
+Funktie:  Kontroleert de status van de SHIFT-STOP
+          toets
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  Geen
+
+
+Naam    :CKCNTC
+Adres   :&h00BD
+Funktie :Doet hetzelfde als ISCNTC (&h00BA), maar wordt door de BASIC 
+         interpreter gebruikt
+Param.  :Geen
+Result. :Geen
+Wijzig. :Geen
+
+
+Naam    :BEEP
+Adres   :&h00C0
+Funktie :Laat beep-geluid klinken. Daarnaast wordt het geluids subsysteem 
+         opnieuw geinitialiseerd door een aanroep van GICINI (&h0090)
+Param.  :Geen
+Result. :Geen
+Wijzig. :Alles
+
+
+Naam:     CLS
+
+Adres:    00C3h
+Funktie:  Wist beeldscherm
+Param.:   Z vlag setten
+Result.:  Geen
+Wijzig.:  AF, BC, DE
+
+
+Naam:     POSIT
+
+Adres:    00C6h
+Funktie:  Plaatst de cursor op de aangegeven positie
+Param.:   Kolom in [H], regel in [L]
+Result.:  Geen
+Wijzig.:  AF
+
+
+Naam:     FNKSB
+
+Adres:    00C9h
+Funktie:  Kontroleert of de funktie toets teksten
+          aanstaan (display). Indien dat het geval
+          is dan worden de teksten afgedrukt. Zo
+          niet; doet het niets
+Param.:   FNKFLG
+Result.:  Geen
+Wijzig.:  Alles
+
+
+Naam:     ERAFNK
+
+Adres:    00CCh
+Funktie:  Wist funktie toetsen display
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  Alles
+
+
+Naam:     DSPFNK
+
+Adres:    00CFh
+Funktie:  Laat funktie toets display zien
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  Alles
+
+
+Naam:     TOTEXT
+
+Adres:    00D2h
+Funktie:  Dwingt het scherm in tekst-mode
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  Alles
+
+>>>***************************************************
+
+Routines om de joystick poorten aan te sturen:
+----------------------------------------------
+
+Naam    :GTSTCK
+Adres   :&h00D5
+Funktie :Geeft de huidige joystick status
+Param.  :A = Joystick ID
+Result. :A = Richting
+Wijzig. :Alles
+
+
+Naam    :GTTRIG
+Adres   :&h00D8
+Funktie :Geeft de huidige vuurknop status
+Param.  :A = Vuurknop ID
+Result. :A = 0 is niet ingedrukt
+             255 wel ingedrukt
+Wijzig. :AF
+
+
+Naam    :GTPAD
+Adres   :&H00DB
+Funktie :Kontroleert de huidige touchpad status
+Param.  :A = ID
+Result. :A = Waarde
+Wijzig. :Alles
+Opm.    :Deze BIOS routine is uit de BIOS bij de Turbo R verdwijderd i.v.m.
+         het ontbreken van een cassette poort. Als deze routine wordt aange-
+         roepen dan keert hij terug met de Carry gezet. 
+           
+
+Naam    :GTPDL
+Adres   :&H00DE
+Funktie :Geeft de waarde van de paddle
+Param.  :A = Paddle ID
+Result. :A = Waarde
+Wijzig. :Alles
+Opm.    :Deze BIOS routine is uit de BIOS bij de Turbo R verdwijderd i.v.m.
+         het ontbreken van een cassette poort. Als deze routine wordt aange-
+         roepen dan keert hij terug met de Carry gezet.
+
+
+Routines om de cassette aan te sturen:
+--------------------------------------
+
+Naam    :TAPION
+Adres   :&H00E1
+Funktie :Zet de motor aan en leest header van de band
+Param.  :Geen
+Result. :Cy1 = Routine is afgebroken
+Wijzig. :Alles
+Opm.    :Deze BIOS routine is uit de BIOS bij de Turbo R verdwijderd i.v.m.
+         het ontbreken van een cassette poort. Als deze routine wordt aange-
+         roepen dan keert hij terug met de Carry gezet. 
+
+
+Naam    :TAPIN
+Adres   :&H00E4
+Funktie :Invoer van cassette
+Param.  :Geen
+Result. :A = Data
+         Cy1 = Routine is afgebroken
+Wijzig. :Alles
+Opm.    :Deze BIOS routine is uit de BIOS bij de Turbo R verdwijderd i.v.m.
+         het ontbreken van een cassette poort. Als deze routine wordt aange-
+         roepen dan keert hij terug met de Carry gezet. 
+
+
+Naam    :TAPIOF
+Adres   :&H00E7
+Funktie :Stopt het lezen van de band 
+Param.  :Geen
+Result. :Geen
+Wijzig. :Geen
+Opm.    :Deze BIOS routine is uit de BIOS bij de Turbo R verdwijderd i.v.m.
+         het ontbreken van een cassette poort. Als deze routine wordt aange-
+         roepen dan keert hij terug met de Carry gezet.
+
+
+Naam    :TAPOON
+Adres   :&H00EA
+Funktie :Zet de motor aan en schrijft het header
+         blok naar cassette
+Param.  :A = 0 voor een korte header
+             <>0 voor een lange header
+Result. :Carry vlag wordt gezet bij afbreken
+Wijzig. :Alles
+Opm.    :Deze BIOS routine is uit de BIOS bij de Turbo R verdwijderd i.v.m.
+         het ontbreken van een cassette poort. Als deze routine wordt aange-
+         roepen dan keert hij terug met de Carry gezet. 
+
+
+Naam    :TAPOUT
+Adres   :&H00ED
+Funktie :Uitvoer naar cassette
+Param.  :A = uit te voeren data
+Result. :Carry vlag wordt gezet bij afbreken
+Wijzig. :Alles
+Opm.    :Deze BIOS routine is uit de BIOS bij de Turbo R verdwijderd i.v.m.
+         het ontbreken van een cassette poort. Als deze routine wordt aange-
+         roepen dan keert hij terug met de Carry gezet. 
+
+
+Naam    :TAPOOF
+Adres   :&H00F0
+Funktie :Stopt het schrijven naar cassette
+Param.  :Geen
+Result. :Geen
+Wijzig. :Geen
+Opm.    :Deze BIOS routine is uit de BIOS bij de Turbo R verdwijderd i.v.m.
+         het ontbreken van een cassette poort. Als deze routine wordt aange-
+         roepen dan keert hij terug met de Carry gezet. 
+
+
+Naam    :STMOTR
+Adres   :&H00F3
+Funktie :Bestuurt de cassette motor
+Param.  :A = 0 om motor te stoppen
+             1 om motor te starten
+             255 om motor te starten indien deze uit stond of uit te zetten 
+                 indien hij aan stond  
+Result. :Geen
+Wijzig. :AF
+Opm.    :Deze BIOS routine is uit de BIOS bij de Turbo R verdwijderd i.v.m.
+         het ontbreken van een cassette poort. Als deze routine wordt aange-
+         roepen dan keert hij terug met de Carry gezet. 
+
+
+Routines om wachtrijen (queus) af te handelen:
+----------------------------------------------
+
+Naam    :LFTQ
+Adres   :&h00F6
+Funktie :Levert het aantal bytes op dat nog in de
+         wachtrij zit
+Param.  :
+Result. :A = Aantal bytes
+Wijzig. :
+Opm.    :Deze routine is intern
+
+
+Naam    :PUTQ
+Adres   :&h00F9
+Funktie :Plaatst een byte in de wachtrij
+Param.  :   
+Result. :
+Wijzig. :
+Opm.    :Deze routine is intern
+
+
+Routines bij de GENGRP en de ADVGRP modules:
+--------------------------------------------
+
+Naam    :RIGHTC
+Adres   :&h00FC
+Funktie :Schuift een beeldpunt naar rechts
+Param.  :
+Result. :
+Wijzig. :AF
+
+
+Naam    :LEFTC
+Adres   :&h00FF
+Funktie :Schuift een beeldpunt naar links
+Param.  :
+Result. :  
+Wijzig. :AF
+
+
+Naam    :UPC
+Adres   :&h0102
+Funktie :Schuift een beeldpunt naar boven
+Param.  :
+Result. :
+Wijzig. :AF
+
+
+Naam    :TUPC
+Adres   :&h0105
+Funktie :Test of UPC mogelijk is, indien dit zo is wordt UPC uitgevoerd
+Param.  :
+Result. :Cy1 = De operatie eindigt buiten het scherm
+Wijzig. :AF
+
+
+Naam    :DOWNC
+Adres   :&h0108
+Funktie :Schuift een beeldpunt naar beneden
+Param.  :   
+Result. :  
+Wijzig. :AF
+
+
+Naam    :TDOWNC
+Adres   :&h010B
+Funktie :Test of DOWNC mogelijk is, en voert DOWNC uit indien mogelijk
+Param.  :
+Result. :Cy1 = De operatie eindigt buiten het scherm
+Wijzig. :AF
+
+
+Naam    :SCALXY
+Adres   :&h010E
+Funktie :Schaalt de X en Y co”rdinaten
+Param.  :
+Result. :  
+Wijzig. :   
+
+
+Naam:     MAPXY
+
+Adres:    0111h
+Funktie:  Plaatst de cursor op het huidige cursor-
+          adres
+Param.:
+Result.:  
+Wijzig.:  
+
+
+Naam:     FETCHC
+
+Adres:    0114h
+Funktie:  Haalt het huidige cursor-adres en masker-
+          patroon
+Param.:   Geen
+Result.:  Cursor-adres in [HL], masker-patroon in
+          [Acc]
+Wijzig.:  Geen
+
+
+Naam:     STOREC
+
+Adres:    0117h
+Funktie:  Slaat huidige cursor-adres en masker-
+          patroon op
+Param.:   Cursor-adres in [HL], masker-patroon in
+          [Acc]
+Result.:  Geen
+Wijzig.:  Geen
+
+
+Naam:     SETATR
+
+Adres:    011Ah
+Funktie:  Zet attribute-byte
+Param.:
+Result.:  
+Wijzig.:  
+
+
+Naam:     READC
+
+Adres:    011Dh
+Funktie:  Leest attribute-byte van huidige beeldpunt
+Param.:   
+Result.:  
+Wijzig.:  
+
+
+Naam:     SETC
+
+Adres:    0120h
+Funktie:  Geef huidige beeldpunt het gespecificeerde
+          attribute-byte
+Param.:
+Result.:  
+Wijzig.:  
+
+
+Naam:     NSETCX
+
+Adres:    0123h
+Funktie:  Zet horizontale beeldpunten
+Param.:
+Result.:  
+Wijzig.:  
+
+
+Naam:     GTASPC
+
+Adres:    0126h
+Funktie:  Haalt de beeld-verhoudingen op
+Param.:   Geen
+Result.:  DE, HL
+Wijzig.:  DE, HL
+
+
+Naam:     PNTINI
+
+Adres:    0129h
+Funktie:  Initialiseert de PAINT-funktie
+Param.:
+Result.:  
+Wijzig.:  
+
+
+Naam:     SCANR
+
+Adres:    012Ch
+Funktie:  Scant beeldpunten naar rechts
+Param.:
+Result.:  
+Wijzig.:  
+
+
+Naam:     SCANL
+Adres:    012Fh
+Funktie:  Scant beeldpunten naar links
+Param.:
+Result.:  
+Wijzig.:
+
+  
+******************************************************************
+
+De volgende routines zijn aanvullende entries
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+Naam    :CHGCAP
+Adres   :&h0132
+Functie :Verandert de status van de CAP lamp
+Param.  :A = 0 om het lampje uit te zetten, niet 0 aan
+Result. :Geen
+Wijzig. :AF
+
+
+Naam    :CHGSND
+Adres   :&h0135
+Functie :Verandert de status van de 1 bit geluidspoort
+Param.  :A = 0 om uit te zetten, niet 0 aan
+Result. :Geen
+Wijzig. :AF
+
+
+Naam    :RSLREG
+Adres   :&h0138
+Functie :Leest het Primaire Slot Selectie Register
+Param.  :Geen
+Result. :A  = Inhoud van het Primair Slot Selectie Register
+Wijzig. :A
+Opm.    :Deze routine bestaat simpelweg uit de volgende instructies:
+            IN  A,(&hA8)
+            RET
+
+
+Naam    :WSLREG
+Adres   :&h013B
+Functie :Schrijft naar het Primaire Slot Selectie Register
+Param.  :A = Te schrijven byte
+Result. :Geen
+Wijzig. :Geen
+Opm.    :Deze routine bestaat simpelweg uit de volgende instructies:
+            OUT (&hA8),A
+            RET
+
+
+Naam    :RDVDP
+Adres   :&h013E
+Functie :Leest het VDP status register
+Param.  :Geen
+Result. :A = Data
+Wijzig. :A
+
+
+Naam    :SNSMAT
+Adres   :&h0141
+Functie :Geeft de status van een gespecificeerde rij van de
+         toetsenbord matrix
+Param.  :A = Rij x (0<= x <=11 op Turbo R)
+Result. :A = Status, het corresponderend bit staat op 0 wanneer een toets is
+             ingedrukt
+Wijzig. :AF
+
+
+Naam    :PHYDIO
+Adres   :&h0144
+Functie :Voert I/O uit voor massa-opslag media zoals diskettes
+Param.  :A = Diskdrive
+         B = Aantal sectoren
+         C = &hF8 of &hF9 invullen
+         DE= 1e sector nummer
+         HL= Bron- of doeladres in het geheugen
+         Cy 1= Saven van sectoren
+         Cy 0= Laden van sectoren
+Result. :Cy 1 = Er is iets fout gegaan. In dat geval bevat:
+               B = Het aantal nog te laden/saven sectoren  
+               A = foutcode, 0 = Write protected
+                             2 = Not ready
+                             4 = Data error
+                             6 = Seek error
+                             8 = Record not found
+                            10 = Write error
+                            12 = Bad parameter
+                            14 = Out of memory
+                            16 = Overig
+Wijzig. :Alles
+Opm.    :In de minimum configuratie is alleen een hook beschikbaar. In Dos 2 
+         zit een fout waardoor de computer gaat hangen. Sommige registers 
+         worden niet goed gepushed in de routine die terug schakelt naar de 
+         Z80 mode en weer terug naar de huidige mode. Gebruik de DOS call die  
+         dezelfde functie heeft! Dit zijn &h30 voor saven en &h2F voor laden.
+
+
+Naam    :FORMAT
+Adres   :&h0147
+Functie :Formateert een diskette in een diskdrive.
+Param.  :???
+Result. :???
+Wijzig. :???
+Opm.    :In de minimum configuratie is alleen een hook beschikbaar. Deze BIOS 
+         routine is gelijk als &h401C in het DiskROM aanroepen.
+
+
+Naam    :ISFLIO
+Adres   :&h014A
+Functie :Controleert of I/O naar een randapparaat plaatsvindt
+Param.  :Geen
+Result. :Niet 0 indien bezig, anders 0
+Wijzig. :AF
+
+Naam    :OUTDLP
+Adres   :&h014D
+Functie :Voert uit naar de printer
+Param.  :Code in [Acc]
+Result. :Geen
+Wijzig. :F
+Opm.    :Deze entry verschilt van LPTOUT in het volgende:
+          1) TABs worden geexpandeerd tot spaties,
+          2) Hiragana en graphics worden geconverteerd als een
+          niet-MSX printer wordt gebruikt,
+          3) Bij afbreken met Control-Stop wordt er een sprong 
+            naar `Device I/O error' gemaakt.
+
+Naam    :GETVCP
+Adres   :&h0150
+Functie :Geef pointer naar muziek-wachtrij
+Param.  :Kanaalnummer in [Acc}
+Result. :Pointer (adres van wachtrij) in [HL]
+Wijzig. :[AF]
+Opm.    :Wordt alleen gebruikt om muziek te spelen op de
+         achtergrond
+
+Naam    :GETVC2
+Adres   :&h0153
+Functie :Geef pointer naar variabele in wachtrij nummer VOICEN 
+         (byte op adres FB38)
+Param.  :Pointer in muziekbuffer in [L]
+Result. :Pointer in [HL]
+Wijzig. :[AF]
+Opm.    :Wordt alleen gebruikt om muziek te spelen in de
+         achtergrond
+
+Naam    :KILBUF
+Adres   :&h156
+Functie :Maakt de toetsenbord buffer leeg dmv GETPNT gelijk te maken aan de 
+         wwarde van PUTPNT (&hF3F8) De inhoud van de buffer wordt hierdoor 
+         niet aangetast maar wel de bufferadministratie, zodat de buffer leeg  
+         lijkt te zijn.
+Param.  :Geen
+Result. :Geen
+Wijzig. :HL, GETPNT (&hF3FA)
+
+Naam    :CALBAS
+Adres   :&h159
+Functie :Voert far_call (de inter-slot call) uit naar de BASIC interpreter. 
+         Hiervoor wordt eerst eventueel het slot waar BASIC inzit 
+         geselecteerd voor het adresgebied &h4000-&hBFFF
+Param.  :IX= Adres dat aangeroepen moet worden
+Result. :Afhankelijk van aangeroepen functie
+Wijzig. :Afhankelijk van aangeroepen functie
+
+
+Het volgende is een `patch area' voor BIOS. Dit vereenvoudigt het plaatsen van
+nieuwe entry vectors.
+
+Naam    :HOLE 90             
+
+
+**********************************************************************
+
+
+
+
+
+Name:             SUBROM
+Address:  015C
+Function: Calls a routine in the SUBROM
+Param.:   Adress in IX and IX pushed on stack !
+Changes:  Shadow registers and IY
+
+Name:             EXTROM
+Address:  015F
+Function: Call a routine in the SUBROM
+Param.:   Address in IX. (Not need on the stack)
+Changes:  Shadow registers and IY
+
+Name:             CHKSLZ
+Address:  0162
+Function: Make a slotscan for the Sub Rom. (Only needed at boot up time.)
+
+Name:             CHKNEW
+Address:  Checks if the screenmode is higher than MSX 1
+Function: Cy=0 if screen 5-?
+Changes:  AF
+
+Name:             EOL
+Address:  0168
+Function: Clear textline to end of line.
+Param.:   position in H,L
+
+Name:             BIGFIL
+Address:  016B
+Function: Does the same as FILVRM but it works beyond the first 16k.
+Param.:   Same as FILVRM
+
+Name:             NSETRD
+Address:  016E
+Function: Set the VRAM up for read.
+Param.:   HL = address. (Page in ActPag #FAF6)
+Changes:  AF
+
+Name:             NSETWR
+Address:  0171
+Function: Set the VRAM up for write.
+Param.:   HL = address. (page in ActPag)
+Changes:  AF
+
+Name:             NRDVRM
+Address:  0174
+Function: Reads 1 byte from VRAM.
+Param.:   Address in HL. Data in A
+
+Name:             NWRVRM
+Address:  0177
+Function: Writes 1 byte to VRAM
+Param.:   HL = address, A = Data to write.
+
+
+Naam    :?
+Adres   :&H017A
+Functie :?
+Param.  :Geen
+Result. :A = Inhoud van I/O poort F4
+Wijzigt :AF
+Opm.    :Deze BIOS routine is alleen aanwezig op de Turbo R of hoger???????
+         Op MSX2+ wordt deze byte gebruikt om te kijken hoe de computer is 
+         gereset (software of hardware)
+
+Naam    :?
+Adres   :&H17D
+Functie :?
+Param.  :A =een byte die naar I/O poort F4 geschreven wordt
+Result. :Geen
+Wijzigt :Niets
+Opm.    :Deze BIOS routine is alleen aanwezig op de Turbo R of hoger???????
+
+
+Naam    :CHGCPU
+Adres   :&H180
+Functie :Omschakelen tussen de Z80 en de R800 processor
+Param.  :A = LxxxxxPP
+         L = 1 als het bij het omschakelen mee moet veranderen
+         PP= 00= Z80
+             01= R800 ROM
+             10= R800 DRAM
+Result. :Geen
+Wijzigt :AF
+Opm.    :Deze BIOS routine is alleen aanwezig op een Turbo R of hoger!
+
+
+Naam    :GETCPU
+Adres   :&H183
+Functie :Opvragen van het huidige processor type
+Param.  :Geen
+Result. :A = 0= Z80
+             1= R800 ROM
+             2= R800 DRAM
+Wijzigt :AF
+Opm.    :Deze BIOS routine is alleen aanwezig op de Turbo R of hoger!
+
+
+Naam    :PCMPLY
+Adres   :&H0186
+Functie :Het weergeven van een PCM sample
+Param.  :A  = RxxxxxFF
+            R = 1= weergeve vanuit Main RAM
+            R = 0= weergave vanuit VRAM
+            FF= 00= 15.75 Khz.
+                01=  7.875 Khz.
+                10=  5.25 Khz.
+                11=  3.9375 Khz.
+         EHL= Start adres weergave
+         DBC= Lengte weergave
+Result. :Carry = 0 bij normale beeindeging
+         Carry = 1 bij abnormale beeindeging
+         A  = (alleen bij abnormaal beeindeging)
+            1= Fout bij instellen van frequenties
+            2= Beeindeging door STOP toets
+         EHL= adres van beeindeging
+Wijzigt :Alles
+Opm.    :De registers D en E hebben alleen een functie bij het VRAM
+         Deze BIOS routine is alleen aanwezig op de Turbo R of hoger!
+
+
+Naam    :PCMREC
+Adres   :&H0189
+Functie :Het opnemen van een PCM sample
+Param.  :A  = RTTTTCFF
+            R = 1= Weergeve vanuit Main RAM
+            R = 0= Weergave vanuit VRAM
+          TTTT= De sterkte van het geluid om te starten, 0 = Direct opnemen
+            C = 1= Compressie van sample AAN
+            FF= 00= 15.75 Khz.
+                01=  7.875 Khz.
+                10=  5.25 Khz.
+                11=  3.9375 Khz.
+         EHL= Start adres weergave
+         DBC= Lengte weergave
+Result. :Carry = 0 bij normale beeindeging
+         Carry = 1 bij abnormale beeindeging
+         A  = (alleen bij abnormaal beeindeging)
+            1= Fout bij instellen van frequenties
+            2= Beeindeging door STOP toets
+         EHL= adres van beeindeging
+Wijzigt :Alles
+Opm.    :De registers D en E hebben alleen een functie bij het VRAM
+         Deze BIOS routine is alleen aanwezig op de Turbo R of hoger!
+
+
+SUBROM head:
+
+#0000           DB #43,#44
+#0002           DW Initial code
+#0004           DW Call Statement handler.
+#0006           DW Device handler. (32k Ramdisk)
+
+#0008           SYNCHK
+#0010           CHRGTR
+#0018           OUTDO
+#001C           CALSLT
+#0020           DCOMPR
+#0028           GETYPR (I did not confirm this one)
+#0030           CALLF  (--!!--)
+
+#0038           Interrupt handler
+#0066           NMI     (Never used on MSX because the MSXDOS uses #0066)
+
+
+
+         STUK ERTUSSEN!!!!!!!!!
+
+
+
+
+Vervolg grafische routines in het SUB-ROM (!)
+
+
+Naam:     LEFTC
+Adres:    00ADH
+Functie:  Verplaatst een pixel naar links
+Param.:   Co”rdinaat in (CLOC) en (CMASK)
+Result.:  Nieuwe co”rdinaat in (CLOC) en (CMASK)
+Wijzig.:  Alleen voor scherm-mode 3
+
+Naam:     TDOWNC
+Adres:    00B1H
+Functie:  Verplaatst een pixel naar beneden
+Param.:   Co”rdinaat in (CLOC) en (CMASK)
+Result.:  Nieuwe co”rdinaat in (CLOC) en (CMASK)
+          Carryvlag wordt gezet wanneer de        
+          co”rdinaat zich op de rand van het scherm
+          bevindt
+Wijzig.:  Voor scherm-mode 3, 5, 6, 7 of 8
+
+Naam:     DOWNC
+Adres:    00B5H
+Functie:  Verplaatst een pixel omlaag
+Param.:   Co”rdinaat in (CLOC) en (CMASK)
+Result.:  Nieuwe co”rdinaat in (CLOC) en (CMASK)
+Wijzig.:  [AF]
+Opm.:     Alleen voor scherm-mode 3
+
+Naam:     TUPC
+Adres:    00B9H
+Functie:  Verplaatst een pixel omlaag
+Param.:   Co”rdinaat in (CLOC) en (CMASK)
+Result.:  Nieuwe co”rdinaat in (CLOC) en (CMASK)
+          Carry vlag wordt gezet wanneer de
+          co”rdinaat zich op de rand van het scherm
+          bevindt
+Wijzig.:  [AF]
+Opm.:     Voor scherm-mode 3, 5, 6, 7 of 8
+
+Naam:     UPC
+Adres:    00BDH
+Functie:  Verplaatst een pixel omhoog
+Param.:   Co”rdinaat in (CLOC) en (CMASK)
+Result.:  Nieuwe co”rdinaat in (CLOC) en (CMASK)
+Wijzig.:  [AF]
+Opm.:     Alleen voor scherm-mode 3
+
+Naam:     SCANR
+Adres:    00C1H
+Functie:  Scant pixels naar rechts
+Param.:   'Suspend'-vlag in [B], randtelling in [C]
+Result.:  Randtelling in [DE], `pixel veranderd'
+          vlag in [C]
+Wijzig.:  Alle
+Opm.:     Voor scherm-mode 3, 5, 6, 7 of 8
+
+Naam:     SCANL
+Adres:    00C5H
+Functie:  Scant pixels naar links
+Param.:   Randtelling in [DE]
+Result.:  Randtelling in [DE], `pixel veranderd'
+          vlag in [C]
+Wijzig.:  Alle
+Opm.:     Werkt op schermen 5-8 en in multi color
+          mode
+
+Naam:     NVBXLN
+Adres:    00C9H
+Functie:  Tekent een rechthoek
+Param.:   Start co”rdinaat in ([BC],[DE])
+          Eind co”rdinaat in (GXPOS,GYPOS)
+          Attribuut code in (ATRBYT)
+          Logische operatie in (LOGOPR)
+Result.:  Geen
+Wijzig.:  Alle
+Opm.:     Werkt op scherm 5, 6, 7 of 8
+
+Naam:     NVBXFL
+Adres:    00CDH
+Functie:  Tekent een gevulde rechthoek
+Param.:   Start co”rdinaat in ([BC],[DE])
+          Eind co”rdinaat in (GXPOS,GYPOS)
+          Attribuut code in (ATRBYT)
+          Logische operatie in (LOGOPR)
+Result.:  Geen
+Wijzig.:  Alle
+Opm.:     Werkt op schermen 5, 6, 7 of 8
+
+
+Toegang VDP:
+
+
+Naam:     CHGMOD
+Adres:    00D1H
+Functie:  Schakelt VDP in mode SCRMOD
+Param.:   Scherm-mode in [A] (0-8)
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     INITXT
+Adres:    00D5H
+Functie:  Initialiseert scherm voor tekst-mode
+          40*24, stelt VDP in
+Param.:   TXTNAM, TXTCGP
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     INIT32
+Adres:    00D9H
+Functie:  Initialiseert scherm voor tekst-mode
+          32*24, stelt VDP in
+Param.:   T32NAM, T32CGP, T32COL, T32ATR, T32PAT
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     INIGRP
+Adres:    00DDH
+Functie:  Initialiseert scherm voor hoge resolutie
+          mode, stelt VDP in
+Param.:   GRPNAM, GRPCGP, GRPCOL, GRPATR, GRPPAT
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     INIMLT
+Adres:    00E1H
+Functie:  Initialiseert scherm voor multi-color-mode
+          (scherm 3), stelt VDP in
+Param.:   MLTNAM, MLTCGP, MLTCOL, MLTATR, MLTPAT
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     SETTXT
+Adres:    00E5H
+Functie:  Stelt de VDP in voor tekst-mode 40*24
+Param.:   TXTNAM, TXTCGP
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     SETT32
+Adres:    00E9H
+Functie:  Stelt de VDP in voor tekst-mode 32*24
+Param.:   T32NAM, T32CGP, T32COL, T32ATR, T32PAT
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     SETGRP
+Adres:    00EDH
+Functie:  Stelt de VDP in voor hoge resolutie-mode
+          (scherm 2)
+Param.:   GRPNAM, GRPCGP, GRPCOL, GRPATR, GRPPAT
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     SETMLT
+Adres:    00F1H
+Functie:  Stelt de VDP in voor multi-color-mode
+          (scherm 3)
+Param.:   MLTNAM, MLTCGP, MLTCOL, MLTATR, MLTPAT
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     CLRSPR
+Adres:    00F5H
+Functie:  Initialiseert alle sprites
+          Patronen worden op 0 gezet, sprite-nummers
+          worden gezet op sprite-vlakken. Sprite-
+          kleur wordt gezet op voorgrondkleur,
+          verticale posities worden gezet op 217
+Param.:   (SCRMOD)
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     CALPAT
+Adres:    00F9H
+Functie:  Geeft adres van sprite patroon-tabel terug
+Param.:   Sprite ID in [A]
+Result.:  Adres in [HL]
+Wijzig.:  [AF], [DE], [HL]
+Opm.:     Deze routine is equivalent aan MSX1 BIOS
+
+Naam:     CALATR
+Adres:    00FDH
+Functie:  Geeft adres van sprite attribuut-tabel
+          terug
+Param.:   Sprite ID in [HL]
+Result.:  Adres in [HL]
+Wijzig.:  [AF], [DE], [HL]
+Opm.:     Deze routine is equivalent aan MSX1 BIOS
+
+Naam:     GSPSIZ
+Adres:    0101H
+Functie:  Geeft huidige sprite-grootte
+Param.:   Geen
+Result.:  Sprite-grootte (aantal bytes) in [A]
+          Carry gezet bij 16*16 sprite
+Wijzig.:  [AF]
+Opm.:     Deze routine is equivalent aan MSX1 BIOS
+
+Naam:     GETPAT
+Adres:    0105H
+Functie:  Geeft een karakter-patroon
+Param.:   ASCII-code in A
+Result.:  Patroon in (PATWRK), adres FC40
+Wijzig.:  Alle
+Opm.:     Deze routine is equivalent aan MSX1 BIOS,
+          maar bestaat daar niet als BIOS-aanroep!
+
+Naam:     WRTVRM
+Adres:    0109H
+Functie:  Schrijft naar VRAM geadresseert door [HL]
+Param.:   Adres in [HL], data in [A]
+Result.:  Geen
+Wijzig.:  [AF]
+Opm.:     Ondersteunt 16-bits adres O-OFFFFH
+
+Naam:     RDVRM
+Adres:    010DH
+Functie:  Leest VRAM geadresseerd door [HL]
+Param.:   Adres in [HL]
+Result.:  Data in [A]
+Wijzig.:  [AF]
+Opm.:     Ondersteunt adres O-OFFFFH
+
+Naam:     CHGCLR
+Adres:    0111H
+Functie:  Verandert kleur van scherm
+Param.:   Scherm-mode in [A]
+          Voorgrondkleur in FORCLR
+          Achtergrondkleur in BAKCLR
+          Randkleur in BDRCLR
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     CLS
+Adres:    0115H
+Functie:  Maakt scherm schoon
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     CLRTXT
+Adres:    0119H
+Functie:  Maakt het tekst-scherm schoon
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     DSPFNK
+Adres:    011DH
+Functie:  Schakelt functietoetsen aan (KEY ON)
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     DELLNO
+Adres:    0121H
+Functie:  Verwijdert een regel in tekst-mode
+Param.:   Regel-nummer in [L]
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     INSLNO
+Adres:    0125H
+Functie:  Voegt regel tussen in tekst-mode
+Param.:   Regel nummer in [L]
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     PUTVRM
+Adres:    0129H
+Functie:  Zet een karakter op tekst-scherm
+Param.:   Kolomnummer in [H], regelnummer in [L]
+Result.:  Geen
+Wijzig.:  [AF]
+
+Naam:     WRTVDP
+Adres:    012DH
+Functie:  Schrijft naar VDP register
+Param.:   Register in [C], data in [B]
+Result.:  Geen
+Wijzig.:  [AF], [BC]
+
+Naam:     VDPSTA
+Adres:    0131H
+Functie:  Leest VDP status
+Param.:   Status-register in [A] (0-9)
+Result.:  Data in [A]
+Wijzig.:  [F]
+
+Naam:     KYKKLOK
+Adres:    0135H
+Functie:  Bestuur Kana-toets en -lamp (Japan)
+Param.:   ???
+Result.:  ???
+Wijzig.:  [AF]
+
+Naam:     PUTCHR
+Adres:    0139H
+Functie:  Haalt een toets-code van toetsenbord,
+          converteert het naar een Kana-karakter, en
+          stopt het in de buffer (Japan)
+Param.:   Zero-vlag wordt gezet indien niet in
+          conversie-mode
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     SETPAG
+Adres:    013DH
+Functie:  Stelt VDP register in op pagina wissel
+Param.:   (ACPAGE), (DPPAGE)
+Result.:  Geen
+Wijzig.:  [AF]
+
+Palette-functies:
+
+Het VDP-palette heeft 3 kleuren: rood, groen, en
+blauw. Elke kleur heeft 3 bits om de intensiteit
+van de kleur weer te geven. Het huidige palette
+wordt opgeslagen in VRAM, omdat het niet te lezen
+is uit de VDP.
+
+Naam:     INIPLT
+Adres:    0141H
+Functie:  Initialiseert palette en VRAM voor opslag
+          van palette
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  [AF],[BC],[DE]
+
+Naam:     RSTPLT
+Adres:    0145H
+Functie:  Stelt palette opnieuw in vanuit VRAM
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  [AF],[BC],[DE]
+
+Naam:     GETPLT
+Adres:    0149H
+Functie:  Haalt kleur-codes van palette
+Param.:   Kleur in [A] (0-15)
+Result.:  ROOD code in hoogste 4 bits van [B]
+          BLAUW code in laagste 4 bits van [B]
+          GROEN code in laagste 4 bits van [C]
+Wijzig.:  [AF],[DE]
+
+Naam:     SETPLT
+Adres:    014DH
+Functie:  Zet kleur-codes in palette
+Param.:   Kleur in [D] (0-15)
+          ROOD in hoogste 4 bits van [A]
+          BLAUW in laagste 4 bits van [A]
+          GROEN in laagste 4 bits van [E]
+Result.:  Geen
+Wijzig.:  [AF]
+
+
+Basic Extended Statements:
+
+Let op: weer alleen vanuit de Basic-interpreter!
+
+Naam:     PUTSPR [Basic!]
+Adres:    0151H
+Functie:  Zet sprites
+Param.:   Tekstpointer in [HL]
+Result.:  Bijgewerkte tekstpointer in [HL]
+Wijzig.:  Alle
+
+Naam:     COLOR [Basic!]
+Adres:    0155H
+Functie:  Verandert scherm-kleur, sprite-kleur,
+palette
+Param.:   Tekstpointer in [HL]
+Result.:  Bijgewerkte tekstpointer in [HL]
+Wijzig.:  Alle
+
+Naam:     SCREEN [Basic!]
+Adres:    0159H
+Functie:  Verandert scherm-mode
+Param.:   Tekstpointer in [HL]
+Result.:  Bijgewerkte tekstpointer in [HL]
+Wijzig.:  Alle
+
+Naam:     WIDTHS [Basic!]
+Adres:    015DH
+Functie:  Verandert tekstscherm-breedte
+Param.:   Tekstpointer in [HL]
+Result.:  Bijgewerkte tekstpointer in [HL]
+Wijzig.:  Alle
+
+Naam:     VDP [Basic!]
+Adres:    0161H
+Functie:  Stelt VDP register in
+Param.:   Tekstpointer in [HL]
+Result.:  Bijgewerkte tekstpointer in [HL]
+Wijzig.:  Alle
+
+Naam:     VDPF [Basic!]
+Adres:    0165H
+Functie:  Leest huidig VDP register
+Param.:   Tekstpointer in [HL]
+Result.:  Bijgewerkt tekstpointer in [HL]
+Wijzig.:  Alle
+
+Naam:     BASE [Basic!]
+Adres:    0169H
+Functie:  Stelt VDP base-register in
+Param.:   Tekstpointer in [HL]
+Result.:  Bijgewerkte tekstpointer in [HL]
+Wijzig.:  Alle
+
+Naam:     BASEF [Basic!]
+Adres:    016DH
+Functie:  Leest VDP base-register
+Param.:   Tekstpointer in [HL]
+Result.:  Bijgewerkte tekstpointer in [HL]
+Wijzig.:  Alle
+
+Naam:     VPOKE [Basic!]
+Adres:    0171H
+Functie:  Schrijft een byte naar VRAM
+Param.:   Tekstpointer in [HL]
+Result.:  Bijgewerkte tekstpointer in [HL]
+Wijzig.:  Alle
+
+Naam:     VPEEK [Basic!]
+Adres:    0175H
+Functie:  Leest een byte van VRAM
+Param.:   Tekstpointer in [HL]
+Result.:  Bijgewerkte tekstpointer in [HL]
+Wijzig.:  Alle
+
+Naam:     SETS [Basic!]
+Adres:    0179H
+Functie:  Stelt beep in, scherm-verplaatsing
+          (adjust), tijd en datum
+Param.:   Tekstpointer in [HL]
+Result.:  Bijgewerkte tekstpointer in [HL]
+Wijzig.:  Alle
+
+
+Diversen:
+
+Naam:     BEEP
+Adres:    017DH
+Functie:  BEEP!
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     PROMPT
+Adres:    0181H
+Functie:  Laat prompt zien (normaal 'Ok')
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  Alle
+
+
+Herstel scherm:
+
+Naam:     SDFSCR
+Adres:    0185H
+Functie:  Herstelt scherm-parameters vanuit RAM op
+          klok-chip (batterij!). Als de carryvlag
+          niet gezet is bij aanroep vanuit MSX-DOS,
+          worden de functietoetsen niet getoond
+Param.:   Carry is nul bij aanroep vanuit DOS
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     SETSCR
+Adres:    0189H
+Functie:  Herstelt scherm-parameters en print
+          openings-boodschap
+Param.:   Geen
+Result.:  Geen
+Wijzig.:  Alle
+
+
+VRAM Data Transfer Functies
+
+Opmerking: vanaf adres F562H moeten parameters
+klaar staan. Zie tekst!
+
+Naam:     SCOPY [Basic!]
+Adres:    018DH
+Functie:  Kopieert VRAM, array en disk file
+Param.:   Tekstpointer in [HL]
+Result.:  Bijgewerkte tekstpointer in [HL]
+Wijzig.:  Alle
+
+Naam:     BLTVV
+Adres:    0191H
+Functie:  Kopieert VRAM naar VRAM
+Param.:   [HL] = 0F562H. Invullen: SX, SY, DX, DY,
+          NX, NY, ARG, L_OP
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     BLTVM
+Adres:    0195H
+Functie:  Kopieert Main RAM (normaal geheugen) naar
+          VRAM
+Param.:   [HL] = 0F562H. SX: Adres van array met
+          scherm-data, zie tekst. Verder DX, DY,
+          ARG en L_OP. NX en NY staan in de scherm-
+          data en hoeven dus niet te worden
+          ingevuld.
+Result.:  Carry-vlag gezet als fout in RAM-data
+Wijzig.:  Alle
+
+Naam:     BLTMV
+Adres:    0199H
+Functie:  Kopieert VRAM naar Main RAM
+Param.:   [HL] = 0F562H. DX: adres van scherm-data
+          in RAM. Verder: SX, SY, NX, NY, ARG
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     BLTVD
+Adres:    019DH
+Functie:  Kopieert diskfile naar VRAM
+Param.:   [HL] = 0F562H. SX: adres van filenaam,
+          zie tekst. Verder: DX, DY, ARG, L_OP. NX
+          en NY staan in de diskfile
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     BLTDV
+Adres:    01A1H
+Functie:  Kopieert VRAM naar diskfile
+Param.:   [HL] = 0F562H. DX: filenaam. Verder SX,
+          SY, NX, NY en ARG
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     BLTMD
+Adres:    01A5H
+Functie:  Laadt array-data van diskfile
+Param.:   [HL] = 0F562H. SX: filenaam. DX:
+          startadres, DY: eindadres in Main RAM
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     BLTDM
+Adres:    01A9H
+Functie:  Slaat array-data op naar diskfile
+Param.:   [HL] = 0F562H. SX: startadres, SY:
+          eindadres in Main RAM. DX: filenaam
+Result.:  Geen
+Wijzig.:  Alle
+
+
+Muis en Trackball:
+
+Naam:     NEWPAD
+Adres:    01ADH
+Functie:  Leest paddle, muis en trackball
+Param.:   Toegang via GTPAD in de BIOS (00DBH).
+          Procedure: lees eerst van het apparaat,
+          vraag dan de X en Y op.
+
+          Betekenis van [A]:
+     8    Lees lichtpen (255 indien aanwezig)
+     9    Geef X-co”rdinaat
+     10   Geef Y-co”rdinaat
+     11   Geef lichtpen-status (255 indien
+          ingedrukt)
+
+     12   Lees muis/trackball aangesloten op poort
+          1 (altijd 255)
+     13   Geef X-offset
+     14   Geef Y-offset
+     15   Geen functie (altijd 0)
+
+     16   Lees muis/trackball aangesloten op poort
+          2 (altijd 255)
+     17   Geef X-offset
+     18   Geef Y-offset
+     19   Geen (altijd 0)
+
+Result.:  Waarde in [A]
+Wijzig.:  Alle
+
+
+Diversen:
+
+Naam:     GETPUT [Basic!]
+Adres:    01B1H
+Functie:  GET TIME en GET DATE en PUT KANJI (Japan)
+Param.:   Tekstpointer in [HL]
+Result.:  Bijgewerkte tekstpointer in [HL]
+Wijzig.:  Alle
+
+Naam:     CHGMDP
+Adres:    01B5H
+Functie:  Stelt VDP mode in op SCRMOD
+Param.:   Scherm-mode in [A] (0-8)
+Result.:  Geen
+Wijzig.:  Alle
+
+Naam:     RESVI
+Adres:    01B9H
+Functie:  Wordt niet gebruikt. Reserve
+Param.:   
+Result.:  
+Wijzig.:  
+
+
+Kanji Print:
+
+Naam:     KNJPRT
+Adres:    01BDH
+Functie:  Zet een Kanji karakter op het grafische
+          scherm (5-8)
+Param.:   [BC] = JIS kanji karakter code
+          [A] = display mode (0 = vol, 1 = even, 2
+          = oneven)
+Result.:  Geen
+Wijzig.:  [AF]
+
+
+Toegang tot klok-chip:
+
+Naam:     REDCLK
+Adres:    01F5H
+Functie:  Leest klok-data
+Param.:   [C] = klok RAM-adres
+          bit - 7 6 5  4  3  2  1  0 
+          [C] = X X B1 B0 A3 A2 A1 A0
+Result.:  [A] = gelezen data (laagste 4 bits)
+Wijzig.:  [F]
+
+Naam:     WRTCLK
+Adres:    01F9H
+Functie:  Schrijft klok data
+Param.:   [C] = klok RAM adres
+          [A] = te schrijven data
+          bit - 7 6 5  4  3  2  1  0 
+          [C] = X X B1 B0 A3 A2 A1 A0
+Result.:  Geen
+Wijzig.:  [F]
+
+
+

@@ -1,0 +1,625 @@
+Extracts from the Compass #1.2 manual
+developed by Compjoetania / Compjoetania TNG
+--------------------------------------------
+These are some extracts of the manual for Compass #1.2
+The appendix at the end gives a nice idea about some of
+the functionality of Compass.
+Extracts concerning disk and other hard-ware packaging should
+be disregarded, since they don't apply to the MCCM-CD.
+
+
+
+
+
+MSX, MSX-Dos en R800 are trademarks of the ASCII Corp.
+Z80 is a trademark of ZILOG Corp.
+Memman is developed by the Msx Software Team
+
+
+
+
+Despite all the care taken by the producing of this text, neither 
+Compjoetania nor the copyright holder can be hold responsible for 
+any possible damage which could be produced by any error contained 
+in this document.
+
+
+
+
+
+
+
+Preface
+*******
+Why another MSX-Assembler ? In the dark past many different assemblers were 
+produced for the MSX-system, beside the already available CP/M assemblers. 
+Beside the advantages of these products there were also had a lot of
+disadvantages. 
+Some of them had an integrated environment but weren't able of handling large 
+sources, others were very powerful but needed a separated editor causing a
+waste of time when testing and debugging. Most of these programs didn't take 
+advantage of the new developments in the MSX-scene. Just to name a few of 
+them: Turbo R (the R800 instruction set ), Memman, Dos 2.xx (subdirectories). 
+There just wasn't an assembler which combined enough advantages to satisfy 
+almost everybody.
+
+Compass is our attempt to create an easy-to-use, menu driven and extensive
+package specifically designed for the MSX-system. The name "Compass" is an 
+contraption of the words "COMPjoetania Assembler". We would like to thank 
+everybody who, one way or another, contributed to the development of Compass. 
+We hope you enjoy Compass.
+
+March 1995, COMPJOETANIA
+September 1997, COMPJOETANIA The Next Generation
+
+Remo Jongeneelen
+David Heremans
+Eric van Beurden
+Jon De Schrijder
+
+
+
+
+
+1. Preparations
+It is important that you read this chapter before you procede. It contains
+important information about the program as a whole and the content of the 
+bought package.
+
+1. 1. Service
+If  there are, despite our efforts, are any errors (disk I/O errors etc.), you can return 
+the malfunctioning disk. We will replace this disk with a better one without any further 
+costs. The contact address is :
+
+        Compjoetania TNG
+        David Heremans
+        Goorweg 24
+        2221 Booischot
+        Belgium
+
+for other info you can contact us at :
+david.heremans@ping.be
+
+1. 2. The contents of the package
+The normal Compass package included (newer version may vary !):
+
+* A black dubbelsided DD disk (branch TDK) with a full colour label. The disk contains :
+        * The program Compass.
+        * Text-files concerning the MSX-system. These files can be loaded in the
+          sourcebuffers of Compass or be printed with any regular text-utility.
+          The disk contains texts about :
+                * The MSX-BIOS
+                * The MSX-Bdos (Dos 1&2)
+                * The systems variables.
+                * The disk variables.
+                * The I/O ports.
+                * The hooks
+        * The programs PMEXT.COM en PMARC.COM to (de)crunch the available .PMA files.
+        * Memman 2.42 together with some accompaigning programs.
+* A 44 pages counting, ringbinded, A4-sized manual.
+
+1. 3. Configuration
+ Compass runs on every MSX2, MSX2+ and MSX Turbo R computer with a memory mapper
+ of at least 256 kB Ram. (You'll  need a double sided diskdrive for the original
+ disk to work ofcourse.)
+
+Compass supports the following configurations :
+
+* MSX-Dos 2.xx: If you have Dos 2.xx you are able to browse through
+  subdirectories and you can take advantage of the Dos 2.xx Ramdisk.
+* MEMORY MAPPER: Compass supports multiple memory mappers.
+* MSX TURBO-R:  If you run Compass on a MSX Turbo R you are able to switch between
+  the Z80 and R800 (ROM/DRAM) processor.
+* HARDDISK: You are able to install Compass on your harddisk, just place
+  the COMPASS.COM and COMPASS.DAT in the same subdirectory.
+* MEMMAN 2.42: Compass uses -if already installed- the memory management
+  routines provided by Memman. This ofcourse allows you to use TSR's while
+  you are using Compass. If you don't use Memman then Compass will use the
+  routines provided by Dos 2.xx . If you don't use either of them, Memman
+  will resort to using its own memory routines. You can find Memman 2.42
+  and the accompanying programs in a packed archive on the distribution disk.
+
+Compass uses screen 0 in 80 columns mode. This mode is slightly altered so that we
+use 26.5 lines and 4 colors. The assembler in Compass also uses some Vram, but this
+amount will never exceed the address space from #00000 up to #07FFF.
+
+1. 4. Booting Compass 
+
+The version of Compass that you'll find on the disk is a COM file which have to be 
+launched using MSX-DOS. The two files that make up MSX-Dos are :
+* MSXDOS.SYS en COMMAND.COM for MSX-Dos 1.xx
+* MSXDOS2.SYS en COMMAND2.COM for MSX-Dos 2.xx
+
+These files are copyrighted and therefore are not distributed with the package. You 
+can copy the files COMPASS.COM and COMPASS.DAT form the Compass-disk to a disk 
+containing these MSX-Dos files, or just launch MSX-Dos and swap the disks. 
+Alternatively you can copy the Compass files to a directory on your harddisk. 
+When you have started MSX-Dos just type :
+
+        A:>COMPASS [RETURN]
+
+Now that you have started Compass you will see a nice graphical logo appear 
+on your screen. This logo is made in screen 5 causing the first page of 
+screen 5 to be erased. Launching compass wile take longer if you leave this logo enabled. In the 
+main install menu there is an option which allows you to disable this logo !
+
+When you launch Compass on an MSX Turbo R the CPU mode will automatically be set 
+to R800 ROM mode. The ROM mode is used because Compass is as fast in ROM mode as 
+in Dram mode. In ROM mode however you are able to use the RAM pages which are 
+otherwise blocked for internal use, making for more memory available and as such 
+allowing more/bigger buffers.
+
+Compass frequently uses Kbuf (#F41F : 318 bytes long). Make sure this part of your 
+memory is free and that your programs and/or TSR don't affect this 
+memory. Also some Compasscode is stored in PLAYqueues for channel B and C.
+(#F9F5-#FAF4) Make sure these queues are not overwritten by other 
+programs or by executing a PLAYstatement in BASIC for channel B or C.
+
+
+
+
+
+
+Calculator
+**********
+
+When you use the SYSTEM menu or the short cut CTRL + C you will see the
+calculator appear on your screen. The calculator consists of a small frame,
+which can be moved up- and downwards using the cursors. This gives you the 
+ability to still have a look at the entire screen without having to worry 
+if the calculator will hide some of the info you need. You can leave the 
+calculator by pressing [ESC].
+
+Compass is equipped with a very powerful calculator. The next enumeration
+should clearly state this.
+* The calculator uses the mathematical priority of operations (raise to
+  the n-th power, multiply, divide, add and substract) and brackets. There
+  is no limitation to the number of brackets used in an expression making
+  for example ((6*(76-4)/23+(12-45))*7 a valid expression.
+* The minus sign can be used as many times as one wishes.
+  This makes ---5 equal to -5.
+* The logical operators AND, OR and XOR and the MOD operator.
+* You can use the result of the previous made calculation in the current
+  expression by using the $-sign.
+* It is possible to place spaces in-between the digits of the same number
+  making % 1100  00  11 a correct number while keeping the readability high.
+* The calculator can use the labels in the labelbuffer. If your program uses
+  labels as START, ENDPROG, DATA, ... then after compilation you can use 
+  expression as : (DATA - START) / 1024 +ENDPROG for example.
+
+When an expression is calculated the result is shown as a 8/16 bits hexadecimal
+number, a 8/16 bits binary number, as a regular decimal number and as one/two 
+character(s). If you entered an error in the expression you will get a chance 
+to correct them and you can try again. If all went fine the command line will 
+be empty and you can enter the next expression.
+
+Terminate & Stay Resident programs
+**********************************
+
+These programs, usually abbreviated to TSR's, are designed to work as a 
+background task. Some can be activated by hotkeys, others intercept hooks 
+to be activated. These programs can only be used when running MemMan 2.4. 
+This Memory Manager does all the necessary memory allocation and hook 
+maintenance for all the different TSR's and other MemMan-enabled programs 
+so that we don't have any trouble with programs who, involuntarily,  destroy 
+each others address space and therefore make your MSX crash. MemMan 2.4 can 
+be found on the Compass-disk
+
+For more information about TSR's you should get
+the TSR development kit made by MST.
+
+Previously the only method to make a TSR was to compile the source to a 
+Relocatable File (see chapter 14) which could only be done with gen80 
+from the DOS command line and further be linked with a specially by MST 
+written linker to created the .TSR file. This is definitely a very time 
+consuming and long-winded method. For this reason Compass has built-in 
+TSR compiling. To make this possible an extra directive had to be 
+built, namingly :
+
+TSRHOOKS
+
+This command has to be used before you define the hooks and accompanying 
+labels at the end of the source (See the TSR framework in the TSR 
+development kit). Afterwards you can compile your source to a TSR, 
+this is a three-pass assembling. The compiled TSR can be loaded from 
+DOS using the TL program. If the TSR doesn't function correctly you 
+can return to Compass using the Compass hotkey and adapt the source. 
+This ensures an ideal working environment for TSR development.
+
+
+
+Example:
+        code
+        .
+        .
+        .
+        code
+
+        TSRHOOKS
+hooks:
+        defw ...,...,...,...
+        end
+
+
+
+Relocatable files
+*****************
+
+In the prehistoric times of computerprogramming, CPU time was an awful 
+expensive item. To make small changes in a 'large' program and recompile 
+the entire source was something you'd better avoided. Beside that there 
+was also the matter of multiple users using the same machine at the same 
+time and the dangers that programs in the memory would trespassing each 
+others memory space. For this reason the principle of small, quick to 
+compile, modules raised its head.
+The principal is thus to use different little sources, which by means 
+of an assembler could be compiled and afterwards could be linked to each 
+other and be placed anywhere in the main-memory. The big advantage was 
+that now a small change in one or more small modules would cost less 
+time to compile. The linking itself is relatively fast, so that the total 
+time was decreased considerably. There was however a drawback to this 
+method. When using labels and routines from an other module their (relative) 
+address isn't known by the compiler since it isn't aware of the target 
+address or the order in linking. To solve this problem the Relocatable 
+Files were designed. These type of files consist of a bitstream containing 
+all unknown addresses in the form of offset to different counterregisters. 
+The linkerprogram is now able to calculate the absolute addresses since he 
+is familiar to the linking order of the project. For more technical info 
+about the Relocatable files we advise you to read the articles once
+published by MCCM.
+
+To make the development of relocatable files possible some extra assembler
+directives were added, making it possible to control the byte flow in the
+final program
+
+CSEG / DSEG / ASEG
+Usage : CSEG / DSEG / ASEG
+
+Assembling to relocatable files makes it possible to use three different 
+counters. These are known as the code-segment (CSEG), the data-segment 
+(DSEG) en the absolute-segment (ASEG). These segments are joined during 
+linking, therefore enabling clustering of data and code blocks. When you 
+start assembling, the code-segment is automatically turned on. By using 
+one of the 3 commands you can indicate in which block the next code has 
+to be placed.
+
+PUBLIC / EXTERN
+Usage : PUBLIC / EXTERN label, label, ..., label
+
+By using the directive PUBLIC you declare labels in the current module 
+known to the other modules, thus indicating that this label can be used 
+by other modules. If a module want to use a label declared in an other 
+module it has to indicate this by declaring that label with EXTRN. 
+Instead of using the PUBLIC directive you can achieve the same effect 
+by stating two doublepoints after the labelname. So 'label::' is functional 
+equivalent to 'PUBLIC label'.
+
+.PHASE
+Usage : .PHASE address
+
+Use this directive to create a temporary absolute segment. The program counter
+will be assigned the value 'address' and all the labels between this directive
+and the .DEPHASE directive will be placed upon this address or higher. This 
+option is extremely useful if you want to replace a part of your program to 
+an absolute address. Just place the desired block between the .PHASE / .DEPHASE 
+directives, making the code to be compiled to the desired target address.
+
+.DEPHASE
+Usage : .DEPHASE
+Using .DEPHASE restores the programcounter to the old value and segment.
+
+Appendix A:
+***********
+
+Short cuts
+
+If you are a frequent Compass user you will certainly appreciate the 
+short cuts, these are thousands times faster than going through the 
+regular select-menu-select-option method.
+
+General short cuts
+------------------
+Japanese NO     Z80
+Japanese YES    R800-ROM
+CTRL + C        Calculator
+CTRL + D        To disk menu
+
+
+Assembler short cuts
+--------------------
+
+CTRL + A        Assemble source to memory
+CTRL + E        End of block
+CTRL + G        Go to memory location (Run program)
+CTRL + J        Jump to line in current sourcebuffer
+CTRL + K        Copy block to current line and buffer
+CTRL + L        Copy the definition label from the first line of the block to current position
+CTRL + N        Continue the search
+CTRL + P        Print the currently selected block
+CTRL + Q        Quit the program
+CTRL + R        Show error list
+CTRL + S        Set the beginning of the block
+CTRL + T        Reset block
+CTRL + V        Move block to current line and buffer
+CTRL + W        Delete block
+CTRL + Z        Search/replace text
+
+CTRL + 1        Select sourcebuffer 1
+CTRL + 2        Select sourcebuffer 2
+CTRL + 3        Select sourcebuffer 3
+CTRL + 4        Select sourcebuffer 4
+
+CTRL + 5        Select PAL mode (50 Hz.)
+CTRL + 6        Select NTSC mode (60 Hz.)
+
+CTRL + F1       Store current line underneath the F1 key
+CTRL + F2       Store current line underneath the F2 key
+CTRL + F3       Store current line underneath the F3 key
+CTRL + F4       Store current line underneath the F4 key
+CTRL + F5       Store current line underneath the F5 key
+
+SHIFT + F1      Get position stored with CTRL F1 and jump to that line
+SHIFT + F2      Get position stored with CTRL F2 and jump to that line
+SHIFT + F3      Get position stored with CTRL F3 and jump to that line
+SHIFT + F4      Get position stored with CTRL F4 and jump to that line
+SHIFT + F5      Get position stored with CTRL F5 and jump to that line
+
+CTRL + INS      Insert a line
+SHIFT + INS     Insert 10 lines
+CTRL + DEL      Remove a line
+SHIFT + DEL     Remove until end of line
+HOME            Jump to beginning / ending of the current source buffer.
+GRAPH + cursors Change : Uppercase >< lowercase
+
+CTRL + up       Scroll up one screen
+CTRL + right    To the beginning of the next word
+CTRL + down     Scroll down one screen
+CTRL + left     To the end of the previous word
+SHIFT + up      Scroll up one hundred lines
+SHIFT + right   To right to the last character of the line
+SHIFT + down    Scroll down one hundred lines
+SHIFT + left    To the first position of the line
+
+STOP            Go to the Monitor
+SHIFT + ESC     Go to shell / end shell
+
+Monitor short cuts
+------------------
+
+CTRL + A        Set current address
+CTRL + E        'PEEK' an address
+CTRL + F        Fill memory with given value
+CTRL + K        Copy memory block 
+CTRL + N        Continue the search
+CTRL + O        'POKE' a value into an address
+CTRL + P        Print a block of memory
+CTRL + Q        Quit the program
+CTRL + Z        Search
+
+CTRL + up       Scroll up one screen
+CTRL + down     Scroll down one screen
+
+STOP            Go to the Monitor
+SELECT          Toggle between debugger and monitor
+
+
+Debugger short cuts
+-------------------
+
+For the shortcuts in the debugger you don't need to use the CTRL key, just the key will do.
+CTRL + A        Set address
+CTRL + B        Set breakpoint
+CTRL + E        Execute until breakpoint
+CTRL + H        Puts the program counter onto the current cursor address
+CTRL + J        Puts the cursor address onto the current program counter 
+CTRL + L        Link the mini-monitor
+CTRL + P        Print a disassembled memory block
+CTRL + Q        Quit the program
+CTRL + R        Registers
+CTRL + S        Step
+CTRL + T        Trace
+CTRL + U        Address, stored with TEMPORARY gets 'popped'
+CTRL + V        View breakpoints
+CTRL + W        Erase breakpoint
+CTRL + Y        Special trace
+
+STOP            Go to the Monitor
+SELECT          Toggle between debugger and monitor
+
+SHIFT + up      Jumps back aprox. 200 bytes
+SHIFT + down    Jumps forward aprox. 200 bytes
+
+Appendix B:
+***********
+
+Error messages
+Here's a list of the messages you may encounter when using Compass
+
+Editor messages
+---------------
+        Databuffer to small....
+During editing or loading the program notices that your databuffer isn't big enough. You are able to change this in the memory-menu (chapter 7).
+
+        Destination in block !
+You are trying to copy or move a block while the cursor (the target line) is in the block itself.
+
+        No block selected !
+You attempted to execute a block-commando when you don't have a block selected.
+
+        Printer not ready !
+Your printer isn't online while you tried to print something.
+
+        Sourcebuffer to small....
+During editing or loading the program notices that your sourcebuffer isn't big enough. You are able to change this in the memory-menu (chapter 7).
+
+        Text not found !
+The search function couldn't locate (any other) occurrence of the wanted text in the current buffer
+
+Assembler errors
+----------------
+        Bad instruction
+Compass didn't recognize the given command.
+
+        Bad mnemonic
+The entered registers, labels, values, etc. weren't recognized by Compass.
+
+        Division by zero
+You tried to divide a (label representing a) number by zero.
+
+        Illegal symbol in label
+You are using a unauthorised symbol in a label.
+
+        Label not defined
+You are using a labelname which isn't defined although it should be at this point during assembling.
+
+        Label too long
+You have used a labelname which exceeds the length of the maximum labellength which is set using the INSTALLATIONS menu or the assembler directive .LABEL.
+
+        Labelbuffer too small.
+During assembling the labelbuffer encountered an overflow. You can 
+change the size of this buffer in the memory menu (chapter 7).
+
+        Macro already opened
+You issued a MACRO command while you're already inside a MACRO definition.
+
+        Macro not definied
+You are using a MACRO command without naming it properly.
+
+        Macro not opened
+You're trying to close a macrodefinition with the ENDM command but you haven't opened any macro definition.
+
+        Macro used as label
+You are trying to use a defined macro-name as a label, this is forbidden.
+
+        Missing ")"
+You entered an expression and forgot one or more closing brackets which leaves the expression open.
+
+        Number out of range
+The number you are using exceeds the maximum value allowed for this operation ex. LD A,300
+
+        Offset out of range
+The target address for the relative offset cannot be reached.
+
+        Phase still active
+You're trying to use ORG / CSEG /DSEG / ASEG commands while you're still in a phase-mode.
+
+        Public not found
+The entered public labelnames don't appear in the current module. 
+
+        Redefined label
+The labelname you try to define is already defined elsewhere.
+
+        Relocatable instruction
+You are using a relocatable instruction and you aren't assembling to a relocatable file.
+
+        Too many if's
+You have more nested IF's than the allowed maximum of sixteen.
+
+
+Monitor errors
+--------------
+        Not equal !
+The two memory areas you are comparing aren't equal.
+
+        Printer not ready !
+You tried to print a memory dump but the printer seems to be off line.
+
+        String not found !
+The entered search string couldn't be found in the select memory chunk.
+
+
+Debugger errors
+---------------
+        Breakpoint-memory filled !
+The memory allocated for breakpoint definitions is full.
+
+        Call-buffer already empty !
+You tried to retrieve an address from the call-buffer which is already empty.
+
+        Call-buffer already filled !
+You tried to put an new address in the call-buffer but there aren't any entries left.
+
+        Printer not ready !
+You tried to print a memory dump but the printer seems to be off line.
+
+        There are no breakpoints to delete !
+The breakpoint list is already completely empty.
+
+        There is no breakpoint at that address !
+You are trying to delete a breakpoint but there isn't a breakpoint defined at that address.
+
+        This address is already defined as a breakpoint !
+The address you gave already contained a breakpoint.
+
+        You haven't defined any breakpoints !
+You try to execute-until-breakpoint, but there aren't any breakpoints set.
+
+
+Disk errors
+-----------
+        Disk I/O error !
+A part of the disk can't be read or written.
+
+        Disk off-line !
+There is no disk in the drive or the disk isn't formatted.
+
+        File not found
+The given file and/or pathname can't be found.
+
+        No assembler file
+You try to open a file as an assemblerfile but the file doesn't seem to be of the ASM type.
+
+        No binair file 
+You try to open a file as a binary-file but the file doesn't seem to be of the BIN type.
+
+        No diskdrive !
+You try to save a sector on a hard drive. This operation isn't allowed by Compass.
+
+        Write error !
+During writing an error occurred. Try again using another disk (maybe your disk is full ?).
+
+        Write protected !
+The disk on which you tried to save is write-protected.
+
+
+Appendix C:
+***********
+Reserved words
+Here's a list of the reserved words in the assembler.
+These are used during compilation and aren't allowed to be used as labels, macro's or similar.
+
+Instructions
+------------
+ADC     CPI     EXX     JP      NEG     PUSH    RLD     SET
+ADD     CPIR    HALT    JR      NOP     RES     RR      SLA
+AND     CPL     IM      LD      OR      RET     RRA     SLL
+BIT     DAA     IN      LDD     OTDR    RETI    RRC     SRA
+CALL    DEC     INC     LDDR    OTIR    RETN    RRCA    SRL
+CCF     DI      IND     LDI     OUT     RL      RRD     SUB
+CP      DJNZ    INDR    LDIR    OUTD    RLA     RST     XOR
+CPD     EI      INI     MULUB   OUTI    RLC     SBF     
+CPDR    EX      INIR    MULUW   POP     RLCA    SCF     
+
+Operands
+--------
+A       H       AF      IXH     C       PE
+B       I       BC      IXL     M       PO
+C       L       DE      IY      NC      Z
+D       R       HL      IYH     NZ      
+E       SP      IX      IYL     P       
+
+
+Assembler directives
+--------------------
+ASEG    DEFW/DW INCLUDE
+BREAKP  END     .LABEL
+COND    ENDC    MACRO
+CSEG    ENDIF   ORG
+DEFB/DB ENDM    PHASE
+DEFC/DC EQU     PUBLIC
+DEFM/DM EXTRN   TSRHOOKS
+DEFL    IF      UPPER
+
+
+
+
