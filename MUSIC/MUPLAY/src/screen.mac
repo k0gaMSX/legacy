@@ -1,0 +1,260 @@
+;Screen Initialize Program.
+;Program Store:Page1 / 初回ディスクアクセス前に実行すること
+
+	include	entry.mac
+	include	macro.mac
+
+	extrn	vdpwait
+	extrn	user_palette
+	extrn	set_palette
+	extrn	sys_load
+	extrn	wrtvdp
+	extrn	boxfull
+	extrn	clrfil
+	extrn	wait1
+	extrn	clrspd
+	extrn	get_drive
+	extrn	now_driver
+	extrn	line
+	extrn	ldirvm
+	extrn	key_y
+	extrn	key_x
+	extrn	copyvm
+	extrn	gra_x
+	extrn	gra_y
+	extrn	spe_x
+	extrn	spe_y
+
+version		equ	6000h
+filer		equ	6002h
+clevel		equ	6004h
+spectrum	equ	6006h
+mudata		equ	6008h
+keydata		equ	600ah
+track1		equ	600ch
+track2		equ	600eh
+track3		equ	6010h
+track4		equ	6012h
+track5		equ	6014h
+track6		equ	6016h
+track7		equ	6018h
+m_spd1		equ	601ah
+m_spd2		equ	601ch
+s_clr		equ	601eh
+
+filename:
+	db	'MUPLAY.BIN',0
+
+scr_init::
+	ld	hl,filename			;Load Graphic File.
+	call	sys_load
+	ld	hl,6003h			;Header Control
+	ld	de,6000h
+	ld	bc,1fffh
+	ldir
+
+	ld	a,7
+	calmin	chgmod
+	ld	hl,user_palette
+	call	set_palette			;screen&palette
+
+	di
+
+	ld	a,2h
+	ld	(forclr),a
+	ld	a,00h
+	ld	(bakclr),a
+	ld	(bdrclr),a
+	calsub	chgclr
+
+	ld	a,22h
+	ld	(forclr),a
+
+	setvdp	 1,00100000b		;mode register 1 / 8*8 no big
+	setvdp	 9,10000000b		;212 line
+	setvdp	 8,00001000b		;mode register 2 / sprite on
+	setvdp	 2,00011111b
+	setvdp	 6,00011110b		;sprite generator ad:F000H
+	setvdp	11,00000001b
+	setvdp	 5,11110111b		;sprite attribute ad:1FA00H
+
+	ld	hl,0				;all clear
+	ld	de,255
+	ld	bc,0000h
+	call	boxfull
+
+	call	clrfil
+	call	wait1
+	call	clrspd
+	call	put_graphic
+	call	put_keyboard
+	call	key_name
+	call	get_drive			;どらいぶ表示
+	call	now_driver			;現在選択中のドライバー
+	call	set_sprite			;sprite set
+	setvdp	 1,01100000b			;mode register 1 / 8*8 no big
+
+	ld	h,fil_x
+	ld	l,fil_y+8
+	ld	d,245
+	ld	b,22h
+	call	line				;線を書く！
+
+	ld	h,125
+	ld	l,30
+	ld	d,126
+	ld	b,55h
+	call	line				;線を書く！
+
+	ei
+	ret
+
+;/sub / sprite set
+
+set_sprite::
+	xor	a				;Clear 7300~7b00h
+	ld	(7300h),a
+	ld	hl,7300h
+	ld	de,7301h
+	ld	bc,800h
+	ldir
+
+	ld	de,sppat
+	ld	hl,7300h
+	ld	bc,800h
+	call	ldirvm				;all clear
+
+	ld	de,spatr
+	ld	hl,(s_clr)
+	ld	bc,32*4
+	call	ldirvm
+
+	ld	de,sppat
+	ld	hl,(m_spd1)
+	ld	bc,8*3				;３つ
+	call	ldirvm				;スプライト定義ね
+
+	ld	hl,(m_spd2)
+	ld	de,spatr-512
+	ld	bc,16*23			;23ｺ mouse,影,line*3,nul,key*17
+	call	ldirvm
+	ret
+
+;/ sub / キーボード表示
+
+put_keyboard::
+	ld	a,(key_y)
+	ld	d,a
+	ld	a,(key_x)
+	ld	e,a
+
+	ld	b,7				;total ch.
+lpx:	push	bc				;縦にも…
+	push	de
+
+	ld	b,8				;ｵｸﾀｰﾌﾞ
+lp0:	push	bc				;横一面に…
+	push	de
+	ld	hl,(keydata)
+	ld	bc,14*256+9			;x*256+y
+	call	copyvm
+	pop	de
+	ld	a,14
+	add	a,e
+	ld	e,a
+	pop	bc
+	djnz	lp0
+
+	pop	de
+	ld	a,16
+	add	a,d
+	ld	d,a
+	pop	bc
+	djnz	lpx
+	ret
+
+;/ sub / きーぼーどの名前（track1とか）かきかき
+
+key_name::
+	ld	hl,(track1)
+	ld	a,(key_y)
+	sub	6
+	ld	d,a
+	ld	a,(key_x)
+	ld	e,a
+
+	ld	b,7
+vdp_loop:
+	push	bc
+
+	push	hl		;*2
+	push	de		;*1
+	ld	bc,26*256+5
+	call	copyvm
+	pop	hl		;*1
+	ld	de,16*256
+	add	hl,de
+	ld	d,h
+	ld	e,l		;*2
+	pop	hl
+	push	de		;*3
+	ld	de,26*5
+	add	hl,de
+	pop	de		;*3
+
+	pop	bc
+	call	vdpwait
+	djnz	vdp_loop
+	ret
+
+;/ sub / put Graphic
+put_graphic::
+	call	vdpwait
+	ld	hl,(filer)
+	ld	a,dir_x
+	sub	2
+	ld	e,a
+	ld	a,dir_y
+	sub	14
+	ld	d,a
+	ld	b,247
+	ld	c,9
+	call	copyvm				;put filer
+
+	call	vdpwait
+	ld	hl,(clevel)
+	ld	a,(gra_x)
+	ld	e,a
+	ld	a,(gra_y)
+	ld	d,a
+	ld	b,10
+	ld	c,31
+	call	copyvm				;channel level
+
+	call	vdpwait
+	ld	hl,(spectrum)
+	ld	a,(spe_x)
+	ld	e,a
+	ld	a,(spe_y)
+	add	a,32
+	ld	d,a
+	ld	b,113
+	ld	c,9
+	call	copyvm				;spectrum
+
+	call	vdpwait
+	ld	hl,(mudata)
+	ld	de,124
+	ld	b,128
+	ld	c,9
+	call	copyvm
+
+	call	vdpwait
+	ld	hl,(version)		;MuPLAY SYSTEM Version
+	ld	de,13*256+131		;start Y,X
+	ld	bc,106*256+15		;増分  x,y
+	call	copyvm
+	ret
+
+	end
+

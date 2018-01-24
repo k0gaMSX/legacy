@@ -1,0 +1,345 @@
+;//// 割り込み制御プログラム
+;//// 割り込み処理だけで使用される全ルーチン（含むページ３依存ルーチン）
+
+include	entry.mac
+include	macro.mac
+
+extrn	disk_on
+extrn	cursor_scroll
+extrn	knjuse
+extrn	bgmplay
+extrn	bgm_on
+extrn	neko
+extrn	chira
+extrn	i_move
+extrn	pkanji
+extrn	now_vpage
+extrn	key_control
+extrn	m_int
+extrn	now_key
+extrn	key_line
+extrn	sp_area
+extrn	getwork
+extrn	k_int
+extrn	g_int
+extrn	s_int
+extrn	vdp_read_port
+extrn	vdp_write_port
+extrn	scroll
+extrn	now_play
+extrn	install
+extrn	mdr
+extrn	mmd
+extrn	mnp1
+extrn	mnp2
+extrn	datsel
+extrn	y_val
+
+inton::	ld	hl,t_int_copy
+	ld	de,0c000h
+	ld	bc,t_int_copy_end-t_int_copy
+	ldir					;プログラムのコピー
+
+;/ １／６０秒割り込み処理の追加
+
+	di
+	ld	hl,timi
+	ld	de,hksave
+	ld	bc,5
+	ldir					;フックコピー
+
+	ld	a,0c3h
+	ld	(timi),a
+
+	ld	hl,t_int
+	ld	(timi+1),hl			;フック乗り換え
+
+;/ 走査線割り込みの追加
+
+	ld	hl,keyi
+	ld	de,hkkeyi
+	ld	bc,5
+	ldir					;フックコピー
+
+	ld	hl,i_int
+	ld	(keyi+1),hl			;フック乗り換え
+	ld	a,0c3h
+	ld	(keyi),a
+
+	setvdp	19,dir_y-9
+	ei
+	ret
+
+t_int_copy:					;割り込み処理メインプログラム。
+	.phase	0c000h
+
+intoff::di					;MuPLAY終了時に呼び出される。
+	setvdp	0,00001010b			;走査線割り込みを不許可
+	setvdp	19,0
+
+	ld	hl,hksave
+	ld	de,timi
+	ld	bc,5
+	ldir					;フックを元に戻す。
+
+	ld	hl,hkkeyi
+	ld	de,keyi
+	ld	bc,5
+	ldir					;フックを元に戻す。
+	ei
+	ret
+
+;/// 1/60割り込み処理
+
+t_int:	setvdp	0,00001010b			;走査線割り込みを不許可
+	setvdp	23,0				;scroll 0
+	setvdp	2,00011111b			;page 0
+	xor	a
+	ld	(now_vpage),a			;page 0にしたからね。
+
+	ld	a,(pkanji)
+	cp	off
+	jr	z,t_ints1
+	setvdp	0,00011010b			;走査線割り込みを許可
+
+t_ints1:ld	a,(knjuse)			;漢字表示中以外ならt_ints1へ
+	cp	off
+	jr	z,t_ints2
+
+	ld	a,(bgm_on)			;BGM処理中以外なら演奏後終了
+	cp	off
+	call	z,bgmplay
+	ret
+
+t_ints2:call	chira				;チラチラ対応
+	call	put_sprite			;スプライト表示
+	call	key_control			;cursol move!
+	call	m_int				;マウス移動処理
+	;上の4つはBGM処理前に動かしておきたいんです(涙)
+
+	ld	a,(bgm_on)			;BGM処理中なら帰る
+	cp	on
+	ret	z
+	call	bgmplay				;BGM演奏開始
+
+	ld	a,(i_move)			;疑似割込禁止状態なら帰る
+	cp	off
+	jp	z,hksave
+	call	hksave
+
+	ld	a,(int_on)			;MuPLAY処理開始
+	cp	off
+	jr	z,t_ints3			;割り込み中だったら終わり
+	ld	a,on
+	ld	(busy),a			;2重割込発生!
+	ret
+
+t_ints3:ld	a,on
+	ld	(int_on),a			;割り込み中フラグｏｎ　
+
+	call	neko
+	ld	a,(busy)
+	cp	on
+	jr	z,t_intend
+
+	call	cursor_scroll			;カーソルスクロール
+	ld	a,(busy)
+	cp	on
+	jr	z,t_intend
+
+	call	getwork				;曲の状態を獲得
+	ld	a,(busy)
+	cp	on
+	jr	z,t_intend
+
+	call	k_int
+	ld	a,(busy)
+	cp	on
+	jr	z,t_intend
+
+	call	g_int				;チャンネルアナライザーごぉ
+	ld	a,(busy)
+	cp	on
+	jr	z,t_intend
+
+	call	s_int				;似非すぺあなごぉ
+
+t_intend:
+	ld	a,off
+	ld	(int_on),a
+	ld	(busy),a
+	ei
+	ret
+
+int_on:	db	off				;on 内部処理
+busy:	ds	2,0				;2重割り込みならON
+hksave::ds	5,0c9h				;1/60処理
+
+;/// 1/60 sub / put_sprite / マウス表示＆カーソル表示
+
+put_sprite:
+	ld	a,(knjuse)
+	cp	on
+	ret	z
+
+	di
+	ld	de,spatr
+	ld	l,01000000b			;write
+	call	vset
+	call	t_int_mouse
+	ld	a,(now_key)
+	call	key_line
+	ld	a,0240
+	out	(c),a				;スプライト表示
+	ei
+	ret
+
+;/// 走査線割り込み処理！
+
+i_int:	ld	a,(pkanji)
+	cp	off
+	jp	z,hkkeyi
+
+	setvdp	15,1				;ステータスレジスタを１へ
+	ld	a,(vdp_read_port)
+	inc	a
+	ld	c,a
+	in	a,(c)
+	push	af				;読み込み！
+	setvdp	15,0				;ステータスレジスタ０に戻す。
+	pop	af
+	and	00000001b
+	jp	z,hkkeyi			;走査線割り込み以外！ 1/60 MDX
+
+	ld	a,(now_vpage)
+	or	a
+	ret	nz				;page 1の走査繊割り込みは無視
+
+	ld	a,1
+	ld	(now_vpage),a
+
+;	setvdp	1,00100000b			;画面表示を一時的にｏｆｆ
+	di
+	ld	a,(knjuse)
+	cp	on
+	jr	z,i_int_s1
+	ld	de,spatr			;vram adress set!
+	ld	l,01000000b
+	call	vset
+	call	i_int_mouse
+	ld	a,(now_key)
+	call	key_line
+	ld	a,0d8h
+	out	(c),a				;5番以降のスプライトＯＦＦ
+i_int_s1:
+	setvdp	2,00111111b			;page 1
+	ld	a,(scroll)
+	cp	76
+	call	z,adjust			;特殊処理。(T_T)
+	sub	dir_y-2
+	ld	b,a
+	ld	c,23
+	call	wrtvdp				;scroll!
+;	setvdp	1,01100000b			;画面表示ｏｎ
+	ei
+	ret
+
+adjust:	inc	a
+	ret
+
+hkkeyi:	ds	5,0c9h				;
+
+;/// マウス表示（ページ０専用）
+
+t_int_mouse:
+	ld	ix,y_val
+	ld	b,2
+
+	di
+t_int_mlp:
+	ld	a,(ix+0)
+	out	(c),a				;スプライト表示
+	ld	a,(ix+1)
+	out	(c),a
+	xor	a
+	out	(c),a
+	out	(c),a
+
+	rept	4
+	inc	ix
+	endm
+
+	djnz	t_int_mlp
+	ret
+
+;/// マウス表示（ページ１専用）
+
+i_int_mouse:
+	ld	ix,y_val
+	ld	b,2
+
+	di
+i_int_mlp1:
+	ld	a,(scroll)
+	ld	h,a
+	ld	a,(ix+0)
+	add	a,h
+	sub	dir_y-2
+	out	(c),a
+	ld	a,(ix+1)
+	out	(c),a
+	xor	a
+	out	(c),a
+	out	(c),a
+
+	rept	4
+	inc	ix
+	endm
+
+	djnz	i_int_mlp1
+	ret
+
+;/ vram set / input de:adress l:read 00000000b write:01000000b / ret:c port
+
+vset::	push	de
+	srl	d
+	srl	d
+	srl	d
+	srl	d
+	srl	d
+	srl	d
+	ld	b,d			;data
+	ld	c,14			;Register
+	call	wrtvdp			;R#14 <= a16~a14
+	pop	de
+	ld	a,(vdp_write_port)
+	ld	c,a
+	inc	c
+	out	(c),e			;port#1 a7~a0
+	ld	a,d
+	and	00111111b
+	or	l
+	out	(c),a			;port#1 a13~a8 [ adress set end ]
+	dec	c
+	ret
+
+;/// wrtvdp / b::data c::register / dont use de
+
+wrtvdp:	ld	d,c
+
+	ld	a,(vdp_write_port)
+	ld	c,a
+	inc	c
+
+	out	(c),b
+
+	ld	a,d	
+	or	10000000b
+	out	(c),a
+	ret
+
+	.dephase
+t_int_copy_end:
+
+	end
+

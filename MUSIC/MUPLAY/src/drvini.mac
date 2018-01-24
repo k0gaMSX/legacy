@@ -1,0 +1,1744 @@
+;////////////////////// [ 各種音楽ドライバーの初期化 ] //////////////////////
+
+include	entry.mac
+include	macro.mac
+
+extrn	miolen
+extrn	miopad
+extrn	mioreg
+extrn	miowrk
+
+extrn	dslots
+extrn	dmaps
+
+extrn	bc1
+extrn	mpkkas
+extrn	adress
+extrn	pstr_x_point
+extrn	pstr_y_point
+
+extrn	mgspad
+extrn	mgsjmp
+extrn	sslot
+extrn	smap
+extrn	dslot
+extrn	dmap
+extrn	mgsver
+extrn	mdr
+extrn	mnp1
+extrn	sys_select
+extrn	sys_ok
+extrn	sys_install
+extrn	mgs_id
+extrn	sys_load
+extrn	get_p2
+extrn	mgscal
+extrn	mgsemu
+extrn	pfile
+extrn	putknj
+extrn	put_p2
+extrn	now_mode
+extrn	mpkjmp
+extrn	mpksiz
+extrn	mpkjmp
+extrn	mpkpad
+extrn	mpkpa2
+extrn	mpkver
+extrn	mpk_id
+extrn	install
+extrn	mpkcal
+extrn	msc_id
+extrn	sys_dir
+extrn	str_forclr
+extrn	str_bakclr
+extrn	clrpfl
+extrn	i_move
+extrn	datsel
+extrn	mmd
+extrn	mnp2
+extrn	mscver
+extrn	get_p1
+extrn	put_p1
+extrn	chkmem
+extrn	all_seg
+extrn	clrttl
+extrn	now_play
+extrn	wrklen
+extrn	fmwrk
+extrn	psgwrk
+extrn	sccwrk
+extrn	msc_drum
+extrn	wait1
+extrn	on_check
+extrn	axbhl
+extrn	get_f1
+extrn	bcdcon
+extrn	miover
+
+drv_init::
+	call	chkins		;本当の常駐チェック
+	call	getmem		;メモリ確保
+	call	open_system	;システムをオープン可能にする。
+	call	move_driver	;起動しなければいけないシステムをオープン
+	ret
+
+;////////// MGS関連初期化 //////////
+
+mgs_init::
+	xor	a
+	ld	de,0f000h
+	call	ebios
+	or	a
+	jp	z,mgs_open
+
+	ld	(mgspad),bc			;save MGS parameter block ad.
+	push	bc
+	ld	bc,9
+	add	hl,bc
+	ld	de,mgsjmp
+	ld	bc,3
+	ldir
+	pop	ix
+
+	xor	a
+	ld	(ix+16),a
+
+	ld	a,(ix+0)
+	ld	(sslot),a
+	ld	a,(ix+1)
+	ld	(smap),a			;ＭＧＳＳＹＳＴＥＭ保存場所！
+
+	ld	a,(ix+2)
+	ld	(dslot),a
+	ld	a,(ix+3)
+	ld	(dmap),a			;ＭＧＳデーター保存場所！
+
+	di
+	ld	ix,(mgspad)
+	ld	iy,mgsver
+	ld	a,(ix+9)
+	ld	(iy+0),a
+	ld	a,(ix+8)
+	ld	(iy+1),a
+
+	ld	h,(ix+11)
+	ld	l,(ix+10)	;get mib
+	push	hl
+	call	mdr
+	pop	ix
+	xor	a
+	ld	(ix+5),a
+	call	mnp1
+	ei
+
+	xor	a
+	ld	(sys_select),a	;set MGS
+	ret
+
+;/// MGS疑似常駐 ///
+
+mgs_open:
+	ld	a,(sys_ok+0)
+	cp	on
+	ret	nz			;システム常駐不可能
+
+	ld	a,(sys_install+0)
+	cp	on
+	jp	z,mgs_open2
+
+	ld	a,0
+	ld	(sys_select),a
+
+	call	sysset			;メモリ環境設定
+
+	ld	hl,mgs_id
+	call	sys_load
+
+	ld	a,(sslot)
+	ld	hl,8000h
+	call	enaslt		;slot change
+	di
+
+	call	get_p2		;page change
+	push	af
+	ld	a,(smap)
+	call	put_p2
+	di
+
+	ld	hl,6000h+13	;system copy
+	ld	de,0a000h
+	ld	bc,1fffh
+	ldir
+
+	ld	a,(page2r)
+	ld	hl,8000h
+	call	enaslt		;slot change
+	di
+
+	pop	af
+	call	put_p2
+	ei
+
+	ld	hl,mgscal
+	ld	(mgsjmp+1),hl
+	ld	a,0c3h		;'jp'
+	ld	(mgsjmp),a
+	ld	hl,mgsemu	;mgsemu:mgspadのエミュレート
+	ld	(mgspad),hl
+
+	ld	ix,sysck
+	call	mgsjmp
+	ld	(mgsemu+10),ix
+	ld	(mgsemu+12),iy
+	ld	(mgsemu+14),bc
+	ld	ix,mgsver
+	ld	(ix+0),h
+	ld	(ix+1),l
+
+	ld	a,(now_mode)
+	cp	1		;MGSの場所が切り替えポイントだから…
+	ret	z		;instalはonに出来ない
+
+	ld	a,on
+	ld	(sys_install+0),a
+	ret
+
+mgs_open2:			;疑似常駐の再度設定
+
+	ld	hl,dmaps		;保存エリアを整え直し
+	ld	de,dmap+1
+	ld	bc,4
+	ldir
+
+	ld	hl,dslots		;保存エリアを整え直し
+	ld	de,dslot+1
+	ld	bc,4
+	ldir
+
+	ld	a,(smap+1)
+	ld	(smap),a
+	ld	a,(dmap+1)
+	ld	(dmap),a
+	ld	a,(sslot+1)
+	ld	(sslot),a
+	ld	a,(dslot+1)
+	ld	(dslot),a
+	xor	a
+	ld	(sys_select),a
+	ret
+
+;////////// MPK関連初期化 //////////
+
+mpk_init::
+	xor	a
+	ld	de,0f101h
+	call	ebios
+	or	a
+	jp	z,mpk_open
+
+	push	bc
+	pop	ix
+	ld	a,(ix+3)
+	ld	(sslot),a
+	ld	a,(ix+4)
+	ld	(smap),a
+
+	ld	bc,3
+	add	hl,bc
+	ld	de,mpkjmp
+	ldir					;set MPK function call
+
+	ld	c,9
+	xor	a
+	call	mpkjmp
+	ld	(mpksiz),a			;バンク数を保存
+
+	ld	b,a
+	ld	a,1
+	ld	c,9
+	ld	ix,dmap+1
+	ld	iy,dslot+1
+
+mpk_ilp1:			;/ １～４番のデータマッパの情報を獲得
+	push	af
+	push	bc
+	call	mpkjmp
+	ld	(ix+0),a
+	ld	(iy+0),b
+	pop	bc
+	pop	af
+	inc	a
+	inc	ix
+	inc	iy
+	djnz	mpk_ilp1
+
+	ld	a,(dmap+1)
+	ld	(dmap),a
+	ld	a,(dslot+1)
+	ld	(dslot),a
+
+	ld	c,15
+	call	mpkjmp
+	push	bc
+
+	push	ix
+	call	mdr
+	di
+	pop	hl
+	ld	a,(hl)
+	add	a,l
+	ld	l,a
+	ld	a,0
+	adc	a,h
+	ld	h,a
+	push	hl
+	ld	bc,33
+	add	hl,bc
+	ld	(mpkkas),hl
+	pop	ix
+	ld	d,(ix+1)
+	ld	e,(ix+0)
+	ld	h,(ix+3)
+	ld	l,(ix+2)
+	add	ix,de
+	ld	(mpkpad),ix
+	ld	(mpkpa2),hl
+	call	mnp1
+	ei
+
+	pop	bc
+	ld	ix,mpkver
+	ld	(ix+1),c
+	ld	(ix+0),b
+
+	ld	a,1
+	ld	(sys_select),a	;set mpk
+	ret
+
+;/// MPK疑似常駐 ///
+
+mpk_open:
+	ld	a,(sys_ok+1)
+	cp	on
+	ret	nz			;システム常駐不可能
+
+	ld	a,(sys_install+1)
+	cp	on
+	jp	z,mpk_open2		;再起動
+
+	ld	a,1			;初回設定ね
+	ld	(sys_select),a
+
+	call	sysset			;メモリ環境設定
+
+	ld	hl,mpk_id
+	call	sys_load
+
+	ld	a,(sslot)
+	ld	hl,8000h
+	call	enaslt		;slot change
+
+	call	get_p2		;page change
+	push	af
+	ld	a,(smap)
+	call	put_p2
+	di
+
+	ld	hl,6000h	;system copy
+	ld	de,08000h
+	ld	bc,1fffh
+	ldir
+
+	ld	a,(page2r)
+	ld	hl,8000h
+	call	enaslt		;slot change
+
+	pop	af		;page return
+	call	put_p2
+	ei
+
+	ld	hl,mpkcal
+	ld	(mpkjmp+1),hl
+	ld	a,0c3h		;'jp'
+	ld	(mpkjmp),a
+
+	ld	c,0
+	call	mpkjmp
+	ld	ix,mpkver
+	ld	(ix+0),b
+	ld	(ix+1),c
+
+	ld	de,0402h
+	call	ebios
+	ld	c,11
+	call	mpkjmp
+
+	ld	ix,dmap
+	ld	iy,dslot
+	ld	b,4
+	ld	c,8
+
+mpklp1:	ld	a,(ix+1)
+	or	a
+	jr	z,mpk1
+	push	bc
+	push	ix
+	push	iy
+	ld	b,(iy+1)
+	call	mpkjmp
+	pop	iy
+	pop	ix
+	pop	bc
+	inc	ix
+	inc	iy
+	djnz	mpklp1
+
+mpk1:	ld	a,(now_mode)
+	cp	2		;MPKの場所が切り替えポイントだから…
+	ret	z		;instalはonに出来ない
+	cp	1		;MGSの場所が…（以下略）
+	ret	z
+
+	ld	a,on		;installをonにするには、now_modeが0である。
+	ld	(sys_install+1),a
+	ret
+
+mpk_open2:			;疑似常駐の再度設定
+	ld	hl,dmaps		;保存エリアを整え直し
+	ld	de,dmap+1
+	ld	bc,4
+	ldir
+
+	ld	hl,dslots		;保存エリアを整え直し
+	ld	de,dslot+1
+	ld	bc,4
+	ldir
+
+	ld	a,(smap+2)
+	ld	(smap),a
+	ld	a,(dmap+1)
+	ld	(dmap),a
+	ld	a,(sslot+2)
+	ld	(sslot),a
+	ld	a,(dslot+1)
+	ld	(dslot),a
+	ld	a,1
+	ld	(sys_select),a
+	ret
+
+;/// MuSICA疑似常駐 ///
+
+msc_init::
+	ld	a,(sys_ok+2)
+	cp	on
+	ret	nz			;システム常駐不可能
+
+	ld	a,(sys_install+2)
+	cp	on
+	jp	z,msc_open2		;再起動
+
+	ld	a,2			;初回設定ね
+	ld	(sys_select),a
+
+	call	sysset			;メモリ環境設定
+
+	ld	hl,msc_id
+	call	sys_load
+
+	ld	a,(sslot)
+	ld	hl,8000h
+	call	enaslt		;slot change
+	di
+
+	call	get_p2		;page change
+	push	af
+	ld	a,(smap)
+	call	put_p2
+	di
+
+	ld	hl,6007h	;system copy
+	ld	de,0a000h
+	ld	bc,1fffh
+	ldir
+
+	ld	ix,mscver
+	ld	a,(600fh+4000h)
+	ld	(ix+1),a
+	ld	a,(600eh+4000h)
+	ld	(ix+0),a
+
+	ld	a,(page2r)
+	ld	hl,8000h
+	call	enaslt		;slot change
+	di
+
+	pop	af		;page return
+	call	put_p2
+	ei
+
+	call	mdr
+	call	6020h
+	call	mnp1
+
+	ld	a,(now_mode)
+	or	a
+	ret	nz
+
+	ld	a,on
+	ld	(sys_install+2),a
+	ret
+
+msc_open2:			;疑似常駐の再度設定
+	ld	a,(smap+3)
+	ld	(smap),a
+	ld	a,(dmaps)
+	ld	(dmap),a
+	ld	a,(sslot+3)
+	ld	(sslot),a
+	ld	a,(dslots)
+	ld	(dslot),a
+	ld	a,2
+	ld	(sys_select),a
+	ret
+
+;/// MIO Driver
+
+mio_init::
+	ld	de,0e800h
+	ld	hl,miowrk
+	xor	a
+	call	ebios
+
+	ld	a,3
+	ld	(sys_select),a
+
+	di
+	ld	ix,miowrk
+
+	ld	a,(ix+8)
+	ld	(sslot),a
+	ld	(sslot+4),a
+	ld	a,(ix+9)
+	ld	(smap),a
+	ld	(smap+4),a	;MIO SYSTEM保存場所！
+
+	ld	bc,10
+	add	ix,bc
+	ld	iy,dmap+1
+	ld	hl,dslot+1	;ix:mio iy:dmap hl:dslot
+
+	ld	b,11
+mio_lp1:ld	a,(ix+0)
+	or	a
+	jr	z,mio1
+	ld	(hl),a
+	ld	a,(ix+1)
+	ld	(iy+0),a			;MIO DATA保存場所！
+	inc	hl
+	inc	iy
+	inc	ix
+	inc	ix
+	djnz	mio_lp1
+
+mio1:	ld	a,(dmap+1)
+	ld	(dmap),a
+	ld	a,(dslot+1)
+	ld	(dslot),a
+
+	ld	hl,(miowrk)
+	ld	a,h
+	ld	(miover+0),a
+	ld	a,l
+	ld	(miover+1),a
+
+	ld	de,0e802h
+	ld	bc,5
+	ld	hl,mioreg
+	xor	a
+	ld	(mioreg+0),a
+	ld	(mioreg+1),bc
+	ld	(mioreg+3),de
+	ld	(mioreg+5),hl
+	call	ebios
+
+	ld	(miopad),hl
+	ld	(0f3fch),hl
+
+	ld	hl,miolen
+	ld	(hl),e
+	ld	hl,0f3feh
+	ld	(hl),e
+
+	ld	d,a
+	ld	h,0ffh
+	ld	l,c
+	ld	bc,0
+	xor	a
+	ld	(mioreg+0),a
+	ld	(mioreg+1),bc
+	ld	(mioreg+3),de
+	ld	(mioreg+5),hl
+	ld	de,0e802h
+	call	ebios
+
+	ei
+	ret
+
+;/////////////////////////////// 関連処理 /////////////////////////////////////
+
+;/// sub / chkins / 本当に常駐しているのか？
+
+chkins::xor	a
+	ld	de,0f000h
+	call	ebios
+	or	a
+	call	nz,mgsins
+
+	xor	a
+	ld	de,0f101h
+	call	ebios
+	or	a
+	call	nz,mpkins
+
+	xor	a
+	ld	de,0e800h
+	call	ebios
+	or	a
+	call	nz,mioins
+	ret
+
+mgsins:	call	mgs_init
+	ld	a,on
+	ld	(install+0),a
+	ld	(sys_ok+0),a
+	ret
+
+mpkins:	call	mpk_init
+	ld	a,on
+	ld	(install+1),a
+	ld	(sys_ok+1),a
+	ret
+
+mioins:	call	mio_init
+	ld	a,on
+	ld	(install+3),a
+	ld	(sys_ok+3),a
+	ret
+
+;/// sub / open_system / 起動可能なドライバをチェック
+
+open_system::
+	ld	hl,mgs_id
+	call	sys_dir
+	call	z,mgsok
+
+	ld	hl,mpk_id
+	call	sys_dir
+	call	z,mpkok
+
+	ld	hl,msc_id
+	call	sys_dir
+	call	z,mscok
+	ret			;MIOは常駐onlyだから
+
+mgsok:	ld	a,on
+	ld	(sys_ok+0),a
+	ret
+
+mpkok:	ld	a,on
+	ld	(sys_ok+1),a
+	ret
+
+mscok:	ld	a,on
+	ld	(sys_ok+2),a
+	ret
+
+;/// sub / move_driver / 優先順位ドライバ
+move_driver:
+
+mvemsc:
+
+mvemio:	ld	a,(install+3)
+	cp	off
+	jr	z,mvempk
+
+	call	mio_init
+
+	ld	de,0e802h
+	ld	hl,mioreg
+	ld	bc,6
+	xor	a
+	ld	(mioreg+0),a
+	ld	(mioreg+1),bc
+	ld	(mioreg+3),de
+	ld	(mioreg+5),hl
+	call	ebios
+	ei
+	or	a
+	jr	z,mvempk
+
+	ld	a,on
+	ld	(now_play),a
+	call	play_tclr
+	ret
+
+mvempk:	ld	a,(install+1)
+	cp	off
+	jr	z,mvemgs
+
+	call	mpk_init
+	ld	c,6
+	call	mpkjmp
+	ld	a,d
+	and	00000001b
+	jr	nz,mpked
+	ld	a,h
+	or	a
+	jr	nz,mpked
+	ld	a,l
+	or	a
+	jr	nz,mpked
+	jr	mvemgs
+
+mpked:	ld	a,on
+	ld	(now_play),a
+	call	play_tclr
+	ret
+
+mvemgs:	ld	a,(install+0)
+	cp	on
+	jr	nz,mveend
+
+	call	mgs_init
+
+	ld	ix,(mgspad)
+	ld	b,(ix+1)
+	ld	l,(ix+10)
+	ld	h,(ix+11)
+	push	hl
+	pop	ix
+
+	call	get_p1
+	push	af
+	ld	a,b
+	call	put_p1
+
+	ld	a,(sslot)
+	ld	hl,4000h
+	call	enaslt
+
+	ld	a,(ix+8)
+	ld	b,a
+
+	pop	af
+	call	put_p1
+
+	push	bc
+	ld	a,(page1r)
+	ld	hl,4000h
+	call	enaslt
+	pop	bc
+
+	ld	a,b
+	or	a
+	jr	z,mveend	;常駐演奏中じゃない場合
+
+	ld	a,on
+	ld	(now_play),a
+	call	play_tclr
+	ret
+
+mveend:	ld	a,4
+	ld	(sys_select),a
+	ret
+
+;/// sub / システム起動させる為の準備（メインへ切り替える処理）
+
+sysset::ld	ix,smap
+	call	sys1
+	ld	a,(ix+0)		;書き換え可能なマッパに変更
+	ld	(smap),a
+
+	ld	ix,sslot
+	call	sys1
+	ld	a,(ix+0)
+	ld	(sslot),a
+
+	ld	hl,dmaps		;保存エリアを整え直し
+	ld	de,dmap+1
+	ld	bc,4
+	ldir
+
+	ld	hl,dslots		;保存エリアを整え直し
+	ld	de,dslot+1
+	ld	bc,4
+	ldir
+
+	ld	a,(dmap+1)		;疑似常駐用をメインへ
+	ld	(dmap),a
+	ld	a,(dslot+1)
+	ld	(dslot),a
+	ret
+
+sys1:	ld	a,(now_mode)
+	or	a
+	jr	z,sys2
+	ld	d,0
+	ld	e,a
+	add	ix,de
+	ret
+
+sys2:	ld	a,(sys_select)
+	inc	a
+	ld	d,0
+	ld	e,a
+	add	ix,de
+	ret
+
+;/// 疑似常駐用メモリ確保処理
+;in no / out smap+1:確保される dmaps:確保される 'c':error!
+
+getmem::xor	a
+	ld	de,0401h
+	call	ebios
+	or	00100000b
+	ld	(memwrk),a
+
+	call	chkmem
+	cp	2
+	jr	c,mem1		;1枚
+	cp	7
+	jr	nc,mem2		;7枚以上
+	cp	6
+	jr	nc,mem3		;6枚
+	cp	5
+	jr	nc,mem4		;5枚
+	cp	4
+	jr	nc,mem5		;4枚
+	cp	3
+	jr	nc,mem6		;3枚
+	jp	mem7		;2枚
+
+mem1:	xor	a
+	sub	1
+	ret			;set c
+
+mem2:	ld	ix,smap+1
+	ld	iy,sslot+1
+	ld	b,3
+	call	mem9
+	ld	ix,dmaps
+	ld	iy,dslots
+	ld	b,4
+	call	mem9
+	ret
+
+mem3:	ld	ix,smap+1
+	ld	iy,sslot+1
+	ld	b,3
+	call	mem9
+	ld	ix,dmaps
+	ld	iy,dslots
+	ld	b,3
+	call	mem9
+	ret
+
+mem4:	ld	ix,smap+1
+	ld	iy,sslot+1
+	ld	b,3
+	call	mem9
+	ld	ix,dmaps
+	ld	iy,dslots
+	ld	b,2
+	call	mem9
+	ret
+
+mem5:	ld	ix,smap+1
+	ld	iy,sslot+1
+	ld	b,3
+	call	mem9
+	ld	ix,dmaps
+	ld	iy,dslots
+	ld	b,1
+	call	mem9
+	ret
+
+mem6:	ld	ix,smap+1
+	ld	iy,sslot+1
+	ld	b,2
+	call	mem9
+	ld	ix,dmaps
+	ld	iy,dslots
+	ld	b,1
+	call	mem9
+	ld	a,2
+	ld	(now_mode),a
+	ret
+
+mem7:	ld	ix,smap+1
+	ld	iy,sslot+1
+	ld	b,1
+	call	mem9
+	ld	ix,dmaps
+	ld	iy,dslots
+	ld	b,1
+	call	mem9
+	ld	a,1
+	ld	(now_mode),a
+	ret
+
+mem9:	push	bc		;(ix)<=all_seg
+	call	get1
+	ld	(ix+0),a
+	ld	a,b
+	ld	(iy+0),a
+	inc	ix
+	inc	iy
+	pop	bc
+	djnz	mem9
+	xor	a
+	ret
+
+get1:	ld	a,(memwrk)
+	or	00100000b
+	ld	b,a		;b:primary slot
+	xor	a
+	call	all_seg
+	ret
+
+memerr:	ld	(ix+0),0
+	ret
+
+memwrk:	db	0
+
+;/// main / putstr / 歌詞表示
+putstr::ld	a,(sys_select)
+	ld	hl,str_table
+	seljmp
+
+str_table:
+	dw	strmgs,strmpk,strmsc,strmio,stretc
+
+strmgs:	ld	ix,(mgspad)
+	ld	h,(ix+11)
+	ld	l,(ix+10)	;get mib
+	ld	bc,10
+	add	hl,bc
+	push	hl
+	call	mdr
+	pop	ix
+	ld	h,(ix+1)
+	ld	l,(ix+0)	;get 制御文字列
+
+	ld	a,h
+	or	l
+	jr	nz,strsub1	;if hl<>0 then strsub1
+
+	call	mnp1
+	ret
+
+strmpk:	call	mdr
+	ld	ix,(mpkkas)
+	ld	h,(ix+1)
+	ld	l,(ix+0)
+
+	ld	a,h
+	or	l
+	jr	z,strmpk1
+
+	ld	bc,8000h
+	add	hl,bc
+	jr	strsub1
+
+strmpk1:call	mnp1
+	ret
+
+strmsc:	ret
+strmio:	ret
+stretc:	ret
+
+;/ putstr / sub input: hl:ix:歌詞アドレス page1:mdr
+
+strsub1:push	hl
+	ld	(ix+1),0
+	ld	(ix+0),0	;clear!
+	call	mnp1
+	call	mmd
+	di
+	pop	hl
+	ld	de,pfile
+	ld	bc,80
+	ldir
+	call	mnp2
+	ei
+
+	xor	a
+	ld	(acpage),a
+	ld	a,(str_forclr)
+	ld	(forclr),a
+	ld	a,(str_bakclr)
+	ld	(bakclr),a
+	ld	hl,(str_posit_bak)
+	ld	de,pfile
+	call	putknj
+
+	ld	hl,(pstr_x_point)
+	srl	h
+	rr	l
+	ld	h,fil_y+10
+	ld	(str_posit_bak),hl
+
+	ld	a,(forclr)
+	ld	(str_forclr),a
+	ld	a,(bakclr)
+	ld	(str_bakclr),a
+	ret
+
+str_posit_bak:
+	db	0
+	db	fil_y+10
+
+;/// sub / put_title / タイトル表示
+put_title::
+	call	clrpfl
+	call	clrttl
+
+	ld	a,(sys_select)
+	ld	hl,put_table
+	seljmp
+
+put_table:
+	dw	putmgs,putmpk,putmsc,putmio,putetc
+
+putmgs:	di			;/ mgs
+	ld	ix,datck
+	ld	hl,8000h
+	call	mgsjmp
+	ret	nz
+
+	int	off
+
+	xor	a
+	ld	(datsel),a
+	call	mmd
+	di
+	ld	hl,8000h
+	ld	bc,4000h
+	ld	a,cr
+	cpir
+	inc	hl
+	ld	de,pfile
+	ld	bc,78
+	ldir
+	call	mnp2
+	ei
+
+	xor	a
+	ld	(acpage),a
+	ld	a,11h
+	ld	(bakclr),a
+	ld	a,22h
+	ld	(forclr),a
+
+	ld	de,pfile
+	ld	l,fil_x
+	ld	h,fil_y+10
+	call	putknj
+
+	int	on
+	ret
+
+putmpk:	call	mmd				;/ mpk
+	di
+
+	ld	ix,8000h
+	ld	a,(ix+0)
+	cp	'M'
+	jr	nz,putmpk_err
+	ld	a,(ix+1)
+	cp	'P'
+	jr	nz,putmpk_err
+	ld	a,(ix+2)
+	cp	'K'
+	jr	nz,putmpk_err
+
+	ld	hl,8000h
+	ld	bc,4000h
+	ld	a,cr
+	cpir
+	inc	hl
+	ld	de,pfile
+	ld	bc,74
+	ldir
+
+	ld	hl,pfile
+	ld	bc,74
+	ld	a,cr
+	cpir
+	dec	hl
+	xor	a
+	ld	(hl),a
+
+	call	mnp2
+	ei
+
+	xor	a
+	ld	(acpage),a
+	ld	a,11h
+	ld	(bakclr),a
+	ld	a,22h
+	ld	(forclr),a
+
+	ld	de,pfile
+	ld	l,fil_x
+	ld	h,fil_y+10
+	call	putknj
+	ret
+
+putmpk_err:
+	call	mnp2
+	ei
+	ret
+
+putmsc:	ret			;Musicaにはタイトル情報が無いので終了
+putmio:	ret			;/ mio
+putetc:	ret
+
+;/// sub / play
+
+play::	ld	a,(now_play)
+	cp	on
+	call	z,stop
+
+	ld	a,off
+	ld	(bc1),a		;bc1がonの時は、歌詞中に\A~\Cが使われた証拠
+				;となる。（使われると一部制御切り替える）
+	xor	a
+	call	volume
+
+	xor	a
+	ld	hl,adress
+	ld	(hl),a
+	ld	de,adress+1
+	ld	bc,7*17-1
+	ldir
+
+	xor	a
+	ld	hl,msc_table
+	ld	(hl),a
+	ld	de,msc_table+1
+	ld	bc,17*2-1
+	ldir
+
+	ld	a,77h
+	ld	(str_forclr),a
+	ld	a,11h
+	ld	(str_bakclr),a
+
+	ld	l,fil_x
+	ld	h,fil_y+10
+	ld	(str_posit_bak),hl
+
+	ld	a,(sys_select)
+	ld	hl,ply_table
+	seljmp
+
+ply_table:
+	dw	plymgs,plympk,plymsc,plymio,plyetc
+
+plymgs:	int	off
+	di			;/ mgs
+	ld	ix,datck
+	ld	hl,8000h
+	call	mgsjmp
+	ret	nz
+
+	ld	ix,plyst
+	ld	b,-1
+	ld	hl,-1
+	ld	de,8000h
+	di
+	call	mgsjmp
+	ld	a,on
+	ld	(now_play),a
+	ei
+	int	on
+	call	play_tclr
+	ret
+
+plympk:	int	off		;/ mpk
+
+	ld	c,1
+	ld	a,1
+	ld	hl,0000h
+	call	mpkjmp
+	or	a
+	jr	nz,plympk_end
+
+plympk1:push	hl
+	call	mdr
+	call	mmd
+	di
+	pop	hl
+	ld	a,(hl)
+	add	a,l
+	ld	l,a
+	ld	a,0
+	adc	a,h
+	ld	h,a
+	push	hl
+	ld	bc,33
+	add	hl,bc
+	ld	(mpkkas),hl
+	pop	ix
+	ld	d,(ix+1)
+	ld	e,(ix+0)
+	ld	h,(ix+3)
+	ld	l,(ix+2)
+	add	ix,de
+	ld	(mpkpad),ix
+	ld	(mpkpa2),hl
+	call	mnp2
+	call	mnp1
+
+	ld	c,12
+	call	mpkjmp
+
+	ld	a,on
+	ld	(now_play),a
+	ei
+
+plympk_end:
+	int	on
+	call	play_tclr
+	ret
+
+plymsc:	int	off
+	call	mdr		;/ musica
+	call	mmd
+	di
+
+	ld	a,(8007h)
+	ld	(msc_drum),a
+	sub	2
+	jr	nc,pmscerr
+
+	ld	hl,(8001h)
+	ex	de,hl
+	ld	hl,8007h
+	xor	a
+	call	6026h		;play
+	di
+	call	chchk
+	call	6044h
+	di
+
+	ld	(wrklen),hl
+	ex	de,hl
+
+	ld	(fmwrk),ix
+	rept	9
+	add	ix,de
+	endm
+	ld	(psgwrk),ix
+	rept	3
+	add	ix,de
+	endm
+	ld	(sccwrk),ix	;work area 保存
+
+	call	mnp2
+	call	mnp1
+
+	di
+	ld	a,on
+	ld	(now_play),a
+	ei
+	int	on
+	call	play_tclr
+	ret
+
+pmscerr:call	mnp2
+	call	mnp1
+	ei
+	int	on
+	call	play_tclr
+	ret
+
+chchk:	ld	de,7		;チャンネルちぇっく
+
+	ld	b,9		;FM
+	ld	ix,8008h
+	ld	iy,adress+7*8
+	ld	hl,msc_table+8
+	call	mchklp
+
+	ld	b,3		;PSG
+	ld	iy,adress
+	ld	hl,msc_table
+	call	mchklp
+
+	ld	b,5		;SCC
+	ld	iy,adress+7*3
+	ld	hl,msc_table+3
+	call	mchklp
+	ret
+
+mchklp:	ld	a,(ix+0)
+	or	(ix+1)
+	jr	z,mcend
+	ld	a,on
+	ld	(iy+5),a
+	ld	(hl),a
+mcend:	inc	ix
+	inc	ix
+	add	iy,de
+	inc	hl
+	djnz	mchklp
+	ret
+
+plymio:	int	off
+	ld	de,0e802h				;/mio
+	ld	bc,1
+	ld	hl,mioreg
+	xor	a
+	ld	(mioreg),a
+	ld	(mioreg+1),bc
+	ld	(mioreg+3),de
+	ld	(mioreg+5),hl
+	call	ebios
+	di
+
+	ld	a,on
+	ld	(now_play),a
+	ei
+	int	on
+	call	play_tclr
+	ret
+
+plyetc:	ret
+
+play_tclr:
+	ld	a,0ffh
+	ld	(mtr_table+0),a
+	ld	(mtr_table+1),a
+	ld	(mtr_table+2),a			;トラック状態消去
+	call	wait1
+	call	wait1
+	call	on_check
+	ret
+
+;/// sub / stop
+stop::	ld	a,off
+	ld	(now_play),a
+
+	ld	a,(sys_select)
+	cp	4
+	ret	nc
+	ld	hl,stp_table
+	seljmp
+
+stp_table:
+	dw	mgsstp,mpkstp,mscstp,miostp,etcstp
+
+mgsstp:	ld	ix,initm	;/ mgs
+	call	mgsjmp
+	call	wait1
+	ret
+
+mpkstp:	ld	c,2		;/ mpk
+	call	mpkjmp
+	call	wait1
+	ret
+
+mscstp:	int	off
+
+	call	mdr
+	call	mmd
+	di
+	ld	a,15
+	call	6038h
+	call	602ch
+	call	mnp2
+	call	mnp1
+	ei
+	int	on
+	call	wait1
+	ret			;/ musica
+
+miostp:	ld	de,0e802h	;/ mio
+	ld	hl,mioreg
+	ld	bc,3
+	xor	a
+	ld	(mioreg+0),a
+	ld	(mioreg+1),bc
+	ld	(mioreg+3),de
+	ld	(mioreg+5),hl
+	call	ebios
+	ei
+	call	wait1
+	ret
+
+etcstp:	ret
+
+;/// sub / loop count
+loop_count::
+	ld	a,(now_play)
+	cp	off
+	ret	z
+
+	ld	a,(sys_select)
+	cp	4
+	ret	nc
+	ld	hl,lp_table
+	seljmp
+
+lp_table:
+	dw	mgsloop,mpkloop,mscloop,mioloop,etcloop
+
+mgsloop:ld	ix,(mgspad)
+	ld	h,(ix+11)
+	ld	l,(ix+10)	;get mib
+	push	hl
+	di
+	call	mdr
+	di
+	pop	ix
+	ld	a,(ix+5)
+	ld	b,(ix+12)
+	push	af
+	push	bc
+	call	mnp1
+	pop	af
+	or	a
+	jr	nz,mgslp2
+	pop	af
+	ei
+	ret
+
+mgslp2:	pop	bc
+	ld	a,1
+	ret
+
+mpkloop:ld	c,14			;/ mpk
+	xor	a
+	call	mpkjmp
+	ret
+
+mscloop:call	mdr			;/ musica
+	call	6032h
+	di
+	push	hl
+	call	mnp1
+	pop	hl
+	ld	a,l
+	sub	1
+	ret	nc
+	xor	a
+	ret
+
+mioloop:ld	de,0e802h
+	ld	bc,06
+	ld	hl,mioreg
+	xor	a
+	ld	(mioreg+0),a
+	ld	(mioreg+1),bc
+	ld	(mioreg+3),de
+	ld	(mioreg+5),hl
+	call	ebios
+	or	a
+	ld	a,2
+	ret	z
+	xor	a
+	ret			;/ mio
+
+etcloop:xor	a
+	ret
+
+;/// sub / master volume
+volume::push	af
+	ld	a,(sys_select)
+	cp	4
+	jr	nc,vol_err
+	ld	hl,vol_table
+	seljmp
+
+vol_err:pop	af
+	ret
+
+vol_table:
+	dw	mgsvol,mpkvol,mscvol,miovol,etcret
+
+mgsvol:	pop	af
+	ld	b,0
+	ld	ix,msvst
+	call	mgsjmp
+	ret
+
+mpkvol:	pop	bc
+	ld	a,15
+	sub	b
+	ld	d,a
+	ld	c,4
+	call	mpkjmp
+	ret
+
+mscvol:	call	mdr
+	pop	af
+	call	6038h
+	call	mnp1
+	ret
+
+miovol:	pop	bc
+	sla	b		;*2
+	sla	b		;*4
+	sla	b		;*8	15*8=120
+	ld	a,120
+	sub	b
+	add	a,7
+
+	ld	d,a
+	ld	e,a
+	ld	hl,mioreg
+	ld	bc,7
+	xor	a
+	ld	(mioreg+0),a
+	ld	(mioreg+1),bc
+	ld	(mioreg+3),de
+	ld	(mioreg+5),hl
+
+	ld	de,0e802h
+	xor	a
+	call	ebios
+	ei
+	ret
+
+etcret:	pop	af
+	ret
+
+;/// Track Controll / sub [mousecom.mac - tc_check]
+
+mgsmtr::pop	bc
+	ld	a,(old_track)	;/ set MGS
+	cp	b
+	ret	z
+
+	ld	a,b
+	ld	(old_track),a
+
+	push	bc
+	ld	a,3
+	call	axbhl
+	ex	de,hl
+	pop	bc
+
+	push	bc
+	ld	c,(iy+0)
+	ld	h,(iy+1)
+	ld	l,(iy+2)
+mtr2:	rr	c
+	rr	h
+	rr	l
+	djnz	mtr2
+	pop	bc
+
+	ld	c,(iy+0)
+	ld	h,(iy+1)
+	ld	l,(iy+2)
+	ld	a,b
+ 	jr	c,mtr4
+
+mtr3:	rr	c
+	rr	h
+	rr	l
+	rr	d
+	rr	e
+	djnz	mtr3
+	set	7,d
+	jr	mtr5
+
+mtr4:	rr	c
+	rr	h
+	rr	l			;cy:ｂ番目の番号が入るのね。
+	rr	d
+	rr	e
+	djnz	mtr4
+	res	7,d
+
+mtr5:	ld	b,a
+mtr6:	rl	e
+	rl	d
+	rl	l			;cy:ｂ番目の番号が入るのね。
+	rl	h
+	rl	c
+	djnz	mtr6
+
+	ld	(iy+0),c
+	ld	(iy+1),h
+	ld	(iy+2),l
+	ld	b,c
+	ld	c,2
+	ld	ix,tmst1
+	call	mgsjmp
+
+	ei
+	call	wait1
+	call	wait1
+	call	on_check
+
+	ld	a,255
+	ld	(get_f1),a
+	ret
+
+mpkmtr::pop	bc
+	ret
+
+mscmtr::pop	bc
+	dec	b
+
+	ld	a,(old_track)	;/ set MuSICA
+	cp	b
+	ret	z
+
+	ld	a,b
+	ld	(old_track),a
+
+	ld	c,b
+	ld	b,0
+	ld	hl,msc_table
+	add	hl,bc
+	ld	a,(hl)
+	cp	off
+	ret	z
+
+	ld	b,c
+	push	bc
+	ld	a,7
+	call	axbhl
+	ld	bc,adress+5
+	add	hl,bc
+	ld	a,(hl)
+	cpl
+	ld	(hl),a
+	pop	bc
+
+	ld	c,b
+	call	msc_convert
+	ld	b,0
+	ld	hl,msc_volume
+	add	hl,bc
+	ld	a,(hl)
+	cpl
+	and	00001111b
+	ld	(hl),a
+
+
+	push	bc
+	push	af
+	call	mdr
+	pop	af
+	pop	bc
+	call	603bh
+	call	mnp1
+
+	ei
+	call	on_check
+
+	ld	a,255
+	ld	(get_f1),a
+	ret
+
+msc_convert:
+	ld	a,c
+	cp	3
+	jr	c,con1
+	cp	8
+	jr	c,con2
+	sub	8		;8,9,10,11,12,13,14,15,16 => 0,1,2,3,4,5,6,7,8
+	ld	c,a
+	ret
+con1:	add	a,9		;0,1,2 => 9,10,11
+	ld	c,a
+	ret
+con2:	add	a,9		;3,4,5,6,7 => 12,13,14,15,16
+	ld	c,a
+	ret
+
+miomtr::
+etcmtr::pop	bc
+	ret
+
+mtr_table::
+	db	0ffh,0ffh,0ffh
+old_track::
+	db	0
+
+msc_table:			;この２つは連続させなきゃだめ。
+	ds	17,off
+msc_volume:
+	ds	17,0
+
+;/// ばーじょん表示っ
+
+put_ver::
+	ld	a,11h
+	ld	(bakclr),a			;背景色は黒っ
+	ld	a,22h
+	ld	(forclr),a			;文字色は青っ
+
+	ld	ix,mgsver			;ばーじょんをPFILEに書き込み
+	call	bcdcon
+	ld	hl,168+13*256
+	ld	de,pfile
+	call	putknj				;Write MGS version.
+
+	ld	ix,mpkver			;ばーじょんをPFILEに書き込み
+	call	bcdcon
+	ld	hl,168+21*256
+	ld	de,pfile
+	call	putknj				;Write MPK version.
+
+	ld	ix,miover			;ばーじょんをPFILEに書き込み
+	call	bcdcon
+	ld	hl,239+13*256
+	ld	de,pfile
+	call	putknj				;Write MIO version.
+
+	ld	ix,mscver			;ばーじょんをPFILEに書き込み
+	call	bcdcon
+	ld	hl,239+21*256
+	ld	de,pfile
+	call	putknj				;Write MuSICA version.
+
+	ld	ix,miover			;ばーじょんをPFILEに書き込み
+	call	bcdcon
+	ld	hl,239+13*256
+	ld	de,pfile
+	call	putknj				;Write MuSICA version.
+	ret
+
+;/// sub / MuPLAY END -終了処理-
+
+mgsend::ld	a,1
+	ld	ix,(mgspad)
+	ld	(ix+16),a			;MGS用特殊処理
+
+	ld	a,(install+0)
+	cp	on
+	ret	z
+
+	call	stop
+	ret
+
+mpkend::ld	a,(install+1)
+	cp	on
+	ret	z
+	call	stop
+	ret
+
+mcaend::call	stop
+	ret
+
+mioend::ret
+
+	end
+

@@ -1,0 +1,761 @@
+;////// ディスク関連ライブラリ　ｆｏｒ　ＭｕＰＬＡＹ //////
+;注意：ページ０にあります。
+
+include	entry.mac
+include	macro.mac
+
+extrn	sys_select
+extrn	disk_on
+extrn	i_move
+extrn	clrwin
+extrn	putknj
+extrn	strig1
+extrn	strig2
+extrn	now_file
+extrn	pfile
+extrn	dir
+extrn	sys_ok
+extrn	axbhl
+extrn	mgs_file
+extrn	clrpfl
+extrn	clrdir
+extrn	datsel
+extrn	mmd
+extrn	mnp2
+extrn	dmap
+extrn	clrttl
+extrn	max_dir
+extrn	now_select
+extrn	clrfil
+extrn	fch
+extrn	mnp
+extrn	sfile
+extrn	fib
+extrn	max_dir
+extrn	up_dir
+extrn	scroll
+extrn	log_drive
+extrn	drv_x
+extrn	drv_y
+
+;//// error init / err_init / エラー処理ルーチンインストール処理
+
+err_init::
+	ld	hl,prompt
+	ld	de,promhk
+	ld	bc,3
+	ldir
+
+	ld	a,0f1h			;pop af
+	ld	(prompt),a
+
+	ld	a,0c9h			;ret
+	ld	(prompt+1),a
+
+	ld	de,error
+	syscall	64h
+	ld	de,about
+	syscall	63h
+	ret
+
+err_reset::
+	ld	hl,promhk
+	ld	de,prompt
+	ld	bc,3
+	ldir
+
+	ld	de,0
+	syscall	64h
+	ld	de,0
+	syscall	63h
+	ret
+
+promhk::ds	3,0				;２ドライブシュミレーター
+
+;//// error エラー処理
+
+emes2:	db 'Error!!! ... Retry:[left] Cancel:[right]',0
+
+error::	int	on
+	ld	a,22h
+	ld	(forclr),a			;文字色変更ね。
+	ld	a,33h
+	ld	(bakclr),a			;背景色変更ね。
+	xor	a
+	ld	(acpage),a
+
+	call	clrwin
+
+	ld	h,dir_y+16
+	ld	l,dir_x+28
+	ld	de,emes2
+	call	putknj
+
+err_loop:
+	call	strig1
+	or	a
+	jr	nz,err_retry
+	call	strig2
+	or	a
+	jr	nz,err_about
+	jr	err_loop
+
+err_retry:
+	int	off
+	ld	a,2
+	ret
+err_about:
+	xor	a
+	ld	(now_file),a
+	call	clrwin
+	int	off
+	ld	a,1
+	ret
+
+about:	pop	af
+	ld	a,255
+	or	a
+	ret
+
+;////////////// sub program ///////////////
+
+;/// 拡張子判別 in: hl:拡張子(asciiz文字列) b:driver+1 / out: z:ok nz:err
+kchk1::	ld	ix,sys_ok-1
+	ld	d,0
+	ld	e,b
+	add	ix,de
+	ld	a,(ix+0)
+	cp	on
+	jr	nz,kchk3		;if sys_ok=off then kchk3
+
+	push	hl
+	push	hl
+	pop	ix
+	ld	a,b
+	dec	a
+	ld	b,4
+	call	axbhl
+	ld	c,l
+	ld	b,h
+	pop	hl
+	ld	iy,mgs_file+1
+	add	iy,bc
+
+	ld	b,3				;ｈｌは保存しておくのよん
+kchk2:	ld	a,(iy+0)
+	cp	(ix+0)
+	jr	nz,kchk3
+	inc	ix
+	inc	iy
+	djnz	kchk2				;チェックして違うなら
+
+	xor	a	;ok
+	ret
+
+kchk3:	ld	a,1	;err
+	sub	2
+	ret
+
+;/// sub / sys_load / 'PROGRAM'から、systemファイルを読み込む
+;in hl:filename(asciiz) / out 6000h～7fffh:system file. z:ok nz:error!!!
+
+sys_load::
+	push	hl
+	call	clrpfl
+	ld	hl,program
+	ld	de,pfile
+	ld	b,80
+	syscall	6bh		;環境変数獲得
+
+	ld	a,'\'
+	ld	hl,pfile+80
+	ld	bc,80
+	cpdr
+	ex	de,hl
+	inc	de
+	inc	de
+	pop	hl
+	ld	bc,13
+	ldir			;pfileを文字列操作
+
+	ld	de,pfile
+	ld	a,00000001b	;can't write.
+	syscall	43h		;file open
+	ret	nz		;set 'nz'
+
+	push	bc
+	ld	de,6000h
+	ld	hl,1fffh
+	syscall	48h		;file read
+	pop	bc
+	syscall	45h		;file close
+	xor	a		;set 'z'
+	ret
+
+program:db	'PROGRAM',0
+
+;/// sub / sys_dir / 'PROGRAM'から、systemファイルを検索する
+;in hl:filename(asciiz) / out z:ok nz:error!!!
+
+sys_dir::
+	push	hl
+	call	clrpfl
+	ld	hl,program
+	ld	de,pfile
+	ld	b,80
+	syscall	6bh		;環境変数獲得
+
+	ld	a,'\'
+	ld	hl,pfile+80
+	ld	bc,80
+	cpdr
+	ex	de,hl
+	inc	de
+	inc	de
+	pop	hl
+	ld	bc,13
+	ldir			;pfileを文字列操作
+
+	ld	de,pfile
+	ld	a,00000001b	;can't write.
+	syscall	43h		;file open
+	ret	nz		;set 'nz'
+	syscall	45h
+	ret
+
+;/// sub / load / input pfile=[filename.xxx] / err:nz
+
+data_load::
+	int	off
+	call	clrdir
+
+	ld	a,11h
+	ld	(bakclr),a			;背景色変更ね。
+	ld	a,22h
+	ld	(forclr),a
+
+	syscall	19h
+	add	a,'A'
+	ld	(pfile+14),a
+	ld	a,':'
+	ld	(pfile+15),a
+	ld	a,'\'
+	ld	(pfile+16),a
+
+	ld	b,0
+	ld	de,pfile+17
+	syscall	59h
+	jp	nz,data_close		;err return.
+
+	ld	a,0
+	ld	hl,pfile+17
+	ld	bc,64
+	cpir
+
+	dec	hl
+	ld	a,'\'
+	ld	(hl),a
+	inc	hl
+
+	ld	de,pfile
+	ex	de,hl
+	ld	bc,13
+	ldir
+
+	xor	a
+	ld	(de),a		;あふれ対策っ
+
+	ld	de,pfile+14
+	ld	l,fil_x
+	ld	h,fil_y
+	call	putknj
+
+	ld	de,pfile
+	ld	a,00000001b			;read only!
+	syscall	43h				;file open
+	jr	nz,data_close			;err return.
+
+	xor	a
+	ld	(datsel),a
+dataload_lp1:
+	push	bc
+	ld	de,4000h
+	ld	hl,4000h
+	syscall	48h
+	push	hl
+	call	mmd
+	di
+	ld	hl,4000h
+	ld	de,8000h
+	ld	bc,4000h
+	ldir
+	call	mnp2
+	ei
+	pop	hl
+	pop	bc
+	ld	a,h
+	cp	40h
+	jr	c,data_close
+
+	ld	a,(datsel)
+	inc	a
+	ld	(datsel),a
+	cp	11
+	jr	z,data_error
+	ld	hl,dmap+1
+	add	a,l
+	ld	l,a
+	ld	a,0
+	adc	a,h
+	ld	h,a
+	ld	a,(hl)
+	or	a
+	jr	z,data_error
+	jr	dataload_lp1
+
+data_close:
+	syscall	45h				;file close
+	xor	a
+	ld	(datsel),a
+	int	on
+	xor	a				;set z
+	ret
+
+data_error:
+	syscall	45h				;file close
+	xor	a
+	ld	(datsel),a
+	call	mmd
+	di
+	xor	a
+	ld	(8000h),a
+	ld	hl,8000h
+	ld	de,8001h
+	ld	bc,100h
+	ldir			;data head clear
+	call	mnp2
+	ei
+
+	call	clrttl
+	ld	de,emes1
+	ld	l,fil_x
+	ld	h,fil_y+10
+	call	putknj
+
+	xor	a
+	sub	1				;set nz
+	ret
+
+emes1:	db 'Error!!! ... Not enough memory mapper.',0,cr,lf,eof
+
+;/// file directory  / ファイル一覧獲得
+
+fdir::	xor	a
+	ld	(now_file),a
+	ld	(max_dir),a
+	ld	(now_select),a
+
+	call	clrfil
+
+	call	fch
+	ld	hl,4000h
+	ld	de,4001h
+	ld	bc,256*9
+	xor	a
+	ld	(hl),a
+	ldir						;clear
+	call	mnp
+
+	int	off
+
+	ld	hl,nul			;最初の検索 for Directory.
+	ld	de,sfile
+	ld	ix,fib
+	ld	b,00010000B
+	syscall	40h
+	jp	nz,dir_err				;エラー発生！
+	ld	a,(fib+14)
+	and	00010000b
+	jr	z,dirlp1
+	call	savefile
+
+dirlp1:	ld	ix,fib
+	syscall	41h
+	jr	nz,dir2					;Go file dir
+	ld	a,(fib+14)
+	and	00010000b
+	jr	z,dirlp1
+	call	savefile
+	jr	z,dirlp1
+
+dir2:	ld	hl,nul					;最初の検索 for music
+	ld	de,sfile
+	ld	ix,fib
+	ld	b,00000000B
+	syscall	40h
+	jr	nz,dir_err				;エラー発生！
+	call	savefile
+
+dirlp2:	ld	ix,fib
+	syscall	41h
+	jr	nz,dir_end
+	call	savefile
+	jr	z,dirlp2
+
+dir_end:int	on
+	ret
+dir_err:call	clrfil
+	jr	dir_end
+
+;/// sub / ファイル記憶
+;/ input  fib<=file data
+;/ output A:0 OK or no DATA file / A:1 error / A:255 file over
+
+savefile::
+	call	clrpfl
+	ld	a,(fib+14)			;ファイル属性バイト
+	and	00010000b
+	or	a
+	jr	z,savef
+
+	ld	a,(fib+1)			;directory . or .. check.
+	cp	'.'
+	jr	nz,dir_save			;if a<>. then save
+
+	ld	a,(fib+2)
+	cp	'.'
+	jr	z,savef1			;if a=.. then savef1
+	jp	save_end			;if a=.? then save_end
+
+dir_save:
+	ld	hl,fib+1
+	ld	bc,8
+	ld	de,pfile
+	ldir
+	ld	hl,max_dir
+	inc	(hl)
+	jr	savef2				;directory!
+
+savef:	ld	a,'.'
+	ld	bc,12
+	ld	hl,fib+1
+	cpir					;'.'を捜せ！
+	jp	nz,save_end			;no MGS & Directory.
+
+	push	hl
+	xor	a
+	ld	de,fib+1
+	sbc	hl,de
+	dec	hl
+	ld	b,h
+	ld	c,l
+	ld	hl,fib+1
+	ld	de,pfile
+	ldir
+	pop	hl
+
+	ld	b,4
+sflp1:	push	bc
+	push	hl
+	call	kchk1
+	pop	hl
+	pop	bc
+	jr	z,savef0
+	djnz	sflp1
+	jp	save_end
+
+savef0:	ld	a,b
+	dec	a
+	ld	(pfile+8),a
+	jr	savef2
+
+savef1:	ld	hl,up_dir		;/ .. 処理
+	ld	bc,8
+	ld	de,pfile
+	ldir
+	ld	a,1
+	ld	(max_dir),a
+
+savef2:	call	fch				;/ mapperへ転送
+	ld	hl,(now_file)			;転送先アドレス指定
+	ld	h,0
+	ld	e,l
+	ld	d,h
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,de
+	ld	de,4000h
+	add	hl,de
+	ex	de,hl
+	ld	hl,pfile
+	ld	bc,9		;保存型式 filename*8byte + driver*1byte
+	ldir					;保存用マッパに保存！
+	call	mnp
+
+	ld	a,(now_file)
+	inc	a
+	ld	(now_file),a
+	cp	255
+	jr	z,save_err		;もしa=255の時…ファイルオーバー
+save_end:
+	xor	a
+	ret
+
+save_err:				;異常の時に戻るのね。
+	ld	a,1
+	sub	2
+	ret
+
+;/ sub / putfile / input no / 一覧用
+
+putfile::
+	ld	a,(now_file)
+	or	a
+	ret	z				;now_file=0 then no file
+
+	ld	hl,4000h
+	ld	(pfile_p),hl
+
+	ld	a,(scroll)
+	ld	h,a
+	ld	l,dir_x
+	ld	(pfile_x),hl
+
+	call	fch
+
+	ld	a,33h
+	ld	(bakclr),a			;背景色変更ね。
+	ld	a,1
+	ld	(acpage),a
+
+	ld	c,1
+	ld	a,(now_file)
+	ld	b,a
+
+putl1:	push	bc		; b=loop c=記憶番号 h=画面表示番号
+
+	ld	a,(max_dir)
+	cp	c
+	jr	c,putl2				;ディレクトリじゃ無ければ飛ぶ
+
+	ld	a,77h
+	ld	(forclr),a			;文字色変更ね。
+
+putl2:	ld	hl,(pfile_p)
+	ld	de,8
+	add	hl,de
+	ld	a,(hl)
+	ld	(pfile_s),a
+	ld	(hl),0				;一時的にasciiz文字列へ変更
+
+	ld	hl,(pfile_x)
+	ld	de,(pfile_p)
+	call	putknj				;さてと…表示ね。
+
+	ld	a,(pfile_x)
+	add	a,27
+	ld	(pfile_x),a
+	cp	dir_x + 27 * 9
+	jr	c,putl4
+
+	ld	a,dir_x
+	ld	(pfile_x),a
+	ld	a,(pfile_y)
+	add	a,8
+	ld	(pfile_y),a
+putl4:
+	ld	hl,(pfile_p)
+	ld	bc,8
+	add	hl,bc
+	ld	a,(pfile_s)
+	ld	(hl),a				;元に戻す
+	inc	hl
+	ld	(pfile_p),hl
+
+	pop	bc
+	inc	c
+	ld	a,22h
+	ld	(forclr),a			;文字色変更ね。
+
+	djnz	putl1
+
+	call	mnp
+
+	ld	a,1
+	ld	(now_select),a
+	xor	a
+	ld	(acpage),a
+	ret
+
+pfile_p:ds	2
+pfile_s:ds	1
+pfile_x:ds	1
+pfile_y:ds	1
+
+;/// ドライブ表示！
+
+get_drive::
+	call	excset2
+	call	clrpfl				;pfile clear
+	ld	a,':'
+	ld	(pfile+1),a
+
+	syscall	19h
+	ld	c,a
+
+	push	bc
+	syscall	18h				;現在接続中のドライブ表示
+	pop	bc
+	ld	a,l
+	ld	(log_drive),a
+
+	ld	b,8
+	push	af
+	ld	a,(drv_x)
+	ld	l,a
+	ld	a,(drv_y)
+	ld	h,a
+	pop	af
+getdlp1:sra	a
+	push	af
+	push	bc
+	call	c,exdrive
+	rept	6
+	inc	l
+	endm
+	call	excset2
+	pop	bc
+	pop	af
+	djnz	getdlp1
+	ret
+
+exdrive:ld	de,exdrtbl-1
+	push	bc
+exdlp2:	inc	de
+	djnz	exdlp2
+	pop	bc
+	ld	a,(de)
+	ld	b,a
+
+	add	a,'A'					;ドライブセット！
+	ld	(pfile),a
+
+	ld	a,b
+	cp	c
+	call	z,excset1
+
+	ld	de,pfile
+	push	hl
+	call	putknj
+	pop	hl
+	ret
+
+excset1:ld	a,11h
+	ld	(forclr),a
+	ld	a,22h
+	ld	(bakclr),a
+	ret
+
+excset2:ld	a,22h
+	ld	(forclr),a
+	ld	a,11h
+	ld	(bakclr),a
+	ret
+
+exdrtbl:db	7,6,5,4,3,2,1,0
+
+
+;/// sub / directory 関連 ///
+
+;/ rute_dir / cd \
+rute_dir::
+	int	off
+	ld	de,rute_db
+	syscall	5ah
+	int	on
+	ret	nz
+	call	dir
+	ret
+
+rute_db:db	'\',0
+
+;/ back_dir / cd ..
+back_dir::
+	int	off
+	ld	de,back_db
+	syscall	5ah
+	int	on
+	ret	nz
+	call	dir
+	ret
+
+back_db:db	'..',0
+
+;/ dirctory move / mousecon.mac - music select2
+
+move_dir::
+	int	off
+
+	push	bc
+	call	fch
+	pop	bc
+
+	ld	hl,4000h-9
+	ld	de,9
+mmclp5:	add	hl,de
+	djnz	mmclp5
+	ld	de,pfile
+	ld	bc,8
+	ldir
+
+	call	mnp
+
+	ld	ix,pfile
+	ld	iy,up_dir			;..の処理ね
+	ld	b,8
+mmclp6:	ld	c,(ix+0)
+	ld	a,(iy+0)
+	cp	c
+	jr	nz,mmc7
+	inc	ix
+	inc	iy
+	djnz	mmclp6
+
+	ld	a,'.'
+	ld	(pfile),a
+	ld	(pfile+1),a
+	xor	a
+	ld	(pfile+2),a			;..に置き換えね。
+
+mmc7:	ld	de,pfile
+	syscall	5ah
+	int	on
+	ret	nz
+
+	int	off
+	call	dir
+	int	on
+	ret
+
+;/ sub / drive move input:a:0~8 0:reread 1~8:a~h
+
+drv_move::
+	int	off
+
+	or	a
+	call	z,drv_m2
+	dec	a
+	ld	e,a
+	syscall	0eh
+	call	get_drive
+	call	dir
+	int	on
+	ret
+
+drv_m2:	syscall	19h
+	inc	a
+	ret
+
+	end
+

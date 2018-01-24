@@ -1,0 +1,541 @@
+;/// vinit / イニシャライズ　絶対に使うこと。
+
+include	entry.mac
+include	macro.mac
+
+extrn	vdp_read_port
+extrn	vdp_write_port
+extrn	gra_x
+extrn	mt1_table
+extrn	mt2_table
+extrn	sp_line
+extrn	spe_x
+extrn	i_move
+extrn	scroll
+extrn	MsxIni_Palette
+
+vdp_init::
+	ld	hl,v_copy
+	ld	de,08000h
+	ld	bc,v_copy_end-v_copy
+	ldir
+
+	ld	a,(exptbl)
+	ld	hl,6
+	call	rdslt
+	ld	(vdp_read_port),a		;ＶＤＰポート取得（読込）
+
+	ld	a,(exptbl)
+	ld	hl,7
+	call	rdslt
+	ld	(vdp_write_port),a		;ＶＤＰポート取得（書込）
+	ret
+
+v_copy:
+	.phase	08000h
+
+;/// グライコ＆スペアナのスピード表示
+
+clrspd::ld	ix,gra_x
+	call	cs1
+	ld	iy,mt1_table
+	ld	a,(iy+5)
+	ld	b,55h
+	call	sp_line
+
+	ld	ix,spe_x
+	call	cs1
+	ld	iy,mt2_table
+	ld	a,(iy+5)
+	ld	b,55h
+	call	sp_line
+	ret
+
+cs1:	ld	b,5
+cs_lp:	push	bc
+	ld	a,b
+	dec	a
+	ld	b,33h
+	call	sp_line		;mt_checkのマイナールーチン(^^;;
+	pop	bc
+	djnz	cs_lp
+	ret
+
+;/// sub / ファイル関連全部消去っ！
+
+clrfil::call	vdpwait
+	ld	h,dir_x-3		;page 1
+	ld	l,1			;1ライン目から書き込み
+	ld	d,252
+	ld	e,255
+	ld	b,33h
+	ld	c,1
+	call	boxfull
+
+	int	off			;0ラインのみ描画
+	di
+	setvdp	14,00000100b
+	ld	a,(vdp_write_port)
+	inc	a
+	ld	c,a
+
+	ld	a,dir_x-3
+	out	(c),a
+
+	ld	a,01000000b
+	out	(c),a
+
+	dec	c
+	ld	a,33h
+	ld	b,252-dir_x-3+6
+cflp1:	out	(c),a
+	djnz	cflp1
+	ei
+
+	call	clrwin
+	xor	a
+	ld	(scroll),a
+	int	on
+	ret
+
+;/// ファイル表示部分下をｃｌｓ！
+
+clrwin::call	vdpwait
+	ld	h,dir_x-3
+	ld	l,dir_y-4
+	ld	de,252*256+211
+	ld	b,33h
+	ld	c,0
+	call	boxfull
+	ret
+
+;/// タイトル表示部分ｃｌｓ！
+
+clrttl::call	vdpwait
+	ld	h,fil_x
+	ld	l,fil_y+10
+	ld	de,255*256+fil_y+18
+	ld	b,11h
+	ld	c,0
+	call	boxfull
+	ret
+
+;/// ディレクトリ表示部分ｃｌｓ！
+
+clrdir::call	vdpwait
+	ld	h,fil_x
+	ld	l,fil_y
+	ld	a,7
+	add	a,l
+	ld	e,a
+	ld	a,(gra_x)
+	ld	d,a
+	ld	b,11h
+	ld	c,0
+	call	boxfull
+	ret
+
+;/// sub / copy memory => vram / input hl::mem adress / de::ad / bc::xy(増分)
+
+copyvm::
+	ld	a,b
+	ld	b,c
+v_cp1:	push	af			;これで、一つ表示
+	push	bc
+	push	de
+	push	hl
+	ld	c,a
+	xor	a
+	ld	b,a
+	call	ldirvm
+	pop	hl
+	pop	de
+	inc	d
+	pop	bc
+	pop	af
+	push	af
+
+	add	a,l
+	ld	l,a
+	jr	nc,v_cp2
+	inc	h
+v_cp2:	pop	af
+	djnz	v_cp1
+	ret
+
+;/// sub / pallete set / input hl:data adress
+
+Init_Palette:
+	ld	hl,MsxIni_Palette
+Set_Palette::
+	ld	a,(vdp_write_port)
+	ld	c,a
+	inc	c
+	xor	a
+	di
+	out	(c),a
+	ld	a,080h + 16
+	out	(c),a
+	inc	c
+	ld	b,32
+	otir
+	ei
+	ret
+	ld	c,16
+	push	de
+	call	wrtvdp
+	pop	de
+
+	ld	a,(vdp_write_port)
+	add	a,2
+	ld	c,a
+	out	(c),d
+	out	(c),e
+	ret
+
+;/// sub / analizer line '-' / input :: hl=xy  / b(0~3,4~7)=color
+
+lines::	ld	a,(vdp_write_port)
+	inc	a
+	ld	c,a
+
+	push	hl
+	srl	l
+	srl	l
+	srl	l
+	srl	l
+	srl	l
+	srl	l
+
+	di
+
+	out	(c),l
+	ld	a,80h+14
+	out	(c),a		;r#14=d
+
+	pop	hl
+	out	(c),h
+	ld	a,00111111b
+	and	l	
+	set	6,a
+	out	(c),a
+
+	dec	c
+	out	(c),b
+
+	ld	a,d
+	or	a
+	jr	nz,lines_send	;d<>0 then return
+
+	out	(c),b
+	out	(c),b
+	out	(c),b
+	out	(c),b
+
+lines_send:			;最後は…半分だけね。(^^;
+	ld	a,b
+	and	11110000b
+	out	(c),a
+	ei
+	ret
+
+;/// sub / line '-' / input / hl=x1y1 / d=長さ / b(0~3,4~7)=color
+
+line::	ld	a,(vdp_write_port)
+	inc	a
+	ld	c,a
+
+	push	hl
+	srl	l
+	srl	l
+	srl	l
+	srl	l
+	srl	l
+	srl	l
+
+	ld	a,(acpage)
+	or	a
+	jr	z,linel1
+
+	set	2,l
+
+linel1:	di
+	out	(c),l
+	ld	a,80h+14
+	out	(c),a		;r#14=d
+
+	pop	hl
+	out	(c),h
+	ld	a,00111111b
+	and	l	
+	set	6,a
+	out	(c),a
+	dec	c
+
+	ld	a,d
+	or	a
+	ret	z
+	ld	d,b
+	ld	b,a
+line_l:	out	(c),d
+	djnz	line_l
+	ei
+	ret
+
+;/// ldirvm / de::転送先ｖｒａｍ　hl::転送元ｒａｍ　bc::バイト数
+
+ldirvm::
+	push	hl
+	push	bc
+	push	de
+
+	ld	a,d
+	ld	b,6
+l_loop:
+	srl	a
+	djnz	l_loop
+
+	di
+	ld	b,a			;data
+	ld	c,14			;Register
+	call	wrtvdp			;R#14 <= a16~a14
+
+	ld	a,(vdp_write_port)
+	ld	c,a
+	inc	c
+
+	pop	de
+
+	out	(c),e			;port#1 a7~a0
+	ld	a,d
+	and	00111111b
+	or	01000000b
+	out	(c),a			;port#1 a13~a8 [ adress set end ]
+
+	pop	bc
+	pop	hl	
+
+	ld	a,(vdp_write_port)
+	ld	d,a
+
+l_loop2:ld	a,(hl)
+
+	push	bc
+	ld	c,d
+	out	(c),a
+	pop	bc
+
+	inc	hl
+	dec	bc
+
+	ld	a,b
+	or	c
+	jr	nz,l_loop2
+	ei
+	ret
+
+;/// copy (h,l)-相対(d,e),1 to (b,c),0
+
+copy::	call	vdpwait
+
+	push	de
+	push	bc
+	push	hl
+
+	setvdp	17,32
+	ld	a,(vdp_write_port)
+	add	a,3
+	ld	c,a
+
+	pop	hl
+
+	xor	a
+	sla	h
+	adc	a,0
+	out	(c),h			;port#3 sx7~sx0
+	out	(c),a			;port#3 sx8
+
+	ld	a,1
+	out	(c),l			;port#3 sy7~sy0 > 1
+	out	(c),a			;port#3 sy8=1
+
+	pop	hl
+
+	xor	a
+	sla	h
+	adc	a,0
+	out	(c),h			;port#3 dx7~dx0
+	out	(c),a			;port#3 dx8
+
+	xor	a
+	out	(c),l			;port#3 dy7~dy0 > 2
+	out	(c),a			;port#3 dy8=0
+
+	pop	hl
+
+	xor	a
+	sla	h
+	adc	a,h
+	out	(c),h			;port#3 nx7~nx0
+	out	(c),a			;port#3 nx8
+
+	xor	a
+	out	(c),l			;port#3 ny7~ny0
+	out	(c),a			;port#3 ny8
+
+	xor	a
+	out	(c),a			;nul
+	out	(c),a			;right&down
+
+	ld	a,11010000b
+	out	(c),a			;HMMM start!
+	ret
+
+;/// box / line (h,l)-(d,e),b,b
+
+box::	call	vdpwait
+
+	ld	a,b
+	ld	(0f3f2h),a
+	xor	a
+	ld	(0fb02h),a
+
+	ld	ix,0fcb3h
+	ld	(ix+2),e
+	ld	(ix+3),a
+	sla	d
+	set	0,d
+	adc	a,0
+	ld	(ix+0),d
+	ld	(ix+1),a
+
+	ld	e,l
+	xor	a
+	sla	h
+	adc	a,0
+	ld	c,h
+	ld	b,a			;bc=x
+
+	xor	a
+	ld	d,a			;de=y
+	calsub	nvbxln
+	ret
+
+;/// boxfull / line (h,l)-(d,e),b,bf c:page
+
+boxfull::
+	call	vdpwait
+boxfl2::
+	push	hl
+
+	ld	a,d
+	sub	h
+	ld	d,a
+
+	ld	a,e
+	sub	l
+	inc	a
+	ld	e,a
+
+	push	de
+	push	bc
+	setvdp	17,36
+	pop	bc
+	pop	de
+	pop	hl
+
+	di
+	ld	a,(vdp_write_port)
+	add	a,3
+	push	bc
+	ld	c,a
+
+	sla	h
+	ld	a,0
+	adc	a,0
+	out	(c),h			;port#3 dx7~dx0
+	out	(c),a			;port#3 dx8
+
+	out	(c),l			;port#3 dy7~dy0
+	pop	hl
+	out	(c),l			;port#3 dy8=?
+
+	sla	d
+	ld	a,0
+	adc	a,0
+	out	(c),d			;port#3 nx7~nx0
+	out	(c),a			;port#3 nx8
+
+	out	(c),e			;port#3 ny7~ny0
+	xor	a
+	out	(c),a			;port#3 ny8
+
+	out	(c),b			;first data
+
+	xor	a
+	out	(c),a			;right&down
+
+	ld	a,11000000b
+	out	(c),a			;HMMV start!
+	ei
+	ret
+
+;/// wrtvdp / b::data c::register / dont use de
+
+wrtvdp::ld	d,c
+
+	ld	a,(vdp_write_port)
+	ld	c,a
+	inc	c
+
+	out	(c),b
+
+	ld	a,d	
+	or	10000000b
+	out	(c),a
+	ret
+
+;/// vdpwait / ＶＤＰコマンド終了までループ / no use : bc
+
+vdpwait::
+	push	bc
+vdpw1:	ld	b,50
+vdpw2:	push	bc
+	call	vdpw4
+	pop	bc
+	jr	z,vdpw3
+	djnz	vdpw2
+	halt
+	jp	vdpw1
+
+vdpw3:	pop	bc
+	ret
+
+vdpw4:	di
+	ld	a,2
+	call	getvdp
+	and	1
+	push	af
+	xor	a
+	call	getvdp
+	pop	af
+	ei
+	ret
+
+;/// getvdp / ステータスレジスタの獲得 / input a:register no. ret:a
+
+GETVDP::PUSH	BC
+	LD	BC,(vdp_write_port)
+	INC	C
+	OUT	(C),A
+	LD	A,8FH
+	OUT	(C),A
+	IN	A,(C)
+	POP	BC
+	RET
+
+	.dephase
+v_copy_end::
+
+	end
+

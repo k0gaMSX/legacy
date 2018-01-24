@@ -1,0 +1,357 @@
+	include	macro.mac
+	include	entry.mac
+
+	extrn	gra_x
+	extrn	spe_x
+	extrn	strig1
+	extrn	x_val
+	extrn	y_val
+	extrn	x_chk
+	extrn	y_chk
+	extrn	old_track
+	extrn	now_file
+	extrn	get_f1
+	extrn	clrpfl
+	extrn	axbhl
+	extrn	wawa
+	extrn	msel1
+	extrn	now_key
+	extrn	yumimi
+	extrn	chg_mode
+	extrn	dir
+	extrn	stop
+	extrn	fast
+	extrn	play
+	extrn	mu_end
+
+	extrn	mt1_table
+	extrn	mt2_table
+	extrn	boxfull
+	extrn	mtr_table
+	extrn	sys_select
+	extrn	mgsmtr
+	extrn	mpkmtr
+	extrn	mscmtr
+	extrn	miomtr
+	extrn	etcmtr
+	extrn	play_mode
+	extrn	chm_normal
+	extrn	chm_random
+	extrn	drv_x
+	extrn	drv_y
+	extrn	drv_move
+	
+;/// mouse command / マウスのボタンチェック＆各種コマンド処理
+;注意：ページ０にあります。
+
+ms_cmd::
+	call	strig1
+	or	a
+	jp	z,m2
+	ld	a,b
+	or	a
+	jr	nz,m1
+	ld	a,(capst)
+	or	a
+	jr	z,m2
+
+m1:	ld	a,(x_val)
+	ld	(x_chk),a
+	ld	a,(y_val)
+	ld	(y_chk),a
+
+	call	sm_check			;Mouse set Music
+	call	fc_check			;Mouse Command
+	call	sc_check			;Speed Control
+	call	tc_check			;Track Control
+	call	pm_check			;Play Mode
+	call	dc_check			;Drive Control
+	ret
+
+m2:	xor	a
+	dec	a
+	ld	(old_track),a
+	ret
+
+;//// mouse / Set Music / click to play
+
+sm_check:
+	ld	a,(now_file)
+	or	a
+	ret	z
+
+	ld	a,(get_f1)			;おしっぱなしなので
+	cp	255
+	ret	z
+
+	call	clrpfl
+
+	ld	a,(x_chk)
+	cp	dir_x+3*9*9
+	ret	nc
+	sub	dir_x
+	ret	c
+	ld	h,a				;真のｘ座標
+	ld	a,(y_chk)
+	cp	dir_y+8*8-2
+	ret	nc
+	sub	dir_y-2
+	ret	c
+	ld	l,a				;真のＹ座標
+
+	sra	l				;ｙ座標／８ね。
+	sra	l
+	sra	l
+	push	hl
+	ld	a,l
+	ld	b,9
+	call	axbhl
+	ld	a,l
+	pop	hl
+	ld	l,a				;h=x（座標） / l=new y（番号）
+
+	ld	a,h
+	ld	b,3*9
+	push	hl
+	call	wawa				;割り算 a=余り c=答え
+	pop	hl
+	ld	a,c
+	add	a,l				;画面上の番号完成！
+	call	msel1
+	ld	(now_key),a
+	ret
+
+;/// mouse / Function Command / F1～F5
+
+fc_check:
+	ld	a,(y_chk)			;ｙチェック！
+	cp	dir_y-5
+	ret	nc
+	cp	dir_y-13
+	ret	c
+
+	ld	a,(x_chk)
+	sub	dir_x
+	ret	c
+	sub	8
+	jp	c,yumimi			;おまけ機能（？）
+
+	ld	b,20
+	call	wawa				;割り算！
+	ld	a,c
+	cp	6
+	ret	nc
+
+	ld	hl,mc_table
+	rlca
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	jp	(hl)				;ジャンプ！
+
+mc_table:
+	dw	chg_mode,dir,stop,fast,play,mu_end
+
+;/// mouse / Speed Controll / Gra & Spe.
+
+sc_check:
+	ld	ix,gra_x
+	ld	iy,mt1_table
+	call	mtc1
+
+	ld	ix,spe_x
+	ld	iy,mt2_table
+	call	mtc1
+	ret
+
+mtc1:	ld	a,(ix+0)
+	sub	1
+	ld	b,a
+	sub	14
+	ld	c,a
+	ld	a,(x_chk)
+	cp	b
+	ret	nc
+	cp	c	
+	ret	c				;ｘチェック通過！
+
+	ld	a,(ix+1)
+	ld	c,a
+	add	a,30
+	ld	b,a
+	ld	a,(y_chk)
+	cp	b
+	ret	nc
+	sub	c
+	ret	c				;ｙチェック通過！
+
+	ld	b,6
+	call	wawa				;割り算！
+	ld	a,c
+
+	push	af
+	ld	a,(iy+5)
+	ld	b,33h
+	call	sp_line				;前回の分を消去！
+	pop	af
+	ld	(iy+5),a			;今回の分を記憶ね
+
+	push	af
+	ld	b,55h
+	call	sp_line				;前回の分を消去！
+	pop	af
+
+	ld	e,a
+	xor	a
+	ld	d,a
+ 	add	iy,de
+	ld	a,(iy+0)
+	ld	(ix+2),a
+	ret
+
+;/ speed control / sub / ライン表示 / input a:no b:color
+
+sp_line::
+	push	af
+	ld	a,(ix+0)
+	dec	a
+	ld	d,a
+	sub	14
+	ld	h,a
+	pop	af
+
+	push	hl
+	push	de
+	push	bc
+	ld	b,6
+	call	axbhl
+	ld	a,(ix+1)
+	add	a,l
+	pop	bc
+	pop	de
+	pop	hl
+
+	ld	l,a
+	add	a,4
+	ld	e,a
+
+	push	ix
+	push	iy
+	ld	c,0
+	call	boxfull
+	pop	iy
+	pop	ix
+	ret
+
+;/// mouse / music driver Track Control
+
+tc_check:
+	ld	ix,gra_x
+	ld	iy,mtr_table
+
+	ld	a,(ix+0)
+	add	a,5
+	ld	d,a				;左端
+	ld	a,6*18
+	ld	e,a				;右端
+	ld	a,(x_chk)			;現在地
+	sub	d
+	ret	c
+	cp	e	
+	ret	nc				;ｘチェック通過！
+
+	ld	b,6
+	call	wawa
+	ld	b,c
+
+	ld	a,(ix+1)
+	add	a,32
+	ld	d,a				;左端
+	add	a,4
+	ld	e,a				;右端
+	ld	a,(y_chk)
+	cp	d
+	ret	c
+	cp	e
+	ret	nc				;ｙチェック通過！
+
+	push	bc
+	ld	a,(sys_select)
+	cp	4
+	ret	nc
+	ld	hl,mtr_table2
+	seljmp
+
+mtr_table2:
+	dw	mgsmtr,mpkmtr,mscmtr,miomtr,etcmtr
+
+;/// mouse / Play Mode Change
+
+pm_check:
+	ld	a,(y_chk)
+
+	cp	dir_y-14+2
+	ret	c
+	cp	dir_y-14+6
+	ret	nc		;Ｙチェック通過！
+
+pm1:	ld	a,(x_chk)
+
+	cp	dir_x+163
+	ret	c
+	cp	dir_x+166
+	jr	nc,pm2
+
+	ld	a,1
+	ld	(play_mode),a
+	call	chm_normal
+	ret
+
+pm2:	cp	dir_x+178
+	ret	c
+	cp	dir_x+181
+	ret	nc
+
+	ld	a,2
+	ld	(play_mode),a
+	call	chm_random
+	ret
+
+;/// mouse / Drive Change
+
+dc_check:
+	ld	a,(drv_x)
+	ld	d,a				;左端
+	ld	a,8*6
+	ld	e,a				;右端
+	ld	a,(x_chk)			;現在地
+	sub	d
+	ret	c
+	cp	e	
+	ret	nc				;ｘチェック通過！
+
+	ld	b,6
+	call	wawa
+	ld	b,c
+
+	ld	a,(drv_y)
+	ld	d,a				;左端
+	add	a,6
+	ld	e,a				;右端
+	ld	a,(y_chk)
+	cp	d
+	ret	c
+	cp	e
+	ret	nc				;ｙチェック通過！
+
+	ld	a,b
+	inc	a
+	call	drv_move
+	ret
+
+	End
+

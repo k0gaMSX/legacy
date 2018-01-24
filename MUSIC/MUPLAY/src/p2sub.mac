@@ -1,0 +1,1262 @@
+;/// ページ２配置サブルーチン
+
+include	entry.mac
+include	macro.mac
+
+extrn	bgmplay
+extrn	scr_flg
+extrn	mioreg
+
+extrn	mdr
+extrn	mmd
+extrn	mnp2
+extrn	mnp1
+
+extrn	wawa
+extrn	wari
+extrn	axbhl
+
+extrn	sys_select
+extrn	install
+extrn	sp_area
+extrn	copy
+extrn	pkanji
+extrn	scroll
+
+extrn	now_key
+extrn	now_play
+extrn	now_file
+extrn	now_vpage
+extrn	now_slot1
+extrn	now_select
+
+extrn	vdp_write_port
+extrn	wrtvdp
+extrn	i_move
+
+extrn	get_p1
+extrn	get_p2
+extrn	put_p1
+extrn	put_p2
+
+extrn	i_move
+
+extrn	sslot
+extrn	dslot
+extrn	smap
+extrn	dmap
+
+extrn	y_mov
+
+extrn	p1_map
+extrn	p2_map
+
+extrn	dir_sltno
+extrn	dir_mapno
+
+extrn	datsel
+extrn	hksave
+extrn	flgup
+extrn	flgdn
+extrn	loop_count
+extrn	max_dir
+extrn	volume
+extrn	putknj
+extrn	stop
+extrn	play
+extrn	play_mode
+extrn	boxfull
+extrn	fdir
+
+extrn	putfile
+extrn	move_dir
+extrn	fch
+extrn	pfile
+extrn	mnp
+extrn	put_ver
+extrn	data_load
+extrn	put_title
+extrn	adress
+extrn	gra_x
+extrn	gra_y
+extrn	getvdp
+extrn	boxfl2
+extrn	get_drive
+extrn	mgsver
+extrn	mgs_init
+extrn	mpk_init
+extrn	msc_init
+extrn	mio_init
+extrn	mgs_file
+extrn	n_port
+extrn	vdpwait
+
+sub2_init::
+	ld	hl,sub2_copy
+	ld	de,08500h
+	ld	bc,sub2_copy_end-sub2_copy
+	ldir
+	ret
+
+sub2_copy:
+	.phase	8500h
+
+;/// main / カーソル移動によるスクロール＆スペースキー or リターンキーで演奏！
+
+key_play::
+	ld	a,(capst)
+	or	a
+	ret	nz
+
+	call	chget
+	cp	13
+	jr	z,key_play2
+	cp	' '
+	ret	nz
+
+key_play2:
+	call	clrpfl
+	ld	a,(now_key)
+	call	msel2			;play music!!
+	ret
+
+;/// main / 次の曲を演奏(自動演奏) / input a:0 no a:1 normal  a:2 ramdom
+chg_play::
+	ld	a,(jiffy)
+	ld	b,a
+	ld	a,(wcount)
+	cp	b
+	ret	z
+	ld	a,b
+	ld	(wcount),a			;1/60以内での処理は無意味。
+
+	call	chget
+	cp	'9'
+	jr	z,chgply1
+
+	call	loop_count
+	or	a
+	ret	z
+
+chgply1:ld	a,(max_dir)
+	ld	b,a
+	ld	a,(now_file)
+	or	a
+	ret	z
+	sub	b
+	ret	z		;ファイル数＝０です。
+
+	ld	a,(play_mode)
+	ld	hl,cp_tbl
+	seljmp
+
+wcount:	db	0
+cp_tbl:	dw	ever_loop,normal,random
+
+chgply2:push	af
+	xor	a
+	ld	(flgup),a
+	call	clrpfl
+	call	fade_out	;fade out
+	pop	af
+	inc	a
+	push	af
+	call	msel2	;music play / a:music no
+	pop	af
+	call	chgply_xy
+	ld	h,b
+	ld	l,c		;hl:目的地 x,y
+
+	ld	a,on
+	ld	(etc_on),a
+	ld	(pkanji),a
+
+chgply3:ld	a,(now_key)		;Ｙ座標セット
+	call	chgply_xy	;a=> b:x c:y 分解 / hl:目的地 bc:now_key
+	ld	a,c
+	cp	l		;cp c,l > y check
+	jr	z,chgply4
+	jr	c,chpy3_1
+	dec	c		;y=y-1
+	push	bc
+	call	chgply5
+	pop	bc
+	jr	chpy3_2
+chpy3_1:inc	c
+	push	bc
+	call	chgply6
+	pop	bc
+chpy3_2:call	chgply_a
+	ld	(now_key),a
+	push	hl
+	ld	b,3
+chpy3_3:push	bc
+	call	wait1
+	pop	bc
+	djnz	chpy3_3
+	pop	hl
+	jr	chgply3
+
+chgply4:ld	a,(now_key)		;Ｘ座標セット
+	call	chgply_xy	;a=> b:x c:y 分解 / hl:目的地 bc:now_key
+	ld	a,b
+	cp	h		;cp c,l > over
+	jr	z,chply4_4
+	jr	c,chpy4_1
+	dec	b		;x=x-1
+	jr	chpy4_2
+chpy4_1:inc	b		;x=x+1
+chpy4_2:call	chgply_a
+	ld	(now_key),a
+	push	hl
+	ld	b,3
+chpy4_3:push	bc
+	call	wait1
+	pop	bc
+	djnz	chpy4_3
+	pop	hl
+	jr	chgply4
+
+chply4_4:
+	ld	a,off
+	ld	(etc_on),a
+	ret
+
+chgply5:ld	a,(now_select)	;/input c:y
+	push	bc
+	call	chgply_xy
+	ld	a,c
+	pop	bc
+	cp	c
+	ret	c
+	push	hl
+	call	sc_up
+	pop	hl
+	ret
+
+chgply6:ld	a,(now_select)	;/input c:y
+	push	bc
+	call	chgply_xy
+	ld	a,c
+	add	a,6
+	pop	bc
+	cp	c
+	ret	nc
+	push	hl
+	call	sc_down
+	pop	hl
+	ret
+
+chgply_xy:	;get x,y / input a:no > b:x c:y
+	ld	b,9
+	call	wawa
+	ld	b,a
+	ret
+
+chgply_a:	;set x,y => a / input b:x c:y / not use hl
+	push	hl
+	push	bc
+	ld	a,c
+	ld	b,9
+	call	axbhl
+	pop	bc
+	ld	a,b
+	add	a,l
+	pop	hl
+	ret
+
+ever_loop:			;/ ever loop(何も無し)
+	ret
+
+normal:	ld	a,(max_dir)	;/ normal play(順アクセス)
+	ld	b,a
+	ld	a,(now_key)
+	cp	b
+	call	c,normal2
+	ld	c,a
+	ld	a,(now_file)
+	ld	b,a
+	ld	a,c
+	cp	b
+	call	nc,normal2
+	jp	chgply2
+
+normal2:ld	a,(max_dir)
+	ret
+
+random:	ld	a,(max_dir)	;/ random play
+	ld	b,a
+	ld	a,(now_file)
+	ld	c,a		;b:max_dir / c:now_file
+
+	ld	hl,(ran_point)
+ran2:	ld	a,(hl)
+	or	a
+	jr	z,ran3
+	cp	b
+	inc	hl
+	jr	c,ran2
+	cp	c
+	jr	nc,ran2
+	jr	ran4
+
+ran3:	ld	hl,chm_work
+	jr	ran2
+
+ran4:	ld	(ran_point),hl
+	jp	chgply2
+
+ran_point:
+	dw	0000h
+
+fade_out:			;/// fade out
+	ld	a,(sys_select)
+	cp	3
+	jr	z,miofade
+
+	xor	a
+	ld	b,14
+fdlp:	push	af
+	push	bc
+	call	volume
+	rept	8
+	call	wait1
+	endm
+	pop	bc
+	pop	af
+	inc	a
+	djnz	fdlp
+	ret
+
+miofade:ld	c,4
+	ld	a,4
+	ld	d,3
+	ld	(mioreg+0),a
+	ld	(mioreg+1),bc
+	ld	(mioreg+3),de
+	ld	(mioreg+5),hl
+
+	ld	hl,mioreg
+	ld	de,0e802h
+	xor	a
+	call	ebios
+
+	ld	b,112
+mioflp:	push	bc
+	call	wait1
+	pop	bc
+	djnz	mioflp
+	ret
+
+;/ DOWN
+sc_down:ld	a,(scr_flg)
+	or	a
+	jr	nz,sc_down
+
+	ld	a,1
+	ld	(scr_flg),a
+	ret
+
+;/ up
+sc_up:	ld	a,(scr_flg)
+	or	a
+	jr	nz,sc_up
+
+	ld	a,2
+	ld	(scr_flg),a
+	ret
+
+;/ sub / BCD => strings(ad:pfile) / input ix:adress
+
+bcdcon::ld	a,(ix+0)
+	ld	b,(ix+1)
+	cp	b
+	jr	nz,bcd2
+	or	a
+	jr	nz,bcd2
+
+	ld	a,'-'
+	ld	(pfile+0),a
+	ld	(pfile+2),a
+	ld	(pfile+3),a
+	ld	a,'.'
+	ld	(pfile+1),a
+	xor	a
+	ld	(pfile+4),a
+	ret
+
+bcd2:	ld	a,(ix+0)
+	and	00001111b
+	add	a,'0'
+	ld	(pfile),a
+	ld	a,'.'
+	ld	(pfile+1),a
+	ld	a,(ix+1)
+	srl	a
+	srl	a
+	srl	a
+	srl	a				;20h > 02h等
+	add	a,'0'
+	ld	(pfile+2),a
+	ld	a,(ix+1)
+	and	00001111b
+	add	a,'0'
+	ld	(pfile+3),a
+	xor	a
+	ld	(pfile+4),a
+	ret
+
+;/// main / function check / ファンクションキーに対応して各種コマンド実行！
+
+function_check::
+	ld	a,6
+	call	snsmat
+	ld	b,a
+	ld	hl,fwait1
+	cp	(hl)
+	ld	(hl),a
+	jr	z,fc1
+
+	and	00100000b		;f1
+	jp	z,chg_mode
+
+	ld	a,b
+	and	01000000b		;f2
+	jp	z,dir
+
+	ld	a,b
+	and	10000000b		;f3
+	jp	z,stop
+
+fc1:	ld	a,7
+	call	snsmat
+	ld	b,a
+	and	00000001b		;f4
+	jp	z,fast
+	ld	a,b
+	ld	hl,fwait2
+	cp	(hl)
+	ld	(hl),a
+	ret	z
+
+	ld	a,b
+	and	00000010b		;f5
+	jp	z,play
+	ret
+
+fwait1:	db	0
+fwait2:	db	0
+
+;/ chg_mode / プレイモード変更
+chg_mode::
+	ld	a,(play_mode)
+	inc	a
+	cp	3
+	jr	c,chm1
+	xor	a
+chm1:	ld	(play_mode),a
+	ld	hl,chm_table
+	seljmp
+
+chm_table:
+	dw	chm_loop,chm_normal,chm_random
+
+chm_loop::
+	ld	b,33h
+	call	chm2
+	ld	b,33h
+	call	chm3
+	ret
+
+chm_normal::
+	ld	b,55h
+	call	chm2
+	ld	b,33h
+	call	chm3
+	ret
+
+chm_random::
+	ld	b,33h
+	call	chm2
+	ld	b,55h
+	call	chm3
+
+	ld	a,(jiffy)
+	ld	(chm_r4+1),a
+	sla	a
+	ld	(chm_r4+2),a		;乱数初期化
+
+	ld	ix,chm_work
+	ld	(ran_point),ix
+	ld	b,255
+	ld	a,1
+chm_r1:	ld	(ix+0),a
+	inc	ix
+	inc	a
+	djnz	chm_r1			;メモリ初期化
+
+	ld	ix,chm_work
+	ld	b,255
+chm_r2:	call	chm_r4
+	ld	iy,chm_work
+	add	iy,de
+	ld	c,(ix+0)		;0>255
+	ld	a,(iy+0)		;random
+	ld	(iy+0),c
+	ld	(ix+0),a		;swap
+	inc	ix
+	djnz	chm_r2
+	ret
+
+chm_r4:	ld	hl,0	;/ 乱数ルーチン ret de:0~255
+	ld	d,h
+	ld	e,l
+	add	hl,hl
+	add	hl,hl
+	add	hl,de
+	ld	de,3711h
+	add	hl,de
+	ld	(chm_r4+1),hl
+	ex	de,hl
+	ld	e,d
+	ld	d,0
+	ld	a,e
+	cp	255
+	ret	nz
+	dec	de
+	ret
+
+chm_work:
+	ds	256,0	;ファイル演奏番号順
+
+chm2:	ld	h,dir_x+163	;/ normal set / in:b=color
+	ld	l,dir_y-14+2
+	ld	d,dir_x+166
+	ld	e,dir_y-14+6
+	ld	c,0
+	call	boxfull
+	ret
+
+chm3:	ld	h,dir_x+178	;/ random set / in:b=color
+	ld	l,dir_y-14+2
+	ld	d,dir_x+181
+	ld	e,dir_y-14+6
+	ld	c,0
+	call	boxfull
+	ret
+
+;/ ff / fast play
+fast::	ld	a,255
+	ld	(get_f1),a
+	call	hksave
+	call	bgmplay
+	ret
+
+;/ dir / directory read
+dir::	xor	a
+	ld	(scroll),a
+	ld	(now_key),a	;カーソル位置初期化
+	call	fdir
+	call	putfile
+	ld	a,on
+	ld	(pkanji),a	;ちらつき防止on!
+	ld	a,1
+	ld	(now_key),a	;カーソル位置初期化
+	ret
+
+;/ msel1 / input:a=music no 画面番号指定 /ret:a:play no.
+
+msel1::	ld	b,a
+	ld	a,(now_select)
+	add	a,b				;全体の番号完成
+	ret	c				;over 255
+
+;/ msel2 / input:a=music no 直接指定 / ret:a:play no.
+
+msel2::	ld	b,a
+	ld	a,(now_file)
+	cp	b
+	ret	c				;番号以上…存在しない（汗）
+
+	ld	a,(max_dir)
+	cp	b
+	jp	nc,move_dir	;ディレクトリを指定したのね。go diskctrl.mac
+
+	push	bc		;*1
+
+	int	off
+	call	stop
+	call	wait1
+
+	call	clrpfl
+	call	fch
+	di
+
+	pop	bc		;*1
+	push	bc		;*0
+
+	ld	hl,4000h-9	;保存型式 filename*8byte + driver*1byte
+	ld	de,9
+mmclp2:	add	hl,de
+	djnz	mmclp2
+	ld	de,pfile
+	ld	bc,9
+	ldir
+
+	call	mnp
+	ei
+
+	ld	a,(sys_select)
+	ld	b,a
+	ld	a,(pfile+8)
+	cp	b
+	jr	z,mmc1
+
+	push	af
+	ld	hl,pfile
+	ld	de,mmcspc
+	ld	bc,8
+	ldir
+	pop	af
+
+	call	chg_driver
+	call	now_driver
+	call	put_ver
+
+	ld	de,pfile
+	ld	hl,mmcspc
+	ld	bc,8
+	ldir
+
+mmc1:	xor	a
+	ld	hl,pfile
+	ld	bc,8
+	cpir					;' 'を捜せ！
+	jr	nz,mmclp3
+	dec	hl
+
+mmclp3:	ld	iy,mgs_file
+	ld	a,(sys_select)
+	ld	b,4
+	push	hl
+	call	axbhl
+	ld	b,h
+	ld	c,l
+	add	iy,bc
+	pop	hl
+
+	ld	b,4		;拡張子コピー
+mmclp4:	ld	a,(iy+0)
+	ld	(hl),a
+	inc	hl
+	inc	iy
+	djnz	mmclp4
+	xor	a
+	ld	(hl),a
+
+	call	data_load
+	jr	nz,mmc2
+	call	put_title
+	call	play
+mmc2:	int	on
+	pop	af		;*0
+	ret				;a:play no
+
+mmcspc:	ds	8,0
+
+;/// 現在のｃｈ状態チェック！（全部） / 汎用！
+
+on_check::
+	ld	ix,adress
+	ld	a,(gra_x)
+	add	a,4
+	ld	h,a
+	ld	a,(gra_y)
+	add	a,32
+	ld	l,a
+	add	a,3
+	ld	e,a				;elは変更しない事！
+
+	ld	b,17
+on_lp1:	ld	a,h
+	add	a,6
+	ld	h,a
+	add	a,5
+	ld	d,a
+
+	push	hl
+	push	de
+	push	bc
+	push	ix
+	ld	a,(ix+5)
+	or	a
+	ld	b,33h
+	jr	z,on_1
+	ld	b,55h
+
+on_1:	ld	c,0
+	call	boxfull
+	pop	ix
+	ld	de,7
+	add	ix,de
+	pop	bc
+	pop	de
+	pop	hl
+
+	djnz	on_lp1
+	ret
+
+;/ sub / 現在、設定されているドライバーを表示
+
+now_driver::
+	ld	ix,mgsver
+	ld	iy,now_drdata
+	xor	a
+	ld	(now_drcnt),a
+
+now_dr1:ld	a,(now_drcnt)
+	cp	4
+	ret	z
+
+	ld	l,(iy+0)
+	ld	h,(iy+1)
+	ld	a,l
+	add	a,6
+	ld	e,a
+	ld	a,h
+	add	a,4
+	ld	d,a
+
+	ld	a,(now_drcnt)
+	ld	b,a
+	ld	a,(sys_select)
+	cp	b
+	ld	bc,3300h
+	call	z,now_dr3
+
+	push	ix
+	push	iy
+	call	boxfull
+	pop	iy
+	pop	ix
+
+now_dr2:ld	bc,2
+	add	ix,bc
+	add	iy,bc
+	ld	hl,now_drcnt
+	inc	(hl)
+	jr	now_dr1
+
+now_dr3:ld	bc,2200h
+	ret
+
+now_drcnt:
+	db	0
+now_drdata:
+	dw	drp_x*256+drp_y			;MGS / 始点、終点
+	dw	drp_x*256+drp_y+8		;MPK
+	dw	drp_x*256+drp_y+8+70*256	;MuSICA
+	dw	drp_x*256+drp_y+70*256		;MIO
+
+;/// sub / chg_driver / ドライバー変更 / in:a=0~3
+
+chg_driver::
+	cp	4
+	ret	nc
+
+	push	af
+	call	stop
+	pop	af
+	ld	hl,chg_table
+	seljmp
+
+chg_table:
+	dw	mgs_init,mpk_init,msc_init,mio_init
+
+;/// sub  / 「猫の手」 スクロール
+
+neko::	ld	a,(chi_on)
+	cp	on
+	ret	z
+
+	call	strig2
+	cp	off
+	jp	z,neko_over		;猫終了？
+
+	ld	a,(now_file)
+	sub	7*9
+	ret	c
+
+	ld	a,(neko_on)
+	cp	on
+	call	nz,neko_init		;猫開始
+
+	ld	ix,cansrl
+	ld	hl,scroll
+
+	ld	a,(y_mov)
+	neg
+	or	a
+	ret	z
+	jp	p,neko2
+
+neko1:	neg
+	ld	b,a
+	ld	a,(hl)
+	sub	b
+	call	c,file_min
+	ld	(hl),a			;scroll!
+	ret
+file_min:
+	xor	a
+	ret
+
+neko2:	add	a,(hl)
+	cp	(ix+0)
+	call	nc,file_max
+	ld	(hl),a			;scroll!
+	ret
+file_max:
+	ld	a,(ix+0)
+	ret
+
+neko_init:
+	ld	a,(now_file)
+	sub	7*9
+	ld	b,9
+	call	wawa
+	sla	c
+	sla	c
+	sla	c	;*8
+	ld	a,c
+	ld	(cansrl),a		;スクロール可能量決定
+
+	ld	a,(scroll)
+	ld	(baksrl),a		;現在のスクロール量を保存
+
+	ld	a,on
+	ld	(get_f2),a		;おしっぱなしを許可
+	ld	(pkanji),a	;ちらつき防止on＆走査線割込許可
+	ld	(neko_on),a		;猫開始の合図
+	ret
+
+neko_over:
+	ld	a,(neko_on)
+	cp	off
+	ret	z			;無関係でした。（汗）
+
+	ld	a,off
+	ld	(neko_on),a
+
+	xor	a
+	ld	(get_f2),a		;おしっぱなし不許可
+
+	ld	a,(scroll)
+	and	11111000b
+	ld	(scroll),a		;調整
+
+	ld	hl,baksrl
+	sub	(hl)		;a=scroll-baksrl
+	jp	c,neko_up
+
+neko_down:
+	srl	a
+	srl	a
+	srl	a
+	ld	b,9
+	call	axbhl
+	ld	a,(now_select)
+	add	a,l
+	ld	(now_select),a
+	ret
+
+neko_up:neg				;反転－を＋へ。
+	srl	a
+	srl	a
+	srl	a	;/8
+	ld	b,9
+	call	axbhl
+	ld	a,(now_select)
+	sub	l
+	ld	(now_select),a
+	ret
+
+neko_on:db	off		;猫操作中はon
+baksrl:	db	0		;猫開始時のスクロール値
+cansrl:	db	0		;移動可能スクロール量
+
+;/// sub / ちらつき防止対策(Page1からPage0へ転送)
+
+chira::	ld	a,(chi_on)
+	cp	on
+	jp	z,chi2
+
+	ld	a,(pkanji)
+	cp	off
+	ret	z				;もう対策済み(^^)
+
+	ld	a,(etc_on)
+	cp	on
+	ret	z
+
+	ld	a,(neko_on)
+	cp	on
+	ret	z
+
+chi1:	ld	a,(scroll)
+	ld	l,a
+	xor	a
+	ld	h,a
+	ld	de,255*256+212-dir_y+5
+	ld	bc,dir_y-2
+	call	copy
+
+	ld	a,on
+	ld	(chi_on),a
+	xor	a
+	ld	(count),a
+	ret
+
+chi2:	ld	a,(count)
+	inc	a
+	ld	(count),a
+	cp	6				;6/60秒
+	ret	c
+
+	ld	a,off
+	ld	(pkanji),a			;対策終わりっ
+	ld	(chi_on),a
+	ret
+
+etc_on::db	off			;メインでpkanjiをいじる時はon
+chi_on:	db	off			;処理中はon
+count:	db	0
+
+;//// 最下層サブルーチン ////
+
+;/ sub / clear pfile / 汎用ワークpfile(80byte)の初期化
+
+clrpfl::push	hl
+	push	de
+	push	bc
+	push	af
+	xor	a
+	ld	(pfile),a
+	ld	hl,pfile
+	ld	de,pfile+1
+	ld	bc,80
+	ldir					;プリントエリアの消去！
+	pop	af
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+;/ sub / wait 1/60 / use a,b
+
+wait1::	ei
+	ld	a,(jiffy)
+	ld	b,a
+w1lp1:	ld	a,(jiffy)
+	cp	b
+	jr	z,w1lp1
+	ret
+
+;/ sub / Bレジスタの指定した値*1001.2ﾏｲｸﾛ待つ
+
+wait2::	in	a,(0e7h)
+	ld	c,a
+w2lp1:	in	a,(0e7h)
+	sub	c
+	cp	b
+	jr	c,w2lp1
+	ret
+
+;/ sub / 現在のボタンの状態を調べる。 / in: no out: a:総合 b:マウス
+
+strig1::call	chget		;/// STRIG1の状態
+	ld	ix,get_s1
+	cp	' '
+	jr	z,st1
+	cp	13
+	jr	z,st1
+
+	ld	ix,get_s1
+	ld	a,(n_port)
+	sra	a
+	sra	a
+	inc	a
+	call	get_main
+	or	a
+	ret
+
+st1:	cp	(ix+0)
+	jr	z,get_off2
+	ld	(ix+0),a
+	ld	b,0
+	ret
+
+strig2::ld	a,6		;/// STRIG2の状態
+	call	snsmat
+	ld	ix,get_s2
+	bit	2,a
+	ld	a,255
+	jr	nz,stg2
+
+	cp	(ix+0)
+	jr	z,get_off2
+	ld	(ix+0),a
+	or	a
+	ld	b,0
+	ret	nz
+
+stg2:	ld	ix,get_s2
+	ld	a,(n_port)
+	sra	a
+	sra	a
+	add	a,3
+	call	get_main
+	or	a
+	ld	b,0
+	ret	nz
+
+get_main:			;/ 両方サポート処理
+	push	ix
+	calmin	gttrig
+	pop	ix
+	or	a
+	jr	z,get_off
+
+	ld	b,a
+	ld	a,(ix+0)
+	cp	b
+	jr	z,get_off2
+
+	xor	a
+	dec	a
+	ld	(ix+0),a
+	ld	b,a
+	ret
+
+get_off:xor	a			;放したなぁ
+	ld	(ix+0),a
+	ld	(ix+2),a
+	ld	b,a
+	ret
+
+get_off2:				;おしっぱなし！
+	ld	a,(ix+2)
+	ld	b,a
+	ret
+
+get_s1:	db	0
+get_s2:	db	0
+get_f1::db	0
+get_f2::db	0
+
+;/// add hl,a / hl=hl+a
+
+add_hl::add	a,l
+	ld	l,a
+	ld	a,0
+	adc	a,h
+	ld	h,a
+	ret
+
+;/// cp hl,de / no use bc
+
+cp_hl::	ld	a,h
+	cp	d
+	ret	c
+	jp	z,cp_2
+
+cp_1:	ld	a,1		;ｄｅ＜ｈｌなのでｃｙは立たない。
+	or	a
+	ret
+
+cp_2:	ld	a,l		;結果はわからない。
+	cp	e
+	ret
+
+;/// snsmat / input:a=scan / ret:a=return
+
+snsmat::di
+	ld	c,a
+	in	a,(0aah)
+	and	11110000b
+	or	c
+	out	(0aah),a
+	in	a,(0a9h)
+	ei
+	ret
+
+;/// chget / input:no / output:a
+
+Skey_flag:
+	db	off
+
+chget::	di
+	ld	a,OFF
+	ld	(skey_flag),a
+	ld	a,6
+	call	snsmat
+	rrca
+	jp	c,Inkey_skip1
+	ld	a,ON
+	ld	(skey_flag),a
+Inkey_skip1:
+
+	ld	a,7
+	call	snsmat
+	ld	c,a
+	bit	2,c
+	ld	a,01bh		;esc
+	jp	z,chret
+	bit	5,c
+	ld	a,08h		;bs
+	jp	z,chret
+	bit	7,c
+	ld	a,0dh		;return
+	jp	z,chret
+
+	ld	a,8
+	call	snsmat
+	ld	c,a
+	bit	0,c
+	ld	a,' '		;spase
+	jp	z,chret
+	bit	7,c
+	ld	a,01ch		;right
+	jp	z,chret
+	bit	6,c
+	ld	a,01fh		;down
+	jp	z,chret
+	bit	5,c
+	ld	a,01eh		;up
+	jp	z,chret
+	bit	4,c
+	ld	a,01dh		;left
+	jp	z,chret
+	ld	a,5
+	call	snsmat
+	ld	c,a
+	bit	6,c
+	ld	a,'Y'
+	jp	z,chret
+	bit	7,c
+	ld	a,'Z'
+	jp	z,chret
+	ld	a,4
+	call	snsmat
+	ld	c,a
+	bit	0,c
+	ld	a,'K'
+	jp	z,chret
+	bit	6,c
+	ld	a,'Q'
+	jp	z,chret
+	ld	a,1
+	call	snsmat
+	ld	c,a
+	bit	4,c
+	ld	a,'\'
+	jp	z,chret
+	bit	5,c
+	ld	a,'@'
+	jp	z,chret
+	ld	a,3
+	call	snsmat
+	ld	c,a
+	bit	4,c
+	ld	a,'G'
+	jp	z,chret
+	ld	a,9
+	call	snsmat
+	ld	c,a
+	bit	3,c
+	ld	a,'0'
+	jp	z,chret
+	bit	4,c
+	ld	a,'1'
+	jp	z,chret
+	bit	5,c
+	ld	a,'2'
+	jp	z,chret
+	bit	6,c
+	ld	a,'3'
+	jp	z,chret
+	bit	7,c
+	ld	a,'4'
+	jp	z,chret
+	ld	a,10
+	call	snsmat
+	ld	c,a
+	bit	0,c
+	ld	a,'5'
+	jp	z,chret
+	bit	1,c
+	ld	a,'6'
+	jp	z,chret
+	bit	2,c
+	ld	a,'7'
+	jp	z,chret
+	bit	3,c
+	ld	a,'8'
+	jp	z,chret
+	bit	4,c
+	ld	a,'9'
+	jp	z,chret
+	bit	5,c
+	ld	a,'-'
+	jp	z,chret
+	bit	6,c
+	ld	a,','
+	jp	z,chret
+	bit	7,c
+	ld	a,'.'
+	jp	z,chret
+	ld	a,0
+	call	snsmat
+	ld	c,a
+	bit	0,c
+	ld	a,'0'
+	jp	z,chret
+	bit	1,c
+	ld	a,'1'
+	jp	z,chret
+	bit	2,c
+	ld	a,'2'
+	jp	z,chret
+	bit	3,c
+	ld	a,'3'
+	jp	z,chret
+	bit	4,c
+	ld	a,'4'
+	jp	z,chret
+	bit	5,c
+	ld	a,'5'
+	jp	z,chret
+	bit	6,c
+	ld	a,'6'
+	jp	z,chret
+	bit	7,c
+	ld	a,'7'
+	jp	z,chret
+	ld	a,1
+	call	snsmat
+	ld	c,a
+	bit	0,c
+	ld	a,'8'
+	jp	z,chret
+	bit	1,c
+	ld	a,'9'
+	jp	z,chret
+	xor	a
+chret:	ei
+	ret
+
+	.dephase
+sub2_copy_end:
+
+	end
+

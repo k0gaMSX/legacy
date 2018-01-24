@@ -1,0 +1,1990 @@
+;==============================================================================
+;
+;	漢字表示 or 歌詞表示処理　STACK積み積みversion all 座標セット
+;
+;==============================================================================
+
+; 使用可能なコントロールコード一覧
+;
+;　※座標は16進数で指定します。
+;
+;　"\b\x??"	表示を開始する座標を指定します。指定された座標より左はクリ
+;		アされずにそのまま残ります。座標の範囲は0～81です(\x41まで)。
+;
+;　"\c\x??"	\bと同じく表示を開始する座標を指定しますが、こちらは指定座
+;		標より左をクリアします。
+;
+;　"\a"		座標を左端(0)に戻します。\aのみを実行すると表示中の歌詞をク
+;		リアできます。
+;
+;　座標の指定は半角単位で行ないます。81(\x51)を超えた場合、動作保証出来ません。
+;
+;==============================================================================
+
+;【共通シンボル】==============================================================
+
+	include	entry.mac
+	extrn	knjuse
+
+KNJPRT		EQU	0d8h	;漢字ROMポート番号
+ROMID		EQU	002dh	;MSX-VerのID番号の格納番地
+View_NORMAL	EQU	0	;16x16の漢字ROMを使用する
+View_GT		EQU	1	;内蔵VIEW-ROMを使用する
+View_ROM	EQU	2	;外部VIEW-ROMを使用する
+;ANK_TBL	EQU	05000h	;ankフォント格納テーブル  SIZE = 2048Bytes
+;PSTR_B_BUF	EQU	05800h	;１行分のボトムバッファ SIZE = 768Bytes
+;FONT_BUF0	EQU	05800h	;既存のフォントテーブル０ SIZE = 768Bytes
+;FONT_BUF1	EQU	05b00h	;既存のフォントテーブル１ SIZE = 768Bytes
+FORCLR0		EQU	15	;既存の文字の色０(主にファイラーに使用します)
+BAKCLR0		EQU	3	;既存の背景の色０
+FORCLR1		EQU	15	;既存の文字の色１(主に歌詞表示に使用します)
+BAKCLR1		EQU	0	;既存の背景の色１
+
+;==============================================================================
+
+;【外部参照宣言】==============================================================
+
+;	PUBLIC	INIKNJ		;漢字表示の初期化処理
+	PUBLIC	PUTKNJ		;漢字表示
+	PUBLIC	PUTSNG		;歌詞表示
+	PUBLIC	BC1		;歌詞表示の最初は'OFF'にする事
+	PUBLIC	View_f		;VIEWフォントの有無フラグ
+
+;==============================================================================
+
+knj_init::
+	ld	hl,knj_copy
+	ld	de,0ab00h
+	ld	bc,knj_copy_end-knj_copy
+	ldir
+	call	iniknj
+	ret
+
+knj_copy:
+	.phase	0ab00h
+
+;【作業領域】==================================================================
+
+ctrl_bc:			;\b or \c実行時はon
+	DB	OFF
+
+bc1:				;一度でもctrl_bcがonになったらon
+	DB	OFF
+
+Pstr_x_point::			;X座標の表示位置
+	DW	0
+
+Pstr_y_point::			;Y座標の表示位置
+	DW	0
+
+Pstr_count:			;一度に表示する文字数
+	DW	0
+
+Pstr_vdp_cmd:			;VDPCOMMANDのﾃｰﾌﾞﾙ
+	DW	0,0		;dx,dy
+	DW	512,8		;nx,ny
+	DB	0,0,11000000b	;color,arg,command
+
+View_f_buf:
+	DS	12
+
+View_bank:
+	DB	0
+
+View_adrs:
+	DW	0
+
+View_f:
+	DB	OFF
+
+View_sel:
+	DB	View_NORMAL
+
+View_slot:
+	DB	-1
+
+ViewROM_id:
+	DB	'MSXViewKROM'
+
+;==============================================================================
+
+;==============================================================================
+;
+;	[名称]	文字表示の初期化
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	Viewﾌｫﾝﾄを使用したくない場合は、「文字表示の初期化」の後に、
+;		[View_f]を'OFF'にして下さい。
+;
+;==============================================================================
+
+INIKNJ:	call	Init_ANK
+	call	Init_FONT
+	call	Init_VIEW
+	ret
+
+;==============================================================================
+;
+;	[名称]	文字表示
+;
+;	[入力]	[H] = 表示Ｘ座標(バイト単位)
+;		[L] = 表示Ｙ座標(ドット単位)
+;		[DE] = asciiZ文字列の先頭番地
+;		[forclr] = 文字の色(上位4bitは下位4bitと同じにする事)
+;		[bakclr] = 背景の色(上位4bitは下位4bitと同じにする事)
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	
+;
+;==============================================================================
+
+PUTKNJ::
+	ld	a,on
+	ld	(knjuse),a
+
+	ld	a,(BC1)
+	push	af
+	ld	a,ON
+	ld	(BC1),a
+	call	PUTSNG
+	pop	af
+	ld	(BC1),a
+
+	ld	a,off
+	ld	(knjuse),a
+
+	ret
+
+
+;==============================================================================
+;
+;	[名称]	歌詞表示
+;
+;	[入力]	[L] = 表示Ｘ座標(バイト単位)
+;		[H] = 表示Ｙ座標(ドット単位)
+;		[DE] = asciiZ文字列の先頭番地
+;		[forclr] = 文字の色(上位4bitは下位4bitと同じにする事)
+;		[bakclr] = 背景の色(上位4bitは下位4bitと同じにする事)
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	
+;
+;==============================================================================
+
+PUTSNG::
+	ld	c,e
+	ld	b,d
+	ld	e,h
+	ld	h,0
+	add	hl,hl
+	ld	(Pstr_x_point),hl	;X座標のゲット。
+	ld	a,(acpage)
+	ld	h,a
+	ld	l,e
+	ld	(Pstr_y_point),hl	;Y座標のゲット。
+	xor	a
+	ld	(Pstr_count),a		;文字数の初期化。
+
+	ld	a,(BC1)
+	cp	OFF
+	call	z,Clear_str
+
+	ld	(Pstr_SP+1),sp
+
+	ld	sp,PSTR_B_BUF
+Pstr_L1:
+	ld	a,(Pstr_count)
+	cp	80			;文字数が80文字を超えたら表示して
+	jp	nc,Pstr_quit		;終了。
+
+	ld	a,(bc)
+	inc	bc
+	or	a			;文字列終端なら表示して終了。
+	jp	z,Pstr_quit
+
+	cp	1			;シーケンス\aなら・・・
+	jp	z,Pstr_ctrla
+
+	cp	2			;シーケンス\bなら・・・
+	jp	z,Pstr_ctrlb
+
+	cp	3			;シーケンス\cなら・・・
+	jp	z,Pstr_ctrlc
+
+	cp	TAB			;ＴＡＢなら・・・
+	jp	z,Pstr_tab
+
+	cp	020h			;他のｺﾝﾄﾛｰﾙｺｰﾄﾞだと表示して終了。
+	jp	c,Pstr_quit
+
+;==============================================================================
+;
+;	[名称]	何バイト文字かのチェック
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	
+;
+;==============================================================================
+
+Chk_char:
+	cp	081h
+	jr	c,Pstr_S1
+
+	cp	0a0h
+	jr	c,Pstr_S2
+
+	cp	0e0h
+	jr	c,Pstr_S1
+
+	cp	0fdh
+	jr	c,Pstr_S2
+
+
+;==============================================================================
+;
+;	[名称]	１バイト文字フォントの獲得
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	
+;
+;==============================================================================
+
+Pstr_S1:
+Get_1font:				;ankフォントの処理。
+	sub	32
+	jp	c,Pstr_L1
+
+	cp	060h
+	jr	c,Get_1font_S1
+
+	sub	32
+
+Get_1font_S1:
+	ld	l,a
+	ld	h,0
+	add	hl,hl			;ankｺｰﾄﾞを８倍してankﾃｰﾌﾞﾙを
+	add	hl,hl			;導き出す。
+	add	hl,hl
+	ld	de,ANK_TBL
+	add	hl,de
+
+	ld	d,(hl)
+	inc	hl
+	ld	e,(hl)
+	push	de
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	e,(hl)
+	push	de
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	e,(hl)
+	push	de
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	e,(hl)
+	push	de
+
+	ld	hl,Pstr_count
+	inc	(hl)			;文字数を１文字分追加。
+	jp	Pstr_L1
+
+Pstr_S2:
+	ld	d,a
+	ld	a,(bc)
+	inc	bc
+	ld	e,a
+	ld	(Pstr_BC1+1),bc
+
+;==============================================================================
+;
+;	[名称]	２バイト文字フォントの獲得
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	
+;
+;==============================================================================
+
+Get_2font:				;漢字フォントの処理。
+	sla	d			;多分・・
+	ld	a,e			;「Shift-JISをJISに変換している。」
+	sub	01fh			;・・・と想う(ｫ。
+	jp	m,Get_2font_s1
+
+	cp	061h
+	adc	a,0deh			;もう組んだ本人も解らない(ｫ(ｽﾏﾝ
+Get_2font_s1:
+	ld	e,a
+	ld	hl,01fa1h		;何かの本を参考にしたような・・？。
+	add	hl,de
+	ex	de,hl
+
+	res	7,d
+	res	7,e
+
+	ld	a,d			;JIS第２水準は標準漢字ROMから・・
+	cp	80
+	jr	nc,Get_2font_s2
+
+	ld	a,(View_f)
+	cp	ON
+	jp	z,Get_view
+
+Get_2font_s2:
+	ld	a,e			;02020hの下駄を外している。
+	sub	020h
+	ld	e,a
+	ld	a,d
+	sub	020h
+	ld	l,a
+	ld	h,0
+	ld	d,h
+
+	ld	c,l
+	ld	b,h
+	add	hl,hl		;ココの処理はHLを96倍するだけ・・・(^^;;
+	add	hl,bc		;だから掛け算命令に差し替えたいんだけど、
+	add	hl,hl		;コッチの方が５倍早いんだな(爆)。
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+
+	add	hl,de
+	cp	030h
+	jr	c,Get_2font_s3
+
+	ld	a,h
+	sub	012h
+	ld	h,a
+	ld	c,KNJPRT +2
+	jr	Get_2font_s5
+
+Get_2font_s3:
+	cp	010h
+	jr	c,Get_2font_s4
+
+	dec	h
+	dec	h
+
+Get_2font_s4:
+	ld	c,KNJPRT
+
+Get_2font_s5:
+	out	(c),l
+	add	hl,hl
+	add	hl,hl
+	inc	c
+	out	(c),h
+
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	d,a
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	e,a
+	push	de
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	d,a
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	e,a
+	push	de
+
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	h,a
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	l,a
+	in	a,(c)
+	in	b,(c)
+	or	b
+	exx
+	ld	d,a
+	exx
+	in	a,(c)
+	in	b,(c)
+	or	b
+	exx
+	ld	e,a
+	exx
+
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	d,a
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	e,a
+	push	de
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	d,a
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	e,a
+	push	de
+
+	push	hl
+	exx
+	push	de
+	exx
+
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	d,a
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	e,a
+	push	de
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	d,a
+	in	a,(c)
+	in	b,(c)
+	or	b
+	ld	e,a
+	push	de
+
+	jp	Pstr_S3
+
+
+;==============================================================================
+;
+;	[名称]	VIEWフォントの獲得
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	Viewﾌｫﾝﾄを使用する利点は、文字が見やすくなるダケだったりし
+;		ます・・・・(^^;;;;;;;。
+;		内蔵漢字ROMに比べて、バンク切り替えやﾌｫﾝﾄの並べ替え等、処理
+;		が多くて、想ったほど速度は稼げなかったりするのね・・。
+;
+;==============================================================================
+
+Get_view:
+	ld	a,(View_sel)
+	cp	View_GT
+	jr	z,Get_viewGT
+
+Get_viewROM:
+	cp	View_NORMAL
+	jp	z,Get_2font_S2
+
+	call	Get_adrs
+
+	exx
+	ld	hl,0ffffh
+	ld	de,06000h
+	di
+	in	a,(0a8h)
+	ld	c,a
+	and	00110011b
+Get_viewROM_w1:
+	or	00000000b
+	out	(0a8h),a
+	ld	a,(hl)
+	cpl
+	ld	b,a
+	and	11110011b
+Get_viewROM_w2:
+	or	00000000b
+	ld	(hl),a
+	ld	a,(View_bank)
+	ld	(de),a
+	exx
+
+	ld	de,View_f_buf
+	ld	bc,05ff5h
+	or	a
+	sbc	hl,bc
+	jr	c,Get_viewROM_S1
+
+	ld	a,11
+	sub	l
+	add	hl,bc
+	ld	c,a
+	ld	b,0
+	ld	a,12
+	sub	c
+	ld	hl,(View_adrs)
+	ldir
+	ld	c,a
+	ld	a,(View_bank)
+	inc	a
+	exx
+	ld	(de),a
+	exx
+	ld	hl,04000h
+	ldir
+	jr	Get_viewROM_S2
+
+Get_viewROM_S1:
+	add	hl,bc
+	ld	bc,12
+	ldir
+
+Get_viewROM_S2:
+	exx
+	xor	a
+	ld	(de),a
+	ld	(hl),b
+	ld	a,c
+	out	(0a8h),a
+	ei
+	exx
+
+	jr	Get_view_s1
+
+Get_viewGT:
+	call	Get_adrs
+
+	ld	a,(View_bank)
+	add	a,14
+	ld	(View_bank),a
+
+	exx
+	ld	hl,0ffffh
+	ld	de,06800h
+	di
+	ld	a,(hl)
+	cpl
+	ld	b,a
+	or	00001100b
+	ld	(hl),a
+	in	a,(0a8h)
+	ld	c,a
+	or	00001100b
+	out	(0a8h),a
+
+	ld	a,00011100b
+	ld	(07ff9h),a
+
+	ld	a,00000100b
+	ld	(07ff8h),a
+
+	ld	a,(View_bank)
+	ld	(de),a
+	exx
+
+	ld	de,View_f_buf
+	ld	bc,05ff5h
+	or	a
+	sbc	hl,bc
+	jr	c,Get_viewGT_S1
+
+	ld	a,11
+	sub	l
+	add	hl,bc
+	ld	c,a
+	ld	b,0
+	ld	a,12
+	sub	c
+	ld	hl,(View_adrs)
+	ldir
+	ld	c,a
+	ld	a,(View_bank)
+	inc	a
+	exx
+	ld	(de),a
+	exx
+	ld	hl,04000h
+	ldir
+	jr	Get_viewGT_S2
+
+Get_viewGT_S1:
+	add	hl,bc
+	ld	bc,12
+	ldir
+
+Get_viewGT_S2:
+	exx
+	xor	a
+	ld	(07ff8h),a
+
+	ld	a,12
+	ld	(de),a
+
+	ld	(hl),b
+	ld	a,c
+	out	(0a8h),a
+	ei
+	exx
+
+Get_view_s1:
+	ld	hl,View_f_buf
+
+	ld	c,(hl)
+	inc	hl
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	ld	d,a
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	ld	c,(hl)
+	inc	hl
+	rl	c
+	rla
+
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	exx
+	ld	b,a
+	exx
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	rl	c
+	rla
+	ld	c,(hl)
+	inc	hl
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	ld	e,a
+	push	de
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	exx
+	ld	c,a
+	exx
+				;@
+	ld	c,(hl)
+	inc	hl
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	ld	d,a
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	ld	c,(hl)
+	inc	hl
+	rl	c
+	rla
+
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	exx
+	ld	d,a
+	exx
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	rl	c
+	rla
+	ld	c,(hl)
+	inc	hl
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	ld	e,a
+	push	de
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	exx
+	ld	e,a
+	exx
+				;@
+	ld	c,(hl)
+	inc	hl
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	ld	d,a
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	ld	c,(hl)
+	inc	hl
+	rl	c
+	rla
+
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	exx
+	ld	h,a
+	exx
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	rl	c
+	rla
+	ld	c,(hl)
+	inc	hl
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	ld	e,a
+	push	de
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	exx
+	ld	l,a
+	exx
+				;@
+	ld	c,(hl)
+	inc	hl
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	ld	d,a
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	ld	c,(hl)
+	inc	hl
+	rl	c
+	rla
+
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	ld	b,a
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	rl	c
+	rla
+	ld	c,(hl)
+	inc	hl
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	ld	e,a
+	push	de
+
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+
+	ld	c,a
+	exx
+	push	bc
+	push	de
+	push	hl
+	exx
+	push	bc
+	jp	Pstr_S3
+
+Get_adrs:
+	ld	hl,-3020h
+	add	hl,de
+	ld	de,07000h
+	jr	c,Get_adrs_S1
+
+	ld	a,h
+	add	a,15
+	ld	h,a
+	ld	de,04480h
+
+Get_adrs_S1:
+	ld	a,l
+	ld	l,h
+	ld	h,0
+	ld	c,l
+	ld	b,h
+	add	hl,hl
+	add	hl,bc
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	ld	c,a
+	add	hl,bc
+
+	ld	b,h
+	ld	c,l
+	xor	a
+	add	hl,hl
+	rla
+	add	hl,bc
+	adc	a,0
+	add	hl,hl
+	rla
+	add	hl,hl
+	rla
+
+	add	hl,de
+	adc	a,2
+	and	00011111b
+	ld	b,a
+
+	ld	a,h
+	and	11100000b
+	or	b
+	rlca
+	rlca
+	rlca
+	ld	(View_bank),a
+
+	ld	a,h
+	and	00011111b
+	add	a,040h
+	ld	h,a
+	ld	(View_adrs),hl
+	ret
+
+Pstr_S3:
+Pstr_BC1:
+	ld	bc,0
+	ld	hl,Pstr_count
+	inc	(hl)			;文字数を２文字分追加。
+	inc	(hl)
+	jp	Pstr_L1
+
+
+;==============================================================================
+;
+;	[名称]	文字バッファのフラッシュ
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	
+;
+;==============================================================================
+
+Pstr_wvrm:
+	ld	a,(Pstr_count)
+	or	a			;文字数が無ければナニもしない。
+	ret	z
+
+	push	bc
+	call	VDP_WAIT
+	ld	hl,(Pstr_x_point)	;x座標の演算。
+	srl	h
+	rr	l
+	ld	a,l
+	ld	(Pstr_wvrm1_w0+1),a
+	ld	(Pstr_wvrm2_w0+1),a
+	ld	hl,(Pstr_y_point)	;y座標の演算。
+
+	ld	de,(forclr)
+	ld	a,e
+	cp	FORCLR0*16+FORCLR0
+	jr	nz,Pstr_wvrm1_S1
+
+	ld	a,d
+	cp	BAKCLR0*16+BAKCLR0
+	ld	a,HIGH FONT_BUF0
+	jr	z,Pstr_wvrm1_S2
+
+Pstr_wvrm1_S1:
+	ld	a,e
+	cp	FORCLR1*16+FORCLR1
+	jr	nz,Pstr_wvrm2
+
+	ld	a,d
+	cp	BAKCLR1*16+BAKCLR1
+	jr	nz,Pstr_wvrm2
+
+	ld	a,HIGH FONT_BUF1
+
+Pstr_wvrm1_S2:				;色固定時の処理(R800の時は意味無し)
+	ld	(Pstr_wvrm1_W3+1),a
+	ld	a,(Pstr_count)
+	ld	(Pstr_wvrm1_w2+1),a
+	exx
+	ld	de,-8
+	ld	hl,PSTR_B_BUF -1
+	exx
+	ld	bc,0899h
+Pstr_wvrm1_L1:
+	ld	a,l
+	and	11000000b
+	or	h
+	rlca
+	rlca
+	and	00000111b
+	di				;VRAMの上位アドレスをセット。
+	out	(c),a
+	ld	a,080h+14
+	out	(c),a
+Pstr_wvrm1_W0:
+	ld	a,0
+	out	(c),a			;VRAMの下位アドレスをセット。
+	ld	a,l
+	and	00111111b
+	or	01000000b
+	out	(c),a
+	ei
+	exx
+Pstr_wvrm1_w2:
+	ld	b,0
+	ld	(Pstr_wvrm1_W4+1),hl
+Pstr_wvrm1_L2:
+	ld	a,(hl)
+	add	hl,de
+	exx
+	ld	e,a
+Pstr_wvrm1_W3:
+	ld	d,HIGH FONT_BUF0
+	ld	a,(de)
+	out	(098h),a		;R800ではココで8.66usのwaitが
+	inc	d			;掛かるんだよナァ(;o;/。
+	ld	a,(de)
+	out	(098h),a
+	inc	d
+	ld	a,(de)
+	out	(098h),a
+	exx
+	djnz	Pstr_wvrm1_L2
+Pstr_wvrm1_w4:
+	ld	hl,0
+	dec	hl
+	exx
+	inc	hl
+	djnz	Pstr_wvrm1_L1
+
+	pop	bc
+	ret
+
+Pstr_wvrm2:				;色随時生成時の処理(Z80ではﾁﾄ遅)
+	ld	(Pstr_wvrm2_w1+1),hl	;表
+	ld	hl,PSTR_B_BUF -1
+	ld	de,-8
+	ld	c,8
+	exx				;裏
+	ld	hl,(forclr)		;[H]=BB/[D]=BF/[E]=FB/[L]=FF
+	ld	(Pstr_wvrm2_w2+1),hl
+	ld	a,(Pstr_count)
+	ld	(Pstr_wvrm2_w3+1),a
+	ld	a,l
+	and	11110000b
+	ld	e,a
+	ld	a,h
+	and	00001111b
+	or	e
+	ld	e,a
+	ld	a,l
+	and	00001111b
+	ld	d,a
+	ld	a,h
+	and	11110000b
+	or	d
+	ld	d,a
+	ld	c,098h
+Pstr_wvrm2_L1:
+Pstr_wvrm2_w1:
+	ld	hl,0
+	ld	a,l
+	and	11000000b
+	or	h
+	rlca
+	rlca
+	and	00000111b
+	di				;VRAMの上位アドレスをセット。
+	out	(099h),a
+	ld	a,080h+14
+	out	(099h),a
+Pstr_wvrm2_w0:
+	ld	a,0			;VRAMの下位アドレスをセット。
+	out	(099h),a
+	ld	a,l
+	and	00111111b
+	or	01000000b
+	out	(099h),a
+	ei
+	inc	hl
+	ld	(Pstr_wvrm2_w1+1),hl
+Pstr_wvrm2_w2:
+	ld	hl,0
+	exx				;表
+	ld	(Pstr_wvrm2_w4+1),hl
+Pstr_wvrm2_w3:
+	ld	b,0
+Pstr_wvrm2_L2:
+	ld	a,(hl)
+	add	hl,de
+	exx				;裏
+
+	ld	b,a
+	and	00100010b
+	rlca
+	or	b
+
+	rlca			;[H]=BB/[D]=BF/[E]=FB/[L]=FF
+	jr	c,Pstr_wvrm2_S1
+
+	ld	b,d
+	rlca
+	jr	c,Pstr_wvrm2_S2
+
+	out	(c),h
+	jr	Pstr_wvrm2_S3
+
+Pstr_wvrm2_S1:
+	ld	b,l
+	rlca
+	jr	c,Pstr_wvrm2_S2
+
+	ld	b,e
+
+Pstr_wvrm2_S2:
+	out	(c),b
+
+Pstr_wvrm2_S3:
+	rlca
+	rlca			;[H]=BB/[D]=BF/[E]=FB/[L]=FF
+	jr	c,Pstr_wvrm2_S4
+
+	ld	b,d
+	rlca
+	jr	c,Pstr_wvrm2_S5
+
+	out	(c),h
+	jr	Pstr_wvrm2_S6
+
+Pstr_wvrm2_S4:
+	ld	b,l
+	rlca
+	jr	c,Pstr_wvrm2_S5
+
+	ld	b,e
+
+Pstr_wvrm2_S5:
+	out	(c),b
+
+Pstr_wvrm2_S6:
+	rlca			;[H]=BB/[D]=BF/[E]=FB/[L]=FF
+	jr	c,Pstr_wvrm2_S7
+
+	ld	b,d
+	rlca
+	rlca
+	jr	c,Pstr_wvrm2_S8
+
+	out	(c),h
+	jr	Pstr_wvrm2_S9
+
+Pstr_wvrm2_S7:
+	ld	b,l
+	rlca
+	rlca
+	jr	c,Pstr_wvrm2_S8
+
+	ld	b,e
+
+Pstr_wvrm2_S8:
+	out	(c),b
+
+Pstr_wvrm2_S9:
+	exx				;表
+	djnz	Pstr_wvrm2_L2
+Pstr_wvrm2_w4:
+	ld	hl,0
+	dec	hl
+
+	dec	c
+	exx
+	jr	nz,Pstr_wvrm2_L1
+
+	exx
+	pop	bc
+	ret
+
+
+;==============================================================================
+;
+;	[名称]	シーケンス'\a'の処理
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	単なる１行だけ消去する処理
+;
+;==============================================================================
+
+Pstr_ctrla:				;シーケンス\aの処理。
+	call	Pstr_wvrm		;とりあえずバッファをフラッシュ。
+	call	clear_str
+	ld	a,ON
+	ld	(BC1),a
+
+	ld	sp,PSTR_B_BUF
+	jp	Pstr_L1
+
+
+;==============================================================================
+;
+;	[名称]	シーケンス'\b'の処理
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	指定位置にカーソルを移動して、文字列の右端から行末まで消去
+;		する処理
+;
+;==============================================================================
+
+Pstr_ctrlb:				;シーケンス\bの処理。
+	call	Pstr_ctrl1
+
+	ld	sp,PSTR_B_BUF
+	jp	Pstr_L1
+
+
+;==============================================================================
+;
+;	[名称]	シーケンス'\c'の処理
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	指定位置にカーソルを移動して、文字列の左端から行頭までと、
+;		右端から行末までを、消去する処理
+;
+;==============================================================================
+
+Pstr_ctrlc:				;シーケンス\cの処理。
+	call	Pstr_ctrl1
+	ld	(Pstr_vdp_cmd+4),hl	;nx
+	ld	hl,0
+	ld	(Pstr_vdp_cmd+0),hl	;dx
+	call	Clear_str1
+
+	ld	sp,PSTR_B_BUF
+	jp	Pstr_L1
+
+Pstr_ctrl1:
+	call	Pstr_wvrm		;とりあえずバッファをフラッシュ。
+	ld	a,ON
+	ld	(ctrl_bc),a
+	ld	(BC1),a
+
+	xor	a
+	ld	(Pstr_count),a		;文字数をクリア。
+
+	ld	a,(bc)
+	inc	bc
+	ld	l,a
+	ld	h,0
+	ld	e,l
+	ld	d,h
+	add	hl,hl
+	add	hl,de
+	add	hl,hl
+	ld	(Pstr_x_point),hl
+	ret
+
+;==============================================================================
+;
+;	[名称]	水平タブの処理
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	
+;
+;==============================================================================
+
+Pstr_tab:				;タブの処理。
+	ld	hl,(Pstr_x_point)
+	xor	a			;ﾄﾞｯﾄ座標をｷｬﾗｸﾀｰ座標に変換。
+	ld	d,16			;(*Pstr_x_point)\6
+Pstr_tab_L1:
+	add	hl,hl
+	rla
+	cp	6
+	jr	c,Pstr_tab_S1
+	sub	6
+	inc	l
+
+Pstr_tab_S1:
+	dec	d
+	jr	nz,Pstr_tab_L1
+
+	ld	a,(Pstr_count)		;表示座標に現在の文字数を足す。
+	add	a,l
+	ld	l,a
+	add	a,8			;８カラムTABを足す。
+	and	11111000b		;８の倍数以外はカット。
+	sub	l			;もしも増加しなければ戻る。
+	jp	z,Pstr_L1		;（多分ありえないと想う(ｫ）
+
+	ld	d,a
+	ld	a,(Pstr_count)		;増加した文字数を足して更新。
+	add	a,d
+	ld	(Pstr_count),a
+
+	ld	hl,0
+Pstr_tab_L2:				;空白をセットする。
+	push	hl
+	push	hl
+	push	hl
+	push	hl
+	dec	d
+	jr	nz,Pstr_tab_L2
+
+	jp	Pstr_L1
+
+
+;==============================================================================
+;
+;	[名称]	文字表示後の処理
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	
+;
+;==============================================================================
+
+Pstr_quit:				;ﾌｫﾝﾄﾊﾞｯﾌｧのフラッシュ処理。
+	call	Pstr_wvrm		;ﾌｫﾝﾄﾊﾞｯﾌｧをフラッシュ。
+
+	ld	a,(Pstr_count)
+	ld	l,a
+	ld	h,0
+	ld	e,l
+	ld	d,h
+	add	hl,hl
+	add	hl,de
+	add	hl,hl
+	ld	de,(Pstr_x_point)	;x座標を文字数分更新する。
+	add	hl,de
+	ld	(Pstr_x_point),hl
+
+Pstr_SP:
+
+	ld	sp,0
+
+	ld	a,(ctrl_bc)
+	cp	ON
+	ret	nz
+
+	ld	a,OFF
+	ld	(ctrl_bc),a
+	ld	(Pstr_vdp_cmd+0),hl	;dx
+	ld	a,l
+	cpl
+	ld	l,a
+	ld	a,h
+	xor	1
+	ld	h,a
+	ld	(Pstr_vdp_cmd+4),hl	;nx
+
+	jr	Clear_str1
+
+
+;==============================================================================
+;
+;	[名称]	１行消去の処理
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	
+;
+;==============================================================================
+
+clear_str:
+	xor	a
+	ld	l,a
+	ld	h,a
+	ld	(Pstr_count),a		;文字数をクリア。
+	ld	(Pstr_x_point),hl	;左端を元に戻す。
+	ld	(Pstr_vdp_cmd+0),hl	;dx
+	ld	hl,512	
+	ld	(Pstr_vdp_cmd+4),hl	;nx
+
+Clear_str1:
+	ld	hl,(Pstr_y_point)
+	ld	(Pstr_vdp_cmd+2),hl	;dy
+	ld	a,(bakclr)
+	ld	(Pstr_vdp_cmd+8),a	;color
+	push	bc
+	ld	hl,Pstr_vdp_cmd		;boxfil(0,*Pstr_y_point)-step(512,8)
+	call	Set_VDP_cmd_R36
+	pop	bc
+
+	ret
+
+
+;==============================================================================
+;
+;	[名称]	ankフォントテーブルの初期化
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	
+;
+;==============================================================================
+
+Init_ANK:
+	ld	hl,(0f920h)
+	ld	de,ANK_TBL
+	ld	bc,020h*8
+	add	hl,bc
+	ld	bc,060h*8
+	call	Init_ANK1
+	ld	bc,020h*8
+	add	hl,bc
+	ld	bc,040h*8
+Init_ANK1:
+Init_ANK_L1:
+	push	bc
+	push	de
+	push	hl
+	ld	a,(0f91fh)
+	call	RDSLT
+	ei
+	ld	c,a			;上位６ﾄﾞｯﾄを８ﾄﾞｯﾄに変換。
+	xor	a
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+	rl	c
+	rla
+	rla
+	rl	c
+	rla
+	rl	c
+	rla
+	pop	hl
+	pop	de
+	pop	bc
+	ld	(de),a
+	inc	hl
+	inc	de
+	dec	bc
+	ld	a,c
+	or	b
+	jr	nz,Init_ANK_L1
+	ret
+
+
+;==============================================================================
+;
+;	[名称]	既存フォントテーブルの初期化
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	ファイラーと歌詞表示で使用するフォントデータを、事前に
+;		作っておくんだにぃ。
+;		これだけで、Z80モードでは倍近く速度が違うんだなぁ(^^;。
+;
+;==============================================================================
+
+Init_FONT:
+	ld	hl,FONT_BUF0	;[D]=BB/[B]=BF/[C]=FB/[E]=FF
+	ld	de,BAKCLR0*4096+BAKCLR0*256+FORCLR0*16+FORCLR0
+	ld	bc,BAKCLR0*4096+FORCLR0*256+FORCLR0*16+BAKCLR0
+	call	Init_FONT1
+	ld	hl,FONT_BUF1	;[D]=BB/[B]=BF/[C]=FB/[E]=FF
+	ld	de,BAKCLR1*4096+BAKCLR1*256+FORCLR1*16+FORCLR1
+	ld	bc,BAKCLR1*4096+FORCLR1*256+FORCLR1*16+BAKCLR1
+Init_FONT1:
+	exx
+	ld	c,0
+	ld	b,0
+Init_FONT_L1:
+	ld	a,c
+	and	00100010b
+	rlca
+	or	c
+	exx
+	rlca			;[D]=BB/[B]=BF/[C]=FB/[E]=FF
+	jr	c,Init_FONT_S1
+
+	ld	(hl),b
+	rlca
+	jr	c,Init_FONT_S2
+
+	ld	(hl),d
+	jr	Init_FONT_S2
+
+Init_FONT_S1:
+	ld	(hl),e
+	rlca
+	jr	c,Init_FONT_S2
+
+	ld	(hl),c
+
+Init_FONT_S2:
+	inc	h
+	rlca
+	rlca			;[D]=BB/[B]=BF/[C]=FB/[E]=FF
+	jr	c,Init_FONT_S3
+
+	ld	(hl),b
+	rlca
+	jr	c,Init_FONT_S4
+
+	ld	(hl),d
+	jr	Init_FONT_S4
+
+Init_FONT_S3:
+	ld	(hl),e
+	rlca
+	jr	c,Init_FONT_S4
+
+	ld	(hl),c
+
+Init_FONT_S4:
+	inc	h
+	rlca			;[D]=BB/[B]=BF/[C]=FB/[E]=FF
+	jr	c,Init_FONT_S5
+
+	ld	(hl),b
+	rlca
+	rlca
+	jr	c,Init_FONT_S6
+
+	ld	(hl),d
+	jr	Init_FONT_S6
+
+Init_FONT_S5:
+	ld	(hl),e
+	rlca
+	rlca
+	jr	c,Init_FONT_S6
+
+	ld	(hl),c
+
+Init_FONT_S6:
+	dec	h
+	dec	h
+	inc	hl
+	exx
+	inc	c
+	djnz	Init_FONT_L1
+
+	exx
+	ret
+
+
+;==============================================================================
+;
+;	[名称]	VIEW-ROM処理の初期化
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	全て
+;
+;	[備考]	
+;
+;==============================================================================
+
+Init_VIEW:
+	xor	a
+	ld	(View_slot),a
+	ld	c,0
+	ld	b,4
+Init_VIEW_L1:
+	push	bc
+	ld	hl,EXPTBL
+	ld	a,l
+	add	a,c
+	ld	l,a
+	ld	a,(hl)
+	and	10000000b
+	jr	nz,Init_VIEW_s2
+	ld	a,c
+	ld	(View_slot),a
+	call	Init_VIEW_s3
+	jr	nc,Init_VIEW_s4
+Init_VIEW_s1:
+	pop	bc
+	inc	c
+	djnz	Init_VIEW_L1
+	jr	Init_VIEW_s5
+
+Init_VIEW_s2:
+	set	7,c
+	ld	b,4
+Init_VIEW_L2:
+	push	bc
+	ld	a,c
+	ld	(View_slot),a
+	call	Init_VIEW_s3
+	pop	bc
+	jr	nc,Init_VIEW_s4
+	inc	c
+	inc	c
+	inc	c
+	inc	c
+	djnz	Init_VIEW_L2
+	jr	Init_VIEW_s1
+
+Init_VIEW_s3:
+	ld	hl,ViewROM_id
+	ld	de,04010h
+	ld	a,(View_slot)
+	ld	c,a
+	ld	b,11
+Init_VIEW_L3:
+	push	bc
+	push	de
+	push	hl
+	ex	de,hl
+	ld	a,c
+	call	RDSLT
+	pop	hl
+	pop	de
+	pop	bc
+	cp	(hl)
+	scf
+	ret	nz
+	inc	hl
+	inc	de
+	djnz	Init_VIEW_L3
+	or	a
+	ret
+
+Init_VIEW_s4:
+	pop	bc
+	ld	a,(View_slot)
+	ld	b,a
+	and	00000011b
+	rlca
+	rlca
+	ld	c,a
+	rlca
+	rlca
+	rlca
+	rlca
+	or	c
+	ld	(Get_viewROM_w1+1),a
+	ld	a,b
+	and	00001100b
+	ld	(Get_viewROM_w2+1),a
+	ld	a,on
+	ld	(View_f),a
+	ld	a,View_ROM
+	ld	(View_sel),a
+	ret
+
+Init_VIEW_s5:
+	ld	a,(EXPTBL)
+	ld	hl,002dh
+	call	RDSLT
+	cp	3
+	jr	c,Init_VIEW_s6
+
+	ld	a,(EXPTBL)
+	ld	hl,0c49h
+	call	RDSLT
+	or	a
+	jr	nz,Init_VIEW_s6
+
+	ld	a,on
+	ld	(View_f),a
+	ld	a,View_GT
+	ld	(View_sel),a
+	ret
+
+Init_VIEW_s6:
+	ld	a,off
+	ld	(View_f),a
+	ld	a,View_NORMAL
+	ld	(View_sel),a
+	ret
+
+
+;==============================================================================
+;
+;	[名称]	VDP-commandの実行
+;
+;	[入力]	[HL] = VDP commandの実行テーブル番地
+;
+;	[出力]	無し
+;
+;	[破壊]	[AF][HL][DE][BC]
+;
+;	[備考]	
+;
+;==============================================================================
+
+Set_VDP_cmd_R36:
+	ld	e,36
+	call	Set_VDP_cmd_SetUP
+	jr	Set_VDP_cmd_DXL
+
+Set_VDP_cmd_SetUP:
+	ld	d,080h+17
+	ld	c,099h
+	di
+	out	(c),e
+	out	(c),d
+	ei
+	call	VDP_wait
+	ld	c,09bh
+	ret
+
+Set_VDP_cmd_SXL:
+	outi
+Set_VDP_cmd_SXH:
+	outi
+Set_VDP_cmd_SYL:
+	outi
+Set_VDP_cmd_SYH:
+	outi
+Set_VDP_cmd_DXL:
+	outi
+Set_VDP_cmd_DXH:
+	outi
+Set_VDP_cmd_DYL:
+	outi
+Set_VDP_cmd_DYH:
+	outi
+Set_VDP_cmd_NXL:
+	outi
+Set_VDP_cmd_NXH:
+	outi
+Set_VDP_cmd_NYL:
+	outi
+Set_VDP_cmd_NYH:
+	outi
+Set_VDP_cmd_DATA:
+	outi
+Set_VDP_cmd_ARG:
+	outi
+Set_VDP_cmd_COM:
+	outi
+	ret
+
+
+;==============================================================================
+;
+;	[名称]	VDP-commandの実行待ち
+;
+;	[入力]	無し
+;
+;	[出力]	無し
+;
+;	[破壊]	[AF]
+;
+;	[備考]	
+;
+;==============================================================================
+
+VDP_wait:
+	push	de
+	push	bc
+	ld	de,08f02h
+	ld	bc,099h
+	di
+	out	(c),b
+	out	(c),b
+	ei
+VDP_wait_L1:
+	di
+	out	(c),e
+	out	(c),d
+	in	a,(c)
+	out	(c),b
+	out	(c),d
+	ei
+	rrca
+	jr	nc,VDP_wait_S1
+
+	dec	c
+	in	a,(c)
+	in	a,(c)
+	in	a,(c)
+	in	a,(c)
+	in	a,(c)
+	inc	c
+	jr	VDP_wait_L1
+VDP_wait_S1:
+	pop	bc
+	pop	de
+	ret
+
+ANK_TBL:	ds	2048	;ankフォント格納テーブル  SIZE = 1280Bytes
+PSTR_B_BUF:			;１行分のボトムバッファ SIZE = 768Bytes
+FONT_BUF0:	ds	768	;既存のフォントテーブル０ SIZE = 768Bytes
+FONT_BUF1:	ds	768	;既存のフォントテーブル１ SIZE = 768Bytes
+
+	.dephase
+knj_copy_end:
+
+	END
+

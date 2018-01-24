@@ -1,0 +1,243 @@
+;/// extrn.
+
+	include	macro.mac
+	include	entry.mac
+
+extrn	m_move
+extrn	n_port
+extrn	x_mov
+extrn	y_mov
+extrn	get_f2
+extrn	chget
+extrn	m_time
+
+;/// sub / マウス移動用 マシン語ルーチン ver 2.00+
+
+mos_init::
+	ld	hl,m_int_copy
+	ld	de,0a900h
+	ld	bc,m_int_copy_end-m_int_copy
+	ldir
+
+chk1:	ld	a,12		;入力要求 port1
+	calmin	gtpad
+	ld	a,13		;Ｘ座標の入力。
+	calmin	gtpad
+	push	af
+	ld	a,14
+	calmin	gtpad
+	pop	bc
+	add	a,b
+	cp	2
+	jp	z,chk2
+
+	xor	a
+	ld	(n_port),a
+	ret
+
+chk2:	ld	a,4
+	ld	(n_port),a
+	ret
+
+;割り込み処理で１／６０秒で飛んでくる所。
+
+m_int_copy:
+	.phase	0a900h
+
+m_int::	ld	a,(m_move)
+	or	a
+	ret	z
+
+	ld	a,(int_on)			;2重割り込み対応
+	cp	on
+	ret	z
+
+	ld	a,(m_time)			;スキャン間隔での間引き
+	rlc	a
+	ld	(m_time),a
+	ret	nc
+
+	ld	a,on
+	ld	(int_on),a
+
+	ld	a,(n_port)
+	add	a,12		;入力要求。
+	calmin	gtpad
+
+	ld	a,(n_port)
+	add	a,13		;Ｘ座標の入力。
+	calmin	gtpad
+	ld	(x_mov),a
+
+	ld	a,(n_port)
+	add	a,14		;Ｙ座標の入力。
+	calmin	gtpad
+	ld	(y_mov),a
+
+	ld	a,(capst)
+	or	a
+	jp	z,mx_move
+
+	ld	a,(y_mov)
+	ld	hl,x_mov
+	cp	(hl)
+	jp	nz,mx_move
+	and	11111110b
+	jp	z,key_move	;0～1
+
+;///// mouse move /////
+
+;Get the X posit.
+
+mx_move:ld	a,(x_mov)
+	or	a
+	jp	z,my_move	;０の時はＹ座標へ。
+	ld	b,a
+	and	a
+	jp	m,mx_mina
+
+mx_plus:ld	a,(x_val)
+	add	a,b
+	jp	nc,mx_out
+	ld	a,255
+	jp	mx_out
+
+mx_mina:ld	a,(x_val)
+	add	a,b
+	jp	c,mx_out
+	xor	a
+
+mx_out:	ld	b,a
+	ld	a,(get_f2)
+	cp	255
+	jp	z,my_move
+
+	ld	a,b
+	ld	(x_val),a
+
+;Get the Y posit.
+
+my_move:ld	a,(y_mov)
+	or	a
+	jp	z,memset
+	ld	b,a
+	and	a
+	jp	m,my_mina
+
+my_plus:ld	a,(y_val)
+	add	a,b
+	cp	211
+	jp	c,my_out
+	ld	a,211
+	jp	my_out
+
+my_mina:ld	a,(y_val)
+	add	a,b
+	jp	c,my_out
+	xor	a
+
+my_out:	ld	b,a
+	ld	a,(get_f2)
+	or	a
+	jp	nz,memset
+
+	ld	a,b
+	ld	(y_val),a
+
+memset:ld	a,(x_val)
+	add	a,2
+	ld	(x_val+4),a
+	ld	a,(y_val)
+	add	a,2
+	ld	(y_val+4),a
+
+	ld	a,off
+	ld	(int_on),a
+	ret
+
+;///// key move /////
+
+key_move:
+	xor	a
+	ld	(x_mov),a
+	ld	(y_mov),a
+	calmin	gtstck
+	or	a
+	jp	z,keyend
+
+	ld	hl,key2
+	push	hl
+
+	ld	hl,key_table
+	seljmp
+
+key_table:
+	dw	0,up,up_right,right,down_right,down,down_left,left,up_left
+
+key2:	ld	ix,x_val
+	ld	a,(x_mov)
+	add	a,(ix+0)
+	ld	(ix+0),a
+	add	a,2
+	ld	(ix+4),a
+
+	ld	a,(get_f2)
+	or	a
+	jp	nz,keyend
+
+	ld	ix,y_val
+	ld	a,(y_mov)
+	add	a,(ix+0)
+	cp	212-8
+	jr	c,key3
+	ld	a,212-8
+key3:	ld	(ix+0),a
+	add	a,2
+	ld	(ix+4),a
+
+keyend:	ld	a,off
+	ld	(int_on),a
+	ret
+
+up:	ld	a,-2
+	ld	(y_mov),a
+	ret
+down:	ld	a,2
+	ld	(y_mov),a
+	ret
+left:	ld	a,-2
+	ld	(x_mov),a
+	ret
+right:	ld	a,2
+	ld	(x_mov),a
+	ret
+up_right:
+	call	up
+	call	right
+	ret
+up_left:
+	call	up
+	call	left
+	ret
+down_right:
+	call	down
+	call	right
+	ret
+down_left:
+	call	down
+	call	left
+	ret
+
+;/// 共通ワークエリア ///
+
+int_on:	db	0
+y_val::	db	200
+x_val::	db	255
+	ds	2,0
+	ds	4,0		;影
+
+	.dephase
+m_int_copy_end:
+
+	end
+

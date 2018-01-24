@@ -1,0 +1,224 @@
+;/// あなあけネズミのコーナー
+
+include	entry.mac
+include	macro.mac
+
+extrn	wait1
+extrn	clrfil
+extrn	putknj
+extrn	copyvm
+extrn	now_key
+extrn	i_move
+extrn	dir
+extrn	line
+extrn	strig1
+extrn	strig2
+
+;ymm_init::
+;	ld	hl,ymm_copy
+;	ld	de,0ab00h
+;	ld	bc,ymm_copy_end-ymm_copy
+;	ldir					;プログラムのコピー
+;	ret
+
+;ymm_copy:
+;	.phase	0ab00h
+
+yumimi::call	clrfil				;ははは(^^;;
+
+	xor	a
+	ld	(acpage),a
+	ld	(now_key),a
+
+	ld	a,22h
+	ld	(forclr),a
+	ld	a,44h
+	ld	(bakclr),a
+
+	ld	h,dir_x
+	ld	l,dir_y
+	ld	de,yumi1
+	call	putknj
+
+	ld	d,dir_y+18
+	ld	e,dir_x
+
+yumlp1:	call	wait1
+	call	wait1
+	call	move_ana
+
+	int	off
+	ld	hl,ana1
+	ld	bc,27*256+26
+	push	de		;*1
+	call	copyvm
+	int	on
+
+	call	wait1
+	call	wait1
+	call	move_ana
+
+	pop	de		;*1
+
+	int	off
+	ld	hl,ana2
+	ld	bc,27*256+26
+	push	de		;*2
+	call	copyvm
+	int	on
+
+	call	yum_strig
+	pop	de		;*2
+	jr	z,yumlp1
+
+	call	dir
+	jr	my_r
+
+move_ana:
+	ld	a,(yumx)
+	add	a,e
+	ld	e,a
+	cp	220
+	jr	z,my_l
+	cp	dir_x
+	jr	z,my_r
+	ret
+
+my_l:	ld	a,255
+	ld	(yumx),a
+	push	de
+	ld	h,dir_x
+	ld	l,dir_y+30
+	ld	b,077h
+	ld	d,223-dir_x
+	call	line
+	pop	de
+	ret
+my_r:	ld	a,1
+	ld	(yumx),a
+	ret
+
+yum_strig:
+	call	strig1
+	or	a
+	ret	nz
+	call	strig2
+	or	a
+	ret
+	
+yumx:	db	1		;/移動方向
+yumi1:	db	'一体なんなんでしょうね…これ（笑）',0
+
+ana1:
+db	04h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,40h,00h,00h,00h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,40h,00h,00h,00h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,07h,77h,77h,77h,00h,44h,44h,44h,44h,44h,44h
+db	44h,44h,06h,77h,77h,77h,04h,44h,44h,44h,44h,44h,44h
+db	44h,44h,40h,77h,66h,77h,77h,77h,00h,44h,44h,44h,44h,44h
+db	44h,00h,66h,77h,77h,77h,70h,44h,44h,44h,44h,44h,44h
+db	44h,44h,40h,77h,76h,67h,77h,77h,77h,00h,44h,44h,44h,40h
+db	40h,66h,67h,77h,77h,77h,77h,04h,44h,44h,44h,44h,44h
+db	44h,44h,40h,77h,76h,66h,67h,77h,77h,77h,00h,00h,00h,06h
+db	06h,66h,77h,77h,77h,77h,77h,04h,44h,44h,44h,44h,44h
+db	44h,44h,40h,77h,77h,66h,66h,77h,77h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,70h,44h,44h,44h,44h,44h
+db	44h,44h,40h,77h,77h,66h,66h,67h,77h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,70h,44h,44h,44h,44h,44h
+db	44h,44h,40h,77h,77h,66h,66h,67h,77h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,77h,04h,44h,44h,44h,44h
+db	44h,44h,40h,77h,77h,77h,77h,77h,77h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,77h,70h,44h,44h,44h,44h
+db	40h,04h,40h,77h,77h,77h,77h,77h,77h,77h,77h,77h,77h,07h
+db	07h,77h,77h,70h,77h,77h,77h,77h,70h,44h,44h,44h,44h
+db	44h,00h,00h,77h,77h,77h,77h,77h,77h,77h,77h,77h,77h,00h
+db	00h,77h,77h,70h,07h,77h,77h,77h,77h,04h,44h,44h,44h
+db	44h,40h,70h,00h,07h,77h,77h,77h,77h,77h,77h,77h,77h,07h
+db	07h,77h,77h,70h,77h,77h,77h,77h,77h,00h,04h,44h,44h
+db	44h,40h,77h,77h,00h,00h,77h,77h,77h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,77h,00h,00h,44h,44h,44h
+db	44h,40h,77h,77h,77h,70h,00h,77h,77h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,00h,07h,70h,44h,44h,44h
+db	44h,40h,77h,77h,77h,77h,70h,00h,77h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,00h,07h,77h,70h,44h,44h,44h
+db	44h,40h,66h,66h,66h,67h,77h,77h,77h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,77h,66h,60h,44h,44h,44h
+db	40h,00h,00h,00h,00h,00h,00h,07h,77h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,00h,00h,00h,00h,04h,44h,44h
+db	44h,44h,40h,66h,66h,66h,66h,66h,66h,67h,77h,77h,77h,77h
+db	77h,77h,77h,76h,66h,66h,66h,66h,60h,44h,44h,44h,44h
+db	44h,44h,44h,00h,66h,66h,66h,66h,66h,66h,66h,66h,66h,66h
+db	66h,66h,66h,66h,66h,66h,66h,60h,04h,44h,44h,44h,44h
+db	44h,44h,44h,40h,00h,66h,66h,66h,66h,66h,66h,66h,66h,66h
+db	66h,66h,66h,66h,66h,60h,66h,00h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,40h,00h,66h,06h,66h,66h,66h,66h,66h,66h
+db	66h,66h,66h,66h,66h,00h,00h,04h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,00h,00h,00h,66h,06h,66h,66h,06h
+db	06h,66h,60h,00h,00h,04h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,44h,44h,44h,00h,00h,00h,00h,00h
+db	00h,00h,04h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+ana2:
+db	44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,00h,00h,00h,04h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,40h,00h,00h,00h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,40h,77h,77h,77h,70h,00h,04h,44h,44h,44h,44h
+db	44h,44h,40h,06h,77h,77h,77h,00h,44h,44h,44h,44h,44h
+db	44h,44h,44h,07h,77h,66h,77h,77h,77h,70h,04h,44h,44h,44h
+db	44h,40h,06h,66h,77h,77h,77h,77h,04h,44h,44h,44h,44h
+db	44h,44h,44h,07h,77h,76h,67h,77h,77h,77h,70h,04h,44h,44h
+db	44h,06h,66h,67h,77h,77h,77h,77h,70h,44h,44h,44h,44h
+db	44h,44h,44h,07h,77h,76h,66h,67h,77h,77h,77h,70h,00h,00h
+db	00h,66h,66h,77h,77h,77h,77h,77h,70h,44h,44h,44h,44h
+db	44h,44h,44h,07h,77h,77h,66h,66h,77h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,77h,77h,04h,44h,44h,44h
+db	44h,44h,44h,07h,77h,77h,66h,66h,67h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,77h,77h,04h,44h,44h,44h
+db	44h,44h,44h,07h,77h,77h,66h,66h,67h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,77h,77h,70h,44h,44h,44h
+db	44h,44h,44h,40h,77h,77h,77h,77h,77h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,77h,77h,77h,04h,44h,44h
+db	44h,44h,44h,40h,77h,77h,77h,77h,77h,77h,77h,77h,77h,77h
+db	77h,07h,77h,77h,70h,77h,77h,77h,77h,77h,04h,44h,44h
+db	44h,44h,44h,40h,77h,77h,77h,77h,77h,77h,77h,77h,77h,77h
+db	77h,00h,77h,77h,70h,07h,77h,77h,77h,77h,70h,44h,44h
+db	44h,00h,00h,00h,77h,77h,77h,77h,77h,77h,77h,77h,77h,77h
+db	77h,07h,77h,77h,70h,77h,77h,77h,77h,77h,70h,00h,44h
+db	44h,44h,40h,70h,00h,00h,77h,77h,77h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,77h,77h,70h,00h,44h,44h
+db	44h,44h,40h,77h,77h,70h,00h,00h,76h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,77h,70h,00h,70h,44h,44h
+db	44h,44h,40h,77h,77h,77h,77h,70h,00h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,00h,00h,77h,70h,44h,44h
+db	44h,44h,40h,66h,66h,66h,67h,77h,67h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,77h,77h,66h,60h,44h,44h
+db	44h,44h,44h,06h,66h,66h,00h,00h,07h,77h,77h,77h,77h,77h
+db	77h,77h,77h,77h,77h,77h,77h,00h,00h,06h,04h,44h,44h
+db	44h,44h,44h,00h,00h,00h,06h,66h,66h,66h,67h,77h,77h,77h
+db	77h,77h,77h,77h,76h,66h,66h,66h,66h,00h,00h,44h,44h
+db	44h,44h,00h,00h,00h,66h,66h,66h,66h,66h,66h,66h,66h,66h
+db	66h,66h,66h,66h,66h,66h,66h,66h,60h,04h,40h,00h,44h
+db	44h,44h,44h,44h,40h,00h,66h,66h,66h,66h,66h,66h,66h,66h
+db	66h,66h,66h,66h,66h,66h,66h,66h,00h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,40h,00h,66h,66h,66h,66h,66h,66h,66h
+db	66h,66h,66h,66h,60h,66h,60h,00h,04h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,40h,00h,00h,00h,66h,66h,06h,66h
+db	66h,66h,60h,60h,00h,00h,00h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,00h,00h,00h,00h
+db	00h,00h,00h,04h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+db	44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h,44h
+
+;	.dephase
+
+;ymm_copy_end:
+
+	end
+

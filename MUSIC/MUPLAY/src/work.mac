@@ -1,0 +1,302 @@
+;///// データーエリア転送プログラム
+
+include	entry.mac
+
+d_init::ld	hl,data_copy
+	ld	de,0c700h
+	ld	bc,data_copy_end-data_copy
+	ldir
+
+	xor	a
+	ld	de,0402h
+	call	ebios				;mapper bios call
+
+	ld	de,all_seg
+	ld	bc,30h
+	ldir					;jump area copy
+
+	ret
+
+;/// データー領域
+data_copy:
+	.phase	0c700h
+
+;/// stack point work
+
+sp_area::
+	ds	2,0				;Gra1 & Gra2 & key SP
+
+;/// disk accecc work
+
+mgs_id::db	'MGSDRV.COM',0
+mpk_id::db	'MPK.BIN',0
+msc_id::db	'KINROU5.DRV',0
+
+read_dirfile::
+	db	'*.DIR',0			;読み込むDIRファイル
+mgs_file::	db	'.MGS'
+mpk_file::	db	'.MPK'
+mus_file::	db	'.BGM'
+mio_file::	db	'.MIO'
+etc_file::	db	'.',0,0,0
+
+up_dir::
+	db	'[..    ]'			;[..]の変わりのファイル名
+fib::	ds	64,0				;そう、その名の通りのＦＩＢ
+sfile::	db	'*.*',0				;これは、あとで検索するため
+pfile::	ds	100,0				;汎用置き場（笑）
+nul::	ds	2,0
+now_file::					;ファイル表示で使用する。
+	db	0				;兼最大ファイル数＋１
+now_select::					;実画面表示開始番号
+	db	0
+now_slot1::
+	db	0				;現在のスロット情報
+max_dir::
+	db	0				;ディレクトリの数！
+dir_mapno::
+	db	0				;DIRファイル格納マッパ番号
+dir_sltno::
+	db	0				;DIRファイル格納スロット番号
+log_drive::
+	db	0		;11111101b	;認識ドライブならビット１
+disk_on::
+	db	off				;ディスクアクセス時にon
+
+drv_x::	db	126				;ドライブチェンジの座標
+drv_y::	db	33
+
+;/// key input area
+
+flgup::	db	0				;if (flgup)=-1 then com5
+flgdn::	db	0				;if (flgdn)=-1 then com6
+
+;/// page 1&2 now mapper segment
+
+p1_map::db	0				;ページ１のマッパ保存
+p2_map::db	0
+
+;/// 各ドライバーの状況
+
+mgsver::ds	2,0
+mpkver::ds	2,0
+mscver::ds	2,0
+miover::ds	2,0
+
+sys_ok::			;ドライバが常駐可能かどうか 0:no 1:ok
+	ds	4,off
+sys_install::			;ドライバが疑似常駐しているのか？
+	ds	4,off
+install::
+	ds	4,off		;ドライバが本当に常駐してるのか？
+sys_select::
+	db	4		;0:MGS 1:MPK 2:MuSICA(MSC) 3:mio 4:No
+now_mode::
+	db	0		;現在のシステム常駐モード
+play_mode::
+	db	0		;0:ever loop / 1:normal / 2:ramdom
+now_play::
+	db	0
+
+;/// MGS parameter block adress / MGS専用エリア
+
+mgspad::dw	0			;MGSパラメーターブロックのアドレス
+mgskey::db	0			;常駐時のキーコントロールの許可フラグ
+mgsjmp::ds	3			;Jump Adress.
+mgsemu::ds	19,0			;非常駐時のmgspad
+
+;/// MPK parameter block adress / MPK専用エリア
+
+mpksiz::db	0			;MPKのデータマッパ数
+mpkpad::dw	0			;演奏情報テーブル
+mpkpa2::dw	0			;演奏情報テーブルの１ブロック分
+mpkkas::dw	0			;歌詞アドレス
+mpkjmp::ds	3			;Jump Adress.
+
+;/// MIO workarea
+
+miopad::ds	2,0
+miolen::ds	1,0
+mioreg::ds	7,0		;レジスタ設定エリア
+miowrk::ds	128,0
+
+;/// 共通ワークエリア
+
+smap::	ds	5,0			;Driverのslot&mapper情報
+sslot::	ds	5,0
+dmap::	ds	12,0			;music dataのslot＆mapper情報
+dslot::	ds	12,0
+dmaps::	ds	4,0			;保存領域
+dslots::ds	4,0
+
+datsel::db	0			;何枚目のデータ番号か？
+
+str_forclr::				;歌詞機能の色保存エリア
+	db	7
+str_bakclr::
+	db	1
+
+;/// MOUSE work area
+
+Y_chk::	db	0			;X posit 座標確認時のタイムラグ修正
+X_chk::	db	0			;Y posit
+
+x_mov::	db	0			;移動量
+y_mov::	db	0
+
+n_port::db	0			;どちらのポートを使用するのか？0 or 4
+
+;/// 共通ワークエリア
+
+c_no::	db	1		;今動いているchね。
+c_etc::	db	0		;ＢＯＸ＿ＦＵＬＬで使用。
+c_line_clear::
+	db	0		;ライン消去可能フラグ 0::ok 255::no
+adress::ds	18*7,0
+knjuse::db	off		;漢字使用中はon
+
+;/// Mouse Interval
+
+m_time::db	01010101b	;1/30秒でのスキャニング
+
+;/// chanel analizer
+
+g_ch_y::ds	17,0		;各chのＹ座標
+g_ch_v::ds	17,0		;現在のvolume
+g_ch_mv::
+	ds	17,0		;最大ボリュームの絶対座標(^^;;
+				;この上の３つは、場所変えをしないこと！
+
+gra_x::	db	140		;start x 場所を変えない事！
+gra_y::	db	84		;start y
+g_check::
+	db	01111011b	;1::no clear line / 0::ok
+
+mt1_table::			;1::no clear line / 0::ok
+	db	00000000b
+	db	01010101b
+	db	01111011b	;基準！
+	db	11111011b
+	db	11111111b	;slow
+	db	2		;前回の番号記憶場所
+
+;/// すぺくとる　あならいざ～。
+
+s_ch_y::ds	s_ch_max,0		;各chのＹ座標
+s_ch_mv::
+	ds	s_ch_max,0		;最大ボリュームの絶対座標(^^;;
+s_wait::ds	s_ch_max,0		;ウエイト値、これが一定以上になると…
+					;この上の２つは、場所変えをしないこと！
+s_spe::	db	1
+
+spe_x::	db	140			;start x 場所は変えない事！
+spe_y::	db	42			;start y
+s_check::
+	db	11011101b		;1:no clear line / 0:ok
+
+mt2_table::				;1:no clear line / 0:ok
+	db	00000000b
+	db	10101010b
+	db	11011101b		;基準！
+	db	11011111b
+	db	11111111b		;slow
+	db	2			;前回の番号記憶場所
+
+;/// き～ぼ～ど君
+
+key_adress::
+	ds	3,16*4+9				;ＰＳＧ　３ｃｈ
+
+	ds	3,16*5+9				;ＳＣＣ　５ｃｈ
+	ds	2,16*6+9
+
+	ds	2,16*0+9				;ＦＭ　９ｃｈ
+	ds	2,16*1+9
+	ds	2,16*2+9
+	ds	3,16*3+9
+
+key_step::				;前回のステップ値,表示中なら２５５
+	ds	17*2,0
+
+key_x::	db	7
+key_y::	db	10
+
+;/// VDP関連
+
+vdp_read_port::
+	db	0
+vdp_write_port::
+	db	0
+
+sc_mode::
+	db	0
+bakfor::db	0			;起動時の保存用
+bakbak::db	0
+bakbdr::db	0
+
+scroll::db	0		;現在の縦スクロールの値
+old_scroll::
+	db	0		;前回のスクロール量
+now_vpage::
+	db	0		;現在ｖｄｐが表示中のページ
+pkanji::db	0		;ちらつき防止策　０：まだ　２５５：やったよん
+
+MsxIni_Palette::
+	DEFW	000h,000h,611h,733h,117h,327h,151h,627h
+	DEFW	171h,373h,661h,663h,411h,265h,555h,777h
+User_palette::						;grb
+	DEFW	000h,000h,547h,223h,112h,704h,552h,774h
+	DEFW	0000,777h,777h,777h,062h,470h,222h,777h	;000hは何かに使用中
+
+;/// カーソル処理
+
+now_key::			;現在のカーソル位置
+	db	0
+scr_flg::
+	db	0		;現在のスクロール処理 1:down 2:up
+
+;/// interrupt flag / on:255 off:0
+
+i_move::	db	0		;グライコｏｎ／ｏｆｆ（操作可能）
+m_move::	db	0		;マウス移動ｏｎ／ｏｆｆ（操作可能）
+int_etc::	db	0		;他の１／６０秒処理中なら２５５
+
+;/// mapper bios(copy)
+
+all_seg::	ds	3,0c9h
+fre_seg::	ds	3,0c9h
+rd_seg::	ds	3,0c9h
+wr_seg::	ds	3,0c9h
+cal_seg::	ds	3,0c9h
+calls::		ds	3,0c9h
+put_ph::	ds	3,0c9h
+get_ph::	ds	3,0c9h
+put_p0::	ds	3,0c9h
+get_p0::	ds	3,0c9h
+put_p1::	ds	3,0c9h
+get_p1::	ds	3,0c9h
+put_p2::	ds	3,0c9h
+get_p2::	ds	3,0c9h
+put_p3::	ds	3,0c9h
+get_p3::	ds	3,0c9h
+
+;/// MuSICA workarea
+
+msc_drum::
+	db	0
+fmwrk::	dw	0
+psgwrk::dw	0
+sccwrk::dw	0
+wrklen::dw	0
+
+bvol::	db	0
+svol::	db	0
+hvol::	db	0
+cvol::	db	0
+mvol::	db	0
+
+	.dephase
+data_copy_end::
+
+	end
+

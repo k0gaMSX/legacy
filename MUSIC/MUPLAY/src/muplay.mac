@@ -1,0 +1,187 @@
+;/////////////// Muti Music Player [ ＭｕＰＬＡＹ ] ///////////////
+
+	.z80
+
+	include	entry.mac
+	include	macro.mac
+	include	extrn.mac
+
+;/// MuPLAY message.
+
+title:	db 'MuPLAY ver 2.61 for MSX',cr,lf,eof,1ah,0
+emes1:	db 'Error!!! ... No free memoery.',cr,lf,eof,0
+
+;/// start / initiaize
+
+start:	putmsg	title				;タイトルね。
+
+	call	chkmem
+	cp	3
+	jp	c,str_err1			;no free memory
+
+	ld	hl,(tpa)
+	ld	a,h
+	cp	0cch
+	jp	c,str_err3
+
+	call	d_init				;work  initialize(first call)
+
+	ld	a,(scrmod)
+	ld	(sc_mode),a
+	ld	a,(forclr)			;色番号保存
+	ld	(bakfor),a
+	ld	a,(bakclr)
+	ld	(bakbak),a
+	ld	a,(bdrclr)
+	ld	(bakbdr),a
+
+	ld	sp,(tpa)			;さぁ、後もどりはできないぞ(^^;
+
+	xor	a
+	ld	de,0401h
+	call	ebios
+	or	00110000b
+	ld	b,a				;ﾌﾟﾗｲﾏﾘ&ﾌﾘｰｾｸﾞﾒﾝﾄ
+	xor	a
+	call	all_seg
+	ld	(dir_mapno),a			;エラーは起きないのね。(^^;
+	ld	a,b
+	ld	(dir_sltno),a
+
+	call	sub3_init			;page3sub initialize
+	call	sub2_init			;page2sub initialize
+	call	vdp_init			;vdp      initialize
+	call	mos_init			;mouse    initialize
+	call	key_init
+	call	set_init
+	call	err_init			;disk error
+	call	drv_init			;driver   initialize
+	call	knj_init			;Kanji    initialize
+	call	scr_init			;screen   initialize
+	call	spe_init			;spean	  initialize
+	call	gra_init			;chanz    initialize
+	call	inton				;interrupt on
+
+	int	on
+	mouse	on
+
+;/// data set
+
+	call	option_check			;option
+	call	now_driver
+	call	put_title			;演奏中のタイトル表示
+	call	wait1
+	call	on_check			;各ｃｈの獲得
+	call	dir
+
+	ld	a,(option)
+	cp	off
+	jr	z,main
+	call	play
+
+;/// main / メイン処理！
+
+main:	call	function_check			;再生、停止、早送り等
+	call	key_play			;ファンクションキー処理等
+	call	putstr				;歌詞機能
+	call	ms_cmd				;マウスによる操作等
+	call	chg_play			;演奏変更等
+	call	short_key
+	jp	main
+
+;/// main / short_key
+short_key:
+	call	chget
+	cp	1bh
+	jp	z,mu_end
+	cp	'Q'
+	jp	z,mu_end
+	cp	'.'
+	jp	z,back_dir
+	cp	08h
+	jp	z,back_dir
+	cp	'\'
+	jp	z,rute_dir
+	sub	'0'
+	cp	9
+	jp	c,drv_move
+	ret
+
+;/// main / over / プログラム終了！
+
+mu_end::
+	ld	ix,mply_end2
+	push	ix
+
+	ld	a,(sys_select)
+	cp	4
+	ret	nc
+	ld	hl,mend_table
+	seljmp
+
+mend_table:
+	dw	mgsend,mpkend,mcaend,mioend
+
+mply_end2:
+	call	intoff
+	call	err_reset
+
+	ld	a,(bakfor)			;色番号戻す
+	ld	(forclr),a
+	ld	a,(bakbak)
+	ld	(bakclr),a
+	ld	a,(bakbdr)
+	ld	(bdrclr),a
+	calmin	chgclr
+
+	ld	hl,msxini_palette
+	call	set_palette
+
+	ld	a,(sc_mode)
+	calmin	chgmod
+
+	calmin	kilbuf				;key buffer clear
+
+	ld	b,0
+	syscall	62h				;over muplay!
+
+str_err1:
+	putmsg	emes1
+	ret
+str_err3:
+	putmsg	emes1
+	ret
+
+;/// sub / 残存メモリチェック（255枚以上は255とする）
+;in no / out a:残りメモリ(0~255)
+
+chkmem::xor	a
+	ld	de,0401h
+	call	ebios
+	ret	c
+
+	push	hl
+	pop	ix
+	ld	b,0
+
+cmlp:	ld	a,(ix+2)
+	add	a,b
+	jr	c,cm1
+	ld	b,a
+	ld	a,(ix+8)
+	ld	de,0008h
+	add	ix,de
+	or	a
+	jr	nz,cmlp
+	ld	a,b
+	ret
+
+cm1:	ld	a,255
+	ret
+
+;include file
+
+	include	option.mac
+
+	end	start
+
