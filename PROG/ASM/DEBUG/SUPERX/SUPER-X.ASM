@@ -1,14 +1,46 @@
 ;--------------------------------------
-;        SUPER-X ver 1.21 BODY
+;        SUPER-X ver 1.22 BODY
 ;	      on 4000H-
 ;--------------------------------------
 ; SUPER-X version 1.2 is made by Romi (1994)
-; Unoffical SUPER-X version 1.21 is Made By: NYYRIKKI (2002)
+; Unoffical SUPER-X version 1.22 is Made By: NYYRIKKI (2011)
+;                                                                      
+; Changes in version 1.22: (Made By: NYYRIKKI 2011)
 ;
-; Changes in this file since version 1.2:
+; - Super-X can now be compiled with Sjasm v.0.42b8 instead of M80/L80
+; - Disassembler labeling engine has been redone to support disassembling self modifying code.
+; - Disassember does not put "END"-text anymore to output file.
+; - Corrected indent in assembler data export
+; - Added possibility to export X-BASIC inline ML
+; - "I"-command in MULTI-mode now defaults to 20 lines
+; - BASIC _CHCPU now supports also Z80 DRAM (MSX tR only)
+; - VR command has been removed. Variables can be now always refered with "@". Value can be set also with "="
+; - New special variables added: @B (begin), @E (end), @S (size / start)
+; - Variables can now be used as parameters to return 16bit address (assembler, CL etc.)
+; - Full screen editing works fine now also in main menu
+; - Now Super-X comes with updated English documentation
+; - Hidden feature: "Repeat previous byte" in DUMP-mode has been documented
+; - LD & SV commands now support offset & loading to anywhere in memory
+; - LD command now corrects end address automatically if it is too long
+; - Global offset has been implemented
+; - New keyboard shortcut: ^Z = Set global offset to Zero (ASCII,DUMP,CHAR,DISASM)
+; - Check sum type has been removed from statusbar
+; - Global offset has been added to status bar
+; - Pressing Esc on BASE address setting does not anymore quit to mainmenu (ASCII,DUMP,CHAR,DISASM)
+; - Internal help updated
+; - On DISASM-mode ^O allows setting global Offset (relative)
+; - OF command added for seting global offset (absolute)
+; - KL command is now fixed to use new flexible disk routines.
+; - Fixed bug in internal CLS routine (insert mode works now properly)
+; - RS (RESISTER) is now known as RG (REGISTER)
+; - New command "TP" to type file on screen
+; - CO command now accepts any number or parameters (1-3)
+; - SD command parameter order changed to match other disk commands
+; - Math operations OR, XOR and MOD are now represented with "|", "^" and "%" in commands.
+;
+; Changes in version 1.21: (Made By: NYYRIKKI 2002)
 ;
 ; - Corrupted sourcefile repaired.
-; - Version changed from 1.2 to 1.21
 ; - Disassembler labeling bug fixed
 ; - Z80 DRAM mode support added (CU3)
 ; - Characters reselected so, that they work well also in non Japanese computers.
@@ -18,18 +50,33 @@
 ; - CD command added to change directory
 ; - FS command remade for DOS2 it now shows also directorys and you can specify full path as parameter.
 ;   (In Dos2 it does not show number of files found)
+; - Japanese Documentation support has been dropped
 ;
-; Changes in version 1.21 have been done without permission from author as Romi could not be contacted.
+; Changes in version 1.2: (Made by: Romi 1994)
+;
+; - Added support for BL (BASIC list) command
+; - Added Characted mode support
+;
+; Version 1.1: (Made by: Romi 1993)
+;
+; Super-X is based on LORD (Made by: Romi 1991)
+;
+; Please note: Changes after version 1.2 have been done without permission from author as Romi could not be contacted.
+;
 ;--------------------------------------
-	.Z80
+	;.Z80
 
-	ASEG
+	;.ASEG
+	
+	OUTPUT "SUPER-X.BDY"
+
 	ORG	100H
 
-FCB	EQU	0F41FH
-DMA	EQU	0F41FH+37
+FCB:	EQU	0F41FH
+DMA:	EQU	0F41FH+37
+BEEP:   EQU	0C0H
 
-	.PHASE	4000H
+	PHASE	4000H
 
 	DB 0,0,0,0
 	DW START
@@ -566,6 +613,8 @@ VAL:	PUSH	HL
 	LD	A,(HL)
 	CP	"'"
 	JP	Z,STRVAL
+        CP      "@"
+        JP      Z,VARVAL
 	CP	'-'
 	JR	Z,VAL3
 	CP	'+'
@@ -722,6 +771,30 @@ STRVAL:	POP	HL
 STRVL1:	INC	HL
 	JP	MNAS
 
+VARVAL:
+        POP	HL
+        INC     HL
+        LD	A,(HL)
+	OR	A
+	SCF
+	RET     Z
+        CALL    VARNAM
+	RET     C
+	PUSH    HL
+	LD      H,0
+	LD      L,A
+
+	LD	BC,ADSAV0
+	ADD	HL,HL
+	ADD	HL,HL
+	ADD	HL,BC
+        LD      E,(HL)
+        INC     HL
+        LD      D,(HL)
+        POP     HL
+        INC     HL
+        RET
+
 ; CVALÉ »ÌÞ
 MNASCK:	XOR	A
 	LD	(MNASFG),A
@@ -797,9 +870,7 @@ FDATST:	XOR	A
 	LD	(ADXWK0),HL
 FDATS9:	LD	HL,STR53
 	CALL	PRINT
-	CALL	HOOKST
-	CALL	0AEH
-	CALL	HOOKOF
+	CALL	INLIN
 	JR	C,FDATS2
 	LD	IX,NALBIG
 	CALL	P0CALL
@@ -996,6 +1067,7 @@ HICHP1:	POP	AF
 	RET
 
 ; º³¿¸ ¶²·Þ®³
+; Scroll screen up trough VWORK if needed.
 KAIGYO:	LD	HL,0F3DCH
 	INC	(HL)
 	LD	A,22
@@ -1082,9 +1154,10 @@ NOTPRN:	XOR	A
 	RET
 
 ; CLS
-CLS:	LD	HL,0
+CLS:	;EQU     #C3
+        LD	HL,0
 	LD	BC,880
-	XOR	A
+	LD      A,020H
 	CALL	FILVRM
 	CALL	0C9H
 	LD	HL,0101H
@@ -1094,6 +1167,29 @@ CLS:	LD	HL,0
 CLS1:	LD	(HL),B
 	INC	HL
 	DJNZ	CLS1
+	RET
+
+
+
+VARNAM:       ; C=ERROR
+        PUSH DE
+        LD      E,4
+        CP      'B'
+        JR      Z,VARNA1
+        INC     E
+        CP      'E'
+        JR      Z,VARNA1
+        INC     E
+        CP      'S'
+        JR      Z,VARNA1
+	SUB	'0'
+	JR	C,VARNA1
+	CP	4
+	CCF
+        LD      E,A
+VARNA1:
+	LD      A,E
+	POP DE
 	RET
 
 ; (HL)<>0 Å× ´×°
@@ -1212,9 +1308,17 @@ LCLR:	PUSH	IX
 	LDIR
 	RET
 
-;I/HL=Adr E=DATA
+;In: HL=Adr E=DATA
 ;(SFXWK0)=½Û¯Ä¼Ã² Ì×¸Þ (SLXWK0)=½Û¯Ä
-POKE:	LD	A,(SFXWK0)
+POKE:	
+        PUSH HL
+        LD BC,(OFFSET)
+        ADD HL,BC
+        CALL POKE8
+        POP HL
+        RET
+POKE8:
+        LD	A,(SFXWK0)
 	OR	A
 	JP	NZ,POKE1
 POKE4:	LD	(HL),E
@@ -1283,7 +1387,15 @@ POKE2:	DI
 ;I/HL=±ÄÞÚ½ (SFXWK0)=½Û¯Ä¼Ã² Ì×¸Þ
 ; (SLXWK0)=½Û¯Ä
 ;O/A=DATA
-PEEK:	LD	A,(SFXWK0)
+PEEK:
+        PUSH HL
+        LD BC,(OFFSET)
+        ADD HL,BC
+        CALL PEEK8
+        POP HL
+        RET
+PEEK8:
+        LD	A,(SFXWK0)
 	OR	A
 	JP	NZ,PEEK1
 PEEK4:	LD	A,(HL)
@@ -1357,7 +1469,7 @@ INITWK:	XOR	A
 	LD	(BUFSV0),A
 	LD	HL,ADSAV0
 	LD	DE,ADSAV0+1
-	LD	BC,15
+	LD	BC,15 +12 +4 ; New variables B,E,S  ,OFFSET ,POFSET
 	LD	(HL),A
 	LDIR
 	LD	HL,RESAVE
@@ -1396,12 +1508,7 @@ VNOTCR:	LD	HL,2000H
 	LD	A,' '
 	JP	FILVRM
 
-; ²Á·Þ®³ Æ­³Ø®¸
-INLIN:	CALL	HOOKST
-	CALL	0B1H
-	JP	HOOKOF
-
-; ²°¼Þ° ²ÝÌß¯Ä
+; ASK ADDRESS & SLOT
 SINLIN:	CALL	156H
 	LD	A,(0F3DDH)
 	LD	(XSAV),A
@@ -1822,7 +1929,7 @@ STOP8:	EX	AF,AF'
 	JR	STOP7
 
 ; ²ÁÓ¼ÞÌ¯¸ ¾¯Ä
-HOOKST:	LD	HL,0FDA4H
+HOOKST:	LD	HL,0FDA4H ;0FDC2H
 	LD	DE,HOOKSV
 	LD	BC,5
 	PUSH	HL
@@ -1834,13 +1941,18 @@ HOOKST:	LD	HL,0FDA4H
 	LDIR
 	RET
 
+; ²Á·Þ®³ Æ­³Ø®¸
+INLIN:	CALL	HOOKST
+	CALL	0AEH ; 0B1H
+	JP	HOOKOF
+
 ; ²ÁÓ¼ÞÌ¯¸ ÓÄÞ½
 HOOKOF:	PUSH	HL
 	PUSH	DE
 	PUSH	BC
 	PUSH	AF
 	LD	HL,HOOKSV
-	LD	DE,0FDA4H
+	LD	DE,0FDA4H ;0FDC2H;
 	LD	BC,5
 	LDIR
 	POP	AF
@@ -1850,6 +1962,8 @@ HOOKOF:	PUSH	HL
 	RET
 
 ; ²ÁÓ¼Þ Ì¯¸ ÄËÞ»·
+; Global keyboard shortcuts in INLIN
+
 HOOK:	CP	12	;CLS
 	JR	Z,HOOK4
 	CP	16	;CTRL+P
@@ -1859,7 +1973,7 @@ HOOK:	CP	12	;CLS
 	CP	24	;SELECT
 	JR	Z,HOOK7
 	CP	' '	;HELP
-	JP	Z,HOOK8
+	JR	Z,HOOK8
 	CALL	TENCH
 	EX	AF,AF'
 	POP	HL
@@ -1875,7 +1989,7 @@ HOOK2:	CALL	VCOPY
 HOOK1:	CALL	PCOPY
 HOOK3:	XOR	A
 	JP	HOOKSV
-HOOK4:	CALL	CLS
+HOOK4:  CALL    CLS
 HOOK9:	POP	HL	;Ó¼Þ Ï¯»Â
 	POP	AF
 	XOR	A
@@ -1889,7 +2003,7 @@ HOOK8:	LD	A,6
 	JP	NZ,HOOKSV
 	LD	HL,0
 	LD	DE,2000H
-	LD	BC,40*19
+	LD	BC,40*20
 	CALL	HELP1
 	LD	IX,HELPSB
 	CALL	P0CALL
@@ -1898,7 +2012,7 @@ HELP2:	CALL	9CH
 	CALL	9FH
 	LD	HL,2000H
 	LD	DE,0
-	LD	BC,40*19
+	LD	BC,40*20
 	CALL	HELP1
 	JP	HOOK9
 HELP1:	CALL	RDVRM
@@ -1931,7 +2045,7 @@ VCOPY1:	CALL	4AH
 	LD	A,B
 	OR	C
 	JR	NZ,VCOPY1
-PCOPY6:	CALL	0C0H
+PCOPY6:	CALL	BEEP
 	POP	AF
 	POP	BC
 	POP	DE
@@ -1980,7 +2094,7 @@ CHGPAG:	PUSH	HL
 	PUSH	DE
 	PUSH	BC
 	PUSH	AF
-	CALL	0C0H
+	CALL	BEEP
 	CALL	156H
 	LD	BC,0A02H
 	CALL	47H
@@ -2266,16 +2380,21 @@ PROMPT:	LD	A,(0F3DDH)
 	LD	A,'>'
 	JP	HICHP
 
-; ºÏÝÄÞÅ² ±ÄÞÚ½Æ­³Ø®¸
+; SET BASE ADDRESS
 ;O/HL=(ADXWK0)=±ÄÞÚ½
 ; (SLXWK0)=½Û¯Ä,(SFXWK0)=½Û¯Ä¼Ã²Ì×¸Þ
 INADRS:	LD	HL,1*256+21
 	LD	(0F3DCH),HL
 	LD	HL,STR36
 	CALL	PRINT
-	CALL	SINLIN
-	JP	C,SYSTEM
+	LD      HL,(BASE)
+	PUSH    HL
+        CALL	SINLIN
 	LD	HL,(ADXWK0)
+	POP     DE
+	RET     NC
+        EX      DE,HL
+        LD      (ADXWK0),HL
 	RET
 
 ; Ì§²Ù ¸Û°½Þ
@@ -2676,6 +2795,7 @@ INCPOK:	PUSH	HL
 	POP	HL
 	RET
 
+; MULTI input routine
 ; (HL)É Ó¼ÞÚÂ¦ ÏÙÁ×²Ã¨Ý¸Þ
 ; OUT/Cf=err B=¶·ºÝÀÞ ÊÞ²Ä½³
 MLCCK:	LD	B,0
@@ -3220,6 +3340,7 @@ START1:	LD	A,(DE)
 	INC	HL
 	EX	(SP),HL
 	CP	3
+        JR      Z,STAT14
 	JR	C,START5
 	LD	E,5	; ERROR(5)
 	LD	IX,406FH
@@ -3229,6 +3350,14 @@ START5:	SET	7,A	; CPU ÁªÝ¼Þ
 	POP	HL
 	OR	A
 	RET
+STAT14:
+        LD      A,128
+        CALL    180H
+        CALL    CHCPU7
+        POP     HL
+        OR      A
+        RET
+
 START6:	INC	DE	; _@ ¼Þ¯º³
 	LD	A,(DE)
 	OR	A
@@ -3297,7 +3426,19 @@ SYST11:	CALL	INLIN
 	JR	C,SYSTEM
 	INC	HL
 	LD	DE,BUFSV0
-	LD	A,(HL)
+	LD	HL,0F55EH+1
+        LD      A,(HL)
+        DEC     HL
+        CP      '>'
+ 	LD	A,(HL)
+        CALL    Z,SYST17
+        DEC     HL
+SYST18:
+        INC     HL
+        LD      A,(HL)
+        CP      ' '
+        JR      Z,SYST18
+
 	OR	A
 	JR	NZ,SYSTM7
 	LD	HL,0F3DCH
@@ -3341,11 +3482,14 @@ SYSTM9:	ADD	A,22
 	LD	L,A
 SYST10:	LD	(0F3DCH),HL
 	JR	SYST11
-SYSTM7:	LD	BC,40
+SYSTM7:
+        PUSH    HL
+        LD	BC,40
 	LDIR
+	POP HL
 	XOR	A
 	LD	(DE),A
-	LD	HL,0F55EH
+
 	LD	A,(HL)
 	CP	'?'
 	JR	NZ,SYSTM6
@@ -3409,6 +3553,17 @@ SYSTM2:	INC	IY
 	POP	IX
 	JP	(IX)
 
+SYST17: ;Drive letter = Repeated command -> skip
+        CP 'A'
+        RET C
+        CP 'H'+1
+        RET NC
+        INC HL
+        INC HL
+        RET
+
+
+
 ; ºÏÝÄÞÁ­³ÀÞÝ
 BREAK:	LD	HL,STR98
 	JR	ERREND
@@ -3451,7 +3606,7 @@ P0CM:	LD	IX,CMTRNS
 	CALL	P0CALL
 	JP	VWORK
 
-; ÃÞ¨½±¾ÝÌÞÙ´ÃÞ¨¯Ä
+;  Disassembler keys (I)
 DA:	XOR	A
 	LD	(Y),A
 	LD	(BASE),HL
@@ -3508,6 +3663,10 @@ DA11:	CALL	9FH
 	JR	Z,DA6
 	CP	9
 	JR	Z,DA6
+	CP      15 ; ^O
+	JP      Z,DA152
+	CP      26
+	JP      Z,DA262
 	CP	27
 	JP	Z,DA7
 	CP	18
@@ -3556,8 +3715,9 @@ DA6:	CALL	DA80
 	LD	HL,STR36
 	CALL	PRINT
 	CALL	SINLIN
-DA101:	JP	C,DA102
-	JP	DISASJ
+DA101:	JP      C,DA18
+	JP      DISASJ
+
 DA100:	LD	HL,1*256+21
 	LD	(0F3DCH),HL
 	LD	HL,STR36
@@ -3572,6 +3732,27 @@ DA100:	LD	HL,1*256+21
 	CALL	ADRSPR
 	CALL	SINLNJ
 	JR	DA101
+
+DA152:	LD	HL,1*256+21
+	LD	(0F3DCH),HL
+        LD      HL,(BASE)
+        PUSH    HL
+	LD	HL,STR36
+	CALL	PRINT
+	CALL	SINLIN
+	POP     HL
+	JP      C,DA18
+        LD      DE,(ADXWK0)
+        ADD     HL,DE
+        LD      (ADXWK0),HL
+        LD      HL,0
+        OR      A
+        SBC     HL,DE
+        LD      DE,(OFFSET)
+        ADD     HL,DE
+        LD      (OFFSET),HL
+	JP      DISASJ
+
 DA7:	LD	HL,1*256+21
 	LD	(0F3DCH),HL
 DA102:	LD	HL,(BASE)
@@ -3686,6 +3867,8 @@ DA23:	LD	HL,1*256+21
 DA25:	XOR	A
 	LD	(Y),A
 	JP	DA12
+DA262:  CALL    SOFSET
+        JP       DISASJ
 DA26:	CALL	DA27
 	LD	(BASE),HL
 	XOR	A
@@ -3825,7 +4008,7 @@ DASUB2:	CALL	9CH
 	CALL	9FH
 DASUB1:	JP	SCRREM
 
-; ·¬×´ÃÞ¨¯Ä
+; CHARACTER editor keys
 C_W:	LD	(BASE),HL
 	LD	HL,VWORK
 	LD	DE,VWORK+1
@@ -3912,6 +4095,8 @@ C_W11:	CALL	C_WSUB
 	JP	Z,C_W8
 	CP	9
 	JP	Z,C_W8
+        CP      26
+        JP      Z,C_W26
 	CP	27
 	JP	Z,C_W10
 	CP	18
@@ -3957,6 +4142,10 @@ C_W81:	RRCA
 	LD	E,A
 	CALL	POKE
 	JP	C_W5
+
+C_W26:  CALL    SOFSET
+        JP      CHARAJ;C_W25
+
 C_W2:	LD	HL,X
 	INC	(HL)
 	LD	A,(HL)
@@ -4229,7 +4418,7 @@ C_WSB1:	LD	A,(Y)
 	ADD	HL,DE
 	RET
 
-; ±½·°´ÃÞ¨¯Ä
+; ASCII editor keys
 A_W:	LD	(BASE),HL
 	LD	IX,SITACL
 	CALL	P0CALL
@@ -4299,6 +4488,8 @@ A_W11:	CALL	A_WSUB
 	JP	Z,A_W16
 	CP	11
 	JP	Z,A_W24
+	CP      26
+	JP      Z,A_W26
 	CP	12
 	JP	Z,A_W15
 	CP	13
@@ -4400,6 +4591,8 @@ A_W16:	LD	HL,(BASE)
 A_W24:	LD	HL,0
 	LD	(Y),HL
 	JP	A_W3
+A_W26:  CALL    SOFSET
+	JP	ASCIIJ;A_W25
 A_W15:	CALL	A_WSUB
 	LD	(BASE),HL
 	JP	A_W25
@@ -4467,7 +4660,7 @@ A_WSUB:	CALL	LACAL
 	ADD	HL,DE
 	RET
 
-; ÀÞÝÌß´ÃÞ¨¯Ä
+; HEX-EDITOR keys
 D_W:	LD	(BASE),HL
 	LD	IX,SITACL
 	CALL	P0CALL
@@ -4539,6 +4732,8 @@ D_W11:	CALL	D_WSUB
 	JP	Z,D_W21
 	CP	11
 	JP	Z,D_W24
+	CP      26
+	JP      Z,D_W26
 	CP	12
 	JP	Z,D_W15
 	CP	13
@@ -4674,6 +4869,8 @@ D_W22:	CALL	D_WSUB
 D_W24:	LD	HL,0
 	LD	(Y),HL
 	JP	D_W3
+D_W26   CALL    SOFSET
+        JP      DUMPJ;D_W25
 D_W15:	CALL	D_WSUB
 	LD	(BASE),HL
 	JP	D_W25
@@ -4944,9 +5141,7 @@ MULTI3:	CALL	ADRSAV
 	CALL	ADRSPR
 	CALL	ONEPUT
 	CALL	156H
-	CALL	HOOKST
-	CALL	0AEH
-	CALL	HOOKOF
+	CALL	INLIN
 	JP	C,SYSTEM
 MULTI2:	LD	IX,NALBIG
 	CALL	P0CALL
@@ -4960,13 +5155,14 @@ MULTI2:	LD	IX,NALBIG
 MULTI7:	LD	HL,STR34
 	CALL	PRINT
 	CALL	CRLF
-	CALL	0C0H
+	CALL	BEEP
 	JR	MULTI3
-MULTI4:	LD	A,(HL)
-	OR	A
-	JR	Z,MULI10
+MULTI4:
 	LD	(ADXWK0),DE
 	LD	(SLXWK0),BC
+        LD	A,(HL)
+	OR	A
+	JR	Z,MULI10
 	INC	HL
 
 	LD	A,(HL)
@@ -4983,6 +5179,7 @@ MULI10:	CALL	SCRSAV
 	CALL	SCRREM
 	JP	MULTI3
 
+
 ;------------------------------
 
 MULI11:
@@ -4991,9 +5188,8 @@ MULI11:
 	DEC	HL
 	OR	A
 	PUSH	AF
-	LD	DE,1
+	LD	DE,20
 	JR	Z,MULI13
-
 	PUSH	HL
 	INC	HL
 	CALL	CVAL
@@ -5010,23 +5206,16 @@ MULI13:
 	LD	B,E
 
 MULI14:
-
 	PUSH	HL
 	PUSH	BC
-
 	LD	HL,(ADXWK0)
-
-	;CALL 	ADISAS
 	LD	IX,LWORK
 	CALL	ADA
-
 	PUSH	HL
 	PUSH	DE
-
 	LD	HL,(ADXWK0)
 	CALL	ADRSPR
 	CALL	ONEPUT
-
 	LD	HL,LWORK+19
 	LD	B,40-19
 MULI12:	LD	A,(HL)
@@ -5041,27 +5230,21 @@ MULI16:
 	CALL	CHPUT
 	DJNZ	MULI12
 	CALL	NCRLF
-
 	POP	DE
 	POP	HL
 	LD	(ADXWK0),HL
-
 	POP	BC
 	POP	HL
-
 	DJNZ	MULI14
-
 	XOR	A
-
 	RET
-
 MULI15:
 	XOR	A
 	SCF
 	RET
 	
 
-; ¿°½É ºÒÝÄ
+; Add comment to begining of file (;XXXXH-YYYYH)
 COMENT:	LD	HL,LWORK
 	LD	(HL),';'
 	INC	HL
@@ -5100,18 +5283,22 @@ STRIN:	LD	A,(HL)
 	JR	STRIN
 
 ; ½°Êß°ÃÞ¨½±¾ÝÌÞ×
-SPDISA:	CALL	SUB200
-	CALL	BUNCON
+SPDISA:	
 	CALL	FLNAME
+	CALL	BUNCON
+        CALL	SUB200
 	LD	A,(HL)
 	OR	A
 	JP	Z,SPDS17
 	CALL	BUNCON
 	LD	A,(HL)
+        CP      'X'
+        JP      Z,SPDS24
 	CP	'B'
 	JR	Z,SPDS18
 	CP	'D'
 	JP	NZ,ERROR
+	; BASIC DATA
 	CALL	SVOPEN
 	LD	HL,STR108
 	LD	IX,LWORK
@@ -5121,6 +5308,17 @@ SPDISA:	CALL	SUB200
 	LD	HL,10001
 	LD	(ADXWK2),HL
 	JR	SPDS21
+        ; XBASIC type
+SPDS24:	CALL	SVOPEN
+	LD	HL,STR108
+	LD	IX,LWORK
+	CALL	STRIN
+	CALL	COMET1
+	LD	IY,DXBAS
+	LD	HL,10001
+	LD	(ADXWK2),HL
+	JR	SPDS21
+	; Assembler type
 SPDS18:	CALL	SVOPEN
 	CALL	COMENT
 	LD	IY,DDEFB
@@ -5146,14 +5344,23 @@ SPDS20:	LD	HL,(ADXWK0)
 	CALL	PEEK
 	INC	HL
 	LD	(ADXWK0),HL
+
 	BIT	0,(IY+3)
 	PUSH	AF
 	CALL	NZ,MOJIHD
+        BIT     2,(IY+3)
+        JR      Z,SPDS25
+        LD      (IX),"&"
+        INC     IX
+        LD      (IX),"H"
+        INC     IX
+SPDS25:
 	CALL	DATIN
 	POP	AF
 	JR	Z,SPDS23
 	LD	(IX),'H'
 	INC	IX
+
 SPDS23:	LD	DE,(ADXWK1)
 	INC	DE
 	RST	20H
@@ -5163,7 +5370,7 @@ SPDS23:	LD	DE,(ADXWK1)
 	DEC	B
 	LD	C,1
 	JR	Z,SPDS19
-	BIT	0,(IY+3)
+	BIT	1,(IY+3)
 	JR	Z,SPDS20
 	LD	(IX),','
 	INC	IX
@@ -5177,7 +5384,7 @@ SPDS19:	LD	(IX),0
 	POP	IY
 	POP	BC
 	DEC	C
-	JR	Z,SPDS21
+	JP	Z,SPDS21
 	POP	BC
 	CALL	CLOSE
 	JP	COMPLT
@@ -5189,20 +5396,30 @@ SPDS17:	CALL	SVOPEN
 	LD	HL,STR99
 	CALL	PRINT
 	LD	HL,(ADXWK0)
-	LD	(ADXWK2),HL
+	LD	(ADXWK2),HL    ; Start addr: ADXWK2, END: ADXWK1
+
+
+        DEC     HL             ; No EQU before start
+	CALL	CLLABL         ;/8
+	LD	DE,6000H
+	ADD	HL,DE
+	CALL	RDVRM
+	OR	B
+	CALL	WRTVRM
+
 SPDIS2:	LD	HL,(ADXWK0)
 	LD	IX,LWORK
 	PUSH	HL
 	CALL	ADA
 	LD	(ADXWK0),HL
 	POP	HL
-	CALL	CLLABL
-	LD	DE,6000H
+	CALL	CLLABL   ;/8
+	LD	DE,6000H      ; #6000-#7FFF Command start flags
 	ADD	HL,DE
 	CALL	RDVRM
 	OR	B
 	CALL	WRTVRM
-	CALL	SPASUB
+	CALL	SPASUB        ; Search address
 	JR	C,SPDIS1
 	EX	DE,HL
 	LD	DE,(ADXWK2)
@@ -5216,7 +5433,7 @@ SPDIS2:	LD	HL,(ADXWK0)
 	RST	20H
 	JR	NC,SPDIS1
 SPDIS3:	CALL	CLLABL
-	LD	DE,4000H
+	LD	DE,4000H      ; #4000-#5FFF Put label flag
 	ADD	HL,DE
 	CALL	RDVRM
 	OR	B
@@ -5224,6 +5441,7 @@ SPDIS3:	CALL	CLLABL
 SPDIS1:	LD	A,(SAMEFG)
 	OR	A
 	JP	Z,SPDIS2
+
 	LD	HL,STR100
 	CALL	PRINT
 	XOR	A
@@ -5231,21 +5449,62 @@ SPDIS1:	LD	A,(SAMEFG)
 	LD	HL,(ADXWK2)
 	LD	(ADXWK0),HL
 	CALL	COMENT
+
+	; ORG routine can be added here if wanted
+
 SPDS12:	LD	HL,(ADXWK0)
-	CALL	CLLABL
+
+        LD A,1
+        LD (SLXWK2),A
+SPDS13:
+        DEC HL
+        PUSH HL
+        CALL	CLLABL          ; Check previous command flag
+	LD	DE,6000H
+	ADD	HL,DE
+	CALL	RDVRM
+	AND	B
+        POP HL
+
+        JR NZ, SPDS28           ; No need for prev label
+        
+        PUSH HL
+        CALL	CLLABL          ; Check also label flag
+	LD	DE,4000H
+	ADD	HL,DE
+	CALL	RDVRM
+	LD      C,A
+	AND	B
+        JP NZ, SPDS27           ; Yes, do EQU $-X (POP HL)
+        POP HL
+
+        LD A,(SLXWK2)
+        INC A
+        LD (SLXWK2),A
+        CP 4
+        JR NZ, SPDS13            ; No prev label inside range
+
+SPDS28:
+        LD	HL,(ADXWK0)
+        PUSH    HL
+        CALL	CLLABL          ; Check label flag
 	LD	DE,4000H
 	ADD	HL,DE
 	CALL	RDVRM
 	AND	B
-	LD	IY,VWORK
-	JR	Z,SPDIS4
-	LD	IX,VWORK+1
-	LD	(IX-1),'X'
+        POP     HL
+ 	LD	IY,VWORK
+        JR      Z,SPDIS4
+
+	LD	IX,VWORK+1     ; Put label in front of command
+	LD	(IY),'X'
 	LD	HL,(ADXWK0)
 	CALL	ADRSIN
-	LD	(IX),'H'
-	LD	(IX+1),':'
-	LD	IY,VWORK+7
+
+        LD	(IX),':'
+
+	LD	IY,VWORK+6
+
 SPDIS4:	LD	(IY),9
 	INC	IY
 	LD	HL,(ADXWK0)
@@ -5269,7 +5528,7 @@ SPDIS5:	LD	(IY),9
 	LD	HL,LWORK+26
 SPDIS8:	LD	A,(HL)
 	OR	A
-	JR	Z,SPDIS7
+	JP	Z,SPDIS7
 	CP	'0'
 	JR	C,SPDIS9
 	CP	'9'+1
@@ -5300,15 +5559,14 @@ SPDS16:	LD	DE,ADINWK
 	LD	A,(HL)
 	JR	SPDIS9
 SPDS11:	PUSH	HL
-	PUSH	IY
-	CALL	CLLABL
-	POP	IY
-	LD	DE,6000H
-	ADD	HL,DE
-	CALL	RDVRM
-	AND	B
-	JR	NZ,SPDS14
-	POP	HL
+        LD      DE,(ADXWK2)       ; Check if inside disasm block
+        RST     20H
+        JR      C,SPDS26
+        LD      DE,(ADXWK1)
+        INC     DE
+        RST     20H
+        JR      C,SPDS14
+SPDS26: POP	HL
 	POP	HL
 SPDS15:	LD	A,(HL)
 	LD	(IY),A
@@ -5318,7 +5576,7 @@ SPDS15:	LD	A,(HL)
 	JR	Z,SPDIS8
 	JR	SPDS15
 SPDS14:	POP	HL
-	LD	(IY),'X'
+	LD	(IY),'X'          ;Inside command
 	INC	IY
 	PUSH	IY
 	POP	IX
@@ -5331,7 +5589,55 @@ SPDS14:	POP	HL
 	INC	HL
 	INC	HL
 	INC	HL
-	JR	SPDIS8
+        LD      A,(HL)
+        CP      'H'
+        JR      NZ,SPDIS8
+        INC     HL
+        JR      SPDIS8
+
+
+SPDS27:
+	LD      A,C
+	XOR	B      ; Reset flag
+	CALL	WRTVRM
+	POP HL
+
+	LD	IX,VWORK
+	LD	(IX),'X'
+	INC     IX
+	LD	HL,(ADXWK0)
+
+	XOR     A
+	LD      D,A
+	LD      A,(SLXWK2)
+	LD      E,A
+	SBC     HL,DE
+
+	CALL	ADRSIN
+        LD	(IX),':'
+
+	LD	HL,VWORK+6
+        LD	(HL),9
+	INC	HL
+	LD      (HL),"E"
+	INC	HL
+	LD      (HL),"Q"
+	INC	HL
+	LD      (HL),"U"
+	INC	HL
+	LD      (HL),9
+	INC	HL
+	LD      (HL),"$"
+	INC	HL
+	LD      (HL),"-"
+	INC	HL
+	LD      A,(SLXWK2)
+	ADD     A,"0"
+	LD      (HL),A
+        INC     HL
+        PUSH HL
+        POP IY
+
 SPDIS7:	LD	(IY),0
 	LD	HL,VWORK
 	CALL	LOUT
@@ -5339,21 +5645,21 @@ SPDIS7:	LD	(IY),0
 	OR	A
 	JP	Z,SPDS12
 	LD	HL,LWORK
-	PUSH	HL
-	LD	(HL),13
-	INC	HL
-	LD	(HL),10
-	INC	HL
-	LD	(HL),9
-	INC	HL
-	LD	(HL),'E'
-	INC	HL
-	LD	(HL),'N'
-	INC	HL
-	LD	(HL),'D'
-	INC	HL
+;	PUSH	HL
+;	LD	(HL),13
+;	INC	HL
+;	LD	(HL),10
+;	INC	HL
+;	LD	(HL),9
+;	INC	HL
+;	LD	(HL),'E'
+;	INC	HL
+;	LD	(HL),'N'
+;	INC	HL
+;	LD	(HL),'D'
+;	INC	HL
 	LD	(HL),0
-	POP	HL
+;	POP	HL
 	CALL	LOUT
 	CALL	CLOSE
 	JP	COMPLT
@@ -5372,6 +5678,7 @@ CLLAB2:	INC	C
 	JR	CLLAB2
 CLLAB1:	RET
 
+; Search back for address
 SPASUB:	LD	B,20
 	LD	HL,LWORK+39
 SPASB2:	LD	A,(HL)
@@ -5401,6 +5708,25 @@ CLCLS:
 	CALL	CLS
 	JP	SYSTEM
 
+SOFSET:
+        LD      HL,(BASE)
+        LD      DE,(OFFSET)
+        LD      A,D
+        OR      E
+        JR      Z,SOFSET2
+        LD      (POFSET),DE
+        ADD     HL,DE ; Don't move
+        LD      (ADXWK0),HL
+        LD      DE,0
+        LD      (OFFSET),DE
+        JP      BEEP
+SOFSET2:
+        LD      DE,(POFSET)
+        LD      (OFFSET),DE
+        XOR     A
+        SBC     HL,DE
+        LD      (ADXWK0),HL
+        JP      BEEP
 
 ; ¹²»Ý
 CALC:	LD	A,(HL)
@@ -6030,12 +6356,17 @@ RESGET:	LD	HL,(RESAVE+2)
 	LD	HL,(RESAVE+12)
 	RET
 
-; ½°Êß°Û°ÄÞ
+; LOAD RAW FILE
 SPLOAD:	CALL	FLNAME
 	CALL	BUNCON
 	LD	IX,ADRES
 	CALL	P0CALL
+	; Add Offset & Len code here
 	CALL	BUNMAT
+	
+	CALL    SPLOD6
+	JP      COMPLT
+
 SPLOD6:	LD	(ADXWK0),DE
 	LD	(SLXWK0),BC
 	LD	(ADXWK1),DE
@@ -6057,11 +6388,14 @@ SPLOD6:	LD	(ADXWK0),DE
 SPLOD7:	LD	HL,STR95
 	CALL	NPRINT
 	LD	HL,(FCB+16)
+ 	LD      (ADSAVS),HL
 	CALL	ADRSPR
 	PUSH	HL
 	LD	HL,STR85
 	CALL	NPRINT
 	POP	HL
+	; HL=LEN
+SPLOD8:
 	LD	DE,(ADXWK0)
 	DEC	HL
 	PUSH	HL
@@ -6109,14 +6443,20 @@ SPLOD5:	LD	HL,(WORK+1)
 	CALL	NPRINT
 	LD	HL,(ADXWK1)
 	LD	DE,(SLXWK0)
-	CALL	ADPRSL
+        LD      (ADSAVB),HL
+ 	LD      (ADSAVB+2),DE
+ 	LD      (ADSAVE+2),DE
+ 	LD      (ADSAVS+2),DE
+        CALL	ADPRSL
 	LD	HL,STR92
 	CALL	NPRINT
 	LD	HL,(ADXWK0)
 	DEC	HL
+        LD      (ADSAVE),HL
 	CALL	ADRSPR
 	CALL	NCRLF
-	JP	COMPLT
+	;JP	COMPLT
+        RET
 
 ; ½°Êß°¾°ÌÞ
 SPSAVE:	CALL	FLNAME
@@ -6205,6 +6545,26 @@ KS:	CALL	STOP2
 	LD	BC,1800H
 	XOR	A
 	JP	FILVRM
+	
+; TYPE
+TPTP:	CALL	FLNAME
+	CALL	LDOPEN
+TPTP1:	LD	C,27H
+	LD	HL,1
+	LD	DE,FCB
+	CALL	0F37DH
+	DEC	A
+	JP	Z,SYSTEM
+	LD	A,(DMA)
+	CP	1AH
+	JP	Z,SYSTEM
+	LD	E,A
+        CALL    CHPUT
+	CALL	STOP
+	JP	Z,SYSTEM
+	JR	TPTP1
+TPEN:
+
 
 ; ²ÝÃÞ¯¸½ÀÝ¸Áª¯¸
 TNKRDX:	CALL	SUB100
@@ -6572,6 +6932,7 @@ STR25:	DEFM 'SELECT$'
 STR26:	DEFM 'SUM:$'
 STR27:	DEFM 'NORMAL$'
 STR28:	DEFM '+ADR$'
+STR29:  DEFM '0=$'
 STR30:	DEFM '# STACK err$'
 STR32:	DEFM '*****$'
 STR33:	DEFM '[     :****:*]$'
@@ -6595,7 +6956,7 @@ STR47:	DEFM '.,+-*/'; KEY1¥TYPE1
 	DEFM '-/*+.,'; KEY2¥TYPE2
 STR49:	DEFM ' !"#$%&()*+,-./:;<=>?@[\]^X`{|}~'
 	DB 0
-STR50:	DEFM '+-*/\&<>'
+STR50:	DEFM '+-*/%&|^'
 STR52:	DEFM '>>Ok!$'
 STR53:	DEFM 'Search data:'
 	DB 10,13,'$'
@@ -6646,16 +7007,22 @@ STR101:	DEFM '--------'
 STR102:	DEFM 'o STACK restore'
 	DEFB 10,13,'$'
 STR104:	DEFM 'CLUSTER:$'
-STR105:	DEFM 'VR@$'
-STR106:	DEFM 'DEFB $'
+STR105:	DEFM '@$'
+STR106:	DEFM 9,'DEFB $'
 STR107:	DEFM 'DATA $'
 STR108:	DEFM "10000 '$"
+STR109: DEFM "'#I $"
 
 DDEFB:	DW STR106
-	DB 8,1
+	DB 8,1+2
 DDATA:	DW STR107
 	DB 32,0
-
+DXBAS:  DW STR109
+	DB 13,2+4
+;	   <data/line>,
+;			bit0: SET = No Linenumbers, ASM outlook
+;			bit1: SET = ","
+;			bit2: SET = XBASIC (also bit 0=0)
 
 CALCAD:	DEFW PLUS,NMNAS,MULT,DIV,MOD,CL_AND,CL_OR,CL_XOR
 
@@ -6735,6 +7102,10 @@ COMAND:	DB 'D',0
 	DB 'CL'
 	DW CALC
 	DW 0,0
+	
+	DB 'OF'
+	DW P0CM
+	DW OFTP,OFEN-OFTP
 
 	DB 'FL'
 	DW P0CM
@@ -6772,7 +7143,7 @@ COMAND:	DB 'D',0
 	DW MAPPER
 	DW 0,0
 
-	DB 'RS'
+	DB 'RG'
 	DW RESIST
 	DW 0,0
 
@@ -6848,7 +7219,8 @@ COMAND:	DB 'D',0
 	DW P0CM
 	DW CITP,CIEN-CITP
 
-	DB 'VR'
+	;DB 'VR'
+	DB '@',0
 	DW P0CM
 	DW VRTP,VREN-VRTP
 
@@ -6875,6 +7247,10 @@ COMAND:	DB 'D',0
 	DB 'PO'
 	DW P0CM
 	DW POTP,POEN-POTP
+
+	DB 'TP'
+	DW TPTP
+	DW 0,0
 
 	DB 0	;ºÏÝÄÞÉ µÜØ
 
@@ -6974,6 +7350,12 @@ CRTOFF:	DS 1 ;¶ÞÒÝË®³¼Þ µÌ
 ADSAV0:	DS 2 ;±ÄÞÚ½ÍÝ½³¾°ÌÞ´Ø±
 SLSAV0:	DS 2
 ADSAV1:	DS 12
+ADSAVB: DS 4
+ADSAVE: DS 4
+ADSAVS: DS 4
+
+OFFSET: DW 0
+POFSET: DW 0
 
 ADXWK0:	DS 2 ;±ÄÞÚ½Ü°¸1
 SLXWK0:	DS 1 ;½Û¯Ä
@@ -6990,16 +7372,16 @@ BUFSV1:	DS 257 ;»°ÁÃÞ°À Ö³
 LWORK:	DS 40 ;1·Þ®³ Ü°¸
 VWORK:	DS 40*24 ;¶ÞÒÝÎ¿ÞÝÖ³
 TANKWK:	DS 64  ;GRA-WIN&IdxTANK¹ÝÖ³
-	DB '!!' ;PAGE1µÜØÉ¼Ù¼(Å¸ÃÓ²²)
+;	DB '!!' ;PAGE1µÜØÉ¼Ù¼(Å¸ÃÓ²²)
 
 	DS	8000H-$
 
-	.DEPHASE
+	DEPHASE
 
 
-;   SUPER-X ver 1.21  PAGE 0
+;   SUPER-X ver 1.22  PAGE 0
 	
-	.PHASE	100H
+	PHASE	100H
 
 ; ºÏÝÄÞÃÝ¿³ I/DE=¾ÝÄ³ BC=ÃÝ¿³ÊÞ²Ä½³
 CMTRNS:	PUSH	HL
@@ -7009,10 +7391,14 @@ CMTRNS:	PUSH	HL
 	POP	HL
 	RET
 
-; ¶Ý¼ÞÌ«ÝÄÛ°ÄÞ ÎÝÀ²
+; KANJI FONT LOAD
 KLTP:	CALL	FCBCLR
 	CALL	DSKNM
-	LD	HL,KFILNM
+        LD      HL,(OFFSET)
+	PUSH    HL
+	LD      HL,0
+        LD      (OFFSET),HL
+        LD	HL,KFILNM
 	LD	DE,FCB+1
 	LD	BC,11
 	LDIR
@@ -7020,10 +7406,13 @@ KLTP:	CALL	FCBCLR
 	LD	BC,0FFFFH
 	LD	A,255
 	LD	(CRTOFF),A
-	JP	SPLOD6
+	CALL	SPLOD6
+	POP     HL
+	LD      (OFFSET),HL
+	JP      COMPLT
 KLEN:	;
 
-; I/OÎß°Ä±³Ä ÎÝÀ²
+; PORT OUT
 POTP:	CALL	CVAL
 	JP	C,ERROR
 	LD	A,D
@@ -7041,7 +7430,7 @@ POTP:	CALL	CVAL
 	JP	COMPLT
 POEN:	;
 
-; DSKF ÎÝÀ²
+; DISK INFO (FREE CLUSTERS)
 CITP:	CALL	DSKNM
 	CALL	BUNMAT
 	LD	A,(FCB)
@@ -7067,7 +7456,7 @@ CITP:	CALL	DSKNM
 	JP	SYSTEM
 CIEN:	;
 
-; I/OÎß°Ä²Ý ÎÝÀ²
+; PORT IN
 PITP:	CALL	CVAL
 	JP	C,ERROR
 	LD	A,D
@@ -7080,7 +7469,7 @@ PITP:	CALL	CVAL
 	JP	SYSTEM
 PIEN:	;
 
-; ºÝÍß± ÎÝÀ²
+; COMPARE
 CMTP:	CALL	SUB300
 	LD	A,(HL)
 	OR	A
@@ -7174,7 +7563,7 @@ MEMCM5:	LD	HL,STR56
 	JP	SYSTEM
 CMEN:	;
 
-; »ÑÓ°ÄÞ·Ø¶´ ÎÝÀ²
+; CHANGE SUM TYPE
 CSTP:	CALL	BUNMAT
 	LD	A,(SUMTYP)
 	CPL
@@ -7191,7 +7580,7 @@ SUMCG1:	CALL	PRINT
 	JP	SYSTEM
 CSEN:	;
 
-; ØÛ¹°Ä ÎÝÀ²
+; RELOCATE
 RTTP:	CALL	TRANS3
 	LD	HL,(SLXWK2)
 	LD	(SLXWK0),HL
@@ -7284,7 +7673,7 @@ RELOC7:	POP	AF
 	JR	RELC10
 RTEN:	;
 
-; ÒÓØÌ¨Ù ÎÝÀ²
+; FILL
 FLTP:	CALL	SUB200
 	CALL	BUNCON
 	CALL	CVAL
@@ -7307,15 +7696,13 @@ FILL1:	PUSH	DE
 	JR	FILL1
 FLEN:	;
 
-; BASIC¹Ý»¸ ÎÝÀ²
+; BASIC FIND
 BFTP:	LD	HL,0
 	LD	(WORK),HL
 	LD	(WORK+2),HL
 	LD	HL,STR53
 	CALL	PRINT
-	CALL	HOOKST
-	CALL	0AEH
-	CALL	HOOKOF
+	CALL	INLIN
 	JP	C,ERROR
 	XOR	A
 	LD	(FINDFG),A
@@ -7418,7 +7805,7 @@ BFIND9:	CALL	STOP
 	JR	BFND17
 BFEN:	;
 
-; ²ÝÃÞ¯¸½ÀÝ¸ ¾°ÌÞ ÎÝÀ²
+; INDEX SAVE
 ISTP:	CALL	FCBCLR
 	CALL	DSKNM
 	LD	HL,TFILNM
@@ -7452,7 +7839,7 @@ TNKSV1:	PUSH	BC
 	JP	COMPLT
 ISEN:	;
 
-; ²ÝÃÞ¯¸½ÀÝ¸ Û°ÄÞ ÎÝÀ²
+; INDEX LOAD
 ILTP:	CALL	FCBCLR
 	CALL	DSKNM
 	LD	HL,TFILNM
@@ -7487,7 +7874,7 @@ TNKLD1:	PUSH	BC
 	JP	COMPLT
 ILEN:	;
 
-; QUITÎÝÀ²
+; EXIT
 QTTP:	CALL	BUNMAT
 	CALL	ERHKOF
 	CALL	MAPNEW
@@ -7510,7 +7897,26 @@ QTTP:	CALL	BUNMAT
 	JP	1CH
 QTEN:	;
 
-; ÃÝ·°¾¯Ä ÎÝÀ²
+
+OFTP:
+	LD      DE,0
+	LD      A,(HL)
+	OR      A
+	JR      Z,OFSET1
+	LD	IX,ADRES
+	CALL	P0CALL
+	JP	C,ERROR
+	CALL	BUNMAT
+OFSET1:
+        XOR     A
+        LD      HL,0
+        SBC     HL,DE
+        LD      (OFFSET),HL
+	JP	SYSTEM
+OFEN:
+
+
+; TENKEY TYPE
 TKTP:	LD	A,(HL)
 	SUB	'1'
 	JP	C,ERROR
@@ -7533,7 +7939,7 @@ TKTP:	LD	A,(HL)
 	JP	SYSTEM
 TKEN:	;
 
-; »ÑÄ°ÀÙ ÎÝÀ²
+; TOTAL SUM
 TSTP:	CALL	SUB200
 	CALL	BUNMAT
 	LD	HL,(ADXWK0)
@@ -7556,8 +7962,21 @@ TOTAL1:	PUSH	DE
 	JR	TOTAL1
 TSEN:	;
 
-; BLOAD ÎÝÀ²
-LDTP:	CALL	FLNAME
+; BLOAD <FILENAME>,[<OFFSET#SLOT>]
+LDTP:   CALL	FLNAME
+        LD      DE,0
+        LD      BC,0
+        LD	A,(HL)
+	OR	A
+	JR	Z,LDTP2
+	CALL	BUNCON
+	LD	IX,ADRES
+	CALL	P0CALL
+	CALL	BUNMAT
+LDTP2:
+        LD	(ADXWK0),DE
+	LD	(SLXWK0),BC
+	LD	(ADXWK1),DE
 	CALL	LDOPEN
 	LD	DE,FCB
 	LD	HL,7
@@ -7570,32 +7989,58 @@ LDTP:	CALL	FLNAME
 	CALL	NPRINT
 	LD	HL,(DMA+1)
 	PUSH	HL
+	LD      DE,(ADXWK0)
+	ADD     HL,DE
 	CALL	ADRSPR
 	LD	HL,STR73
 	CALL	NPRINT
 	LD	HL,(DMA+3)
+
+        ; Select smaller option
+        PUSH    DE
+        PUSH    HL
+        LD      HL,(FCB+16)
+        LD      DE,-8
+        ADD     HL,DE
+        LD      DE,(DMA+1)
+        ADD     HL,DE
+        POP     DE
+        RST     #20
+        JR      C,LDTP1
+        EX      DE,HL
+LDTP1:  POP     DE
+        LD      (DMA+3),HL
+
+	ADD     HL,DE
 	CALL	ADRSPR
 	LD	HL,STR74
 	CALL	NPRINT
 	LD	HL,(DMA+5)
+	ADD     HL,DE
+	LD      (ADSAVS),HL
 	CALL	ADRSPR
 	CALL	NCRLF
 	POP	DE
 	LD	HL,(DMA+3)
 	OR	A
 	SBC	HL,DE
-	INC	HL
-	PUSH	HL
-	LD	C,1AH
-	CALL	0F37DH
-	POP	HL
-	LD	DE,FCB
-	LD	C,27H
-	CALL	0F37DH
-	JP	COMPLT
+	INC	HL      ;HL=Lenght DE=Start
+
+	LD	BC,0FFFFH
+	LD	A,255
+	LD	(CRTOFF),A
+
+	PUSH    HL
+        LD      HL,(ADXWK0)
+        ADD     HL,DE
+        LD	(ADXWK0),HL
+         LD	(ADXWK1),HL
+        POP     HL
+	CALL	SPLOD8
+	JP      COMPLT
 LDEN:	;
 
-; ¾¸À¾°ÌÞ ÎÝÀ²
+; SECTOR SAVE
 SCSTP:	CALL	DMASET
 	PUSH	HL
 	LD	C,19H
@@ -7650,7 +8095,7 @@ SCSAV5:	LD	BC,512
 	JR	SCSAV5
 SCSEN:	;
 
-; BSAVE ÎÝÀ²
+; BSAVE <FILENAME>,<BEGIN>[<#SLOT>],<END>,[<START>[,<OFFSET>]]
 SVTP:	CALL	FLNAME
 	CALL	BUNCON
 	CALL	SUB200
@@ -7673,6 +8118,27 @@ SAVE2:	CALL	BUNCON
 	LD	IX,ADRES
 	CALL	P0CALL
 	LD	(DMA+5),DE
+	
+	LD      A,(HL)
+	OR      A
+	JR      Z,SAVE3
+
+        CALL	BUNCON
+	LD	IX,ADRES
+	CALL	P0CALL
+	
+	PUSH    HL
+	LD      HL,(DMA+1)
+	ADD     HL,DE
+	LD      (DMA+1),HL
+	LD      HL,(DMA+3)
+	ADD     HL,DE
+	LD      (DMA+3),HL
+	LD      HL,(DMA+5)
+	ADD     HL,DE
+	LD      (DMA+5),HL
+	POP     HL
+
 	CALL	BUNMAT
 SAVE3:	LD	A,0FEH
 	LD	(DMA),A
@@ -7681,19 +8147,16 @@ SAVE3:	LD	A,0FEH
 	LD	HL,7
 	LD	C,26H
 	CALL	SYSCAL
-	LD	DE,(DMA+1)
-	LD	C,1AH
-	CALL	0F37DH
-	LD	DE,(DMA+1)
-	LD	HL,(DMA+3)
+
+	LD	HL,(ADXWK1)
+	LD	DE,(ADXWK0)
 	OR	A
 	SBC	HL,DE
-	INC	HL
-	LD	DE,FCB
-	LD	C,26H
-	CALL	SYSCAL
-	CALL	CLOSE
-	JP	COMPLT
+	LD	DE,256
+	CALL	DIV
+	LD	(WORK),HL
+	LD	(WORK+1),IX
+	JP      SPSAV3
 SVEN:	;
 
 ; ¾¸ÀÛ°ÄÞ ÎÝÀ²
@@ -7755,6 +8218,7 @@ SCLOD3:	EX	DE,HL
 	LD	HL,STR95
 	CALL	NPRINT
 	EX	DE,HL
+	LD      (ADSAVS),HL
 	CALL	ADRSPR
 	EX	DE,HL
 	LD	HL,STR85
@@ -7793,19 +8257,29 @@ SCLOD5:	LD	DE,(WORK)
 SCLOD6:	LD	HL,STR91
 	CALL	NPRINT
 	LD	HL,(ADXWK1)
+	LD      (ADSAVB),HL
 	LD	DE,(SLXWK0)
+	LD      (ADSAVB+2),DE
+	LD      (ADSAVE+2),DE
+	LD      (ADSAVS+2),DE
 	CALL	ADPRSL
 	LD	HL,STR92
 	CALL	NPRINT
 	LD	HL,(ADXWK0)
 	DEC	HL
+	LD      (ADSAVE),HL
 	CALL	ADRSPR
 	CALL	NCRLF
 	JP	COMPLT
 SCLEN:	;
 
 ; COºÏÝÄÞ ÎÝÀ²	
-COTP:	CALL	CVAL
+COTP:	LD      A,(HL)
+        INC     HL
+        CP      ","
+        JR      Z,COLOR4
+        DEC     HL
+        CALL	CVAL
 	INC	D
 	DEC	D
 	JP	NZ,ERROR
@@ -7813,7 +8287,15 @@ COTP:	CALL	CVAL
 	CP	16
 	JP	NC,ERROR
 	LD	(0F3E9H),A
+	LD      A,(HL)
+	OR      A
+	JR      Z,COLOR3
 	CALL	BUNCON
+COLOR4: LD      A,(HL)
+        INC     HL
+        CP      ","
+        JR      Z,COLOR5
+        DEC     HL
 	CALL	CVAL
 	INC	D
 	DEC	D
@@ -7822,8 +8304,11 @@ COTP:	CALL	CVAL
 	CP	16
 	JP	NC,ERROR
 	LD	(0F3EAH),A
+	LD      A,(HL)
+	OR      A
+	JR      Z,COLOR3
 	CALL	BUNCON
-	CALL	CVAL
+COLOR5: CALL	CVAL
 	INC	D
 	DEC	D
 	JP	NZ,ERROR
@@ -8014,16 +8499,17 @@ CD1:
 CDEN:	; CD command end
 
 ; VRºÏÝÄÞ ÎÝÀ²
-VRTP:	LD	A,(HL)
+VRTP:
+        LD	A,(HL)
 	OR	A
 	JR	Z,VARBL1
-	SUB	'0'
+        CALL    VARNAM
 	JP	C,ERROR
-	CP	4
-	JP	NC,ERROR
+	LD      D,0
+	LD      E,A
+VARBL5:
 	EX	DE,HL
-	LD	H,0
-	LD	L,A
+
 	LD	BC,ADSAV0
 	ADD	HL,HL
 	ADD	HL,HL
@@ -8031,7 +8517,13 @@ VRTP:	LD	A,(HL)
 	PUSH	HL
 	EX	DE,HL
 	INC	HL
+	LD      A,(HL)
+	INC     HL
+	CP      "="
+	JR      Z,VARBL7
+	DEC     HL
 	CALL	BUNCON
+VARBL7:
 	LD	IX,ADRES
 	CALL	P0CALL
 	JP	C,ERROR
@@ -8050,8 +8542,21 @@ VARBL1:	LD	B,0
 VARBL3:	PUSH	BC
 	LD	HL,STR105
 	CALL	NPRINT
-	LD	A,B
-	ADD	A,'0'
+	LD	A,'0'
+	ADD     A,B
+	LD      C,A
+	LD      A,B
+	CP      4
+	JR      C,VARBL6
+	LD      C,"B"
+	JR      Z,VARBL6
+	CP      5
+	LD      C,"E"
+	JR      Z,VARBL6
+	CP      6
+	LD      C,"S"
+	;JR      Z,VARBL6
+VARBL6: LD      A,C
 	CALL	CHPUT
 	LD	A,'='
 	CALL	CHPUT
@@ -8072,10 +8577,12 @@ VARBL3:	PUSH	BC
 	POP	BC
 	INC	B
 	LD	A,B
-	CP	4
+	CP	4+3
 	JR	NZ,VARBL3
 	JP	SYSTEM
-VREN:	;
+	
+
+VREN:   ; Variable end
 
 ; SFºÏÝÄÞ ÎÝÀ²
 SFTP:	LD	A,(HL)
@@ -8127,7 +8634,7 @@ STFUN3:	LD	(DE),A
 	XOR	A
 	LD	(DE),A
 	JP	SYSTEM
-SFEN:	;
+SFEN:
 
 ; SUB
 
@@ -8256,7 +8763,7 @@ NWST10:	INC	C
 	CALL	NCRLF
 	CALL	MAPPR
 	JP	PCRLF
-NWSLEN:	;
+NWSLEN:
 
 ; ÊÞ¯Ì§Å² ½ÍÞÃ µµÓ¼Þ1
 ALLBIG:	PUSH	HL
@@ -8626,7 +9133,7 @@ TITLE1:	CALL	WRTVRM
 ; ÍÙÌß»ÌÞ
 HELPSB:	LD	HL,HELPMS
 	LD	DE,0
-	LD	BC,40*19
+	LD	BC,40*20
 	JP	LDIRVM
 
 ; ²ÝÃÞ¯¸½É¼­Ù²
@@ -8677,7 +9184,7 @@ BOX1:	LD	D,13
 	DJNZ	BOX1
 	RET
 
-; ²ÝÌ«Ò°¼®Ý ´Ø±
+; Info on bottom of screen
 MAKSLA:	PUSH	HL
 	POP	IX
 	CALL	CLSLIN
@@ -8709,15 +9216,17 @@ MAKSL1:	LD	A,(SLSAV0)
 	CALL	SLOTPR
 MAKSL2:	LD	A,28
 	LD	(0F3DDH),A
-	LD	HL,STR26
-	CALL	PRINT
-	LD	A,(SUMTYP)
-	OR	A
-	JR	NZ,MAKSL3
-	LD	HL,STR27
-	JR	MAKSL4
-MAKSL3:	LD	HL,STR28
-MAKSL4:	CALL	PRINT
+        LD      HL,STR29
+        CALL    PRINT
+        LD      DE,(OFFSET)
+        LD      HL,0
+        XOR     A
+        SBC     HL,DE
+        LD	A,H
+	CALL	DATPR
+	LD	A,L
+	CALL	DATPR
+
 	POP	HL
 	LD	(0F3DCH),HL
 	LD	A,22
@@ -8732,9 +9241,9 @@ ADRES:	LD	A,(HL)
 	LD	A,(HL)
 	OR	A
 	JR	Z,ADRS20
-	SUB	'0'
+	CALL    VARNAM
 	RET	C
-	CP	4
+	CP	4+3
 	CCF
 	RET	C
 	PUSH	HL
@@ -9767,629 +10276,629 @@ OPSTR:	DEFM '2LD3ADD3ADC3SUB3SBC3AND3XOR2OR2CP3INC3DEC4PUSH3POP3LDI4LDIR3LDD'
 	DEFB 0
 
 ASMOP:
-DEFB 1,16H,0,0
-DEFB 3,1,59H,83H
-DEFB 1,1,4EH,4DH
-DEFB 1,0AH,59H,0
-DEFB 1,0AH,46H,0
-DEFB 1,0BH,46H,0
-DEFB 2,1,46H,80H
-DEFB 1,2BH,0,0
-DEFB 1,20H,5CH,7BH
-DEFB 1,2,5BH,59H
-DEFB 1,1,4DH,4EH
-DEFB 1,0BH,59H,0
-DEFB 1,0AH,47H,0
-DEFB 1,0BH,47H,0
-DEFB 2,1,47H,80H
-DEFB 1,2CH,0,0
-
-DEFB 2,32H,85H,0
-DEFB 3,1,5AH,83H
-DEFB 1,1,4FH,4DH
-DEFB 1,0AH,5AH,0
-DEFB 1,0AH,48H,0
-DEFB 1,0BH,48H,0
-DEFB 2,01H,48H,80H
-DEFB 1,2DH,0,0
-DEFB 2,30H,85H,0
-DEFB 1,2,5BH,5AH
-DEFB 1,1,4DH,4FH
-DEFB 1,0BH,5AH,0
-DEFB 1,0AH,49H,0
-DEFB 1,0BH,49H,0
-DEFB 2,1,49H,80H
-DEFB 1,2EH,0,0
-
-DEFB 2,30H,64H,85H
-DEFB 3,1,5BH,83H
-DEFB 3,1,76H,5BH
-DEFB 1,0AH,5BH,0
-DEFB 1,0AH,4AH,0
-DEFB 1,0BH,4AH,0
-DEFB 2,1,4AH,80H
-DEFB 1,1BH,0,0
-DEFB 2,30H,68H,85H
-DEFB 1,2,5BH,5BH
-DEFB 3,1,5BH,76H
-DEFB 1,0BH,5BH,0
-DEFB 1,0AH,4BH,0
-DEFB 1,0BH,4BH,0
-DEFB 2,1,4BH,80H
-DEFB 1,1CH,0,0
-
-DEFB 2,30H,65H,85H
-DEFB 3,1,5DH,83H
-DEFB 3,1,76H,4DH
-DEFB 1,0AH,5DH,0
-DEFB 1,0AH,4CH,0
-DEFB 1,0BH,4CH,0
-DEFB 2,1,4CH,80H
-DEFB 1,1FH,0,0
-DEFB 2,30H,69H,85H
-DEFB 1,2,5BH,5DH
-DEFB 3,1,4DH,76H
-DEFB 1,0BH,5DH,0
-DEFB 1,0AH,4DH,0
-DEFB 1,0BH,4DH,0
-DEFB 2,1,4DH,80H
-DEFB 1,1EH,0,0
-
-DEFB 1,33H,64H,0
-DEFB 1,0DH,59H,0
-DEFB 3,2FH,64H,83H
-DEFB 3,2FH,83H,0
-DEFB 3,31H,64H,83H
-DEFB 1,0CH,59H,0
-DEFB 2,2,4DH,80H
-DEFB 1,36H,87H,0
-DEFB 1,33H,68H,0
-DEFB 1,33H,0,0
-DEFB 3,2FH,68H,83H
-DEFB 0,0,0,0
-DEFB 3,31H,68H,83H
-DEFB 3,31H,83H,0
-DEFB 2,3,4DH,80H
-DEFB 1,36H,87H,8
-
-DEFB 1,33H,65H,0
-DEFB 1,0DH,5AH,0
-DEFB 3,2FH,65H,83H
-DEFB 2,3FH,78H,4DH
-DEFB 3,31H,65H,83H
-DEFB 1,0CH,5AH,0
-DEFB 2,04H,80H,0
-DEFB 1,36H,87H,10H
-DEFB 1,33H,69H,0
-DEFB 1,21H,0,0
-DEFB 3,2FH,69H,83H
-DEFB 2,3AH,4DH,78H
-DEFB 3,31H,69H,83H
-DEFB 0,0,0,0
-DEFB 2,5,4DH,80H
-DEFB 1,36H,87H,18H
-
-DEFB 1,33H,66H,0
-DEFB 1,0DH,5BH,0
-DEFB 3,2FH,66H,83H
-DEFB 1,20H,50H,5BH
-DEFB 3,31H,66H,83H
-DEFB 1,0CH,5BH,0
-DEFB 2,06H,80H,0
-DEFB 1,36H,87H,20H
-DEFB 1,33H,6AH,0
-DEFB 1,2FH,4CH,0
-DEFB 3,2FH,6AH,83H
-DEFB 1,20H,5AH,5BH
-DEFB 3,31H,6AH,83H
-DEFB 0,0,0,0
-DEFB 2,07H,80H,0
-DEFB 1,36H,87H,28H
-
-DEFB 1,33H,67H,0
-DEFB 1,0DH,5CH,0
-DEFB 3,2FH,67H,83H
-DEFB 1,18H,0,0
-DEFB 3,31H,67H,83H
-DEFB 1,0CH,5CH,0
-DEFB 2,08H,80H,0
-DEFB 1,36H,87H,30H
-DEFB 1,33H,6BH,0
-DEFB 1,1,5DH,5BH
-DEFB 3,2FH,6BH,83H
-DEFB 1,19H,0,0
-DEFB 3,31H,6BH,83H
-DEFB 0,0,0,0
-DEFB 2,9,80H,0
-DEFB 1,36H,87H,38H
+        DEFB 1,16H,0,0
+        DEFB 3,1,59H,83H
+        DEFB 1,1,4EH,4DH
+        DEFB 1,0AH,59H,0
+        DEFB 1,0AH,46H,0
+        DEFB 1,0BH,46H,0
+        DEFB 2,1,46H,80H
+        DEFB 1,2BH,0,0
+        DEFB 1,20H,5CH,7BH
+        DEFB 1,2,5BH,59H
+        DEFB 1,1,4DH,4EH
+        DEFB 1,0BH,59H,0
+        DEFB 1,0AH,47H,0
+        DEFB 1,0BH,47H,0
+        DEFB 2,1,47H,80H
+        DEFB 1,2CH,0,0
+        
+        DEFB 2,32H,85H,0
+        DEFB 3,1,5AH,83H
+        DEFB 1,1,4FH,4DH
+        DEFB 1,0AH,5AH,0
+        DEFB 1,0AH,48H,0
+        DEFB 1,0BH,48H,0
+        DEFB 2,01H,48H,80H
+        DEFB 1,2DH,0,0
+        DEFB 2,30H,85H,0
+        DEFB 1,2,5BH,5AH
+        DEFB 1,1,4DH,4FH
+        DEFB 1,0BH,5AH,0
+        DEFB 1,0AH,49H,0
+        DEFB 1,0BH,49H,0
+        DEFB 2,1,49H,80H
+        DEFB 1,2EH,0,0
+        
+        DEFB 2,30H,64H,85H
+        DEFB 3,1,5BH,83H
+        DEFB 3,1,76H,5BH
+        DEFB 1,0AH,5BH,0
+        DEFB 1,0AH,4AH,0
+        DEFB 1,0BH,4AH,0
+        DEFB 2,1,4AH,80H
+        DEFB 1,1BH,0,0
+        DEFB 2,30H,68H,85H
+        DEFB 1,2,5BH,5BH
+        DEFB 3,1,5BH,76H
+        DEFB 1,0BH,5BH,0
+        DEFB 1,0AH,4BH,0
+        DEFB 1,0BH,4BH,0
+        DEFB 2,1,4BH,80H
+        DEFB 1,1CH,0,0
+        
+        DEFB 2,30H,65H,85H
+        DEFB 3,1,5DH,83H
+        DEFB 3,1,76H,4DH
+        DEFB 1,0AH,5DH,0
+        DEFB 1,0AH,4CH,0
+        DEFB 1,0BH,4CH,0
+        DEFB 2,1,4CH,80H
+        DEFB 1,1FH,0,0
+        DEFB 2,30H,69H,85H
+        DEFB 1,2,5BH,5DH
+        DEFB 3,1,4DH,76H
+        DEFB 1,0BH,5DH,0
+        DEFB 1,0AH,4DH,0
+        DEFB 1,0BH,4DH,0
+        DEFB 2,1,4DH,80H
+        DEFB 1,1EH,0,0
+        
+        DEFB 1,33H,64H,0
+        DEFB 1,0DH,59H,0
+        DEFB 3,2FH,64H,83H
+        DEFB 3,2FH,83H,0
+        DEFB 3,31H,64H,83H
+        DEFB 1,0CH,59H,0
+        DEFB 2,2,4DH,80H
+        DEFB 1,36H,87H,0
+        DEFB 1,33H,68H,0
+        DEFB 1,33H,0,0
+        DEFB 3,2FH,68H,83H
+        DEFB 0,0,0,0
+        DEFB 3,31H,68H,83H
+        DEFB 3,31H,83H,0
+        DEFB 2,3,4DH,80H
+        DEFB 1,36H,87H,8
+        
+        DEFB 1,33H,65H,0
+        DEFB 1,0DH,5AH,0
+        DEFB 3,2FH,65H,83H
+        DEFB 2,3FH,78H,4DH
+        DEFB 3,31H,65H,83H
+        DEFB 1,0CH,5AH,0
+        DEFB 2,04H,80H,0
+        DEFB 1,36H,87H,10H
+        DEFB 1,33H,69H,0
+        DEFB 1,21H,0,0
+        DEFB 3,2FH,69H,83H
+        DEFB 2,3AH,4DH,78H
+        DEFB 3,31H,69H,83H
+        DEFB 0,0,0,0
+        DEFB 2,5,4DH,80H
+        DEFB 1,36H,87H,18H
+        
+        DEFB 1,33H,66H,0
+        DEFB 1,0DH,5BH,0
+        DEFB 3,2FH,66H,83H
+        DEFB 1,20H,50H,5BH
+        DEFB 3,31H,66H,83H
+        DEFB 1,0CH,5BH,0
+        DEFB 2,06H,80H,0
+        DEFB 1,36H,87H,20H
+        DEFB 1,33H,6AH,0
+        DEFB 1,2FH,4CH,0
+        DEFB 3,2FH,6AH,83H
+        DEFB 1,20H,5AH,5BH
+        DEFB 3,31H,6AH,83H
+        DEFB 0,0,0,0
+        DEFB 2,07H,80H,0
+        DEFB 1,36H,87H,28H
+        
+        DEFB 1,33H,67H,0
+        DEFB 1,0DH,5CH,0
+        DEFB 3,2FH,67H,83H
+        DEFB 1,18H,0,0
+        DEFB 3,31H,67H,83H
+        DEFB 1,0CH,5CH,0
+        DEFB 2,08H,80H,0
+        DEFB 1,36H,87H,30H
+        DEFB 1,33H,6BH,0
+        DEFB 1,1,5DH,5BH
+        DEFB 3,2FH,6BH,83H
+        DEFB 1,19H,0,0
+        DEFB 3,31H,6BH,83H
+        DEFB 0,0,0,0
+        DEFB 2,9,80H,0
+        DEFB 1,36H,87H,38H
 
 ASMOP1:
-DEFB 40H,2,3AH,46H,51H
-DEFB 41H,2,3FH,51H,46H
-DEFB 42H,2,5,5BH,59H
-DEFB 43H,4,1,77H,59H
-DEFB 44H,2,1DH,0,0
-DEFB 45H,2,35H,0,0
-DEFB 46H,2,1AH,6CH,0
-DEFB 47H,2,1,56H,4DH
-DEFB 48H,2,3AH,47H,51H
-DEFB 49H,2,3FH,51H,47H
-DEFB 4AH,2,3,5BH,59H
-DEFB 4BH,4,1,59H,77H
-DEFB 4DH,2,34H,0,0
-DEFB 4FH,2,1,57H,4DH
-DEFB 50H,2,3AH,48H,51H
-DEFB 51H,2,3FH,51H,48H
-DEFB 52H,2,5,5BH,5AH
-DEFB 53H,4,1,77H,5AH
-DEFB 56H,2,1AH,6DH,0
-DEFB 57H,2,1,4DH,56H
-DEFB 58H,2,3AH,49H,51H
-DEFB 59H,2,3FH,51H,49H
-DEFB 5AH,2,3,5BH,5AH
-DEFB 5BH,4,1,5AH,77H
-DEFB 5EH,2,1AH,6EH,0
-DEFB 5FH,2,1,4DH,57H
-DEFB 60H,2,3AH,4AH,51H
-DEFB 61H,2,3FH,51H,4AH
-DEFB 62H,2,5,5BH,5BH
-DEFB 67H,2,2AH,0,0
-DEFB 68H,2,3AH,4BH,51H
-DEFB 69H,2,3FH,51H,4BH
-DEFB 6AH,2,3,5BH,5BH
-DEFB 6FH,2,29H,0,0
-DEFB 70H,2,3AH,4CH,51H
-DEFB 72H,2,5,5BH,5DH
-DEFB 73H,4,1,77H,5DH
-DEFB 78H,2,3AH,4DH,51H
-DEFB 79H,2,3FH,51H,4DH
-DEFB 7AH,2,3,5BH,5DH
-DEFB 7BH,4,1,5DH,77H
-DEFB 0A0H,2,0EH,0,0
-DEFB 0A1H,2,12H,0,0
-DEFB 0A2H,2,3BH,0,0
-DEFB 0A3H,2,40H,0,0
-DEFB 0A8H,2,10H,0,0
-DEFB 0A9H,2,14H,0,0
-DEFB 0AAH,2,3DH,0,0
-DEFB 0ABH,2,42H,0,0
-DEFB 0B0H,2,0FH,0,0
-DEFB 0B1H,2,13H,0,0
-DEFB 0B2H,2,3CH,0,0
-DEFB 0B3H,2,41H,0,0
-DEFB 0B8H,2,11H,0,0
-DEFB 0B9H,2,15H,0,0
-DEFB 0BAH,2,3EH,0,0
-DEFB 0BBH,2,43H,0,0
-DEFB 0C1H,2,44H,4DH,46H
-DEFB 0C3H,2,45H,5BH,59H
-DEFB 0C9H,2,44H,4DH,47H
-DEFB 0D1H,2,44H,4DH,48H
-DEFB 0D3H,2,45H,5BH,5AH
-DEFB 0D9H,2,44H,4DH,49H
-DEFB 0E1H,2,44H,4DH,4AH
-DEFB 0E3H,2,45H,5BH,5BH
-DEFB 0E9H,2,44H,4DH,4BH
-DEFB 0F3H,2,45H,5BH,5DH
-DEFB 0F9H,2,44H,4DH,4DH
-DEFB 0FFH
+        DEFB 40H,2,3AH,46H,51H
+        DEFB 41H,2,3FH,51H,46H
+        DEFB 42H,2,5,5BH,59H
+        DEFB 43H,4,1,77H,59H
+        DEFB 44H,2,1DH,0,0
+        DEFB 45H,2,35H,0,0
+        DEFB 46H,2,1AH,6CH,0
+        DEFB 47H,2,1,56H,4DH
+        DEFB 48H,2,3AH,47H,51H
+        DEFB 49H,2,3FH,51H,47H
+        DEFB 4AH,2,3,5BH,59H
+        DEFB 4BH,4,1,59H,77H
+        DEFB 4DH,2,34H,0,0
+        DEFB 4FH,2,1,57H,4DH
+        DEFB 50H,2,3AH,48H,51H
+        DEFB 51H,2,3FH,51H,48H
+        DEFB 52H,2,5,5BH,5AH
+        DEFB 53H,4,1,77H,5AH
+        DEFB 56H,2,1AH,6DH,0
+        DEFB 57H,2,1,4DH,56H
+        DEFB 58H,2,3AH,49H,51H
+        DEFB 59H,2,3FH,51H,49H
+        DEFB 5AH,2,3,5BH,5AH
+        DEFB 5BH,4,1,5AH,77H
+        DEFB 5EH,2,1AH,6EH,0
+        DEFB 5FH,2,1,4DH,57H
+        DEFB 60H,2,3AH,4AH,51H
+        DEFB 61H,2,3FH,51H,4AH
+        DEFB 62H,2,5,5BH,5BH
+        DEFB 67H,2,2AH,0,0
+        DEFB 68H,2,3AH,4BH,51H
+        DEFB 69H,2,3FH,51H,4BH
+        DEFB 6AH,2,3,5BH,5BH
+        DEFB 6FH,2,29H,0,0
+        DEFB 70H,2,3AH,4CH,51H
+        DEFB 72H,2,5,5BH,5DH
+        DEFB 73H,4,1,77H,5DH
+        DEFB 78H,2,3AH,4DH,51H
+        DEFB 79H,2,3FH,51H,4DH
+        DEFB 7AH,2,3,5BH,5DH
+        DEFB 7BH,4,1,5DH,77H
+        DEFB 0A0H,2,0EH,0,0
+        DEFB 0A1H,2,12H,0,0
+        DEFB 0A2H,2,3BH,0,0
+        DEFB 0A3H,2,40H,0,0
+        DEFB 0A8H,2,10H,0,0
+        DEFB 0A9H,2,14H,0,0
+        DEFB 0AAH,2,3DH,0,0
+        DEFB 0ABH,2,42H,0,0
+        DEFB 0B0H,2,0FH,0,0
+        DEFB 0B1H,2,13H,0,0
+        DEFB 0B2H,2,3CH,0,0
+        DEFB 0B3H,2,41H,0,0
+        DEFB 0B8H,2,11H,0,0
+        DEFB 0B9H,2,15H,0,0
+        DEFB 0BAH,2,3EH,0,0
+        DEFB 0BBH,2,43H,0,0
+        DEFB 0C1H,2,44H,4DH,46H
+        DEFB 0C3H,2,45H,5BH,59H
+        DEFB 0C9H,2,44H,4DH,47H
+        DEFB 0D1H,2,44H,4DH,48H
+        DEFB 0D3H,2,45H,5BH,5AH
+        DEFB 0D9H,2,44H,4DH,49H
+        DEFB 0E1H,2,44H,4DH,4AH
+        DEFB 0E3H,2,45H,5BH,5BH
+        DEFB 0E9H,2,44H,4DH,4BH
+        DEFB 0F3H,2,45H,5BH,5DH
+        DEFB 0F9H,2,44H,4DH,4DH
+        DEFB 0FFH
 
 ASMOP2:
-DEFB 7EH,3,1,4DH,52H
-DEFB 46H,3,1,46H,52H
-DEFB 4EH,3,1,47H,52H
-DEFB 56H,3,1,48H,52H
-DEFB 5EH,3,1,49H,52H
-DEFB 66H,3,1,4AH,52H
-DEFB 6EH,3,1,4BH,52H
-DEFB 77H,3,1,52H,4DH
-DEFB 70H,3,1,52H,46H
-DEFB 71H,3,1,52H,47H
-DEFB 72H,3,1,52H,48H
-DEFB 73H,3,1,52H,49H
-DEFB 74H,3,1,52H,4AH
-DEFB 75H,3,1,52H,4BH
-DEFB 36H,4,1,52H,82H
-DEFB 21H,4,1,5EH,84H
-DEFB 2AH,4,1,5EH,77H
-DEFB 22H,4,1,77H,5EH
-DEFB 0E5H,2,0CH,5EH,0
-DEFB 0E1H,2,0DH,5EH,0
-DEFB 0F9H,2,1,5DH,5EH
-DEFB 86H,3,2,4DH,52H
-DEFB 8EH,3,3,4DH,52H
-DEFB 96H,3,4,52H,0
-DEFB 9EH,3,5,4DH,52H
-DEFB 0A6H,3,6,52H,0
-DEFB 0AEH,3,7,52H,0
-DEFB 0B6H,3,8,52H,0
-DEFB 0BEH,3,9,52H,0
-DEFB 34H,3,0AH,52H,0
-DEFB 35H,3,0BH,52H,0
-DEFB 0E3H,2,20H,50H,5EH
-DEFB 9,2,2,5EH,59H
-DEFB 19H,2,2,5EH,5AH
-DEFB 29H,2,2,5EH,5EH
-DEFB 39H,2,2,5EH,5DH
-DEFB 23H,2,0AH,5EH,0
-DEFB 2BH,2,0BH,5EH,0
-DEFB 0E9H,2,2FH,7CH,0
-DEFB 7CH,2,1,4DH,60H
-DEFB 7DH,2,1,4DH,62H
-DEFB 44H,2,1,46H,60H
-DEFB 45H,2,1,46H,62H
-DEFB 4CH,2,1,47H,60H
-DEFB 4DH,2,1,47H,62H
-DEFB 54H,2,1,48H,60H
-DEFB 55H,2,1,48H,62H
-DEFB 5CH,2,1,49H,60H
-DEFB 5DH,2,1,49H,62H
-DEFB 64H,2,1,60H,60H
-DEFB 65H,2,1,60H,62H
-DEFB 6CH,2,1,62H,60H
-DEFB 6DH,2,1,62H,62H
-DEFB 67H,2,1,60H,4DH
-DEFB 60H,2,1,60H,46H
-DEFB 61H,2,1,60H,47H
-DEFB 62H,2,1,60H,48H
-DEFB 63H,2,1,60H,49H
-DEFB 6FH,2,1,62H,4DH
-DEFB 68H,2,1,62H,46H
-DEFB 69H,2,1,62H,47H
-DEFB 6AH,2,1,62H,48H
-DEFB 6BH,2,1,62H,49H
-DEFB 26H,3,1,60H,88H
-DEFB 2EH,3,1,62H,88H
-DEFB 84H,2,2,4DH,60H
-DEFB 85H,2,2,4DH,62H
-DEFB 8CH,2,3,4DH,60H
-DEFB 8DH,2,3,4DH,62H
-DEFB 94H,2,4,60H,0
-DEFB 95H,2,4,62H,0
-DEFB 9CH,2,5,4DH,60H
-DEFB 9DH,2,5,4DH,62H
-DEFB 0A4H,2,6,60H,0
-DEFB 0A5H,2,6,62H,0
-DEFB 0ACH,2,7,60H,0
-DEFB 0ADH,2,7,62H,0
-DEFB 0B4H,2,8,60H,0
-DEFB 0B5H,2,8,62H,0
-DEFB 0BCH,2,9,60H,0
-DEFB 0BDH,2,9,62H,0
-DEFB 24H,2,0AH,60H,0
-DEFB 2CH,2,0AH,62H,0
-DEFB 25H,2,0BH,60H,0
-DEFB 2DH,2,0BH,62H,0
-DEFB 0FFH
+        DEFB 7EH,3,1,4DH,52H
+        DEFB 46H,3,1,46H,52H
+        DEFB 4EH,3,1,47H,52H
+        DEFB 56H,3,1,48H,52H
+        DEFB 5EH,3,1,49H,52H
+        DEFB 66H,3,1,4AH,52H
+        DEFB 6EH,3,1,4BH,52H
+        DEFB 77H,3,1,52H,4DH
+        DEFB 70H,3,1,52H,46H
+        DEFB 71H,3,1,52H,47H
+        DEFB 72H,3,1,52H,48H
+        DEFB 73H,3,1,52H,49H
+        DEFB 74H,3,1,52H,4AH
+        DEFB 75H,3,1,52H,4BH
+        DEFB 36H,4,1,52H,82H
+        DEFB 21H,4,1,5EH,84H
+        DEFB 2AH,4,1,5EH,77H
+        DEFB 22H,4,1,77H,5EH
+        DEFB 0E5H,2,0CH,5EH,0
+        DEFB 0E1H,2,0DH,5EH,0
+        DEFB 0F9H,2,1,5DH,5EH
+        DEFB 86H,3,2,4DH,52H
+        DEFB 8EH,3,3,4DH,52H
+        DEFB 96H,3,4,52H,0
+        DEFB 9EH,3,5,4DH,52H
+        DEFB 0A6H,3,6,52H,0
+        DEFB 0AEH,3,7,52H,0
+        DEFB 0B6H,3,8,52H,0
+        DEFB 0BEH,3,9,52H,0
+        DEFB 34H,3,0AH,52H,0
+        DEFB 35H,3,0BH,52H,0
+        DEFB 0E3H,2,20H,50H,5EH
+        DEFB 9,2,2,5EH,59H
+        DEFB 19H,2,2,5EH,5AH
+        DEFB 29H,2,2,5EH,5EH
+        DEFB 39H,2,2,5EH,5DH
+        DEFB 23H,2,0AH,5EH,0
+        DEFB 2BH,2,0BH,5EH,0
+        DEFB 0E9H,2,2FH,7CH,0
+        DEFB 7CH,2,1,4DH,60H
+        DEFB 7DH,2,1,4DH,62H
+        DEFB 44H,2,1,46H,60H
+        DEFB 45H,2,1,46H,62H
+        DEFB 4CH,2,1,47H,60H
+        DEFB 4DH,2,1,47H,62H
+        DEFB 54H,2,1,48H,60H
+        DEFB 55H,2,1,48H,62H
+        DEFB 5CH,2,1,49H,60H
+        DEFB 5DH,2,1,49H,62H
+        DEFB 64H,2,1,60H,60H
+        DEFB 65H,2,1,60H,62H
+        DEFB 6CH,2,1,62H,60H
+        DEFB 6DH,2,1,62H,62H
+        DEFB 67H,2,1,60H,4DH
+        DEFB 60H,2,1,60H,46H
+        DEFB 61H,2,1,60H,47H
+        DEFB 62H,2,1,60H,48H
+        DEFB 63H,2,1,60H,49H
+        DEFB 6FH,2,1,62H,4DH
+        DEFB 68H,2,1,62H,46H
+        DEFB 69H,2,1,62H,47H
+        DEFB 6AH,2,1,62H,48H
+        DEFB 6BH,2,1,62H,49H
+        DEFB 26H,3,1,60H,88H
+        DEFB 2EH,3,1,62H,88H
+        DEFB 84H,2,2,4DH,60H
+        DEFB 85H,2,2,4DH,62H
+        DEFB 8CH,2,3,4DH,60H
+        DEFB 8DH,2,3,4DH,62H
+        DEFB 94H,2,4,60H,0
+        DEFB 95H,2,4,62H,0
+        DEFB 9CH,2,5,4DH,60H
+        DEFB 9DH,2,5,4DH,62H
+        DEFB 0A4H,2,6,60H,0
+        DEFB 0A5H,2,6,62H,0
+        DEFB 0ACH,2,7,60H,0
+        DEFB 0ADH,2,7,62H,0
+        DEFB 0B4H,2,8,60H,0
+        DEFB 0B5H,2,8,62H,0
+        DEFB 0BCH,2,9,60H,0
+        DEFB 0BDH,2,9,62H,0
+        DEFB 24H,2,0AH,60H,0
+        DEFB 2CH,2,0AH,62H,0
+        DEFB 25H,2,0BH,60H,0
+        DEFB 2DH,2,0BH,62H,0
+        DEFB 0FFH
 
 ASMDT:
-DEFB 1,16H,0
-DEFB 3,01H,59H,7EH,1
-DEFB 3,01H,4EH,4DH,0
-DEFB 2,0AH,59H,0
-DEFB 2,0AH,46H,0
-DEFB 2,0BH,46H,0
-DEFB 3,01H,46H,7EH,2
-DEFB 1,2BH,0
-DEFB 3,20H,5CH,7BH,0
-DEFB 3,02H,5BH,59H,0
-DEFB 3,01H,4DH,4EH,0
-DEFB 2,0BH,59H,0
-DEFB 2,0AH,47H,0
-DEFB 2,0BH,47H,0
-DEFB 3,01H,47H,7EH,2
-DEFB 1,2CH,0
-
-DEFB 2,32H,7EH,3
-DEFB 3,01H,5AH,7EH,1
-DEFB 3,01H,4FH,4DH,0
-DEFB 2,0AH,5AH,0
-DEFB 2,0AH,48H,0
-DEFB 2,0BH,48H,0
-DEFB 3,01H,48H,7EH,2
-DEFB 1,2DH,0
-DEFB 2,30H,7EH,3
-DEFB 3,02H,5BH,5AH,0
-DEFB 3,01H,4DH,4FH,0
-DEFB 2,0BH,5AH,0
-DEFB 2,0AH,49H,0
-DEFB 2,0BH,49H,0
-DEFB 3,01H,49H,7EH,2
-DEFB 1,2EH,0
-
-DEFB 3,30H,64H,7EH,4
-DEFB 3,01H,5BH,7EH,1
-DEFB 3,01H,76H,5BH,5
-DEFB 2,0AH,5BH,0
-DEFB 2,0AH,4AH,0
-DEFB 2,0BH,4AH,0
-DEFB 3,01H,4AH,7EH,2
-DEFB 1,1BH,0
-DEFB 3,30H,68H,7EH,4
-DEFB 3,02H,5BH,5BH,0
-DEFB 3,01H,5BH,76H,1
-DEFB 2,0BH,5BH,0
-DEFB 2,0AH,4BH,0
-DEFB 2,0BH,4BH,0
-DEFB 3,01H,4BH,7EH,2
-DEFB 1,1CH,0
-
-DEFB 3,30H,65H,7EH,4
-DEFB 3,01H,5DH,7EH,1
-DEFB 3,01H,76H,4DH,5
-DEFB 2,0AH,5DH,0
-DEFB 2,0AH,4CH,0
-DEFB 2,0BH,4CH,0
-DEFB 3,01H,4CH,7EH,2
-DEFB 1,1FH,0
-DEFB 3,30H,47H,7EH,4
-DEFB 3,02H,5BH,5DH,0
-DEFB 3,01H,4DH,76H,1
-DEFB 2,0BH,5DH,0
-DEFB 2,0AH,4DH,0
-DEFB 2,0BH,4DH,0
-DEFB 3,01H,4DH,7EH,2
-DEFB 1,1EH,0
-
-DEFB 2,33H,64H,0
-DEFB 2,0DH,59H,0
-DEFB 3,2FH,64H,7EH,1
-DEFB 2,2FH,7EH,5
-DEFB 3,31H,64H,7EH,1
-DEFB 2,0CH,59H,0
-DEFB 3,02H,4DH,7EH,2
-DEFB 2,36H,7EH,6
-DEFB 2,33H,68H,0
-DEFB 2,33H,0,0
-DEFB 3,2FH,68H,7EH,1
-DEFB 1,0,0
-DEFB 3,31H,68H,7EH,1
-DEFB 2,31H,7EH,5
-DEFB 3,03H,4DH,7EH,2
-DEFB 1,0,0
-
-DEFB 2,33H,65H,0
-DEFB 2,0DH,5AH,0
-DEFB 3,2FH,65H,7EH,1
-DEFB 3,3FH,76H,4DH,7
-DEFB 3,31H,65H,7EH,1
-DEFB 2,0CH,5AH,0
-DEFB 2,04H,7EH,7
-DEFB 1,0,0
-DEFB 2,33H,47H,0
-DEFB 1,21H,0
-DEFB 3,2FH,47H,7EH,1
-DEFB 3,3AH,4DH,76H,2
-DEFB 3,31H,47H,7EH,1
-DEFB 1,0,0
-DEFB 3,05H,4DH,7EH,2
-DEFB 1,0,0
-
-DEFB 2,33H,66H,0
-DEFB 2,0DH,5BH,0
-DEFB 3,2FH,66H,7EH,1
-DEFB 3,20H,50H,5BH,0
-DEFB 3,31H,66H,7EH,1
-DEFB 2,0CH,5BH,0
-DEFB 2,06H,7EH,7
-DEFB 1,0,0
-DEFB 2,33H,6AH,0
-DEFB 2,2FH,4CH,0
-DEFB 3,2FH,6AH,7EH,1
-DEFB 3,20H,5AH,5BH,0
-DEFB 3,31H,6AH,7EH,1
-DEFB 1,0,0
-DEFB 2,07H,7EH,7
-DEFB 1,0,0
-
-DEFB 2,33H,67H,0
-DEFB 2,0DH,5CH,0
-DEFB 3,2FH,67H,7EH,1
-DEFB 1,18H,0
-DEFB 3,31H,67H,7EH,1
-DEFB 2,0CH,5CH,0
-DEFB 2,08H,7EH,7
-DEFB 1,0,0
-DEFB 2,33H,6BH,0
-DEFB 3,01H,5DH,5BH,0
-DEFB 3,2FH,6BH,7EH,1
-DEFB 1,19H,0
-DEFB 3,31H,6BH,7EH,1
-DEFB 1,0,0
-DEFB 2,09H,7EH,7
-DEFB 1,0,0
-DEFB 0
+        DEFB 1,16H,0
+        DEFB 3,01H,59H,7EH,1
+        DEFB 3,01H,4EH,4DH,0
+        DEFB 2,0AH,59H,0
+        DEFB 2,0AH,46H,0
+        DEFB 2,0BH,46H,0
+        DEFB 3,01H,46H,7EH,2
+        DEFB 1,2BH,0
+        DEFB 3,20H,5CH,7BH,0
+        DEFB 3,02H,5BH,59H,0
+        DEFB 3,01H,4DH,4EH,0
+        DEFB 2,0BH,59H,0
+        DEFB 2,0AH,47H,0
+        DEFB 2,0BH,47H,0
+        DEFB 3,01H,47H,7EH,2
+        DEFB 1,2CH,0
+        
+        DEFB 2,32H,7EH,3
+        DEFB 3,01H,5AH,7EH,1
+        DEFB 3,01H,4FH,4DH,0
+        DEFB 2,0AH,5AH,0
+        DEFB 2,0AH,48H,0
+        DEFB 2,0BH,48H,0
+        DEFB 3,01H,48H,7EH,2
+        DEFB 1,2DH,0
+        DEFB 2,30H,7EH,3
+        DEFB 3,02H,5BH,5AH,0
+        DEFB 3,01H,4DH,4FH,0
+        DEFB 2,0BH,5AH,0
+        DEFB 2,0AH,49H,0
+        DEFB 2,0BH,49H,0
+        DEFB 3,01H,49H,7EH,2
+        DEFB 1,2EH,0
+        
+        DEFB 3,30H,64H,7EH,4
+        DEFB 3,01H,5BH,7EH,1
+        DEFB 3,01H,76H,5BH,5
+        DEFB 2,0AH,5BH,0
+        DEFB 2,0AH,4AH,0
+        DEFB 2,0BH,4AH,0
+        DEFB 3,01H,4AH,7EH,2
+        DEFB 1,1BH,0
+        DEFB 3,30H,68H,7EH,4
+        DEFB 3,02H,5BH,5BH,0
+        DEFB 3,01H,5BH,76H,1
+        DEFB 2,0BH,5BH,0
+        DEFB 2,0AH,4BH,0
+        DEFB 2,0BH,4BH,0
+        DEFB 3,01H,4BH,7EH,2
+        DEFB 1,1CH,0
+        
+        DEFB 3,30H,65H,7EH,4
+        DEFB 3,01H,5DH,7EH,1
+        DEFB 3,01H,76H,4DH,5
+        DEFB 2,0AH,5DH,0
+        DEFB 2,0AH,4CH,0
+        DEFB 2,0BH,4CH,0
+        DEFB 3,01H,4CH,7EH,2
+        DEFB 1,1FH,0
+        DEFB 3,30H,47H,7EH,4
+        DEFB 3,02H,5BH,5DH,0
+        DEFB 3,01H,4DH,76H,1
+        DEFB 2,0BH,5DH,0
+        DEFB 2,0AH,4DH,0
+        DEFB 2,0BH,4DH,0
+        DEFB 3,01H,4DH,7EH,2
+        DEFB 1,1EH,0
+        
+        DEFB 2,33H,64H,0
+        DEFB 2,0DH,59H,0
+        DEFB 3,2FH,64H,7EH,1
+        DEFB 2,2FH,7EH,5
+        DEFB 3,31H,64H,7EH,1
+        DEFB 2,0CH,59H,0
+        DEFB 3,02H,4DH,7EH,2
+        DEFB 2,36H,7EH,6
+        DEFB 2,33H,68H,0
+        DEFB 2,33H,0,0
+        DEFB 3,2FH,68H,7EH,1
+        DEFB 1,0,0
+        DEFB 3,31H,68H,7EH,1
+        DEFB 2,31H,7EH,5
+        DEFB 3,03H,4DH,7EH,2
+        DEFB 1,0,0
+        
+        DEFB 2,33H,65H,0
+        DEFB 2,0DH,5AH,0
+        DEFB 3,2FH,65H,7EH,1
+        DEFB 3,3FH,76H,4DH,7
+        DEFB 3,31H,65H,7EH,1
+        DEFB 2,0CH,5AH,0
+        DEFB 2,04H,7EH,7
+        DEFB 1,0,0
+        DEFB 2,33H,47H,0
+        DEFB 1,21H,0
+        DEFB 3,2FH,47H,7EH,1
+        DEFB 3,3AH,4DH,76H,2
+        DEFB 3,31H,47H,7EH,1
+        DEFB 1,0,0
+        DEFB 3,05H,4DH,7EH,2
+        DEFB 1,0,0
+        
+        DEFB 2,33H,66H,0
+        DEFB 2,0DH,5BH,0
+        DEFB 3,2FH,66H,7EH,1
+        DEFB 3,20H,50H,5BH,0
+        DEFB 3,31H,66H,7EH,1
+        DEFB 2,0CH,5BH,0
+        DEFB 2,06H,7EH,7
+        DEFB 1,0,0
+        DEFB 2,33H,6AH,0
+        DEFB 2,2FH,4CH,0
+        DEFB 3,2FH,6AH,7EH,1
+        DEFB 3,20H,5AH,5BH,0
+        DEFB 3,31H,6AH,7EH,1
+        DEFB 1,0,0
+        DEFB 2,07H,7EH,7
+        DEFB 1,0,0
+        
+        DEFB 2,33H,67H,0
+        DEFB 2,0DH,5CH,0
+        DEFB 3,2FH,67H,7EH,1
+        DEFB 1,18H,0
+        DEFB 3,31H,67H,7EH,1
+        DEFB 2,0CH,5CH,0
+        DEFB 2,08H,7EH,7
+        DEFB 1,0,0
+        DEFB 2,33H,6BH,0
+        DEFB 3,01H,5DH,5BH,0
+        DEFB 3,2FH,6BH,7EH,1
+        DEFB 1,19H,0
+        DEFB 3,31H,6BH,7EH,1
+        DEFB 1,0,0
+        DEFB 2,09H,7EH,7
+        DEFB 1,0,0
+        DEFB 0
 
 ASMDT1:
-DEFB 3,3AH,46H,51H,40H,0
-DEFB 3,3FH,51H,46H,41H,0
-DEFB 3,05H,5BH,59H,42H,0
-DEFB 3,01H,76H,59H,43H,8
-DEFB 1,1DH,44H,0
-DEFB 1,35H,45H,0
-DEFB 2,1AH,6CH,46H,0
-DEFB 3,01H,56H,4DH,47H,0
-DEFB 3,3AH,47H,51H,48H,0
-DEFB 3,3FH,51H,47H,49H,0
-DEFB 3,03H,5BH,59H,4AH,0
-DEFB 3,01H,59H,76H,4BH,9
-DEFB 1,34H,4DH,0
-DEFB 3,01H,57H,4DH,4FH,0
-DEFB 3,3AH,48H,51H,50H,0
-DEFB 3,3FH,51H,48H,51H,0
-DEFB 3,05H,5BH,5AH,52H,0
-DEFB 3,01H,76H,5AH,53H,8
-DEFB 2,1AH,6DH,56H,0
-DEFB 3,01H,4DH,56H,57H,0
-DEFB 3,3AH,49H,51H,58H,0
-DEFB 3,3FH,51H,49H,59H,0
-DEFB 3,03H,5BH,5AH,5AH,0
-DEFB 3,01H,5AH,76H,5BH,9
-DEFB 2,1AH,6EH,5EH,0
-DEFB 3,01H,4DH,57H,5FH,0
-DEFB 3,3AH,4AH,51H,60H,0
-DEFB 3,3FH,51H,4AH,61H,0
-DEFB 3,05H,5BH,5BH,62H,0
-DEFB 1,2AH,67H,0
-DEFB 3,3AH,4BH,51H,68H,0
-DEFB 3,3FH,51H,4BH,69H,0
-DEFB 3,03H,5BH,5BH,6AH,0
-DEFB 1,29H,6FH,0
-DEFB 3,3AH,4CH,51H,70H,0
-DEFB 3,05H,5BH,5DH,72H,0
-DEFB 3,01H,76H,5DH,73H,8
-DEFB 3,3AH,4DH,51H,78H,0
-DEFB 3,3FH,51H,4DH,79H,0
-DEFB 3,03H,5BH,5DH,7AH,0
-DEFB 3,01H,5DH,76H,7BH,9
-DEFB 1,0EH,0A0H,0
-DEFB 1,12H,0A1H,0
-DEFB 1,3BH,0A2H,0
-DEFB 1,40H,0A3H,0
-DEFB 1,10H,0A8H,0
-DEFB 1,14H,0A9H,0
-DEFB 1,3DH,0AAH,0
-DEFB 1,42H,0ABH,0
-DEFB 1,0FH,0B0H,0
-DEFB 1,13H,0B1H,0
-DEFB 1,3CH,0B2H,0
-DEFB 1,41H,0B3H,0
-DEFB 1,11H,0B8H,0
-DEFB 1,15H,0B9H,0
-DEFB 1,3EH,0BAH,0
-DEFB 1,43H,0BBH,0
-DEFB 3,44H,4DH,46H,0C1H,0
-DEFB 3,44H,4DH,47H,0C9H,0
-DEFB 3,44H,4DH,48H,0D1H,0
-DEFB 3,44H,4DH,49H,0D9H,0
-DEFB 3,44H,4DH,4AH,0E1H,0
-DEFB 3,44H,4DH,4BH,0E9H,0
-DEFB 3,44H,4DH,4DH,0F9H,0
-DEFB 3,45H,5BH,59H,0C3H,0
-DEFB 3,45H,5BH,5AH,0D3H,0
-DEFB 3,45H,5BH,5BH,0E3H,0
-DEFB 3,45H,5BH,5DH,0F3H,0
-DEFB 0
+        DEFB 3,3AH,46H,51H,40H,0
+        DEFB 3,3FH,51H,46H,41H,0
+        DEFB 3,05H,5BH,59H,42H,0
+        DEFB 3,01H,76H,59H,43H,8
+        DEFB 1,1DH,44H,0
+        DEFB 1,35H,45H,0
+        DEFB 2,1AH,6CH,46H,0
+        DEFB 3,01H,56H,4DH,47H,0
+        DEFB 3,3AH,47H,51H,48H,0
+        DEFB 3,3FH,51H,47H,49H,0
+        DEFB 3,03H,5BH,59H,4AH,0
+        DEFB 3,01H,59H,76H,4BH,9
+        DEFB 1,34H,4DH,0
+        DEFB 3,01H,57H,4DH,4FH,0
+        DEFB 3,3AH,48H,51H,50H,0
+        DEFB 3,3FH,51H,48H,51H,0
+        DEFB 3,05H,5BH,5AH,52H,0
+        DEFB 3,01H,76H,5AH,53H,8
+        DEFB 2,1AH,6DH,56H,0
+        DEFB 3,01H,4DH,56H,57H,0
+        DEFB 3,3AH,49H,51H,58H,0
+        DEFB 3,3FH,51H,49H,59H,0
+        DEFB 3,03H,5BH,5AH,5AH,0
+        DEFB 3,01H,5AH,76H,5BH,9
+        DEFB 2,1AH,6EH,5EH,0
+        DEFB 3,01H,4DH,57H,5FH,0
+        DEFB 3,3AH,4AH,51H,60H,0
+        DEFB 3,3FH,51H,4AH,61H,0
+        DEFB 3,05H,5BH,5BH,62H,0
+        DEFB 1,2AH,67H,0
+        DEFB 3,3AH,4BH,51H,68H,0
+        DEFB 3,3FH,51H,4BH,69H,0
+        DEFB 3,03H,5BH,5BH,6AH,0
+        DEFB 1,29H,6FH,0
+        DEFB 3,3AH,4CH,51H,70H,0
+        DEFB 3,05H,5BH,5DH,72H,0
+        DEFB 3,01H,76H,5DH,73H,8
+        DEFB 3,3AH,4DH,51H,78H,0
+        DEFB 3,3FH,51H,4DH,79H,0
+        DEFB 3,03H,5BH,5DH,7AH,0
+        DEFB 3,01H,5DH,76H,7BH,9
+        DEFB 1,0EH,0A0H,0
+        DEFB 1,12H,0A1H,0
+        DEFB 1,3BH,0A2H,0
+        DEFB 1,40H,0A3H,0
+        DEFB 1,10H,0A8H,0
+        DEFB 1,14H,0A9H,0
+        DEFB 1,3DH,0AAH,0
+        DEFB 1,42H,0ABH,0
+        DEFB 1,0FH,0B0H,0
+        DEFB 1,13H,0B1H,0
+        DEFB 1,3CH,0B2H,0
+        DEFB 1,41H,0B3H,0
+        DEFB 1,11H,0B8H,0
+        DEFB 1,15H,0B9H,0
+        DEFB 1,3EH,0BAH,0
+        DEFB 1,43H,0BBH,0
+        DEFB 3,44H,4DH,46H,0C1H,0
+        DEFB 3,44H,4DH,47H,0C9H,0
+        DEFB 3,44H,4DH,48H,0D1H,0
+        DEFB 3,44H,4DH,49H,0D9H,0
+        DEFB 3,44H,4DH,4AH,0E1H,0
+        DEFB 3,44H,4DH,4BH,0E9H,0
+        DEFB 3,44H,4DH,4DH,0F9H,0
+        DEFB 3,45H,5BH,59H,0C3H,0
+        DEFB 3,45H,5BH,5AH,0D3H,0
+        DEFB 3,45H,5BH,5BH,0E3H,0
+        DEFB 3,45H,5BH,5DH,0F3H,0
+        DEFB 0
 
 ASMDT2:
-DEFB 3,01H,4DH,52H,7EH,10
-DEFB 3,01H,46H,52H,46H,10
-DEFB 3,01H,47H,52H,4EH,10
-DEFB 3,01H,48H,52H,56H,10
-DEFB 3,01H,49H,52H,5EH,10
-DEFB 3,01H,4AH,52H,66H,10
-DEFB 3,01H,4BH,52H,6EH,10
-DEFB 3,01H,52H,4DH,77H,11
-DEFB 3,01H,52H,46H,70H,11
-DEFB 3,01H,52H,47H,71H,11
-DEFB 3,01H,52H,48H,72H,11
-DEFB 3,01H,52H,49H,73H,11
-DEFB 3,01H,52H,4AH,74H,11
-DEFB 3,01H,52H,4BH,75H,11
-DEFB 3,01H,52H,7EH,36H,12
-DEFB 3,01H,5DH,5EH,0F9H,0
-DEFB 3,01H,5EH,7EH,21H,9
-DEFB 3,01H,5EH,76H,2AH,9
-DEFB 3,01H,76H,5EH,22H,8
-DEFB 2,0CH,5EH,0E5H,0
-DEFB 2,0DH,5EH,0E1H,0
-DEFB 3,02H,4DH,52H,86H,10
-DEFB 3,03H,4DH,52H,8EH,10
-DEFB 2,04H,52H,96H,11
-DEFB 3,05H,4DH,52H,9EH,10
-DEFB 2,06H,52H,0A6H,11
-DEFB 2,07H,52H,0AEH,11
-DEFB 2,08H,52H,0B6H,11
-DEFB 2,09H,52H,0BEH,11
-DEFB 2,0AH,52H,34H,11
-DEFB 2,0BH,52H,35H,11
-DEFB 3,20H,50H,5EH,0E3H,0
-DEFB 3,02H,5EH,59H,09H,0
-DEFB 3,02H,5EH,5AH,19H,0
-DEFB 3,02H,5EH,5DH,39H,0
-DEFB 3,02H,5EH,5EH,29H,0
-DEFB 2,0AH,5EH,23H,0
-DEFB 2,0BH,5EH,2BH,0
-DEFB 2,2FH,52H,0E9H,13
-DEFB 2,22H,52H,06H,14
-DEFB 2,23H,52H,0EH,14
-DEFB 2,24H,52H,16H,14
-DEFB 2,25H,52H,1EH,14
-DEFB 2,26H,52H,26H,14
-DEFB 2,27H,52H,2EH,14
-DEFB 2,28H,52H,3EH,14
-DEFB 3,37H,6CH,52H,46H,15
-DEFB 3,37H,6DH,52H,4EH,15
-DEFB 3,37H,6EH,52H,56H,15
-DEFB 3,37H,6FH,52H,5EH,15
-DEFB 3,37H,70H,52H,66H,15
-DEFB 3,37H,71H,52H,6EH,15
-DEFB 3,37H,72H,52H,76H,15
-DEFB 3,37H,73H,52H,7EH,15
-DEFB 3,38H,6CH,52H,86H,15
-DEFB 3,38H,6DH,52H,8EH,15
-DEFB 3,38H,6EH,52H,96H,15
-DEFB 3,38H,6FH,52H,9EH,15
-DEFB 3,38H,70H,52H,0A6H,15
-DEFB 3,38H,71H,52H,0AEH,15
-DEFB 3,38H,72H,52H,0B6H,15
-DEFB 3,38H,73H,52H,0BEH,15
-DEFB 3,39H,6CH,52H,0C6H,15
-DEFB 3,39H,6DH,52H,0CEH,15
-DEFB 3,39H,6EH,52H,0D6H,15
-DEFB 3,39H,6FH,52H,0DEH,15
-DEFB 3,39H,70H,52H,0E6H,15
-DEFB 3,39H,71H,52H,0EEH,15
-DEFB 3,39H,72H,52H,0F6H,15
-DEFB 3,39H,73H,52H,0FEH,15
-DEFB 3,01H,4DH,60H,7CH,0
-DEFB 3,01H,4DH,62H,7DH,0
-DEFB 3,01H,46H,60H,44H,0
-DEFB 3,01H,46H,62H,45H,0
-DEFB 3,01H,47H,60H,4CH,0
-DEFB 3,01H,47H,62H,4DH,0
-DEFB 3,01H,48H,60H,54H,0
-DEFB 3,01H,48H,62H,55H,0
-DEFB 3,01H,49H,60H,5CH,0
-DEFB 3,01H,49H,62H,5DH,0
-DEFB 3,01H,60H,60H,64H,0
-DEFB 3,01H,60H,62H,65H,0
-DEFB 3,01H,62H,60H,6CH,0
-DEFB 3,01H,62H,62H,6DH,0
-DEFB 3,01H,60H,4DH,67H,0
-DEFB 3,01H,62H,4DH,6FH,0
-DEFB 3,01H,60H,46H,60H,0
-DEFB 3,01H,62H,46H,68H,0
-DEFB 3,01H,60H,47H,61H,0
-DEFB 3,01H,62H,47H,69H,0
-DEFB 3,01H,60H,48H,62H,0
-DEFB 3,01H,62H,48H,6AH,0
-DEFB 3,01H,60H,49H,63H,0
-DEFB 3,01H,62H,49H,6BH,0
-DEFB 3,01H,60H,7EH,26H,10
-DEFB 3,01H,62H,7EH,2EH,10
-DEFB 3,02H,4DH,60H,84H,0
-DEFB 3,02H,4DH,62H,85H,0
-DEFB 3,03H,4DH,60H,8CH,0
-DEFB 3,03H,4DH,62H,8DH,0
-DEFB 2,04H,60H,94H,0
-DEFB 2,04H,62H,95H,0
-DEFB 3,05H,4DH,60H,9CH,0
-DEFB 3,05H,4DH,62H,9DH,0
-DEFB 2,06H,60H,0A4H,0
-DEFB 2,06H,62H,0A5H,0
-DEFB 2,07H,60H,0ACH,0
-DEFB 2,07H,62H,0ADH,0
-DEFB 2,08H,60H,0B4H,0
-DEFB 2,08H,62H,0B5H,0
-DEFB 2,09H,60H,0BCH,0
-DEFB 2,09H,62H,0BDH,0
-DEFB 2,0AH,60H,24H,0
-DEFB 2,0AH,62H,2CH,0
-DEFB 2,0BH,60H,25H,0
-DEFB 2,0BH,62H,2DH,0
-
-DEFB 0
+        DEFB 3,01H,4DH,52H,7EH,10
+        DEFB 3,01H,46H,52H,46H,10
+        DEFB 3,01H,47H,52H,4EH,10
+        DEFB 3,01H,48H,52H,56H,10
+        DEFB 3,01H,49H,52H,5EH,10
+        DEFB 3,01H,4AH,52H,66H,10
+        DEFB 3,01H,4BH,52H,6EH,10
+        DEFB 3,01H,52H,4DH,77H,11
+        DEFB 3,01H,52H,46H,70H,11
+        DEFB 3,01H,52H,47H,71H,11
+        DEFB 3,01H,52H,48H,72H,11
+        DEFB 3,01H,52H,49H,73H,11
+        DEFB 3,01H,52H,4AH,74H,11
+        DEFB 3,01H,52H,4BH,75H,11
+        DEFB 3,01H,52H,7EH,36H,12
+        DEFB 3,01H,5DH,5EH,0F9H,0
+        DEFB 3,01H,5EH,7EH,21H,9
+        DEFB 3,01H,5EH,76H,2AH,9
+        DEFB 3,01H,76H,5EH,22H,8
+        DEFB 2,0CH,5EH,0E5H,0
+        DEFB 2,0DH,5EH,0E1H,0
+        DEFB 3,02H,4DH,52H,86H,10
+        DEFB 3,03H,4DH,52H,8EH,10
+        DEFB 2,04H,52H,96H,11
+        DEFB 3,05H,4DH,52H,9EH,10
+        DEFB 2,06H,52H,0A6H,11
+        DEFB 2,07H,52H,0AEH,11
+        DEFB 2,08H,52H,0B6H,11
+        DEFB 2,09H,52H,0BEH,11
+        DEFB 2,0AH,52H,34H,11
+        DEFB 2,0BH,52H,35H,11
+        DEFB 3,20H,50H,5EH,0E3H,0
+        DEFB 3,02H,5EH,59H,09H,0
+        DEFB 3,02H,5EH,5AH,19H,0
+        DEFB 3,02H,5EH,5DH,39H,0
+        DEFB 3,02H,5EH,5EH,29H,0
+        DEFB 2,0AH,5EH,23H,0
+        DEFB 2,0BH,5EH,2BH,0
+        DEFB 2,2FH,52H,0E9H,13
+        DEFB 2,22H,52H,06H,14
+        DEFB 2,23H,52H,0EH,14
+        DEFB 2,24H,52H,16H,14
+        DEFB 2,25H,52H,1EH,14
+        DEFB 2,26H,52H,26H,14
+        DEFB 2,27H,52H,2EH,14
+        DEFB 2,28H,52H,3EH,14
+        DEFB 3,37H,6CH,52H,46H,15
+        DEFB 3,37H,6DH,52H,4EH,15
+        DEFB 3,37H,6EH,52H,56H,15
+        DEFB 3,37H,6FH,52H,5EH,15
+        DEFB 3,37H,70H,52H,66H,15
+        DEFB 3,37H,71H,52H,6EH,15
+        DEFB 3,37H,72H,52H,76H,15
+        DEFB 3,37H,73H,52H,7EH,15
+        DEFB 3,38H,6CH,52H,86H,15
+        DEFB 3,38H,6DH,52H,8EH,15
+        DEFB 3,38H,6EH,52H,96H,15
+        DEFB 3,38H,6FH,52H,9EH,15
+        DEFB 3,38H,70H,52H,0A6H,15
+        DEFB 3,38H,71H,52H,0AEH,15
+        DEFB 3,38H,72H,52H,0B6H,15
+        DEFB 3,38H,73H,52H,0BEH,15
+        DEFB 3,39H,6CH,52H,0C6H,15
+        DEFB 3,39H,6DH,52H,0CEH,15
+        DEFB 3,39H,6EH,52H,0D6H,15
+        DEFB 3,39H,6FH,52H,0DEH,15
+        DEFB 3,39H,70H,52H,0E6H,15
+        DEFB 3,39H,71H,52H,0EEH,15
+        DEFB 3,39H,72H,52H,0F6H,15
+        DEFB 3,39H,73H,52H,0FEH,15
+        DEFB 3,01H,4DH,60H,7CH,0
+        DEFB 3,01H,4DH,62H,7DH,0
+        DEFB 3,01H,46H,60H,44H,0
+        DEFB 3,01H,46H,62H,45H,0
+        DEFB 3,01H,47H,60H,4CH,0
+        DEFB 3,01H,47H,62H,4DH,0
+        DEFB 3,01H,48H,60H,54H,0
+        DEFB 3,01H,48H,62H,55H,0
+        DEFB 3,01H,49H,60H,5CH,0
+        DEFB 3,01H,49H,62H,5DH,0
+        DEFB 3,01H,60H,60H,64H,0
+        DEFB 3,01H,60H,62H,65H,0
+        DEFB 3,01H,62H,60H,6CH,0
+        DEFB 3,01H,62H,62H,6DH,0
+        DEFB 3,01H,60H,4DH,67H,0
+        DEFB 3,01H,62H,4DH,6FH,0
+        DEFB 3,01H,60H,46H,60H,0
+        DEFB 3,01H,62H,46H,68H,0
+        DEFB 3,01H,60H,47H,61H,0
+        DEFB 3,01H,62H,47H,69H,0
+        DEFB 3,01H,60H,48H,62H,0
+        DEFB 3,01H,62H,48H,6AH,0
+        DEFB 3,01H,60H,49H,63H,0
+        DEFB 3,01H,62H,49H,6BH,0
+        DEFB 3,01H,60H,7EH,26H,10
+        DEFB 3,01H,62H,7EH,2EH,10
+        DEFB 3,02H,4DH,60H,84H,0
+        DEFB 3,02H,4DH,62H,85H,0
+        DEFB 3,03H,4DH,60H,8CH,0
+        DEFB 3,03H,4DH,62H,8DH,0
+        DEFB 2,04H,60H,94H,0
+        DEFB 2,04H,62H,95H,0
+        DEFB 3,05H,4DH,60H,9CH,0
+        DEFB 3,05H,4DH,62H,9DH,0
+        DEFB 2,06H,60H,0A4H,0
+        DEFB 2,06H,62H,0A5H,0
+        DEFB 2,07H,60H,0ACH,0
+        DEFB 2,07H,62H,0ADH,0
+        DEFB 2,08H,60H,0B4H,0
+        DEFB 2,08H,62H,0B5H,0
+        DEFB 2,09H,60H,0BCH,0
+        DEFB 2,09H,62H,0BDH,0
+        DEFB 2,0AH,60H,24H,0
+        DEFB 2,0AH,62H,2CH,0
+        DEFB 2,0BH,60H,25H,0
+        DEFB 2,0BH,62H,2DH,0
+        
+        DEFB 0
 
 NST01:	DEFM '--------------$'
 	DEFM '|            |$'
@@ -10405,30 +10914,31 @@ NST01:	DEFM '--------------$'
 NST02:	DEFM '    MAIN SUB FDC RAM'
 NST03:	DEFM '    BIOSWORKDATAPORTMATHKEY HOOK'
 NST04:	DEFM '+--------------------------------------+'
-	DEFM '          SUPER-X version 1.21          '
-	DEFM ' Copyright(C) 1994-2002 Romi & NYYRIKKI '
+	DEFM '          SUPER-X version 1.22          '
+	DEFM ' Copyright(C) 1991-2011 Romi & NYYRIKKI '
 	DEFM '+--------------------------------------+$'
 
 HELPMS:
-DEFM '---------------- HELP ------------------'
-DEFM '| [D]-DUMP     BF=BAS-FIND  BL=BAS-LIST|'
-DEFM '| [A]-ASCII    BT=TRANSFER  CK=CHECK   |'
-DEFM '| [I]-DISASM   CL=CALCU     CM=COMPARE |'
-DEFM '| [M]-MULTI    CO=COLOR     CS=CHG-SUM |'
-DEFM '| [H]-CHARA    CU=CHG-CPU   FD=FIND    |'
-DEFM '| FL=FILL      GO=GO        KR=K-READ  |'
-DEFM '| KT=K-TYPE    PP=MAPPER    PI=PORT IN |'
-DEFM '| PO=PORT OUT  RS=RESISTER  RT=RELOCATE|'
-DEFM '| SD=SpDISASM  SF=FUNCTION  TK=TENKEY  |'
-DEFM '| TR=TRACE     TS=TOTALSUM  VR=VARIABLE|'
-DEFM '| QT=QUIT      CD=CHDIR     CLS=CLS    |'
-DEFM '|--------------------------------------|'
-DEFM '|   INDEX    | [LD]-BLOAD  [SV]-BSAVE  |'
-DEFM '| [iM]-MAKE  | [L#]-SpLOAD [S#]-SpSAVE |'
-DEFM '| [iC]-CHECK | [L%]-ScLOAD [S%]-ScSAVE |'
-DEFM '| [iL]-LOAD  | [FS]-FILES  [KL]-KnjLOAD|'
-DEFM '| [iS]-SAVE  | [CI]-Ck.DSK             |'
-DEFM '----------------------------------------'
+        DEFM '---------------- HELP ------------------'
+        DEFM '| [D]-DUMP     BF=BAS-FIND  BL=BAS-LIST|'
+        DEFM '| [A]-ASCII    BT=TRANSFER  CK=CHECK   |'
+        DEFM '| [I]-DISASM   CL=CALCU     CM=COMPARE |'
+        DEFM '| [M]-MULTI    CO=COLOR     CS=CHG-SUM |'
+        DEFM '| [H]-CHARA    CU=CHG-CPU   FD=FIND    |'
+        DEFM '| TP=TYPE      GO=GO        KR=K-READ  |'
+        DEFM '| KT=K-TYPE    PP=MAPPER    FL=FILL    |'
+        DEFM '| PO=PORT OUT  RG=REGISTER  RT=RELOCATE|'
+        DEFM '| PI=PORT IN   SF=FUNCTION  TK=TENKEY  |'
+        DEFM '| TR=TRACE     TS=TOTALSUM  OF=OFFSET  |'
+        DEFM '| SD=SpDISASM  CD=CHDIR     CLS=CLS    |'
+        DEFM '|                           QT=QUIT    |'
+        DEFM '|--------------------------------------|'
+        DEFM '|   INDEX    | [LD]-BLOAD  [SV]-BSAVE  |'
+        DEFM '| [iM]-MAKE  | [L#]-SpLOAD [S#]-SpSAVE |'
+        DEFM '| [iC]-CHECK | [L%]-ScLOAD [S%]-ScSAVE |'
+        DEFM '| [iL]-LOAD  | [FS]-FILES  [KL]-KnjLOAD|'
+        DEFM '| [iS]-SAVE  | [CI]-Ck.DSK             |'
+        DEFM '----------------------------------------'
 NST05:	DB 15
 	DEFM '----------$'
 	DB 10
@@ -10448,32 +10958,33 @@ NST06:	DEFM '----------------------------------------'
 	DEFM '----------------------------------------'
 
 HNKNDT:
-DW 2120H,212AH,216DH,2174H,2170H
-DW 2173H,2175H,216CH,214AH,214BH
-DW 2176H,215CH,2124H,215DH,2125H,213FH
-DW 2330H,2331H,2332H,2333H,2334H,2335H,2336H,2337H,2338H,2339H
-DW 2127H,2128H,2163H,2161H,2164H,2129H,2177H
-DW 2341H,2342H,2343H,2344H,2345H,2346H,2347H,2348H,2349H,234AH,234BH,234CH,234DH,234EH,234FH
-DW 2350H,2351H,2352H,2353H,2354H,2355H,2356H,2357H,2358H,2359H,235AH
-DW 214EH,216FH,214FH,2130H,2132H,212EH
-DW 2361H,2362H,2363H,2364H,2365H,2366H,2367H,2368H,2369H,236AH,236BH,236CH,236DH,236EH,236FH
-DW 2370H,2371H,2372H,2373H,2374H,2375H,2376H,2377H,2378H,2379H,237AH
-DW 2150H,2143H,2151H,2141H,2120H
+        DW 2120H,212AH,216DH,2174H,2170H
+        DW 2173H,2175H,216CH,214AH,214BH
+        DW 2176H,215CH,2124H,215DH,2125H,213FH
+        DW 2330H,2331H,2332H,2333H,2334H,2335H,2336H,2337H,2338H,2339H
+        DW 2127H,2128H,2163H,2161H,2164H,2129H,2177H
+        DW 2341H,2342H,2343H,2344H,2345H,2346H,2347H,2348H,2349H,234AH,234BH,234CH,234DH,234EH,234FH
+        DW 2350H,2351H,2352H,2353H,2354H,2355H,2356H,2357H,2358H,2359H,235AH
+        DW 214EH,216FH,214FH,2130H,2132H,212EH
+        DW 2361H,2362H,2363H,2364H,2365H,2366H,2367H,2368H,2369H,236AH,236BH,236CH,236DH,236EH,236FH
+        DW 2370H,2371H,2372H,2373H,2374H,2375H,2376H,2377H,2378H,2379H,237AH
+        DW 2150H,2143H,2151H,2141H,2120H
 HNKDT1:
-DW 2120H,2123H,2156H,2157H,2122H,2126H,2572H,2521H,2523H,2525H,2527H,2529H,2563H,2565H,2567H,2543H,213CH
-DW 2522H,2524H,2526H,2528H,252AH
-DW 252BH,252DH,252FH,2531H,2533H
-DW 2535H,2537H,2539H,253BH,253DH
-DW 253FH,2541H,2544H,2546H,2548H
-DW 254AH,254BH,254CH,254DH,254EH
-DW 254FH,2552H,2555H,2558H,255BH
-DW 255EH,255FH,2560H,2561H,2562H
-DW 2564H,2566H,2568H
-DW 2569H,256AH,256BH,256CH,256DH
-DW 256FH,2573H,212BH,212CH
+        DW 2120H,2123H,2156H,2157H,2122H,2126H,2572H,2521H,2523H,2525H,2527H,2529H,2563H,2565H,2567H,2543H,213CH
+        DW 2522H,2524H,2526H,2528H,252AH
+        DW 252BH,252DH,252FH,2531H,2533H
+        DW 2535H,2537H,2539H,253BH,253DH
+        DW 253FH,2541H,2544H,2546H,2548H
+        DW 254AH,254BH,254CH,254DH,254EH
+        DW 254FH,2552H,2555H,2558H,255BH
+        DW 255EH,255FH,2560H,2561H,2562H
+        DW 2564H,2566H,2568H
+        DW 2569H,256AH,256BH,256CH,256DH
+        DW 256FH,2573H,212BH,212CH
+          
+        DEFM "It's all too much!"
 
-DEFM "It's all too much!"
-
-	.DEPHASE
+	DEPHASE
 
 	END
+                                                
