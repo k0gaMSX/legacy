@@ -1,0 +1,72 @@
+# MAKE.MF, Makefile for making MAKE.COM, The MSX Maniac, 17-Dec-1994
+#
+# The TCO-files cannot be specified separatly because the file is deleted
+# by CF.COM when an error is detected. MAKE v1.00 exits when the file cannot
+# be found. The solution is to specify the TCO-files at the end of the makefile
+# with the file MAKE.COM as the master.
+
+
+make.mf:
+
+#--- MAIN --------------------------------------------------------------------
+main.mac: main.c main.h sda.h sdm.h error.h
+	echo Making MAIN.REL
+	cf main
+	cg main
+main.rel: main.mac
+	m80 =main
+
+#--- SDA ---------------------------------------------------------------------
+sda.mac: sda.c sda.h macro.h main.h error.h
+	echo Making SDA.REL
+	cf sda
+	cg sda
+sda.rel: sda.mac
+	m80 =sda
+
+#--- SDM ---------------------------------------------------------------------
+sdm.mac: sdm.c sdm.h macro.h main.h error.h mac.h
+	echo Making SDM.REL
+	cf -r3:2:1 sdm
+	cg sdm
+sdm.rel: sdm.mac
+	m80 =sdm
+
+#--- TREE --------------------------------------------------------------------
+tree.mac: tree.c tree.h error.h
+	echo Making TREE.REL
+	cf tree
+	cg tree
+tree.rel: tree.mac
+	m80 =tree
+
+#--- MACRO -------------------------------------------------------------------
+macro.mac: macro.c macro.h
+	echo Making MACRO.REL
+	cf macro
+	cg macro
+macro.rel: macro.mac
+	m80 =macro
+
+#--- ERROR -------------------------------------------------------------------
+error.mac: error.c error.h
+	echo Making ERROR.REL
+	cf error
+	cg error
+error.rel: error.mac
+	m80 =error
+
+#--- MAC ---------------------------------------------------------------------
+mac.rel: mac.mac mac.c
+	echo Making MAC.REL
+	cf mac
+	m80 =mac
+
+#--- MAKE.COM ----------------------------------------------------------------
+make.com: main.tco sda.tco sdm.tco macro.tco tree.tco error.tco mac.tco
+	echo Checking Parameters
+	fpc lib main sda sdm macro tree error mac
+make.com: main.rel sda.rel sdm.rel macro.rel tree.rel error.rel
+	echo Linking MAKE.COM
+	l80 ck,main,sda,sdm,macro,tree,error,mac,clib/s,crun/s,cend,make/n/e:xmain
+

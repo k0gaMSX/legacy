@@ -1,0 +1,301 @@
+--- MAKE.HLP ------------------------------------------------------------------
+function: Teaching You How to Make Use of Make
+credits:  FVu, Apr-1994 (freddy@textinfo.nl)
+
+
+
+				   INRODUCTION
+
+Finding myself in distress and complicated batch files, I thought: 'There must 
+be an easier way to automate these ASCII-C compilations on my RAMdisk.' So I 
+build MAKE, using wheels from UNIX.
+
+MAKE takes a description of file-dependencies as input. Normally, a 'makefile' 
+will contain these descriptions but if no makefile is specified, MAKE can read 
+from the standard input just as well.
+A description of a file-dependency contains subsequent filenames in the 
+'master-slave' format:
+
+   MASTER: SLAVE.1 SLAVE.2 ... SLAVE.n
+	   operation1
+	   operation2
+
+MAKE checks whether one of the slaves has been modified by comparing the time 
+& date of the slaves against the time & date of the master. If the master is 
+older then one of the slaves, the operations will be send to the standard 
+output.
+Besides outputting these 'make' operations, MAKE can also output backup 
+commands. When you're using MSX-DOS2, MAKE checks the archive attribute of 
+every file to determine if the file has been modified. If the file has been 
+modified, the 'copy' command will be send to the standard output.
+
+					                  			Freddy Vulto (freddy@textinfo.nl)
+
+
+     "The sky's revolving above you, showing all its eternal magnificence,
+		  and still you're looking to the ground..."
+
+						    (Dante)
+
+
+
+				   CONTENTS
+
+1. Available options
+   
+2. Executing MAKE commands
+   
+3. Make syntax
+   
+4. Example
+
+5. Errors
+
+
+
+			     1. AVAILABLE OPTIONS
+
+/x	      output operations for modified files only
+/y	      output operations for all files
+/b<dirspec>   output backup commands for modified files only
+/l<dirspec>   output backup commands for all files
+/a	      check on archive attribute (overrule /X time check)
+/m	      check on - and reset - archive attribute
+/t	      check on date and time (overrule /B archive check)
+
+When no options are specified, MAKE will output operations for the modified 
+files only (i.e. option /X)
+
+/x
+   Output operations to the standard output for modified files only. MAKE 
+   checks the time & date of the files to determine whether they are modified 
+   or not. By using the /A or /M option this 'time check' will be overruled 
+   and only an 'archive attribute check' will be carried out.
+   By specifying the /X option before or after the /B or /L option, MAKE will 
+   either output the operations before or after the backup commands.
+
+/y
+   Output operations to the standard output for all files. By specifying this 
+   option before or after the /B or /L option, MAKE will either output the 
+   operations before or after the backup commands.
+
+/b<dirspec>
+   Output backup commands for modified files only; the files will be copied to 
+   the specified drive/directory. When you're using MSX-DOS 2, MAKE checks the 
+   archive attribute of the files to determine whether they are modified or 
+   not. By using the /T option this 'archive attribute check' will be overú 
+   ruled and only a 'time check' will be carried out.
+   If the /B option is specified before the 'make' option (e.g. /BX or /BY), 
+   backup commands will be output BEFORE operations are output. If this option 
+   is specified after the 'make' option (e.g. /XB or /YB), backup commands 
+   will be output AFTER operations are output.
+
+/l<dirspec>
+   Output backup commands for all files. If this option is specified before 
+   the 'make' option (e.g. /LX or /LY), backup commands will be output BEFORE 
+   operations are output. If this option is specified AFTER the 'make option 
+   (e.g. /XL or /YL), backup commands will be output AFTER operations are 
+   output.
+
+/a
+   Check on archive attribute. This option overrules the standard 'time check' 
+   from the /X option.
+   The archive attribute is set by MSX-DOS 2 if the file is modified. If this 
+   option is specified while MSX-DOS does not support the archive attribute, 
+   MAKE will return an error. If neither /A or /M is specified and your 
+   MSX-DOS version supports the archive attribute, MAKE will only perform an 
+   'archive attribute check' for outputting the backup commands (see /B and 
+   /L).
+
+/m
+   Check on - and reset - archive attribute for outputting operations. When 
+   the /M option is specified with the /B option, it will only affect the
+   'archive attribute check' for outputting the backup commands.
+   When the /M option is specified with both the /X and /B option, it will
+   only affect the option which is stated last.
+   'Slave' archive attributes will be reset immediately by MAKE. 'Master'
+   archive attributes will not be reset directly by MAKE, since the output 
+   operations will most certainly modify the masters archive attribute. For 
+   master files, MAKE will output the:
+
+      ATTRIB2 -a <file>
+    
+   command at the end of the operations. If the /M option is specified while MSX-DOS does not support the archive
+   attribute, MAKE will return an error.
+
+/t
+   Check on date and time for outputting backup commands. This option 
+   overrules the standard 'archive attribute check' from the /B option.
+
+
+
+			  2. EXECUTING MAKE COMMANDS
+
+MAKE outputs commands for the command interpreter. There are two possible ways 
+to execute these commands. At first, when you're using DOS v2.xx, immediate 
+pipelining to COMMAND2.COM can be applied:
+
+   MAKE myprog.mf | command2
+
+Secondly, redirectioning and subsequent executing can be used:
+
+   MAKE myprog.mf > temp.bat
+   TEMP
+
+
+
+			      3. MAKE SYNTAX
+
+At the command line, the MAKE command must have the following syntax:
+
+   MAKE [<makefile>] [<options>]
+
+MAKE processes a makefile which contains a description of file-dependencies 
+and the operations used to attain a result. If no makefile is specified, input 
+will be taken from the standard input. A makefile-line must have the following 
+syntax (empty lines are ignored):
+
+   #<comment> | <master>:{<space><slave>}[\] | <space><operation>[\]
+
+comment:
+   Comment lines must have a '#' at the beginning of the line. Comment lines 
+   are not allowed to continue onto the next line. Every comment line must 
+   begin with the '#' character.
+
+master, slave:
+   File dependencies are denoted in 'master-slave' format. The master is the 
+   file which results out of the slaves and the given operations. A slave is 
+   the file on which the master depends: if a slave has been updated or 
+   modified, the master must be updated too with use of the given operations.
+   It is not possible to define a file as a master when you've already used 
+   the file as a slave; the possible modification of the master would not be 
+   noticed when MAKE performs a 'modification-check' on the slave. MAKE will 
+   return an error if your definitions aren't correct.
+
+space:
+   Space consists of either space (ASCII 32) or TAB (ASCII 9) characters.
+
+operation:
+   An operation is a character string to use by the operating system 
+   (COMMAND.COM). An operation must be preceeded by a space character.
+
+spill ('\'):
+   'Master-slave' and operation lines can be continued onto the next line, 
+   provided the previous line is being closed with the backslash '\' character. 
+   Space at the beginning of the next line are ignored.
+
+
+				   
+				  4. EXAMPLE
+
+For example, suppose you composed a program MYPROG.C with the header file 
+MYPROG.H. To compile this program using the ASCII-C compiler, the command:
+
+   c myprog
+
+will result in the executable file MYPROG.COM. The makefile MYPROG.MF which 
+describes these file-dependencies and operations, will look like this:
+
+   # Making MYPROG.COM
+
+   MYPROG.COM:	MYPROG.C  MYPROG.H
+		c myprog
+
+Now, if you give the command:
+
+   make myprog
+   
+the command:
+
+   c myprog
+
+will be output only if MYPROG.C and/or MYPROG.H were modified AFTER the 
+compilation of MYPROG.COM.
+Furthermore, if you carry out all the compilations at the RAMdisk from 
+MSX-DOS2, it is possible to make use of the backup-facility of MAKE. At first 
+- when you've just copied the files to the RAMdisk - you can reset the archive 
+attributes by specifying the /B options with redirectioning set to 'NUL':
+
+   make myprog /mba:backup > NUL
+
+Now, when you have done some compilations and you decide to backup from your 
+RAMdisk to the directory A:\BACKUP, the following command will take care:
+
+   make myprog /mba:backup | command2
+
+
+				    
+				   5. ERRORS
+
+"archive bit not supported by MSX-DOS 1"
+   The /a or /m option has been specified, while you're using MSX-DOS 1. The 
+   use of the archive attribute is not supported by MSX-DOS 1.
+   
+"backup drive/path not specified"
+   The /b and /l options must be followed by a string, which describes the 
+   backup drive/directory.
+
+"backup drive/path specification too long"
+   The drive/path specification can contain 64 characters at most.
+
+"error closing file"
+   Error on closing file.
+
+"file not found"
+   The file couldn't be found on the current drive/directory.
+
+"filename expected as first parameter"
+   While there are 2 parameters, the first one is expected to be a filename 
+   referring to the 'makefile'.
+
+"filename too long"
+   The filename consists of too many characters.
+
+"inconsistent relation; master already used as slave"
+   It is not possible to define a file as a master when you've already used 
+   the file as a slave; the possible modification of the master would not be 
+   noticed when MAKE performs the slave-check.
+
+"invalid filename character"
+   The filename contains a non-valid character.
+
+"invalid option"
+   An unknown option has been given.
+
+"line too long"
+   A makefile line can contain at most 128 characters.
+
+"no master defined"
+   Operations cannot be specified when no master is defined.
+
+"node already exists"
+   Only used internally.
+
+"not enough memory"
+   Not enough memory. Try to remove some TSR's or buffers.
+
+"option /A without option /X specified"
+   Option /A must be specified with option /X.
+
+"option /B and /L both specified"
+   Since option /B and option /L exclude each other, they can not be used
+   together.
+
+"option /M without option /B or /X specified"
+   Option /M must be specified with option /B and/or /X.
+
+"option /T without option /B specified"
+   Option /T must be specified with option /B.
+
+"option /X and /Y both specified"
+   Since option /X and option /Y exclude each other, they can not be used
+   together.
+
+"spill character used in middle of line"
+   Only used internally.
+
+"too many parameters"
+   Parameters are separated by spaces. Options must concatenate. This way, 
+   MAKE allows 2 parameters at most.
+
+

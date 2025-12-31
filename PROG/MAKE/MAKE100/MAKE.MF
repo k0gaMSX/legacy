@@ -1,0 +1,22 @@
+# Example file: makefile for making MAKE.COM
+# The MSX Maniac (pd) 09-Apr-1994
+#------------------------------------------------------------------------------
+
+main.rel: main.c main.h stdio.h bdosfunc.h error.h tree.h mf.h mac.h
+	cmain
+
+tree.rel: tree.c stdio.h tree.h error.h
+	ctree
+
+mf.rel:   mf.c stdio.h mf.h main.h error.h
+	cmf
+
+error.rel: error.c stdio.h error.h
+	cerror
+
+mac.rel: mac.mac
+	amac
+
+make.com: ck.rel main.rel tree.rel mf.rel error.rel mac.rel cend.rel
+	lmake
+
