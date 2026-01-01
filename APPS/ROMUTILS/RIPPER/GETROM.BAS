@@ -1,0 +1,1 @@
+bload"getrom.bin",r
