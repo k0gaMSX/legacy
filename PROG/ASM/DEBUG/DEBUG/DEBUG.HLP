@@ -1,0 +1,109 @@
+DEBUG                                                   [Compatible]
+-----
+
+Format:      DEBUG
+
+Purpose:     Used to test, patch and disassemble executable files.
+
+Use:         This  tool is the  MSX-DOS  port  of the  original tool
+             that was delivered with MS-DOS.
+	     Differences mainly consist in MSX  different  platform,
+	     using Z80-R800 cpu instead of intel x86 for IBM pc.
+
+	     Here some usage  information  for this  tool. For  more
+	     details, type '?' in command line.
+
+
+	     IMPORTANT
+	     All numbers in this tool are always interpreted as hex.
+
+
+	     LOADING EXECUTABLE
+	     First use command 'N' to specify the name of your file.
+
+		Example: N test.com
+
+             Then use command 'L' to load it. If you  need  you  can
+             specify the starting address, setting  it as  argument.
+             Default value is 0100.
+
+             This  value  will be  stored  to  'HL' debug  register.
+
+             In 'BC' register there will be stored the size of  your
+             file.
+
+             The software will not allow to load files  to addresses
+             less  than  100h and remember that your program  should
+	     NOT  overwrite same tool's space  to  avoid  unexpected
+	     crash! (see 'Free TPA' information typing '?').
+
+
+	     SAVING EXECUTABLE
+	     To save program in  memory to a  file,  use 'W' command.
+	     Argument is optional and is used to specify the starting
+	     address. (will be stored to 'HL' register)
+
+	     'BC' register will be used for size. If you loaded  this
+	     file with  'L'  command,  you  will  already  have  this
+	     register set.
+
+	     If you need to specify size manually, use 'R' command.
+
+		Example: R BC A
+
+	     Register value will be 10.
+
+	     ASSEMBLE
+	     With the command 'A' you  can  write  manually  Z80-R800
+	     assembly code!
+	     Default address is 0100h but you can manually set  it as
+	     argument.
+
+		Example: A 200
+
+	     Your code will be assembled starting from 0200 address.
+
+	     For commands like LD r,r / IN A,(C) / OUT (C),A remember
+	     that you need to write LD A,B with 'B' as  register  and
+	     LD A,0B with '0B' as hex number.
+	     The same for IN and OUT, (C) to specify C  register  and
+	     (0C) to specify C as hex number.  Excluding  this  case,
+	     generally you don't  need to write all  digits  for  hex
+	     numbers.
+	     For example it is enough  you write '10'  for  0010 word
+	     number.
+
+	     CPUMODE
+	     With  '#'  command  you  can  set cpu mode for your MSX.
+	     This command can be used only for MSX turboR.
+	     Arguments:
+	     '0' for mode Z80;
+	     '1' for mode R800 ROM;
+	     '2' for mode R800 RAM;
+
+	     SCRIPTING
+	     DEBUG.COM can be used also with a  scripting input file.
+
+		Example: DEBUG < SCRIPT.TXT
+
+		SCRIPT.TXT
+		----------
+		a 100
+		ld a,2
+		la hl,1234
+		ret
+		r bc 6
+		n test.com
+		w
+		q
+
+	     This script will assemble a small program and save it  as
+	     'TEST.COM' and finally closes DEBUG.
+
+Examples:
+
+        DEBUG
+        ?
+
+             Writes a summary of all available commands.
+
