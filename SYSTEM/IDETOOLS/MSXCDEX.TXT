@@ -1,0 +1,610 @@
+*** MSX CD Extension version 0.41
+*** Copyright (C) 1995,1996 Taro Kashiwazaki.
+*** All rights reserved.
+
+This is tiny references of MSX CD Extension.
+A Google-translated version of the original Japanese manual is available below.
+
+New in this version #0.41 (fixed by Louthrax):
+*Fixed bug in the MSX-DOS 2 function 4Ah (Move file handle pointer)
+when using method 2 (Relative to the end of the file). The addition
+logic to compute the new file offset was wrong.
+
+Files:
+
+This software includes following 5 files.
+
+MSXCDEX.ENG	Tiny references written in English (this file)
+MSXCDEX.MAN	MSX CD Extension manual (written in Japanese)
+MSXCDEX.COM	MSX CD Extension executable file
+MSXCDEX.HED	Abstruct for Japanese BBS (written in Japanese)
+README.DOC	Message from author (written in Japanese)
+
+To use MSXCDEX:
+
+1.Set SCSI ID of CD-ROM #2.
+2.Boot MSX-DOS2.
+3.Leave 2 free segments(internal RAM).
+4.Set MSXCDEX.COM in a directory with path.
+5.To install.
+  A>MSXCDEX_ -gscsi
+  Last logical drive are reserved for CD-ROM.
+  If you use MEGA-SCSI cartridge,remove ``-gscsi''.
+6.To release.
+  A>MSXCDEX -release
+  Reserved logical drive are released.
+
+NOTES:
+
+1.Programs that use FCB are not available. Only File-handle.
+2.Remove cache driver before install. Cache driver may conflict
+  with MSXCDEX.
+
+
+
+¦¦¦ MSX CD Extension version 0.40
+¦¦¦ Copyright (C) 1995, 1996 Taro Kashiwazaki.
+¦¦¦ All rights reserved.
+
+Before using the MSX CD extension, this manual
+Please read.
+
+This software has two kinds of interfaces, MEGA-SCSI and Gouda SCSI
+It corresponds to the face. The part with (M) in the manual
+Is specific to MEGA-SCSI. Similarly, the part marked with (G)
+It is a description specific to Gouda SCSI.
+
+¦ Attention!
+
+This software is a preliminary version.
+
+As it seems that there are still many bugs and inconveniences, those who were used
+Please report the operation status to the author.
+
+¦ Restriction on the provisional version
+
+Since this software is an incomplete provisional version, in the description of this manual
+There are many parts to be opposed. I will give you such a part.
+
+· The -id option is ignored even if it is set.
+
+· There is no CD-DA control function call.
+
+· CD-R (multi session) is not yet supported.
+
+· The following BDOS functions can not be used for CD-ROM. Use
+If you use it, except for FCB function, .INTER error
+Will be returned. (Can be used for drives other than CD-ROM)
+
+Function numbers 0fh to 17h, 21h to 28h (file access using FCB)
+Function numbers 42 h, 44 h (file creation)
+Function number 4 ch (File handle inspection)
+Function number 4 dh - 51 h (file information change)
+
+¦ What is the MSX CD extension?
+
+The MSX CD extension (CD Extension) is MSX-
+Extend the BDOS function of DOS 2 and compile CD-ROM conforming to ISO 9660
+Allowing you to read in the same way as FD, HD and RAMDISK, always
+It is parking software.
+
+Furthermore, since the CD-DA control function can be used,
+You can easily control CD-DA in a unified way.
+
+? CD-DA is Compact Disc Digital Audio, which is commonly used
+It is the standard of music CD etc. that it is doing.
+
+¦ File structure
+
+This software consists of the following four files
+.
+
+MSXCDEX.MAN manual (what you are reading now)
+MSXCDEX.COM MSX CD Extension
+MSXCDEX.HED Reprint header
+
+¦ License Agreement
+
+This software is free software. Gouda SCSI
+The copyright other than the CD-ROM sector readout routine part of the driver for
+Author 'Taro Kashiwazaki' owns it.
+
+As long as we comply with the following license terms, all individuals and corporations
+Use freely, redistribute (copy, reprint to the network,
+You can transfer).
+
+Also, I wish to create this software for use and redistribution
+The author is not responsible for any damage or inconvenience.
+
+1. Do not alter or delete the copyright notice of this software.
+2. Do not redistribute only a portion of this software.
+3. Do not redistribute modified version of this software.
+4. Do not exchange money more than necessary at redistribution.
+In case of redistributing for commercial purposes, advance authorization by the author is necessary.
+5. Reports to the author at reprint. Before or after reprinting it is okay
+No.
+
+Operation model
+
+MSX 2, MSX 2 +, MSX turbo R on MSX-DOS 2 (version 2.31 is recommended)
+It works with.
+
+MEGA-SCSI with version 2.10 or later kernel installed
+, CD - ROM drive compatible with SCSI - 2 · CD - DA connected to it is required
+is. (M)
+
+NOVAXIS SCSI BIOS ROM with version number of 1.000 or more installed
+CD-ROM compatible with SCSI-2 · CD-DA connected to it
+Drive is necessary. The SCSI ID number of the CD-ROM drive must be 2
+It will not. (G)
+
+Two free segments of the primary mapper RAM slot are required.
+
+? MEGA-SCSI is MSX dedicated SCSI designed and announced by Mr. Tsjikawa.
+(M)
+
+? NOVAXIS SCSI BIOS is copyrighted by KMcs and MSX CLUB Gouda
+WD33C93A SCSI BIOS for SCSI cartridges.
+Also, the MSX CD extension for Gouda SCSI is Henrik Gilvad
+Quoted the CD-ROM sector readout routine created by Mr.
+is. (G)
+
+* Depending on the model of the drive, reading of CD-R and CD-ROM XA
+It may not be possible.
+
+¦ Operation confirmed drive
+
+Currently the operation on the following CD-ROM drive is confirmed.
+
+· PLEXTOR PX-43CS
+· (PLEXTOR PX - 45CS (It is probably OK because it is an external type of PX - 43CS))
+· Logitec LCD-550
+· TOSHIBA XM - 4101TA (The contents of LCD - 550 is this)
+· TOSHIBA XM - 5301TA (Please go into Logitec quadruple speed drive well
+is)
+
+¦ How to use
+
+· Register CD-ROM drive (M)
+
+First of all, a CD-ROM drive is registered as MEGA-SCSI's DOS drive
+Register in the table. Registration is set up by ESET.COM etc
+Please use it.
+
+Once registered contents are backed up, so even if you turn off the power
+It will not disappear.
+
+* ESET.COM is Mega-SCSI setup tool of Taro.
+
+Set the CD-ROM drive (G)
+
+In advance, set the SCSI ID number of the CD-ROM drive to 2
+I will.
+
+· Make the CD extension resident
+
+First, put MSXCDEX.COM in the directory where the path passed
+please.
+
+To make it resident, run MSXCDEX.COM on MSX - DOS 2
+.
+
+A: \> MSXCDEX [option]
+
+Usually when using with MEGA-SCSI, it is OK without options
+. (M)
+
+For use with Gouda SCSI, specify the -GSCSI option
+Please give me. Other options are usually not necessary. (G)
+
+MSXCDEX.COM, when launched, moves the driver body to the mapper RAM
+I will let the program of the CD extension reside.
+
+? Resident of CD Extension, preferably as soon as MSX - DOS 2 starts
+Please go to. Resident on child process such as filer
+If this is done, the operation may become unstable.
+Furthermore, it is not a problem to cancel the resident status anytime.
+
+* Maybe a resident program such as disk cache and
+The compatibility may be bad. Please be careful enough.
+
+When resident, the following message is output.
+
+MSX CD extension version 0.40
+Copyright (C) 1995 Taro Kashiwazaki.
+All rights reserved.
+CD-ROM on drive d: is available.
+
+For d: part, first upgrade the CD-ROM drive to the DOS drive
+It will be the drive number of the record table. (M)
+
+The part of d: is the last drive number used by Gouda SCSI
+I will. (G)
+
+After resident, you can use CD-ROM of d: drive.
+
+If the resident fails, an error message is displayed, and if it is resident
+I will not.
+
+· Cancel resident of CD extension
+
+To cancel the resident status, from the command line
+
+A: \> MSXCDEX-release
+
+Please.
+
+MSX CD extension version 0.40
+Released.
+
+It will be displayed and the resident will be canceled.
+
+¦ Command reference
+
+A description of the options available in MSXCDEX.COM. Options are
+You can use either upper case letters or lower case letters. Switch character
+You can also use "/" in place of "-" for Tata.
+
+Options other than -release make the CD extension resident
+It is effective only at time.
+
+Other options are ignored even if they are set.
+
+-gscsi
+
+Make the driver for Gouda SCSI resident. Use with MEGA-SCSI
+Please do not specify it.
+
+-id "..."
+
+When recognizing the CD-ROM drive model, have the CD-ROM drive
+Place a model recognition character string (such as vendor ID) on the one specified by ...
+I will change.
+
+The CD extension is connected to the CD-ROM at the time of resident
+It recognizes the model of the camera and automatically performs the setting for each model.
+
+However, if this setting does not work, it is connected
+If you have a CD-ROM drive that is pseudo CD-ROM drive of another model
+There are cases where it can be set well by making it recognize as if it is
+I will do.
+
+-release
+
+I will cancel the resident of the CD extension.
+
+When this option is set, all other options are ignored
+Yes.
+
+¦ Error Message and Countermeasure
+
+** No free segment
+
+Empty the mapper RAM segment where the CD extension resides.
+I can not do it.
+
+Reduce the capacity of RAMDISK, for example, free up the mapper RAM segment
+Please make it.
+
+** CD-ROM drive not connected
+
+The CD - ROM drive is not connected.
+
+This error,
+
+· MEGA-SCSI is not connected (M)
+· CD-ROM drive is not connected to MEGA-SCSI (M)
+· Gouda SCSI is not connected (G)
+· CD-ROM drive is not connected to Gouda SCSI (G)
+· The SCSI ID number of the CD-ROM drive is not 2 (G)
+· The CD-ROM drive does not support SCSI-2
+· The CD-ROM drive is not turned on.
+
+It occurs in case of such as. Please check these.
+
+** Already installed
+
+The CD extension already resides.
+
+CD Extension can not be dual resident. Up
+MEGA-SCSI driver and Gouda SCSI driver simultaneously reside
+I can not make it.
+
+** Not installed
+
+The CD extension is not resident.
+
+** Too scarce TPA
+
+Make sure the TPA required for the CD extension loader to work
+I could not keep it.
+
+In order for the loader to operate normally, the upper limit of TPA is above C406h
+It must not be in rank. With no other extra resident objects removed
+Please activate the daughter.
+
+** Wrong version of MSX-DOS
+
+MSX-DOS currently running is compatible with CD extensions
+not.
+
+Using the version of MSX-DOS supported by the CD extension
+please use it.
+
+** No mapper BIOS
+
+The system does not have a mapper support routine.
+
+It is an error not normally occurring.
+
+** Failed to initialize file-system
+
+Initialization of the file system inside the CD extension failed
+It was.
+
+It is an error not normally occurring.
+
+¦ Compatibility with ISO 9660
+
+CD extension is for JIS X 0606 (Japanese Industrial Standard Information Exchange
+CD-ROM volume and file structure) and programming
+It is being done.
+
+Corresponding to this standard The international standard is ISO 9660 (Information processing
+- Volume and file structure of CD-ROM for information inter-
+change), so if you use the CD extension you conform to ISO 9660
+It is thought that you can read the CD-ROM you want without problems.
+
+However, there are the following restrictions.
+
+Logical sector length
+
+Logical sector length must be 2,048 bytes.
+
+Logical block length
+
+Logical block length must be 2,048 bytes.
+
+Extended attribute record
+
+You can not access files with extended attribute records.
+
+Interleave mode
+
+You can not access files recorded in interleaved mode
+Yes.
+
+· File splitting
+
+Each file must consist of one file split.
+
+· File identifier
+
+The file name must be 8 characters or less. File extension name must be 3 characters or less
+something.
+
+'CON', 'NUL', 'AUX', 'LPT', 'PRN'.
+
+· Directory identifier
+
+The directory name must be 8 characters or less.
+
+Secondary volume descriptor
+
+Within the directory hierarchy identified by the secondary volume descriptor
+Information constituting the identified file can not be accessed.
+
+Secondary volume descriptor, associated path table record, related
+In directory records and associated directory records
+The information recorded in each column of the extended attribute record to be changed is accessed
+Can not.
+
+¦ Compatibility with MSX-DOS 2
+
+In consideration of compatibility with the standard MSX - DOS 2, the CD extension is
+It is logged but compatibility is ensured for the following parts
+It has been confirmed that it has not been done.
+
+In addition, we will prepare a program expecting normal MSX - DOS 2 operation
+In case you never comply with the specification of MSX - DOS 2 without following the contents of this chapter
+Please.
+
+If you create a program according to the contents of this chapter, that pro
+Grams may be incompatible.
+
+·redirection
+
+When the CD extension is resident, the associated lidar of the CD-ROM drive
+The write function does not work properly. (There is a fear of runaway.
+It seems that ... is working properly for some reason. However, operation guarantee
+I will not)
+
+· Environment variable APPEND
+
+When the CD extension is resident, APPEND for the CD-ROM drive
+The function does not operate normally.
+
+· Logical drive allocation
+
+After resident CD extension, ASSIGN command or BDOS
+Drive displayed when resident using function _ASSIGN
+When you assign a CD-ROM drive to the outside, the drive is a CD extension
+It is placed outside the management of the room, and it can be accessed by the BDOS function
+lose. (There is fear of runaway when trying to access)
+
+After resident CD extension, ASSIGN command or BDOS
+To the drive displayed at the time of resident using function _ASSIGN
+Even if you assign a drive other than the CD-ROM drive,
+It will not be done normally.
+
+· Root directory
+
+In the CD-ROM, the root directory also contains directories '.', '..'
+An entry exists. Both of these are root directories themselves
+I show myself.
+
+· Disk parameters
+
+The return value of BDOS function _ALLOC, _DPARM for CD-ROM
+Among them, values ??other than drive number, volume ID and sector size
+Is invalid. (The sector size is 2,048)
+
+JIS X 0606 regulates the volume ID as specified by MSX - DOS 2
+Although it is not, in the CD extension, the basic volume
+Volume based on CRC-32, the first 2,048 bytes of the descriptor,
+I use it as an ID.
+
+· File attributes
+
+The read-only bit of the attribute of the directory in the CD-ROM is set to 1
+It is getting.
+
+· Contents of FIB (file information block)
+
+The start cluster number of the FIB regarding the file in the CD-ROM is invalid
+. For the file size of the FIB indicating the directory in the CD-ROM
+It is the length of the directory.
+
+· Disk error handling
+
+If a disk error occurs when accessing the CD-ROM,
+The error is output to the user program from the BDOS function A
+It is informed as the return value of the register. Disk Error Processing Route
+It is not passed to Chin. If passed, CD Extension
+I did not hook the disk processing completely at the computer (do not intentionally hook it
+There are two possibilities when you can not hook with bugs.
+It is time. At that time write error reading drive d: and
+It will be a strange error.
+
+If a disk error occurs when accessing the CD-ROM, BDOS
+The contents of the F, BC, DE, HL registers as return values ??of the function are not
+It is fixed. The A register returns an error code (zero flag reset
+), IX, IY, Bottom register set is called BDOS function call
+Then I will return to the previous state.
+
+· Internal information
+
+FIB indicating files and directories on the CD-ROM, "inside
+Part information "is completely different from that of MSX - DOS 2.
+
+· "Get previous error code" function
+
+Error on CD-ROM access with BDOS function _ERROR
+Even if you try to acquire an error code, you get the appropriate error code
+not.
+
+· "Absolute sector read / write function" function
+
+Can not perform BDOS functions _RDABS, _WRABS on CD-ROM
+Hmm.
+
+· Presence of unique functions
+
+Function number 0ffh unique to CD extension extension
+The assignment is assigned. In MSX - DOS 2 function number
+Issue 0ffh is undefined.
+
+func. Read CD-ROM logical sector
+(Defined tentatively for operation test)
+entry hlde = start sector number
+b = number of sectors
+ix = Transfer start memory address
+c = 0ffh
+return cy = 0: successful reading
+cy = 1: Read failure
+a = error code (details omitted)
+modify all
+note Rotate to pages 0, 1, 2, and 3 of the primary mapper slot
+Sendable. One sector = 2,048 bytes.
+
+¦ Programming guide
+
+Version up profile
+
+Version number Date released Summary
+-------------------------------------------------------------------- ----------
+0.00 1995 - 1-19 · Incomplete preliminary version.
+· Sector read function for operation test
+Can be used only.
+0.01 1995 - 2 - 3 - Incomplete preliminary version.
+· Specification of sector read function
+change.
+· You can search files and directories
+I made it.
+0.02 1995 - 2-5 · Incomplete preliminary version.
+· Setting and obtaining current directory
+I made it possible.
+· File and directory search behavior is
+I made it to be stable.
+0.03 1995 - 2-7 · Incomplete preliminary version.
+· Di in sectors after 10000h sector
+I fixed a bug where I can not search the Rectory.
+· When pointers are searched for directories
+I fixed the bug when I crossed.
+0.04 1995 - 2-9 · Incomplete preliminary version.
+· Reduced code size.
+· Dust remains in FIB file name area
+I improved the elephant.
+· File open and readable
+It came to be.
+0.05 1995 - 2-11 · Incomplete preliminary version.
+· Reading files larger than 16 MB
+I corrected a bug that failed to appear.
+· Between driver memory and user memory
+Fixed major bug of data transfer routine.
+· Fixed a bug in FCB inspection.
+· Improved path name inspection method. Deterioration
+maybe)
+0.06 1995 - 2 - 15 · Incomplete preliminary version.
+· MEGA-SCSI provisional correspondence.
+· Reduced the code size further.
+· Checked open files
+I fixed the bug of Chin.
+0.07 1995 - 3-20 · Incomplete preliminary version.
+· Enhancement of function call, function addition
+I added.
+· Confirm some of undefined specifications
+did.
+- Fixed major slot bugs.
+0.10 1995 - 5-31 · Incomplete preliminary version.
+· Set the parameters of RESLOAD.COM to shell
+I tried to hand it over.
+· MEGA-SCSI fully compatible (new MEGA-SCSI
+Function call entry address
+Use)
+· Read CD-ROM XA with Toshiba drive
+I made it so.
+0.20 1995- 9 - 5 · Changed resident method.
+· Changed the file name of the loader.
+(RESLOAD.COM -> MSXCDEX.COM)
+0.30 1995-10-1 · Changed the manual.
+· We made it possible to cancel resident status.
+· Change the memory area used for resident.
+· Can not return allocation information correctly
+I fixed a bug.
+0.40 1996 - 1 - 5 · Loader and driver main unit together
+Motta.
+· It corresponds to Gouda SCSI and others.
+
+¦ Author's Contact
+
+Opinion, impressions, other communication with this software, etc.
+Once you have one of the following IDs (handle name is "Taro")
+Please send it by e-mail to your e-mail address
+I will.
+
+CAT-CGNET CGN 22934
+CAT-NET CAT 22934
+FALCON-NET FALC0021
+Illusion City TARO
+Internet (up to '97. 2) b9244040@dnj.ynu.ac.jp
+Laox - Jr .NET LAOX 1256
+MARIO-NET TARO
+Natsume Net NAT 26114
+I can hear the voice of cherry blossoms CVN0007
+Tokyo BBS TARO-K
+etc.
+
+??? MSX CD Extension version 0.40
+??? Copyright (C) 1995, 1996 Taro Kashiwazaki.
+??? All rights reserved.
