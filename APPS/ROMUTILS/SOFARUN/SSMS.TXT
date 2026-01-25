@@ -1,0 +1,199 @@
+                ***************************
+                * SofaSMS 1.0 by Louthrax *
+                *   A.I. code by NYYRIKKI *
+                ***************************
+
+SofaSMS is  a tool  designed to  launch Sega  Master System and SG-
+1000 games on our MSX machines.  SG-1000 games can run on a  normal
+MSX, but you'll  need a Franky  or Playsoniq device  for SMS games.
+These     can     be    ordered     at     Supersoniq's    website:
+https://shop.supersoniqs.com/en/20-msx-hardware
+
+SofaSMS mainly focuses on Franky for now, but also supports lots of
+Playsoniq's specific options (see usage below).
+
+It offers the following features:
+- Automatic patching  of VDP, FM-PAC,  PSG, mapper, and joystick
+  ports for Franky.
+- Launching SG-1000 games on MSX machines.
+- Use of NYYRIKKI  Artificial Intelligence routines to  distinguish
+  between code and data.
+- Possibility  to  add  per-game  patch  instructions  and   patch
+  sequences in an SSMS.INI file.
+- Support of Pause button emulation for Sofa-compliancy ;)
+- Save and load of on-cartridge RAM.
+- Developper's options to make the creation of patches easier.
+
+Thanks to:
+
+  - Sander for offering me a Playsoniq and a Darky.
+  - BiFi for SMSLOAD and SMSSAVE.
+  - Alex Mena for his MSX conversions of SMS games.
+  - FRS for his help and suggestions.
+  - Tiny Yarou for the SN76489 to AY-3-8910 conversion routine.
+
+Usage: SSMS <rom_image> [options]
+
+<rom_image> is a Sega Master System ROM image file
+
+[options] can be specified on the command line, and also per-game in
+  this INI file.
+  Each game is identified by the CRC32 of its first 16KB.
+  Command line options have priority over the INI file ones.
+
+[options] can be one or more of:
+  ("*" indicates default value - note that *.SG games have different
+  default values, same as /SD2, see below).
+
+********************
+*** User options ***
+********************
+
+/AE<Audio emulation>
+  0: None
+  1: Use Playsoniq
+ *2: Patch for Franky
+  3: Patch for MSX
+
+/FD<FM detection emulation>
+  0: None
+  1: Use Playsoniq
+ *2: Patch for MSX
+
+/FE<FM emulation>
+  0: None
+  1: Use Playsoniq
+ *2: Patch for FM-PAC
+
+/II<Ignore INI file>
+ *0: Get extra options from INI file
+  1: Ignore INI file
+
+/JE<Joystick emulation>
+  0: None
+  1: Use Playsoniq
+ *2: Patch for MSX
+
+/ME<Mapper emulation>
+  0: None
+  1: Use Playsoniq
+ *2: Patch for memory mapper using IOs (see /RH option)
+  3: Patch for memory mapper using CALLs (required for
+       games using SRAM, like Ys)
+
+/NC<No confirmation>
+  0: Ask for confirmation before launching ROM
+  1: Do not ask
+
+/PB<Pause button emulation>
+  0: None
+  1: Use Playsoniq (not available yet)
+ *2: Patch for JoyMega
+
+/PS<PSG to SCC> (Playsoniq only)
+ *0: OFF
+  1: ON
+
+/RH<Readback handling for /ME2 mode>
+ *0: Error if readback not present
+  1: Ignore problem (might crash)
+  2: Try to fix readback with mirroring (might crash too)
+
+/SD<Set default options>
+  0: Set default options for Playsoniq:
+     Audio emulation use Playsoniq
+     FM detection emulation use Playsoniq
+     FM emulation use Playsoniq
+     Joystick emulation use Playsoniq
+     Mapper emulation use Playsoniq
+     Pause Button emulation None
+     Video emulation Use Playsoniq
+  1: Set Default Options for Franky:
+     Audio emulation patch for Franky
+     FM detection emulation patch for MSX
+     FM emulation patch for FM Pac
+     Joystick emulation patch for MSX
+     Mapper emulation patch for Memory Mapper Io Method
+     Pause Button emulation patch for Joymega
+     Video emulation patch for Franky
+  2: Set Default Options for SG-1000 Games:
+     Audio emulation patch for MSX
+     FM detection emulation None
+     FM emulation None
+     Joystick emulation patch for MSX
+     Mapper emulation None
+     Pause Button emulation patch for Joymega
+     Video emulation patch for MSX
+
+/SR<Save RAM>
+ *0: OFF
+  1: ON
+  This options saves the on-cartridge RAM into a .SAV file
+  (based on the ROM file name) and exits. 
+  A typical usage is the following:
+    - Launch your game by typing: "SSMS YS"
+    - Play the game...
+    - Reset your MSX
+    - Type: "SSMS ys /SR1". An "YS.SAV" file will be created.
+    - Next time you'll relaunch your game, this .SAV file will be 
+      automatically loaded.
+
+/TR<turboR mode>
+ *0: Z80
+  1: R800 ROM
+  2: R800 DRAM
+
+/TS<Target slot>
+  Parameter is a slot in the form <slot>[-subslot]
+  (e.g. /TS2-3 to use subslot 3 in main slot 2,
+        /TS1 to use main slot 1)
+
+/VE<Video emulation>
+  0: None
+  1: Use Playsoniq
+ *2: Patch for Franky
+  3: Patch for MSX
+
+/VF<Video frequency> (Playsoniq and MSX only)
+  0: 50HZ
+ *1: 60HZ
+
+/VM<Video mode> (Playsoniq only)
+  0: Composite
+ *1: RGB
+
+/VS<Video standard> (Playsoniq only)
+  0: PAL
+ *1: NTSC
+
+***************************
+*** Developpers options ***
+***************************
+
+/FP<Range in which to force patching>
+  Parameter can be a single hexadecimal ROM offset value (e.g. /FP1ACF),
+  or a range (e.g. /FP7C877-7CB9C).
+  Code found here will always be patched, ignoring AI advice.
+
+/IP<Range in which to ignore patching>
+  Parameter can be a single hexadecimal ROM offset value (e.g. /FP1ACF),
+  or a range (e.g. /FP7C877-7CB9C).
+  Code found here will never be patched, ignoring AI advice.
+
+/LG<Logging>
+ *0: OFF
+  1: ON
+  If enabled, saves applied and rejected patches in .APL and .REJ files.
+
+/PR<ROM patch>
+  Parameter is composed of a hexadecimal ROM offset value, followed by "="
+  and by one or several sequences. Sequences can be hexadecimal
+  numbers (quoted by "`") or ASCII strings (quoted by """).
+  Here are some examples:
+  /PR125=`000000` : patch 3 0 bytes at offset 0x125
+  /PR3A7="Hi mum!" : patch one string at offset 0x3A7 
+  /PR3A7="Hi mum!"`000000` : patch one string followed by 3 0 bytes.
+
+/SP<Save patched ROM>
+ *0: Do not save patched ROM
+  1: Save patched ROM result in SSMS.ROM

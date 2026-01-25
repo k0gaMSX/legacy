@@ -1,0 +1,250 @@
+MSX HID tester v3.0
+-------------------
+By FRS
+
+This utility lets you test a lot of Human Interface Devices that can be
+connected to the MSX, either directly or by using adapters. It was formerly
+known as JOYTEST, but it got renamed since now supports a lot more devices
+than just joysticks and joypads.
+
+It's based on my own HIDlib library, that is 100% compliant to the MSX coding
+guidelines and can be used either to create new MSX gaming/utilities, or
+patch the old ones to add support for new devices / solve incompatibility
+bugs.
+
+Please note that joysticks that are not wired according to the standard MSX
+joystick schematics will produce incorrect fingerprints that will be detected
+as incorrect devices.
+
+1) List of fully supported devices that are automatically detected:
+
+1a) Native MSX devices
+- Joystick (default)
+- Mouse
+- Trackball
+- Touchpad
+- Keyboard (directional keys, SPACE and GRAPH)
+- Light gun (Plus-X Terminator Laser protocol)
+- Light Pen (note: Only the Sanyo interface was tested. The MSX2-BIOS V9938
+  light pen support is implemented but still require testing)
+- Micomsoft XE-1AP analog joypad
+  - Micomsoft XE-1AJ analog joypad (has the same protocol as the XE-1AP)
+  - Sharp Cyberstick CZ-8NJ2 (has the same protocol as the XE-1AP)
+- PWM protocol devices 
+  - MSX-Paddle
+  - Yamaha MMP-01
+- Vaus Arkanoid paddle
+
+1b) Joymega adapter devices
+- Sega Megadrive 3-button joypad
+- Sega Megadrive 6-button joypad
+- Sega Megadrive MK-1654 Multi-tap (and compatibles)
+
+1c) Joysat adapter devices
+- Sega Saturn digital joypad
+- Sega Saturn analog joystick
+
+1d) PWM devices via adapters
+- IBM DA-15 joysticks
+- Atari 2600's dual-paddles
+
+
+Warning: *Never* connect any Megadrive device directly to the MSX as it can
+damage your computer and/or the device! Always connect them using a joymega
+adapter. You can buy one in the MSX community, or DIY following the
+instructions shown here:
+http://frs.badcoffee.info/hardware/joymega-en.html
+
+2) Devices that are detected, but have no drivers: 
+- Sega Saturn mouse
+
+3) Only planned
+- Panasonic FS-JH1 joywheel (there's no doc available about its protocol yet)
+
+
+2) Usage
+
+HIDTEST [joyport][subport]
+
+  [joyport] can be: 0, 1, 2 or S
+                    0 = keyjoystick
+                    1 = joystick-port1
+                    2 = joystick-port2
+                    P = Light Pen/Touchscreen
+  [subport] can be:
+                    A, B, C or D for the multi-tap
+                    1 or 2 for the light pen
+
+3) Examples
+
+A:\HIDTEST
+
+Will run HIDtest with the defaults: joyport=1, multitapport=A
+
+A:\HIDTEST 2
+
+HIDtest will search for devices in joyport2
+
+A:\HIDTEST 1c
+
+HIDtest will search for devices in joyport1, and select multitapport C when a
+multi-tap is connected.
+
+A:\HIDTEST P2
+
+HIDtest will test a light pen connected to the light pen port2
+
+
+4) Driver specifics 
+
+a) Light-pen/touchscreen
+  - Normally, the Sanyo Light pen interface is mapped by the BIOS to the port
+    P1, and the V9938 built-in light pen interface is mapped to the port P2.
+  - Press GRAPH+SELECT to enable the calibration of the Light pen/touchscreen
+    devices. When calibrating, the pointer will be held at a fixed position
+    on the screen. You just have to click the light pen where the pointer is to
+    calibrate it and return to normal operation.
+  - MSX1 machines only support the 1st light pen port, via a built-in direct I/O
+    driver. For newer MSX generations, only the BIOS interface is used.
+  - For the MSX Turbo-R models, an external driver like TRnewdrv must be loaded
+    beforehand.
+
+b) Light-gun
+  - The raster effects that show red pixels where the light-gun is seeing light
+    are only displayed in MSX2 or higher computers. MSX1 computers will only
+    use the driver without raster effects.
+
+c) Mouse/trackball
+  - A built-in direct I/O driver is included for MSX1 computers, since they
+    lack mouse support in their BIOS. For MSX2 and newer generations, only the
+    BIOS interface will be used.
+  - The extended MSX-Mouse protocol (2014) defined by NYYRIKKI & Prodatron,
+    that supports scroll wheel and extra buttons, is supported via the extended
+    GTPAD BIOS interface. The TRnewdrv driver implements this.
+
+d) MSX-Paddles
+  - For the MSX Turbo-R models, an external driver like TRnewdrv must be loaded
+    prior to use.
+
+e) Megadrive multi-tap
+  - Connect the joymega adapter only to the MSX and the multi-tap cable, then
+    connect the megadrive controllers directly to the multi-tap. Never connect
+    joymega adapters or MSX controllers to the multi-tap!
+
+f) Vaus Arkanoid Paddle
+  - The right border is a bit off on Z80 turbo machines. I still have to find a
+    better central position that works both on turbo and non-turbo machines.
+
+5) Changelog
+
+v1.0: Initial release
+v2.0: Ported the source to use my Acid2Test compliant JoyLib library
+v2.1: Bugfixes
+v2.2: Added multi-tap support
+v2.3: Added touchpad support
+v2.3b: Fixed a minor bug in the command line parameter parser
+v2.4: Added support for the light gun and the two light-pen ports
+ - Light pen calibration
+ - Light pen support for MSX1 computers
+ - Mouse support for MSX1 computers
+v3.0
+ - Changed the name to MSX HID tester, since it now tests much more human
+   interface devices than just joysticks. Analogously, joylib has renamed
+   HIDlib.
+ - A huge overhaul of the code, with many optimizations and bug fixes
+ - Created the backbone in HIDlib to support analog controllers
+ - Added support for the following devices:
+   - PWM protocol devices, including recognition and specific button/axis
+     decoding of the following controllers:  
+     - MSX-Paddle, with up to 5 digital buttons
+     - IBM-PC DA15 analog joystick, via adapter
+     - Atari 2600's dual-paddles, via adapter
+ - Arkanoid Vaus paddle
+ - Sega Saturn digital joypad
+ - Sega Saturn analog joypad (AKA 3D-pad)
+ - Micomsoft XE-1AJ / XE-1AP and Sharp Cyberstick
+ - Better light gun hit detection. It's now very hard to trick it and pass a
+   false hit consistently. Also, the light gun disconnection is handled much
+   quicker now.
+ - Added support to handle two light pen ports
+ - Fixed bugs in the detection of devices connected to the Megadrive multi-tap 
+ - When no devices are connected to the multi-tap, the screen now shows a
+   reminder that only Megadrive controllers can be connected to the multi-tap.
+
+
+== Thanks and Credits ==
+
+This project wouldn't be possible without the help and contributions of the
+following die hard MSX fans:
+
+- Sergio Guerrero Miralles, for developing the original joymega adapter and the
+  JOYMEGA.COM utility, that inspired this utility.
+- Zeilemaker, for his impressive msxsyssrc project, and for his tips about
+  the V9938 light pen interface present on Daewoo machines
+- Ein Terakawa, for the detailed document about the Sega Genesis 6-button
+  protocol.
+- Raphael Assenat, for his detailed document about the Sega Multitap protocol.
+- antime, for publishing the Sega Saturn SMPC User's Manual, that describes
+  the signature mechanism used to autodetect devices in this utility.
+- Daniel Ravazzi, for his patience and careful tests to try to reverse engineer 
+  the Panasonic FS-JH1 protocol, and for the high resolution pictures of his
+  Arkanoid paddle circuit board that allowed the reverse engineering its
+  protocol.
+- Jipe, for the Arkanoid paddle schematics.
+- Takamichi, for his help with many devices, including the Panasonic FS-JH1,
+  the Sharp Cyberstick and specially for searching for the documentation about
+  the Micomsoft/Dempa XE-1AP protocol.
+- Werner Kai, for his quest to find me a Sony GB-6 trackball.
+- Priscila P. Folly and Mario Negrello Filho, for storage and delivery of  
+  many of some hardware that was used to test and develop this library.
+- Sturaro and Piter Punk, for testing all their mice & adapters.
+- Rafael Rigues and Cadari, for lending me their Saturn digital joypads for
+  testing.
+
+== Special donator thanks ==
+
+- Manuel Bilderbeek, for the donation of a Philips NMS-1150 touchpad.
+- Erik Luppes, of www.msxinfo.net, for donating a rare Sanyo MLP-001 Lightpen 
+- Sebastião Singer, for donating an original Sega SJ-6000 joypad and a
+  Panasonic JS-220 joypad
+- Rafael Rigues, for building and donating a mini joymega2 adapter
+
+===========================================================================
+	                     License
+                           Terms of use
+---------------------------------------------------------------------------
+
+1) This software is gratis for non-commercial purposes, and the author retains
+   its copyright. You only can run, make backup copies or distribute this
+   software while observing the non-commercial restriction.
+
+2) You are only allowed distribute this software (online or on a removable
+   media) under the following conditions:
+   2.1) No commercial transaction of any kind is involved.
+   2.2) All the original files are distributed together inside the same
+   compressed file.
+   2.3) This README must be included unmodified inside the same compressed file.
+
+3) If you want to use this software for commercial purposes you MUST first
+   contact me to negotiate the terms and conditions. Send an e-mail to
+   sdsnatcheralpha@gmail.com to contact me.
+
+4) This software is provided ‘as-is’, without any express or implied warranty.
+   In no event will the author be held liable for any damages resulting from the
+   use of this software.
+
+5) USE THIS SOFTWARE SOLELY AT YOUR OWN RISK.
+
+
+===========================================================================
+                          Donations
+---------------------------------------------------------------------------
+ If you like this software and want to show your appreciation for the time
+ invested in making it, you can donate any amount, or MSX hardware, and it will
+ be very welcome and will help future development.
+ Donations can be done via PayPal to sdsnatcheralpha@gmail.com, and for MSX
+ hardware, try contacting me on this e-mail address too.
+ For a hardware wish list, please check:
+ http://frs.badcoffee.info/wishlist.html
+
+
