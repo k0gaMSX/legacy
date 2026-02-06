@@ -1,0 +1,697 @@
+	Flash Rom Loader 2.3 (DOS 2 Compatible) for LPE-FLASH G
+	(c) 2003 by Ramones and Manuel Pazos
+	
+	Userguide
+
+1.- INDEX
+	
+	1.- Index.
+	2.- Description of LPE-FLASH G board.
+	3.- Tehcnical documentation of the LPE-FLASH G board.
+	4.- Documentation of the Flash ROM memory Am29F040B.
+	5.- FL2 Flash Rom Loader.
+	6.- Parameters and options.
+	7.- Errors.
+	8.- Recommendations.
+	9.- Building the program from sources
+	10.- Contact the author and thanks.
+	11.- Versions History
+
+2.- DESCRIPTION OF THE LPE-FLASH G BOARD.
+
+LPE-FLASH G board, in any of its versions (at the moment of writing this
+documentation four are known) is a data storage device with a capacity
+of 512KB.
+
+The data is not volatile as it is stored in a Flash ROM memory type,
+model Am29F040B made by AMD.
+
+Performance is close to a MegaROM cart with ASCII mapper. It is also
+possible to define its behaviour based on other configurations, such as 16KB
+mapper ASCII or even controlling the memory pages through physical ports of
+the MSX system.
+
+The big advantage of this board is the possibility of simulating
+ROM files (copies of the program stored in ROM cartridges) in a reliable and
+efficient way, without needing a big amount of memory in the MSX computer.
+
+The board works without problems in ANY MSX model, the only restriction is the
+need of a disk drive for loading a program in memory . When this program
+is loaded, then the program works in any MSX, including the first generation
+if the program supports it.
+
+Even though this board is used for 'game playing' in 90% of cases, its
+capabilities and configuration options give us the possibility of creating many
+utils for it. It is very handy if you want to create a game in ROM format. Then
+you have a reliable tool for testing before building the final cart. This board
+can be considerated as a transfer method too and even could be very interesting
+to create new utils which don't require system resources (memory), such as a
+disassembler.
+
+
+3.- TECHNICAL DOCUMENTATION OF LPE-FLASH G BOARD.
+
+LPE-FLASH G board consists of four parts :
+
+[] MSX cartridge board
+[] Configuration Jumpers / Switches
+[] PLD Controller.
+[] FlashROM type memory, model Am29F040B by AMD.
+
+	* MSX cartridge board :
+
+	MSX cartridge board, similar to a Konami.
+
+	* Configuration Jumpers / Switches :
+
+	Four Jumpers / switches which define the different states and
+	possibilities. Even though the position of them changes between models,
+	they are named the same way:
+	
+	- 8K 16K Size : Selects the mapper type which will use the board.
+
+	- Slot On     : This is for turning on / off the board.
+ 	
+	- R&W RD      : With this one we can write-protect the memory if set to
+			RD. For storing the program in Flash, R&W must be set.
+			
+	- IO / Slot   : Defines the selecting pages for a given mapper mode
+			together with the 8K 16K jumper / switch.
+
+	* PLD Controller. 
+		
+	This contoller takes care of the memory paging system and creates the
+	physical or memory ports. In short, this is the device which does the
+	communication between Flash Memory and MSX.
+	
+	* Flash ROM Memory.
+
+	As PLD, this is the most important chip in the board.
+	This device stores the desired program and makes it 'visible' in any
+	page of the MSX System.
+	
+As we have said before, LPE-FLASH G board has four physical ports through which
+we can control the pages of the mapper of the cartridge as we desire.
+
+Those ports work depending on the mapper type selection and in both mapper
+modes (IO / Slot). They are:
+
+05Ch : 	It does the paging of the 04000h - 05FFFh memory area in 8K 
+	configuration, or the 04000h - 07FFFh area, in 16K mode.
+
+05Dh : 	This port is only used if the mapper mode is 8K. It does the paging
+	in the 06000h - 07FFFh area.
+
+05Eh :  As 05Ch, it has 2 modes depending on the mapper mode. It handles the
+	08000h - 09FFFh area in 8K and 08000h-0BFFFh in 16K.
+
+05Fh : 	Close to 05Dh, it is only useful in 8K mapper mode. Involved memory
+	addresses are 0A000h - 0BFFFh.
+
+	So, for example, to locate the bank 8 in the area 08000h - 09FFFh, 
+	or 08000h - 0BFFFh for 16 K banks , something like this should be done:
+		
+		ld	a,8
+		out	(05Fh),a
+
+
+
+The other mode of paging which is provided by the board is similar to the modes
+which are found in many megarom cartridges by ASCII Corp. To use this mapping, 
+it is necessary to have the jumper / switch set in SLOT mode.
+
+Note : The mapping mode by ports (I/O), works in both mapping modes.
+
+Mode ASCII	 8 K:
+
+	Divides the memory in 4 banks of 8KB each:
+
+	Bank 0 : 04000h - 05FFFh
+	Bank 1 : 06000h - 07FFFh
+	Bank 2 : 08000h - 09FFFh
+	Bank 3 : 0A000h - 0BFFFh
+
+	And the addresses for exchanging the page are:
+	
+	Bank 0 : 06000h - 067FFh (Normally used 06000h)
+	Bank 1 : 06800h - 06FFFh (Normally 06800h)
+	Bank 2 : 07000h - 077FFh (Normally 07000h)
+	Bank 3 : 07800h - 07FFFh (Normally 07800h)
+	
+	So, for locating bank 8 in the area 08000h - 09FFFh :
+	
+		ld	a,8
+		ld	(07000h),a	; Any address 07000h - 077FFh
+
+Mode ASCII 16 K:
+
+	Set the mapper selection jumper / switch to 16 K
+	It divides the memory banks in two 16KB banks.
+
+	Bank 0 : 04000h - 07FFFh
+	Bank 1 : 08000h - 08FFFh
+
+	And the addresses for exchanging the page of the bank :
+
+	Bank 0 : 06000h - 067FFh 
+	Bank 1 : 07000h - 077FFh
+
+	So, for locating page 3 in bank 0 :
+
+		ld	a,3
+		ld	(060FFh),a
+
+
+Finally, the position of the jumpers when a program is going to be stored
+or executed, similar in FL.COM and FL2.COM:
+
+	For storing (from file to flash):
+
+	[] 8K 16 K Size : 16 Ks
+	[] Slot On 	    : On
+	[] R&W RD	    : R&W
+	[] I/O  Slot    : I/O	 	
+
+	To execute the program:
+
+	[] 8K 16K Size 	: It depends on the program, most of cases 8K
+	[] Slot On	      : On
+	[] R&W RD	      : RD
+	[] I/O Slot	      : Slot
+
+It has to be said that when executing a ROM program -when resetting (booting
+the MSX)- and the flash board is plugged, the program will execute itself. To
+avoid this the Slot On jumper/switch has to be set to OFF. After the OS is
+loaded, then it can be switched ON.
+
+
+4.- DOCUMENTATION OF FLASH ROM MEMORY Am29F040B
+
+The memory Am29F040B is a 4 Megabit (512 x 8 bit) chip, of type CMOS 5.0 V
+Uniform Sector Flash Memory.
+
+The 512 Kbytes of data are divided in 8 sectors of 64 Ks each one.
+
+This is a 'programmable' device which has some 'commands' for communicating
+with the Flash and be able to erase and program it.
+
+This device -not exactly the same model but from the same family- is already
+widely used in MSX devices. The Sunrise IDE controller is an example of it.
+
+Without the intention of converting this in a technical manual of the chip
+-for that it is recommended to use the documentation provided at the AMD home
+page- we will explain the commands used in this program (FL2).
+
+All the commands work the same way. A byte sequence has to be written
+in some memory areas of the flash device, those zones depending on the command
+type used. So, we have from 1 cycle commands to 6 cycles ones, where each cycle
+corresponds to 1 writing in the memory at the indicated address.
+
+For the explanation we will use the same terminology.
+On the one hand we'll specify the address and on the other hand the value to be
+written in that address. Ex :
+		x555 addr
+		0AAh value.
+
+This means that we have to write at the x0555 address the value 0AAh, whereby x
+is any address where the flash is mapped in.
+
+
+[] Device ID.
+	
+This is a 4-cycles command. It returns a value which shows the flash type we
+are using (in the case it is from the same family). In our case, the returned
+value is 0A4h.
+
+	* First Cycle :
+
+		x555h	addr.
+		 0AAh	value.
+
+	* Second Cycle:
+		
+		x2AAh	addr.
+		 055h	value.
+
+	* Third Cycle:	
+
+		x555h	addr.
+		 090h	value.
+
+	* Fourth Cycle:
+		
+		In any adress with the ending xx01h it'll be get the value 0A4h
+		
+	
+	This command is used by Fl2 to detect the slot where the cartridge is
+	placed or for detecting the presence. For more information, the
+	subroutine CHECKFLASH -in the sources- makes use of this command.
+
+[] Chip Erase :
+
+This is a 6-cycle command. Its result is to erase ALL of the flash memory
+contents. This command doesn't need any byte write checking, because the same
+command waits for the value that has been introduced in the flash memory for
+stepping to the next one. The waiting time for the complete erasing of the
+flash in a MSX, is around 8 secs approximately.
+
+	* First Cycle :
+	
+		x555h	addr.
+	 	 0AAh	value.
+	
+	* Second Cycle :
+		
+		x2AAh	addr.
+		 055h	value.
+
+	* Third Cycle :	
+		
+		x555h	addr.
+		 080h	value.
+
+	* Fourth Cycle :
+
+		x555h	addr.
+		 0AAh	value.
+
+	* Fifth Cycle :
+		
+		x2AAh	addr.
+		 055h	value.
+
+	* Sixth Cycle :
+		
+		x555h	addr.
+		 010h	value		
+
+Once the sixth cycle is executed we must wait around 8 secs for being able to
+execute the next command.
+The FL2 subroutine ERASEFLASH makes use of this command.
+
+[] Sector Erase.
+
+This function is close to the previous command, but here we only erase a 64KB
+sector. The cycles are EQUAL to CHIP ERASE, but sixth cycle which is explained
+here:
+
+		xSAh	addr.
+		030h 	value.
+
+The address 0SAh is that of the sector to erase. So, as FL2 does,
+it maps through port 05Ch to erase the first page of each sector. 
+For understanding this command study the subroutine ERASEFLASH from FL2.
+This routine has a longer waiting time, taking 2 seconds per erased sector.
+
+
+[] Program.
+
+This is the command used for writing 1 byte in flash memory. This is a command
+which has to be executed byte per byte. It is not possible to write in bigger
+portions, pages or sectors. Even in this way it is a very fast command.
+This is a 4 cycles command.
+
+	* First Cycle :
+		
+		x555h	addr.
+		 0AAh 	value.
+
+	* Second Cycle :
+
+		x2AAh	addr.
+		 055h	value.
+
+	* Third Cycle :
+
+		0555h	addr.
+		 0A0h	value.
+
+	* Fourth Cycle :
+
+		PAh	addr.
+		PDh	value.
+
+	In this fourth cycle we have to write the address where we want
+	the desired byte to be written. The writing is NOT finished instantly
+	and some microseconds are needed to make sure that the value is really
+	written. Once the value is written it is read from the address to check
+	if the value is there. The check is repeated twice. In the case that
+	the value is not there, there are some possibilities: the flash is
+	write-protected, any step failed, or there is another problem.
+	
+	For a better understanding of the command, read the
+	subroutine WRITEFLASH in the source of FL2.
+
+
+[] Reset
+
+	This command makes the flash ready for a new command. 
+	It is necessary to execute this command before each of the other
+	commands previously explained. This is a 1-cycle command.
+
+	* First Cycle :
+
+		XXXXh	addr.
+		 0F0h	value.
+
+	where XXXX is any address of the flash memory.
+
+
+
+5.- FL2 FLASH ROM LOADER.
+
+FL2 is an util which load programs, ROM files and data, in the Padial's
+LPE-FLASH G board. The function is similar to his predecessor's one, FL.COM,
+which was coded by Jose Angel Morente (Jam Soft). From FL.COM has been kept the
+easeos use, adding some new characteristics:
+
+	[] Total compatibility with DOS2, file loading from CDROM
+	or any other device used with this OS is possible.
+	 
+	[] Possibility of using paths in DOS2.
+
+	[] Possibility of full erase of the memory without executing any other
+	action.
+		
+	[] Possibility of executing a stored program after the loading process
+	or without this loading.
+
+	[] BIOS patched for keyboard and japanese system emulation.
+	
+	[] BIOS patched for keyboard and european / american system emulation.
+
+	[] Possibility of booting the program in NTSC (60Hz) or PAL (50hz)
+	without needing to patch the program.
+
+	[] Possibility of executing the program in R800 mode (only with MSX
+	turboR computers) without needing to patch the program.
+
+	[] Total compatibility of the options in DOS1 and DOS2 and with the
+	check of the parameters which don't need hierarchy.
+
+	[] Possibility of partial or full erasing before the loading of a file.
+
+	[] Possibility of loading files from 1 byte to 512 Kbytes. FL.COM was
+	not able to do it.
+
+Its functioning is very easy:
+
+	FL2 /params FILE.ROM /params.
+
+The parameters can be placed before or after the filename (FILE.ROM) to load
+(see the line above). Some examples:
+
+	FL2 E:MGALIOUS.ROM /5 /8 /R
+
+	FL2 /N /R /E
+
+	FL2 /R MGALIOUS.ROM /6
+
+	FL2 /D
+
+	FL2 /S /R C:\ROMS\MGALIOUS.ROM /5
+
+
+FL2 can be used in the same way as the predecessor by only executing the next
+instruction from the same device and directory where the file and the program
+FL2.COM are:
+
+	FL2 FILE.EXT
+
+FL2 will then initiate the loading process of the file.
+
+6.- PARAMETERS AND OPTIONS.
+
+FL2 has some options for configuring the program, the loading of the file or
+its execution.
+
+
+	/h : Show Help. It shows the online help of the FL2 program. It will
+	be also	shown if /? is used or if no parameters are used.
+	
+	/r : Run Loaded Game. This option will execute the stored program after
+	confirmation  by the userby pressing the <SPACE> key.
+	It should be remembered that this option is for executing
+	ROMs, not for executing other type of programs stored in the flash
+	memory.
+	
+	/e : Run and emulate European Keyboard. This option and the next one
+	make use of an easy trick for patching the ROM BIOS of the computer
+	and let the possibility of changing the language in some ROMs.
+	FL2 searches inside the ROM the keyboard and mode checking of the
+	computer during the loading of the ROM and patches it to European.
+	
+	/j : Run and emulate a Japanese Keyboard. As the previous option, it
+	only patches the ROM for emulating a japanese computer.
+
+	/8 : Run in R800 mode. This option is only valid for MSX turboR
+	computers. It will execute the program (if /r is used) with the R800
+	active. As /e and /j it will be only valid if the program is executed
+	by FL2.
+	
+	/5 : Run in PAL mode (50hz). This option will execute the program
+	with 50Hz of vertical refresh. This one only works with MSX2 computers
+	or higher and this effect is finished until the computer is reset.
+	
+	/6 : Run in NTSC mode (60Hz). As the previous option but changing the
+	vertical refresh to 60 Hz.
+	
+	/d : Delete all sectors. By selecting this parameter, any other 
+	parameter will be ignored. FL2 will erase the complete flash memory and
+	will exit of the program.
+	
+	/s : Delete all sectors on load. With this option, the flash will be
+	fully erased instead of only erasing the necessary sectors, not
+	depending on the file size of the file to load.
+
+	/n : No load, use loaded game. This parameter only disables the file
+	loading. So it is not necessary to use a file as parameter for storing
+	it in flash memory. FL2 will execute the other parameters and the game
+	which is already stored in the flash.
+	Of course, executing this option with together with the /r option.
+		
+More examples:
+
+	FL2 MGALIOUS.ROM 
+	
+	Load MGALIOUS.ROM file in the flash and the program finishes.
+
+	FL2 /R MGALIOUS.ROM /5
+
+	Load MGALIOUS.ROM file in the flash and will execute the program
+	once it is stored, setting the vertical refresh to 50 Hz.
+
+	FL2 /N /R /E
+
+	Execute the program which is stored in the flash 
+	emulating the european keyboard.
+
+
+
+7.- ERRORS.
+
+Error messages description shown by FL2 and their causes.
+
+	[] LPE - FLASH G not found : 
+
+	Message :
+	
+	Ooops! Flash Rom not Found!!
+	Please check the 'slot on / off' switch.
+
+	Cause :
+	
+	The flash is not plugged in the computer, the jumper / switch
+	Slot On / Off is set to Off or the board is damaged.
+	
+	Solution :
+		
+	Revise the jumpers / switchs, and if it is necessary turn the computer
+	off and insert the board again. If this does not help contact
+	Leonardo Padial.
+
+	[] File error, not found or damaged :
+
+	Message :
+	
+	ERROR: Problems opening file ...
+	
+	Cause:
+	
+	The file passed as parameter is not found in the specified device or
+	directory or the system is damaged and there are problems reading.
+	
+	Solution :
+
+	Revise the parameters and check if the file is really is present in
+	the specified directory and device.
+
+
+	[] File Size > 512 KB.
+
+	Message :
+	
+	ERROR : File size > 512 Ks
+
+	Cause :
+
+	The specified file is bigger than 512 KB. It is not possible to load
+	files over 512 KB in the board.
+	
+	[] Problems writing the file in the board.
+
+	Message :
+
+	ERROR: Problems writing Flash Rom ...
+
+	Cause :
+
+	The flash is write protected or the jumpers are not correctly selected
+	for storing the data. 
+
+	Solution :
+
+	Revise the jumpers and set them as explained in point 3.
+
+
+8.- RECOMMENDATIONS.
+
+FL2 has many possibilities but it can give some headaches
+to the user if this one doesn't know what he really does.
+
+As examples of usage, there is a possibility of simulating other carts before
+executing the one who was just stored in flash. Of course, this can't be
+made directly by FL2, but maybe the user knows how to do that.
+
+The possibility of changing the palette is also possible (MSX2 or higher)
+before executing the game.
+
+Another use is to load / save the savegames in HARD DISC. It can be very nice
+but it can be REALLY DANGEROUS.
+
+Not all the games which load / save the savegames do it in a file, some of
+them use SECTORS and if it is saved in that way in the hard disc, it can
+damage the used partition.
+
+Of course the author does NOT ASSUME ANY RESPONSABILITY of any damage which
+can occur by using this program. 
+
+It should be added that FL2 has been widely tested with different MSX models
+and on configurations with no problems.
+
+
+9.- BUILDING THE PROGRAM FROM SOURCES
+
+The FL2.LZH package comes with the sources of the FL2 program, in four formats:
+
+	[] TASM : FL2.ASM, this file can be assembled with the crossed
+	assembler TASM, which is available in many sites, and is
+	added to the programs made by Borland. 
+	The parameters for assembling the source :
+	
+	TASM -i -e -a13 -80 -b FL2.ASM FL2.COM
+	
+	For making it correctly, it is necessary to have the TASM80.TAB
+	which has the tables of the Z80 microprocessor.
+		
+	TASM has multiple versions for different computers and OS's.
+	We will execute the TASM program for our system.
+		
+	[] CHAOS ASSEMBLER 3 : FL2.CAP + FL2.ASM. The same FL2.ASM is valid
+	for the Z80 assembler for PC Windows, Chaos Assembler 3. It comes 
+	with the file project (FL2.CAP) ready.
+	
+	
+	[] COMPASS : FL2.ASC : Source file ready for the MSX Assembler Compass
+	by CompJoetania. Even if the source is ready, for visualizing it
+	correctly in the Compass editor is useful to change the label size
+	to 20.
+	
+	[] DEVPAC GEN80 : FL2.ASC is the same file used by Compass.
+	The only change to do to the source is erase the line :
+	
+		.label 20
+		
+	Then it can be assembled with the next parameters:
+		
+		GEN80 FL2.ASC ;S 20 F U+
+		
+	Using GEN80 the assembled file size will change of the other assembled
+	versions with other assemblers (the reason is because GEN80 is
+	CP /M compatible). It doesn't matter, the file will work perfectly.
+	
+
+10.- CONTACT THE AUTHOR AND THANKS.
+
+For any suggest, doubt or recommendation, just contact with :
+
+Armando Perez Abad (Ramones)
+
+e-mail : armando.perez@wanadoo.es
+
+snail mail :
+
+	C/ Santo Tomas 2-21
+	46100 Burjassot
+	(Valencia)
+	SPAIN
+
+
+For contacting the manufacturer of the LPE-FLASH G board :
+
+Leonardo Padial Ortiz 
+
+e-mail : lpadial@teleline.es
+
+
+The author wants to thank grateful for their support and help, in any order:
+
+	[] Nestor A. Soriano aka Konamiman : for his SIGSLOT routine.
+
+	[] Franciso Alvarez aka Babea (Saeba) : Because of the translation into
+	english of the source comments, of this manual and of the LEEME.TXT.
+	I also wanted to thank him his help testing the program and letting me
+	use part of the source of his Steria.bin program.
+
+	[] Leonardo Padial : Because of being always there, offering quality
+	and new products for the MSX, like this board.
+
+	[] Jose Angel Morente aka Jam : for creating FL.COM 
+
+	[] David Fernandez aka Imanok / Steria / Sopra Bull: Because of his
+	constant recommendations and suggestions for the program and also
+	thanks for helping with the betatesting.
+	
+	[] Manuel Pazos : He has collaborated on this version adding the
+	compatible turboR routines. The turboR owners will enjoy a much faster
+	load. He created the patching routine of the ROM for simulating
+	the european and japanese keyboard too.
+	
+ And of course thanks you for using this program.
+
+11.- HISTORIA DE VERSIONES:
+
+[] FL2 1.0 : 
+	
+	ROMs and Files loading support.
+	
+[] FL2 2.0: 
+	
+	BIOS patching for emulating japanese & european modes added.
+	It has errors with files bigger than 16KB and with not 'standard'
+	size when they are loaded or stored.
+	
+[] FL2 2.2:	
+
+	First version which comes inside FL2.LZH package. It keeps the same
+	errors that the previous version.
+	
+[] FL2 2.3 : (This version)
+
+	Problems with files of any size fixed.
+	Loading, storing & erasing routines speeded up.
+	R800 support for loading / erasing.
+	ROM patching for emulating the european / japanese keyboard in the
+	ROM itself.
+
+(c) Armando Perez Abad (Ramones), January 2003
