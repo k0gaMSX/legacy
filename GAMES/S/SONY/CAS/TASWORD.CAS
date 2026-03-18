@@ -1,0 +1,254 @@
+¶ﬁ∫Ã}tÍÍÍÍÍÍÍÍÍÍTASWOR¶ﬁ∫Ã}t1 ON STOP GOSUB 10000
+2 ON ERROR GOTO 10
+10 STOP ON:MP=PEEK(&HD180):IF MP=70 THEN 300
+20 SCREEN0,0,0:COLOR 15,12,12
+30 LOCATE8,8:  PRINT"************************"
+31 DEF FN P(X)=PEEK(X)+256*PEEK(X+1)
+35 BL=0
+40 LOCATE8,9:  PRINT"*                   ¶ﬁ∫Ã}t   *"
+50 LOCATE8,10:PRINT"*                      *"
+60 LOCATE8,11:PRINT"*       CARGANDO       *"
+70 LOCATE8,12:PRINT"*                      *"
+80 LOCATE8,13:PRINT"*                      *"
+90 LOCATE8,14:PRINT"*                      *"
+100 LOCATE8,15¶ﬁ∫Ã}t:PRINT"************************"
+105 CLEAR 250,&HA200
+110 BLOAD"MTW20"
+111 DEFUSR=&HEEB2:A=USR(A)
+120 DEFUSR1=&HE942
+130 DEFUSR2=&HDEB8
+140 DEFUSR3=&HCC
+150 DEFUSR4=&HE9B2
+160 POKE &HEFF7,16
+170 KEY1,CHR$(200)
+180 KEY2,CHR$(202)
+190 KEY3,CHR$(12¶ﬁ∫Ã}t)
+200 FOR Z=4 TO 10:KEY Z,"":NEXT Z
+269 A=USR3(A)
+270 SCREEN2
+280 A=USR1(A)
+290 DEFUSR1=&HD6D8:A=USR1(A)
+300 SCREEN2,0,BL
+310 A=USR2(A)
+320 A=USR4(A):MG=A
+330 SCREEN0
+331 RP=PEEK(&HF001):IF RP=64 THEN5000
+340 LOCATE 14,4:PRINT"Opciones"
+350 PRI¶ﬁ∫Ã}tNT
+360 PRINTTAB(5)"Imprimir texto .......... P"
+370 PRINTTAB(5)"Grabar   texto .......... S"
+380 PRINTTAB(5)"Cargar   texto .......... L"
+390 PRINTTAB(5)"Mezclar  texto .......... M"
+395 PRINTTAB(5)"Comprobar texto ......... V"
+400 PRINTTAB(5)"Volver¶ﬁ∫Ã}t al texto ......... R"
+410 PRINTTAB(5)"Definir grafico/impresora D"
+420 PRINTTAB(5)"Grabar TASWORD MSX ...... T"
+430 PRINTTAB(5)"Entrar al Basic ......... B"
+440 LOCATE0,20:PRINT"          Pulsa una tecla               "
+445 DEF FN P(X)=PEEK(X)+256*PE¶ﬁ∫Ã}tEK(X+1)
+450 LOCATE0,21:PRINT"                                      "
+460 A$=INKEY$:IF A$=""THEN 460
+470 I=0:B=ASC(A$):IF B<97THEN B=B+32
+475 I=(6ANDB=112)+(7ANDB=115)+(8ANDB=108)+(9ANDB=109)+(10ANDB=118)+(11ANDB=114)+(12ANDB=100)+(13ANDB=116)+(14ANDB=9¶ﬁ∫Ã}t8)
+560 IF I>0THEN 580
+570 GOTO 460
+580 LOCATE 5,20:PRINT"Pulsa RETURN para continuar."
+590 LOCATE 5,21:PRINT"Pulsa C para cambiar de opcion."
+600 LOCATE 30,I:PRINT"<":LOCATE 32,I:PRINT">"
+610 FORF=1TO100:NEXTF
+620 LOCATE 30,I:PRINT" ":LOCATE 32,I:PR¶ﬁ∫Ã}tINT" "
+630 FORF=1TO100:NEXT
+640 A$=INKEY$:IF A$="C"OR A$="c"THEN GOTO 440
+650 IF A$=""THEN 600
+660 IF ASC(A$)=13THEN666
+661 GOTO 600
+666 CLS:ON IGOTO,,,,,4000,1000,2000,3000,800,10,9000,3500
+740 IF B=98  THEN CLS:STOP OFF:END
+800 LOCATE 0,0:PRINT"O¶ﬁ∫Ã}tpcion V:Verificar el texto en cinta."
+810 IF PEEK (&HF32D)<>0 THEN LOCATE10,5:PRINT"No puedo verificar":LOCATE10,10:PRINT"despues de un Error":FOR Z=1 TO 15:BEEP:NEXT Z:GOTO 10
+820 POKE &HF307,0:POKE &HF308,1
+830 GOTO 2010
+1000 L=FN P(&HF002):L=64*INT(¶ﬁ∫Ã}tL/64+.9999):S=INT((L/64)/22+.999)
+1010 POKE &HF307,1:POKE &HF317,S
+1020 LOCATE 0,0:PRINT"Opcion S:Grabar texto en cinta."
+1030 LOCATE 5,8:PRINT"Nombre del archivo a grabar?"
+1040 LOCATE 5,9:LINE INPUT A$
+1050 IF LEN(A$)>8 THEN CLS:LOCATE 5,20:PRINT"De¶ﬁ∫Ã}tmasiado largo - maximo 8":FOR Z=1 TO 15:BEEP:NEXT Z:GOTO 1020
+1060 IF A$=""THEN CLS:LOCATE 5,20:PRINT"Debes darle nombre al texto":FOR Z=1 TO 15:BEEP:NEXT Z:GOTO 1020
+1070 FOR Z=0 TO 7:POKE &HF30E+Z,32:NEXT Z
+1080 FOR Z=1 TO LEN(A$):POKE &HF30D+Z,ASC(MI¶ﬁ∫Ã}tD$(A$,Z,1)):NEXT Z
+1085 Z$=A$
+1090 LOCATE 5,12:PRINT"Velocidad grabacion (1200/2400)":LOCATE 5,13:PRINT"Por defecto =1200"
+1100 LOCATE 5,14:LINE INPUT A$
+1110 IF (A$="") OR(A$="1200") THEN POKE &HF316,0:GOTO 1135
+1120 IF A$="2400" THEN POKE &HF316,1:G¶ﬁ∫Ã}tOTO 1135
+1130 LOCATE 5,20:"NO VALE, teclea 1200 o 2400":LOCATE 5,20:FOR Z=1 TO 15:BEEP:NEXT Z:PRINT"                               ":GOTO 1090
+1135 MOTOR ON:LOCATE 2,20:PRINT"PREPARA LA CINTA Y PULSA RETURN"
+1136 IF INKEY$="" THEN 1136
+1137 LOCATE 2,20¶ﬁ∫Ã}t:PRINT"   grabando : ";Z$"                                  "
+1140 DEFUSR=&HF130:A=USR(A)
+1145 LOCATE 5,20:PRINT"                                    "
+1150 IF PEEK(&HF32D=1) THEN LOCATE 5,20:PRINT"Grabacion cancelada:for i=1 to 15:beep:next z:goto 330
+¶ﬁ∫Ã}t1155 CLS
+1160 LOCATE 5,10:PRINT"Texto ";Z$;" Grabado."
+1170 LOCATE 8,11:PRINTL;" Bytes ";L/64;" Lineas."
+1180 LOCATE 5,20:PRINT"Pulsa una tecla."
+1190 IF INKEY$=""THEN 1190
+1200 GOTO 330
+2000 LOCATE 0,0:PRINT"Opcion L:Cargar texto de la cinta."
+2005¶ﬁ∫Ã}t POKE &HF305,0:POKE &HF307,0:POKE &HF308,0
+2010 LOCATE 5,8:PRINT"Nombre del texto...":LOCATE 5,9:PRINT"<RETURN> Carga el siguiente":LOCATE 5,10:LINEINPUT A$
+2020 FOR Z=0TO7:POKE&HF30E+Z,32:NEXTZ
+2030 IF A$="" THEN GOTO 2060
+2040 IF LEN(A$)>8 THEN:LOCAT¶ﬁ∫Ã}tE 5,20:PRINT"Muy largo- max 8 caracteres":FOR Z=1 TO 15:BEEP:NEXT Z:CLS:GOTO 2000
+2050 FOR Z=1 TO LEN(A$):POKE &HF30D+Z,ASC(MID$(A$,Z,I)):NEXTZ
+2060 LOCATE 13,14:PRINT"Pulsa PLAY."
+2070 LOCATE0,15:DEFUSR=&HF130:A=USR(A)
+2080 IF PEEK(&HF32D)=1 THEN GOTO¶ﬁ∫Ã}t 2500
+2086 FOR Z=1 TO 15:BEEP:NEXT Z:GOTO 10
+2090 GOTO 10
+2500 PRINT "ERROR":FORF=1TO10:BEEP:COLOR3,12,12
+2510 MOTOR OFF
+2520 POKE &HF32D,0
+2560 FOR G=1TO50:NEXTG
+2570 BEEP:COLOR15,12,12
+2580 FOR G=1TO50:NEXTG
+2590 NEXTF:GOTO 330
+3000 L=FN P(&HF0¶ﬁ∫Ã}t02):L=INT(L/64+.999):S=INT(L/22+.999):
+3005 LOCATE 0,0:PRINT"Opcion M:Mezclar texto de la cinta."
+3010 POKE &HF305,S:POKE &HF307,0:POKE &HF308,0:I=10:GOTO 2010
+3500 LOCATE 0,0:PRINT"Opcion T: Grabar TASWORD MSX en cinta"
+3520 LOCATE 4,8:PRINT"Velocidad¶ﬁ∫Ã}t Grabacion (1200/2400)":LOCATE 4,9:PRINT"Por defecto=1200"
+3530 LOCATE 4,10:LINE INPUT A$
+3532 IF A$="2400" THEN SCREEN ,,,2:GOTO 3535
+3533 SCREEN ,,,1
+3535 ON ERROR GOTO 2500
+3536 MOTOR ON
+3537 PRINT:PRINT:PRINT" PULSA UNA TECLA PARA GRABAR TASWORD ¶ﬁ∫Ã}t  Cuando aparezca ok, pulsa RETURN":PRINT:PRINT"GOTO 3550"+CHR$(30)+CHR$(30);
+3538 IF INKEY$="" THEN 3538
+3539 LOCATE 0,13:PRINT"   ******* GRABANDO TASWORD *******   ":LOCATE0,15:SAVE "CAS:TASWORD"
+3550 LOCATE 4,18:PRINT"Tasword basic grabado":LOCATE 1¶ﬁ∫Ã}t2,19:PRINT"ESPERA"
+3551 MOTOR ON
+3555 FORF=1TO1000:NEXTF
+3560 BSAVE "CAS:MTW20",&HBB00,&HF367
+3561 LOCATE 6,19:PRINT"PULSA UNA TECLA"
+3562 IF INKEY$="" THEN 3562
+3570 GOTO 330
+4000 GOSUB 7000:LOCATE12,3 :PRINT"OPCIONES":PRINT:PRINT" Pulsa RETURN por¶ﬁ∫Ã}t defecto (valor entre parentesis)"
+4005 L=FN P(&HF002):L=64*INT(L/64+.9999)
+4010 LOCATE 2,8:PRINT"Espacio entre lineas? (1)";:LINEINPUTA$:IF A$=""THEN A$="1"
+4015 POKE &HEFED,VAL (A$)
+4020 LOCATE2,9:PRINT"Linea de comienzo? (1)";:LINEINPUT A$:IF A$=""T¶ﬁ∫Ã}tHEN A$="1"
+4030 C=64*(INT(VAL(A$)-1)):B=C+FN P(&HEFDA):X=&HD9DB:GOSUB 7010
+4040 LOCATE 2,10:PRINT"Linea de fin? (ultima)";:LINEINPUT A$:IF A$=""THEN B=L-C:GOTO 4050
+4045 B=64*INT(VAL(A$)-C)
+4050 X=&HD9DE:GOSUB 7010
+4051 DEFUSR5=&HD9DA
+4052 LOCATE 2,2¶ﬁ∫Ã}t0:PRINT"Pulsa ESC para detener la impresion."
+4053 STOP OFF
+4055 A=USR5(A)
+4060 GOTO 10
+5000 POKE&HF001,0
+5010 FORF=&HBF00TO&HBF41:POKEF,32:NEXTF
+5020 POKE&HBF42,0
+5030 LOCATE2,8:PRINT"Palabra a reemplazar / encontrar"
+5040 LOCATE2,9:LINEINPUT A$:I¶ﬁ∫Ã}tFA$=""THEN10
+5050 J=0:FORI=1TOLEN(A$):POKE&HBF01+I,ASC(MID$(A$,I,1)):IFMID$(A$,I,1)=" "THENJ=J+1
+5060 NEXTI
+5070 IFJ<>0THENCLS:LOCATE2,12:PRINT"solo letras - no permite espacios":GOTO5000
+5080 POKE&HBF01,LEN(A$)
+5090 LOCATE2,12:PRINT"RETURN para busqu¶ﬁ∫Ã}teda":LOCATE 2,13:LINEINPUT A$
+5100 IF A$=""THENPOKE&HBF42,1:GOTO5120
+5110 FORI=1TOLEN(A$):POKE&HBF21+I,ASC(MID$(A$,I,1)):NEXTI
+5120 DEFUSR8=&HDB61
+5130 SCREEN2:COLOR15,12,12:DEFUSR=&HD421:A=USR(A)
+5140 A=USR8(A)
+5150 DEFUSR9=&HE9B8
+5160 A=USR9(A)
+5¶ﬁ∫Ã}t170 GOTO330
+7000 LOCATE12,0:PRINT"Tasword MSX":LOCATE8,1:PRINT"Tasman software 1984":RETURN
+7010 POKEX,B-256*INT(B/256):POKEX+1,INT(B/256):RETURN
+7500 LOCATEJ,I:PRINTA$;"(";PEEK(X);")";:LINEINPUT A$:IFA$<>""THENPOKEX,VAL(A$)
+7510 RETURN
+9000 GOSUB7000¶ﬁ∫Ã}t:PRINT"     Caraceteres de control.":PRINT
+9010 G$="Tecla":G1$="Tecla cambiada"
+9020 L=128:FORF=1TO8:PRINT" ";L;TAB(14)G$;F:PRINT" ";L+1;G1$;F:L=L+2:NEXT
+9030 FORI=0TO15:FORJ=0TO3:C=PEEK(&HDD37+I*4+J):A$=STR$(C):IFC=255THENA$=""
+9040 LOCATE20+4*J,I+4:P¶ﬁ∫Ã}tRINTA$:NEXTJ:NEXTI
+9050 A$="":LOCATE2,20:LINEINPUT"Caracter grafico codigo 128-143       (RETURN si ha terminado)";A$:IF A$=""THEN9130
+9060 LOCATE2,20:FORF=1TO80:PRINT" ";:NEXTF
+9070 B=VAL(A$):IFB<128ORB>143THEN9050
+9080 LOCATE3,20:PRINTB
+9090 FORJ=0T¶ﬁ∫Ã}tO3:POKE(&HDB37+B*4+J),255:NEXTJ
+9100 FORJ=0TO3:LOCATE 2,21:INPUT"codigo (RETURN si ha terminado)";A$:IFA$=""THEN9120
+9105 LOCATE0,21:FORF=1TO40:PRINT" ";:NEXTF
+9110 POKE(&HDB37+B*4+J),VAL(A$):LOCATE10+4*J,20:PRINTVAL(A$):A$="":NEXTJ:CLS:GOTO9000
+9120 C¶ﬁ∫Ã}tLS:GOTO9000
+9130 CLS:GOSUB7000
+9140 PRINT:PRINT"  Borrar codigos de control etc?"
+9150 LOCATE5,5:PRINT"(S/N)"
+9155 A$=INKEY$: IFA$=""THEN9155
+9160 IFA$="N"ORA$="n"THEN330
+9170 IFA$="s"ORA$="S"THEN9190
+9180 GOTO9155
+9190 CLS:GOSUB7000:PRINT:PRINT"  ¶ﬁ∫Ã}tRETURN para manteners los valores dados:"
+9200 JO=30
+9235 I=8:J=2:A$="Retorno carro de impresora=":X=&HDD79:GOSUB7500
+9240 I=10:J=2:A$="Salto de linea=":X=&HDD7A:GOSUB7500
+9250 I=12:J=2:A$="Margen izquierdo=":X=&HDD7B:GOSUB7500
+9260 I=14:J=2:A$="TAB="¶ﬁ∫Ã}t:X=&HEFF7:GOSUB7500
+9261 LOCATE2,16:PRINT"Sonido";:IF PEEK(&HE9DC)=&HCD THEN PRINT"(ON)"; ELSEPRINT"(OFF)";
+9262 INPUT A$:IF A$="" THEN 9270
+9263 IF A$="OFF"ORA$="off"THENFORF=&HE9DCTO&HE9DE:POKEF,0:NEXT
+9264 IFA$="ON"ORA$="on"THENPOKE&HE9DC,&HCD:POKE&¶ﬁ∫Ã}tHE9DD,&HC0
+9270 CLS:GOSUB7000:PRINT:PRINT"   RETURN para mantener los valores dados:"
+9280 J=2:I=8:A$="COLORES TEXTO ?":X=&HDEBF:GOSUB 7500
+9290 J=2:I=10:A$="COLORES MARGEN IZQUIERDO?":X=&HD44E:GOSUB 7500
+9300 J=2:I=12:A$="COLORES MARGEN DERECHO?":X=&H¶ﬁ∫Ã}tD483:GOSUB 7500
+9310 J=2:I=14:A$="Code for ú on your printer":X=&HD3C1:GOSUB 7500
+9331 J=2:I=16:A$="MARGEN IZQUIERDO POR DEFECTO?":X=&HE953:GOSUB 7500:POKE &HEBB1,PEEK(&HE953)
+9332 J=2:I=18:A$="MARGEN DERECHO POR DEFECTO":X=&HE96F:GOSUB 7500:POKE &HEBB6¶ﬁ∫Ã}t,PEEK(&HE96F)
+9335 CLS:GOSUB 7000
+9340 PRINT:PRINT:PRINT:PRINT" Quieres editar las paginas de ayuda? Si pulsas Y entonces las 46 lineas de las paginas de ayuda apareceran en pantalla  puedes editarlas de forma normal"
+9350 PRINT:PRINT" Despues de editar¶ﬁ∫Ã}t las paginas de ayuda, vuelve al  TASWORD   pulsando CTRL STOP"
+9360 LOCATE 10,20:PRINT"(Y/N)":LOCATE 11,21:A$="":A$=INPUT$(1)
+9370 IF A$<>"S"ANDA$<>"s" THEN 9420
+9380 POKE &HE966,24:POKE &HE967,0:POKE &HE97A,&HC6:POKE &HE979,0
+9390 SCREEN 2:A=USR4(A)¶ﬁ∫Ã}t
+9400 POKE &HE966,&HE9:POKE &HE967,1:POKE &HE979,64:POKE &HE97A,0
+9410 SCREEN0:CLS:GOSUB 7000:PRINT:PRINT:PRINT:PRINT" PAGINAS DE AYUDA EDITADAS.":FOR I=1 TO 15:BEEP:NEXT I
+9420 GOTO 330
+10000 RETURN
+¶ﬁ∫Ã}t––––––––––MTW20 ¶ﬁ∫Ã}t ªgÛ ª                                                                    ˇˇˇˇ    ˇˇˇˇˇˇˇˇˇˇˇˇˇˇˇˇˇˇˇˇ<<<<<<<<ˇˇ    ˇˇ~~````~~~~~~ˇ   ˇ                  ÅB$$BÅ|(DÇ ˛í˛ TTí0                 PPP     PP¯P¯PP  x†p(  ¿» @ò @†@®êò`  @      @@@  @  @  ®p p®     ¯           @   x         ``    @Ä pàò®»àp  `†   ¯ pà`Ä¯ pà0àp 0Pê¯ ¯Ä‡‡ 0@Äààp ¯à     pààpààp pààx`                @0`¿`0   ¯ ¯   ¿`00`¿ pà    pàh®®p  Pàà¯àà HHpHH 0HÄÄÄH0 ‡PHHHP‡ ¯ÄÄÄÄ¯ ¯ÄÄÄÄÄ pàÄ∏ààp ààà¯ààà p     p 8êê` àê†¿†êà ÄÄÄÄÄÄ¯ àÿ®®ààà à»»®òòà pàààààp ààÄÄÄ pààà®êh àà†êà pàÄpàp ¯       ààààààp ààààPP  ààà®®ÿà ààP Pàà àààp    ¯ @Ä¯ p@@@@@p àP p p  pp  Pà           ¯ @        pxàx ÄÄ∞»à»∞   pàÄàp hòàòh   pà¯Äp ( ¯      hòòhpÄÄàààà   `   p  0ê`@@HP`PH `     p   –®®®®   ∞»ààà   pàààp   ∞»»∞ÄÄ  hòòh  ∞»ÄÄÄ   xÄ @@@@H0   êêêêh   àààP    à®®®P   àP Pà   ààòhp  ¯ @¯   @           ¿    ¿ @®             A                                                                ˇ Ô Ô Ô Ô Ô ˇ ˇ ˇ ˇ@ˇ Ô@ˇ Ô ˇ Ô Ô Ô Ô Ô Ô Ô ˇ Ô ˜ ˇ ˜ ˜ Ô ˇ         RETURN returns to text. F1 for other help page          ˇ@ˇ ˇ Ô Ô Ô Ô ˇ@ˇ ˇ@ˇ ˇ@ˇ@ˇ@ˇ@Ô@√√√√¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸¸                    (C) 1984 Tasman Software                                                                                         Este  Tasword  MSX  Tutor  es  un  texto  pensado  para        familiarizarte con el uso de las teclas de control.                                                                                            USA LA TECLA HACIA ABAJO PARA                                        AVANZAR POR EL TEXTO                                                                                          Usualmente, pulsaras dos  teclas,  cuando  pulses  una        tecla de Control.  P.ej.:  ^F  Significa  que  mantienes        pulsada la tecla CTRL y pulsas a su  vez,  la  tecla  F;        ~CURSOR ABAJO significa que debes  mantener  pulsada  la        tecla SHIFT y la flecha hacia abajo.                                                                                              La primera tecla que vamos a estudiar es ~CURSOR ABAJO        Esto te lleva hasta el final del texto. Pruebalo  ahora,        pulsando SHIFT y Cursor abajo.                                                                                                    Una tecla muy usual, con la que te evitas consultar el        manual, es la tecla F1, que te mostrara  una  pagina  de        ayuda. Con la tecla RETURN volveras al  menu.  Pulsa  F1        ahora.                                                          ÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑ        âLine   8êCol  5êR/J on êW/W on êInsert offêF1 for helpà                   < < <  T A S W O R D   M S X  > > >                                                                                  F1 . . . . . Help page              èèèèèèèèèèèèèèèèèèèè        F2 . . . . . Reform paragraph       è    Epson FX80             F3 . . . . . Delete line            è On-shifted     Off        GRAPH  . . . Printer control chars >è Å   enlarged    Ä         UP ARROW . . Cursor up              è      (key 1)              DOWM ARROW . Cursor down            è É   condensed   Ç         LEFT ARROW . Cursor left            è      (key 2)              RIGHT ARROW  Cursor right           è Ö   underline   Ñ         ^ UP ARRW  . Scroll up              è      (key 3)              ^ DOWN ARRW  Scroll down            è á   italics     Ü         ^ LEFT ARRW  Cursor to word left    è      (key 4)              ^ RIGHT ARRW Cursor to word right   è â  emphasised   à         ~ UP ARRW  . Go to start of text    è      (key 5)              ~ DOWN ARRW  Go to end of text      è ã double strike ä         ~ LEFT ARRW  Move line left         è      (key 6)              ~ RIGHT ARRW Move line right        è ç     elite     å         HOME . . . . Centre line            è      (key 7)              DEL or BS  . Delete character       è è  proportional é         ^ STOP . . . Load/save/print text   è      (key 8)              ^ Indicates CTRL key. ~ Indicates SHIFT key.                    C O P Y R I G H T  1 9 8 4  T A S M A N  S O F T W A R E            RETURN returns to text. F1 for other help page                         < < <  T A S W O R D   M S X  > > >                                     Control key actions                                                                                             BLOCK COMMANDS                     FORMATTING                ^ B - Mark start of block     ^ E - Right justify on/off        ^ V - Mark end of block       ^ W - Word-wrap on/off            ^ Q - Move marked block       ^ J - Justify line                ^ N - Copy marked block       ^ U - Unjustify line                                                                                 MISCELLANEOUS                      MARGINS                   ^ T - Change window           ^ A - Set left margin             ^ Y - Clear text              ^ S - Reset margins               ^ 0 - Replace or find text    ^ D - set right margin            ^ Z - Inset mode on/off                                                                              SCROLLING                        CURSOR                  ^ F - Fast scroll down            ^ UP ARRW    - Scroll down    ^ G - Fast scroll up              ^ DOWN ARRW  - Scroll up                                        ^ LEFT ARRW  - Cursor to word left                              ^ RIGHT ARRW - Cursor to word right                                                                                             ^ Indicates CTRL key.                                       FILE FULLTOP OF FILEEND OF FILE    âLine    êCol   êR/J    êW/W    êInsert    êF1 for helpà    on off  C A P S  L O C K    G R A P H I C S  Press  ESC  key to stop printing  Ready to clear the text file  Are you sure?Press  y  for yesn  for noëPrintëëatëëdoubleëëheight$ëoffë!ÿÔÀn(ÀÆÀÓ√c‰:ÏÔ2π“ó2”Ô√πŸ:π“2”Ô√πŸÕ-È˛ (:”ÔG:ÔÔ=∏(ÕÏÍ»ËÕÏÍ»Õ-È˛ (ı…ÕU’:y›Õ
+›ÕU’:z›˛ »Õ
+›…:“ÔÊW:ÿÔÊ0_… ˇˇ!ˇˇ"ˇˇ#ˇˇ$ˇˇ%ˇˇ&ˇˇ'ˇˇ(ˇˇ)ˇˇ*ˇˇ+ˇˇ,ˇˇ-ˇˇ.ˇˇ/ˇˇ0ˇˇ1ˇˇ2ˇˇ3ˇˇ4ˇˇ5ˇˇ6ˇˇ7ˇˇ8ˇˇ9ˇˇ:ˇˇ;ˇˇ<ˇˇ=ˇˇ>ˇˇ?ˇˇ@ˇˇAˇˇBˇˇCˇˇDˇˇEˇˇFˇˇGˇˇHˇˇIˇˇJˇˇKˇˇLˇˇMˇˇNˇˇOˇˇPˇˇQˇˇRˇˇSˇˇTˇˇUˇˇVˇˇWˇˇXˇˇYˇˇZˇˇ[ˇˇ\ˇˇ]ˇˇ^ˇˇ_ˇˇ#ˇˇaˇˇbˇˇcˇˇdˇˇeˇˇfˇˇgˇˇhˇˇiˇˇjˇˇkˇˇlˇˇmˇˇnˇˇoˇˇpˇˇqˇˇrˇˇsˇˇtˇˇuˇˇvˇˇwˇˇxˇˇyˇˇzˇˇ{ˇˇ|ˇˇ}ˇˇ~ˇˇˇˇÕ∏ﬁÕ»Ÿ:ÏÔÀ/2ÛÔG:ÔÔÎÀG¬¶‘À/2ÙÔ  !  :ÛÔª Y‘>√ÕM #˙√D‘>∫ r‘’z !  = ¸— √D‘  !ˇ :ÙÔª é‘>√ÕM +˙√y‘>∫»’z !ˇ =¬õ‘— √y‘<√9‘:ÿÔÀ_ƒ!‘…2ÎÔ !‡ø6¸#˚:ÏÔG:ÎÔOê0ÌDG!‡ø6√#˚y∆ G:ÔÔê0ÌDG!ˇø6√+˚!  ‡ø ÕM ########Ò»√‘*”ÔÂ*÷ÔÂÕ0÷·—–"÷ÔÌS”Ô≈Õ È¡:”ÔG:ÏÔ∏≈ƒ†Ìó2”ÔÕË¡ÿÕ-Èq…Õ£“íÕ	’Õ∞“√c‰ÕÌÕ£“ìÌ:x›˛ »Õ
+›…ó2”ÔÕËÿÕ-È6êÕ≤’"ÄøíÕ0÷ÿÕ≤’ÂìÕ0÷¡ÿÕ≤’T]ßÌBÿ*ÄøßÌR–*ÄøÎ`ißÌR…!ÿÔÀ∂!ÿÔÀˆÕ£“ÕΩ’√∞“*÷Ô:‘Ô_ …Õ_’8<íÕ0÷Õ†ÌÕ-È˛ì Õ/ÊÕGÌÕ/Ê"Äø@ Ì∞√÷êÕ0÷ÕË!Äø@ Ì∞Õ˝ËƒêÕ0÷Õ/Ê√c‰8ÛÕ-ÈÎ‡:ÿÔÀw Õ/Ê ÕGÌÕ/ÊÕ†ÌÕËÕ-È6í∑≈Õ Ë¡Õ-Èπ»≈Õ†Ì¡ÿÛ:ﬁÔ˛å !`ﬁ…!xﬁ…Õ†ﬁOÕ-È:ÔÔëGO> æ #˙…æ(#˙…æ¬˝È#˘…Â& :‘Ôo)˝  :”ÔÂ!ÿÔÀ^· ú÷À?ááá_Î·…Â*ÎÔï·√î÷ÕcÌ ö≈!â—Ì∞√nÌÕcÌ ö≈!î—Ì∞√nÌ*ﬂÔ"÷ÔÕÈ…ÕBÈÕ«÷Î*⁄ÔÛ€®ı:XÛ”®6 #zº ˘{Ω ı6 ÛÒ”®˚…Û€®ı:XÛ”®Õ5ÓÕ«÷Ì[⁄Ô> æ 	+zº ˆ{Ω ÚßÌRÛÒ”®˚…!ÿÔÀf(À¶ÀÊ√c‰ÎÕM #¯…ÎÕJ #¯…        !ˇ?>ˇÕM ! +ÂÕr◊·|µ ˆ ¿ÌSÅÓ…Ì[ÅÓ& o)))|∆ﬁGM& o)))|∆ﬁg
+ááááÜ”ò#
+ááááÜ”ò#
+ááááÜ”ò#
+ááááÜ”ò#
+ááááÜ”ò#
+ááááÜ”ò#
+ááááÜ”ò#
+ááááÜ”òÌSÅÓ…Õ<ÌÿÕßﬁ8˜…:ÌÔ2ÓÔÕﬁ“:ÓÔ= ÙÕ¥Â&@…Õ»Ÿ√ªÎ!  º ÕY …:ÎÔo&  ¿"ıÔ!ˇ?>ˇÕM  ≈ÕJÿ¡*ıÔ#"ıÔÚ Ñÿ≈  	"ıÔ¡·  ÌKıÔ
+˛Ä⁄Yÿ÷Ä& o)))|∆ªgÎ”ò”ò”ò”ò”ò”ò”ò”ò…Ä≈ÌSÅÓ!ˇÕJ ÕM &@ÂÕr◊·% ¯ ¿ÌSÅÓÕ»Ÿ…:”Ô˛0ó
+˛/0÷> Õ≥‘√ÿ*÷Ô:‘ÔO 	#{ÔÕ¡Î:”Ô<o& ÇÔÕ¡Î>l2ÇÔ:ÿÔÀg !ﬂ—!‚— ãÔÌ∞ìÔ :“ÔÀW !ﬂ—!‚—Ì∞:ÿÔÀo(!ﬂ—!‚— ûÔÌ∞!6Ô8>Ñw#¸:“ÔÀo(_Ô!˘— Ì∞:´¸∑(6Ô!Â— Ì∞!2Ô6 #˚!nÔ6 #˚!ÆÔ6 #˚!2ÔÄ≈Ä Ì∞…Õ-È˛ (:”ÔG:ÏÔ∏(Õ‚◊ÿÈÕ‚◊ÿÕ-È˛ (ı…:”Ô<G:ÔÔ=ê0Õ∞Î…Õc‰:”Ô2Ì2)Ó2ÏÔ√™‘>œ! 6ˇÕM #˙ÕM ……@ Ä Õ¥Â√ö‹ë≈!“ Ì∞:y›Õ
+›…………>2 øÕ-È˛ (:”ÔO:ÏÔπ()ÕÌÿÈ:”ÔO:ÏÔπ !ÿÔÀF(ÀŒß…ÕÌÿ:”ÔO:ÏÔπ(¡Õ-Èø: øG˝Gæ(:”ÔO:ÏÔπÃÌ¢:ø∏(! ø4«ÕÌÿ!”Ô:ÏÔæ("Õ-È˛ (˛:(˛;(˛?(˛.(˛,(˛!(√˚Ÿ√<Ìó2Bø!”Ô:ÔÔ=æ Õ<ÌÕ-È˛ (ˆÕÌ2ÕÌÕ-È˛!(˛:(˛;(˛?(˛.(˛,(	˛ (≈Õ<Ì2Bø6 πÕËÿÕ<Ì!”Ô:ÏÔæ(Õ-È˛  ÌÕËÿÕÌ:ÏÔ2”ÔÕ-ÈÎ  !"øÌ∞:Bø˛ (#:ÔÔ=2”ÔÕ-È˛  Õ<ÌÙÕÌÕ-È:Bøw:ÏÔ2”Ô√ÌÕGÌ0*⁄ÔÕ-È˛  Ô:ÔÔG> æ #˙ÕÌß…ÕÿÕ ÈÕ'È!ÿÔÀÜÀé:Bø˛ (√˚Ÿ!ÿÔÀÜÕ˚Ÿÿ!ÿÔÀN À∆Õó⁄0ß…Õ'ÈÁÀéÀF(ﬂÕ?€Õ√Ê‘Õ5Óó! Ã ¿ÄÌ∞!ÄÀÄ Ì∞Õ˝ËÕú (˚Õû ˛  È˛» >‰ÏÕc‰Õ5Ó>@2···…!ÿÔ˝Ë À^ Àﬁ!‹Ì∞Õ!‘>Àû!‹Ì∞>Õ∏ﬁ…√c‰√©ÿ√U◊G:ÿÔÀ_x(À?É_…É_:ÎÔG{ê_…:ÿÔÀ_ 	Õv÷ÕB÷√5◊ä‹!M◊:”ÔÀG(~Ê#¯~ÊÓ#ˆ:ﬁÔ˛å(~Ê#¯~ÊÓ#ˆÕv÷!ä‹√5◊    ˇ˝˝≈!? Â@Û:XÛ”®~ı:YÛ”®Ò˚+˛  ÍÛ:XÛ”®ı:YÛ”®Ò˚Â≈ÕÏ‹¡·Á—·@ ßÌBDMx± ÊŸÕ®‚ÿÕÏ◊Æ˛Ä“›÷ !”O 			~˛ˇ»~Õ
+›#ı…ıÕ®  ›ÒÕ• …Â≈÷Äáá!7›O 	~˛ˇ(
+ÕU’~Õ
+›#Ò¡·…W ˇWˇˇˇˇˇˇˇ- ˇ-ˇ5ˇˇ4ˇˇFˇˇEˇˇHˇˇGˇˇPˇˇMˇˇp ˇpˇˇ 
+:”ÔO:ÔÔ=ë(ÿOÕ-ÈT]#Ì∞+6 √˝ËÕ-ÈˆCURAD	PUSH	HLÅ	LD	H,0Ç	LD	A,(Y_POSN)É	LD	L,AÑ	LD	B,8ÖCU1	ADD	HL,HLÜ	DJNZ	CU1á	LD	DE,0ˇÅÅÅÅÅÅˇ        ˇˇˇˇ        ˇˇˇˇ    ˇˇˇˇ    ˇˇˇˇˇˇˇˇˇˇˇˇˇˇˇˇˇˇˇˇ<<<<<<<<ˇˇ    ˇˇ~~````~~~~~~:ÏÔ2”Ô…:”ÔG:ÔÔ=êÿ:ÏÔOxë…!   >¸ÕM #z≥ ı!ü—rÔ? Ì∞…B	Lö	POP	HLõ	JP	CU2ú*HMESSTF    TOP O                                                                                                         
+                                                                                                                                               
+     
+	                        						       ˛      Õú »Õü ˛¿7…:ÏÔ<G:”Ô∏0√∞Î:”Ô<2ÔÔÕc‰√™‘ ‡x± ˚!“ÔÀF(ÕôÈ!ÿÔÀ^Ã‰€Õ˚÷"DM………  D˝! ¿>  w#¸ ˜…Õ˚÷>@_óWGOÌR0˚}2”Ô:Ô=_óW`iÌR8>}!  "÷Ô"ÒÔ2‘Ô*”Ô"ËÔ√ È!O„√4Î¶Ÿ=’œ‚¥‚%◊-‰!‰ÄÂ	]Ó
+ıÈÂ/Ê—Ì§’’€Û‚ù’Ë∞Î‰€√ÂK’‰ö„ì“óÕ5ÓÕ˘‚!ÿÔÀæÀ^ À˛Õ‰€ÕrÍ À˛#˚!,“Œ≈  Ì∞¬Ì∞ñ¬Ì∞√	Ì∞Õ˝ËÕú (˚Õü ˛y(˛n Õ»ŸÕ È>Y2ù¬Õ˝ËÕÿ÷Õ˘‚Õc‰ÕBÈ:ÿÔÀƒ‰€…!“ÔÀV(ÀñÀ÷√c‰.ÂÕΩÏ·ÿ- ˜….ÂÕ‰Ï·ÿ  - ı…Õ5Óó! ∆ ¿ Ì∞Õ˝ËÕú (˚Õû ˛(˛» ™€Ì√ È!“ÔÀ¶… ˇZÀf 
+ÀÊÎÀ˛+˚Î…À¶ÎÀæ+˚Î…Õ-ÈÂ*”ÔÂÕÉŸÕ-È—ÌS”Ô—H> +æ ˚:ÏÔG:ÔÔ=êπÿ y#Ì∞G +q¸G:ÏÔÄ2”Ô…Õßﬁÿ:”Ô2·ÔO:ÔÔ=2”Ôë»OÕ-È> æ T]+Ì∏:·Ô2”Ô¿Õ-È6 …Õßﬁÿ:”Ô2·ÔO:ÏÔGyê»Ox2”ÔÕ-È˛  T]#Ì∞√Â‰Õßﬁÿ:ÏÔ2”ÔÕ-ÈH:ÔÔG> æ #˘H:ÔÔ=2”ÔÕ-ÈP> æ +˘zπ(0<π(,Y:ÔÔ=Ozª˙jÂy2”ÔÕ-ÈT]+Ì∏:ÏÔ2”ÔÕ-ÈT]#Ì∞> õ√†ÌÕßﬁ:”ÔO:ÔÔ8=ë=ë8:ÏÔë=>?ë(OÕ-ÈT]#Ì∞+6 √<ÌÕ-Èˆ!{›nóΩ»> Õ
+›-ı:”Ô2ÂÔ:ÔÔ=O2”ÔÕ-È:ÏÔGyêG> æ +˘y2ÊÔ:ÏÔ=2”ÔÕ%Ê(˚:”ÔO:ÊÔπ :ÂÔ2”Ô…Õ%Ê ÍÕ%Ê ÂÕÄÂ:”Ô!ÊÔ5G+~∏8Î5Ë!”Ô4Õ-È˛ …Û€®ı:XÛ”®!”Ôów#~G:Ô=ê(_ógoW>@G˝ÂÕ-ÈT]>@O	¡Ì∞*ﬂÔÌ[÷ÔßÌR(8+>@GT]!  ˝"ÁÔÕNÏT]>@O ßÌBÎÌKÁÔÌ∞!¿@+6 ˚Ò”®˚:ÏÔ2”Ô…*”ÔÂó2”Ô:Ô=2‘ÔÕ-È>@G6 #˚·"”ÔÀÕ˝Ë:‘ÔG:Ô=∏Ã‰ÏÿÕ√Â:ÊÔ<<2”ÔG:ÔÔê0ó2‰ÔÕ-È"ÂÔÕ†ÌÕ-È> æ» #æ ˚ßÌB:‰Ôπ0Õ‡ËµÌ[ÂÔÌ∞Õ-È> æ(w#˘:ÔÔ=2”Ô2‰ÔÕÚ‰:‰Ô= Ù:ÏÔ2”ÔÕ-È˛ Ã/ÊÕGÌ√√Ê:‘ÔG:Ô=∏ Õ‰ÏÿÛ€®ı:XÛ”®*ﬂÔÌ[÷ÔßÌR -*”ÔÂó2”Ô*ÔÔ|=2‘ÔÕ-È—ÌS”Ô@> æ #˙HÛÒ”®˚ÕsÌ…’ÕwÏ*ﬂÔ:Ô=O 	"÷ÔÕÈ—ÌS÷Ô>@GO> æ ‘#˙+ÂßÌBÂ*ﬂÔßÌRÎ`hA˝Â¡·—Ì∏*”ÔÂ:Ô=Oî_ bj>@G˝ÂAO=2”Ôx2‘ÔÕ-ÈÂßÌB—¡Ì∏·"”ÔßÛÒ”®˚…:”Ô˛ (Õßﬁÿ #:”Ô2;Ëó2”ÔÕGÁ8Õ-È@> w#¸:;Ë2”Ô… Õ-È> æ (Õ√ÂÕ-È> æ(!”Ô4ÕGÁ0Õ‡Ë7…!‘Ô4>@ıÕÄÂÒ= ¯…Õ√Â*”ÔÂ:ÔÔ=2”ÔÕ-È˛ ·"”Ô(?óO!”Ô5:ÏÔæ(Õ-È˛  Ó≈ÕË¡ÿ!‘Ô4!”Ô4:ÔÔ=æ»Õ-È˛  Ô≈ÕË¡ÿ:ÏÔÅ2”ÔÕ√‰ß…Õ5Ó!  "÷Ô:ÏÔ2”ÔØ2‘Ô√ È:ÿÔÀg¿:”Ô2‚Ô!‘Ô5ÕıÈ!‘Ô4:‚Ô+w…√U◊ÕÈÛ€®ı:XÛ”® ¿ÄÌ∞Ò”®˚…*÷Ô)˝Ì[⁄Ô…Õ√ÿ√˝ËóW! ¿:”Ô_@:‘Ô_˝~…ÕÉÓÕÙ“!!“Ôów#¸>2”ÔÕÏ>å2ﬁÔÕ‰€Õc‰!È"ﬂÔ!ÔÔ6<#6!ÌÔ6!@ "⁄ÔÕ»Ÿó√πŸ*‹Ô ßÌB"‹Ô–!“ÔÀF(ÀÜ!M◊Õv÷√5◊À∆Õv÷!M◊ÕA◊√-‹ÕBÈÕ ÈóÕ'ÈÕÖÈÕ∑ ⁄œ‚!Î˚ÀV OÓÕú (ÍÕü ˛ú >`ıÕ¿ Ò!  "‹ÔOÕ¶È!“ÔÀÜyÕÆÍ√!ÿÔÀæ√Q÷Õ-ÈA:ÏÔO> æ #˘…y2·Ô:ÔÔ=O:ÔÔ=2”ÔÕ-È˛ ¿y2”ÔÕ-È> æ +˘Ì[‡Ô æ(	zπ(#x+Ù:ÔÔ=2”ÔÕ-È:ÔÔ=ëQOzT]+Ì∏!ÿÔÀ˛≤!ÿÔÀ~»:ÔÔ=O≥!¿Z >8w#¸…!éÍæ(##˘…#~…1Ä2Ç3Ñ4Ü5à6ä7å8é#Ö$á!Å%â*è^ã&ç@É!“ÔÀnƒ~Í˛ 0˛⁄G„!¯Í√4Î˛†8!(Î√4Î˛ ÀÍ!“ÔÀ~(
+˛{0˛a8÷ √ÑÌÕÌ⁄
+„Õßﬁ8ı…GÌÌ<ÌÌ Ë
+„Ú‰√‰‰ÏΩÏÉŸ∫“GÌÌ<ÌÌ»;‰…ñÎ √Ê|›Î!“ÔÀ^¬*ÓÎÂ!Î˚ÀFÃnÎÀNÃÇÎ·æ(###¯…#~2lÎ#~2mÎ!Î¯Í Ì∞√Ìı≈’Â !Î¯ÍÌ∞·—¡Ò…ı≈’Â !Î¯ÍÌ∞·—¡Ò…!“ÔÀn(ÀÆ…ÀÓ…!“ÔÀ~(Àæ…À˛…>ÕºŸ><√∆‚…Õb √uÍË>0ßÌB˙œÎ<˜	>Ëπ d Ë>dπ 
+ﬂ>
+π ÷Î++++>0æ 6 #¯…!ê“6f#6f!ê“6n#6ëÕŸŸ√c‰z2“Ô{2ÿÔ!ˇ"⁄Ô…Õ∞ÎÕc‰Õa€‹
+„…ÕÈÛ€®ı:XÛ”®Î! ¿@ Ì∞Ò”®˚…ÕÈÛ€®ı:XÛ”®Ä@≈@ Ì∞Ò”®˚… ¿!@¿@Ì∞…ÕÈÛ€®ı:XÛ”®@Î!@≈@ Ì∞Ò”®˚…ÕÈÛ€®ı:XÛ”®@ ßÌB ¿Ì∞Ò”®˚…≈!?≈@Ì∏…Ì[÷ÔßÌbÌR √•÷ÕwÏÕ±ÏÕïÏ*÷Ô+"÷Ô!‘Ô>æ»4…Ì[÷Ô*ﬂÔßÌR √∂÷Õ4ÏÕkÏÕNÏ*÷Ô#"÷Ô:‘Ô˛ »=2‘Ô…!”Ô>?æ(4…6!‘Ô4>æ¿Õ‰Ï–:ÔÔ!”Ôw#>w!“ÔÀû>å2ﬁÔ…!”Ôóæ(6?!‘Ô5>ˇæ¿6 ÕΩÏ!‘Ô6 –+:ÏÔw…5ß…!Ä≈@6 #˚…Õ˝Ë7…ÕcÌ	 õ≈!Ä—Ì∞√nÌOÕ-Èq!“ÔÀ^¬ÈÌ!”Ô4:ÔÔæ ¶Ì>@æ¿!”Ô√Ì!“ÔÀV $Àﬁ>è2ﬁÔ> π ó!›Ìyæ(#˙>>2‚ÔÕ†Ì!ÿÔÀnƒË…!,.:;?:\˛q…> π(#!„Ôq+>æ(=æ(ÕÜ‰Õ‡ËÕ-È:„Ôw!”Ô4:‚Ô˛ (
+˛ >2‚Ô…Õ‡Ë!”Ô6>å2ﬁÔ!“ÔÀû…ÕÈÛ€®ı:XÛ”® ¿ÎÄÌ∞Ò”®˚…ÕñÎ! %|µ ∏È+¯:”Ô<G:˜ÔO∏(“pÓÅ√fÓ=2”Ô˛>»ÿ:ÏÔ2”Ô√Ì ¿Û:XÛ”®!ØÓ 8 Ì∞:YÛ”®˚…Ûı€®ı:YÛ”®Õ8 ÛÒ”®Ò˚…√õÓÛ€®2YÛ2XÛ>¸!   Ê∞”®ı>™Ow~π ’ˇ?—w~π(xÉG∫(Ò√»ÓÒ>ˇ2-Û:YÛ”®˚…:XÛO°OÒ±2XÛ{˛(>Û:XÛ! @ √»Ó> 2-Û:YÛ”®˚…XÒ:ÑÒ”®˚…    ÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑ        âLine   8êCol  5êR/J on êW/W on êInsert offêF1 for helpà                                      Èà @ ·åÈn1¬@v   <› `≈          â=                                                                                                                                                                                                                                                                                                            :Û˛ PÚ:Û˛ (G≈ÕÕË¡≈Õ-‰¡˘:Û˛(Õ’÷ÕÕËÕÄÒ⁄˜ÚÕ»Ú:)ÛG≈ÕÚ¡⁄˜Ú≈Õ-‰¡ÒÕ5Ó> 2-Û…ÕÎÚÕ· ÿ!Û≈ÂÕ‰ ·¡ÿw#ÙÕÁ > ÕÛ !*Û>Tæ¬ÄÒ#>Aæ¬ÄÒ#>Sæ¬ÄÒ! ÛÛ˛ ("æ(!7Û
+ÕÚ! ÛÕÚ>Õ¢ √ÄÒ#‡Õ√ Õ¿ !.Û	ÕÚÕ¿ ! ÛÕÚ>Õ¢ Õ¿ ß…~Õ¢ #˘…Õ· ÿÄ! ¿≈ÂÕ‰ Õ‰ Õ‰ Õ‰ Õ‰ ·¡:ÛW≈’ÂÕ‰ ·—¡ÿÀB(æ(7…w#x±¬0ÚÕÁ ß…ÕBÈÕÕËÕpÚÕ»Ú:ÛG≈ÕòÚ¡⁄˜Ú≈Õ-‰¡Ò…ÕÎÚ!	ÛÂ≈>ˇÕÍ ¡·ÿ≈Â~ÕÌ ·¡ÿ#ÙÕ > ÕÛ ß…>ˇÕÍ ≈ØÕÌ ¡ÿ˜! ¿Ä≈Â~ÕÌ ·¡ÿ#x±¬ÆÚÕ > ÕÛ ß…:Û˛ (	:Û˛ (:(Û˛ (!ÙÙ Ì∞…!¸ÛÙ Ì∞…!AÛÕÚ>2-Û…                  TAS     TUTOR    TAS LOADING: SKIPPING: CTRL/STOP OR TAPE ERROR™†ˇ—]Øg…Õ[QÀ  ¶ﬁ∫Ã}t     TUTOR    TAS      ¶ﬁ∫Ã}t                         (C) 1984 Tasman Software                                                                                         Este  Tasword  MSX  Tutor  es  un  texto  pensado  para        familiarizarte con el uso de las teclas de control.                                                                                            USA LA TECLA HACIA ABAJO PARA                                        AVANZAR POR EL TEXTO                                                                                          Usualmente, pulsaras dos  teclas,  cuando  pulses  una        tecla de Control.  P.ej.:  ^F  Significa  que  mantienes        pulsada la tecla CTRL y pulsas a su  vez,  la  tecla  F;        ~CURSOR ABAJO significa que debes  mantener  pulsada  la        tecla SHIFT y la flecha hacia abajo.                                                                                              La primera tecla que vamos a estudiar es ~CURSOR ABAJO        Esto te lleva hasta el final del texto. Pruebalo  ahora,        pulsando SHIFT y Cursor abajo.                                                                                                    Una tecla muy usual, con la que te evitas consultar el        manual, es la tecla F1, que te mostrara  una  pagina  de        ayuda. Con la tecla RETURN volveras al  menu.  Pulsa  F1        ahora.                                                         ¶ﬁ∫Ã}t                                                                          Hay dos paginas de ayuda. Pulsa F1 dos veces  para  ver        la segunda.                                                                                                                       La siguiente tecla es ^CURSOR ARRIBA.  Pulsala  ahora,        hasta que aparezca el mensaje de parar.                                                                                           Habras notado que ^CURSOR ARRIBA hace un  "scroll"  de        la pantalla subiendo el texto.                                                                                                    La funcion contraria es ^CURSOR ABAJO, mostrandote  el        texo hacia arriba.                                                                                                               Usa ^CURSOR ABAJO para subir  unas  pocas  lineas,  usa        ^CURSOR  ARRIBA,  para  bajar  las  lineas   hasta   que        aoparezca el mensaje de parar.                                                                                                    La tecla HOME, centra el texto,  en  la  mitad  de  la        pantalla. Vamos a practicar la tecla HOME con el mensaje        de parar. Pulsa ^CURSOR ARRIBA hasta ver el mensaje.                                                                              Usa  los  cursores  para  moverte  por  la  linea  del       ¶ﬁ∫Ã}t         mensaje, entonces pulsa HOME dos veces, y mira a ver que        sucede cada vez que  pulsas  la  tecla.  Despues,  sigue        leyendo el texto a continuacion.                                                                                                  P A R A R  DE  P U L S A R  ^CURSOR ARRIBA                      ------------------------------------------                                                                                      La tecla ~CURSOR DERECHA mueve el texto de la  derecha        del cursor, una posicion . La tecla   ~CURSOR  IZQUIERDA        mueve el texto situado a la izquierda  del  cursor,  una        posicion.  RECUERDA  QUE  REPRESENTA  LA  TECLA   SHIFT.                                                                                                                                                 POR QUE NO PRUEBAS CON ESTA LINEA?.                                                                                      Estudia  con  atencion  lo  expuesto  en  el   parrafo        anterior. Mueve la linea superior con ~CURSOR  DEREHA  y        ~CURSOR IZQUIERDA de un lado a otro de  la  pantalla.  A        continuacion continua con el siguiente parrafo.                                                                                   La tecla CAPS, pone el teclado en mayusculas cuando la        pulsas, y el mensaje CAPS  LOCK,  aparece  en  la  linea       ¶ﬁ∫Ã}t         inferior de la pantalla, indicando que esta  pulsada,  y        todas las letras que escribas apareceran en  mayusculas.        Tambien puedes escribir letras  mayusculas  pulsando  la        tecla SHIFT y la letra en cuestion. Para volver a letras        minusculas, vuelve a pulsar la tecla CAPS.                                                                                        ^CURSOR IZQUIERDA y ^CURSOR DERECHA mueven  el  cursor        una palabra a la izquieda o derecha. Descubre una rapida        manera de mover el cursor a lo largo de la linea.                                                                                 La tecla GRAPH la utilizaras para introducir  graficos        con los numeros del teclado. Prueba a  escribir  algunos        graficos en la linea de abajo, pulsando la tecla GRAPH.                                                                           Tambien aparecera un mensaje en la parte  inferior  de        la pantalla, indicando que te hallas en ese modo.                 Hay dos simbolos en cada tecla numerica 1-8.                                                                                             1,2,3,4,5,6,7,8  y  ~1,~2,~3,~4,~5,~6,~7,~8           que son:  Ä,Ç,Ñ,Ü,à,ä,å,é  y   Å, É, Ö, á, â, ã, ç, è           Cuando utilizas el modo grafico.                                                                                              ¶ﬁ∫Ã}t         Pulsa GRAPH para volver al modo normal.                                                                                           Los simbolos graficos son usados para enviar  mensajes        a la impresora. Los simbolos  estan  inicializados,  tal        como aparecen en la pagina de ayuda, para  la  impresora        EPSON  FX-80.  Tu  puedes  redefinirlos  con  ayuda  del        manual.                                                                                                                           La forma mas facil de corregir un herror en una letra,        es usando las teclas del cursor, y  colocarse  sobre  el        caracter escrito erroneamente. Haz esto con la falta  de        ortografia que aparece en este parrafo.                                                                                           La tecla BS es  utilizada  para   borrar   caracteres,        recuperando el espacio borrado. El caracter borrado sera        el que se encuentre  bajo el cursor.  XYZXYZ.  Usa  esta        tecla para borrar los  carateres  no  deseados  de  este        parrafo.                                                                                                                          La tecla DEL, tambien permite borrar caracteres,  pero        manteniemdo  el cursor en su posicion. XYZXYZ. Borra las        letras erronea de este parrafo.                                ¶ﬁ∫Ã}t                                                                           Si tu has usado DEL y BS para  borrar  XYZXYZ  de  los        parrafos  anteriores,  entonces los habras  descolocado,        ahora debes volver a justificar el texto.                                                                                         Este es      un parrafo que                                   ha sido cambiado               y desolocado.                    Coloca l cursor en la       primera        linea de este        parrafo, pulsa F2      y a ver que pasa.                        F2 justifica las lineas     contenidas  desde         la        posicion del cursor hasta el                                    fin de parrafo.                                                                                                                   Esta linea no deberia estar aqui.                                                                                               La tecla F3 borra la linea sobre la que  se  halle  el        cursor. Puedes probarlo con la  linea  superior  que  no        deberia estar hay.                                                                                                                La tecla INS se  usa  para  insertar  texto,  de  tres        maneras diferentes:                                                                                                            ¶ﬁ∫Ã}t         (1)   Para  insertar  una  linea  en   blanco,                      coloca el cursor al principio de la  linea                      que desees quede  debajo.  Entonces  pulsa                      INS.                                                                                                                        (2)   Para  insertar  una  palabra  entre  dos                      palabras, pon  el  cursor  en  el  espacio                      intermedio y pulsa INS.                                                                                                     (3)   Para insertar un caracter en el interior                      de una palabra, coloca el cursor sobre  el                      caracter a al derecha del nuevo,  y  pulsa                      INS.                                                                                                                          INS  estropea  la  justificacion  de   los   parrafos.        Recuerda que puedes arreglarlo usando F2. Prueba a  usar        INS en este parrafo,  insertando  algunos  caracteres  o        palabras, despues coloca el cursor en la primera  linea,        y pulsa F2 para volver a  justificar  los  margenes  del        parrafo.                                                                                                                         La tecla ^STOP, se usa  fundamentalmente  para  grabar,       ¶ﬁ∫Ã}t         cargar, o imprimir un texto. Pulsando ^STOP, Tasword  te        mostrara un menu  con  estas  y  otras  opciones.  ^STOP        tambien  te  permite  definir  simbolos  graficos   como        caracteres  de  control  de  la   impresora,  y  adaptar        Tasword a tu impresora.                                                                                                           Ademas de mover una linea,  puedes  tambien  hacer  un        "Escroll rapido arriba o abajo en  el  texto.  La  tecla        ^G hace que el texto suba y  la  tecla  ^F  que  baje.                                                                             "Escroll rapido" quiere decir  que  puedes  mover  22        lineas enteras. Esto generalmente se usa para  encontrar        rapidamente una  parte  del  texto  o  para  una  rapida        revision. Intenta ahora volver hacia  atras  usando  "G"        unas pocas pantallas y despues ^F ,para volver aqui.                                                                               La tecla ^J  justifica la linea en  la  que  esta  el        cursor. Mira su significado, USE DEL o BS  para  cambiar        la pregunto hecha en la linea de abajo y entonces  pulse        ^J.                                                             ********  *********(  ***(  ??????????  **********  ****                                                                       ¶ﬁ∫Ã}t           La tecla ^U  tiene el efecto contrario,  no  justifica        la linea en la que esta  el  cursor.  Observa  que  esto        ocurre por  no  haber  justificado  la  linea  superior.                                                                                                                                          El  texto  en  este  Tasword   MSX   Tutor   ha   sido        justificado al copiarlo. Puedes anular la justificacion         usando la tecla ^E.Hazlo ahora y veras que el mensaje           R/J a cambiado.Cuando R/J esta en off,el texto que              escriba no sera justificado hasta que no complete cada          linea - su texto se ira recortando segun aparezca.                                                                                Sera facil cambiar el texto que ya tiene escrito desde        uno hasta el otro. Vea si puede cambiar este parrafo            recortandolo con el mensaje R/J en off, moviendo el             cursor dentro de la primera linea, y usando la tecla F2         de control para reformarlo. Entonces  ? puede volver a          cambiar el parrfo para justificarlo otra vez ?. Use la          tecla ^E para poner R/J de nuevo en on.                                                                                           La  tecla  de  control  ^W  altera  la  indivision  de        palabras de off a on. El mensaje W/W muestra el  estado        ¶ﬁ∫Ã}t         actual. Si dicha indivion esta en off, las palabras  que        sobrepasen el final de la linea no seran automaticamente        transferidas al pricipio de la linea siguiente.                                                                                   La tecla ^Z se utiliza para alterar el MODO INSERT  on        y off. El mensaje Insert muestra su estado actual.  Este        modo es usado frecuentemente cuando se  quiere  escribir        algunas lineas de texto dentro de otras  ya  existentes.        Cuando se halla en on,se crea una nueva linea en la  que        se escribira hasta completarla, y despues pulsar RETURN.                                                                          Intenta volviendo al modo Insert on introducir algunas        lineas en el  espacio  que  queda  entre  este  parrafo.        Cuando halla acabado,asegurese de  que  el  modo  Insert        esta en off y pulse F3 para borrar  las  lineas  que  ha        escrito.                                                                                                                          La tecla ^T abre y cierra ventanas de 32 caracteres de        ancho en el texto. Intentalo ahora moviendo las  flechas        del cursor para mover la ventana. Con ella abierta puede        ver todas las letras pero no la linea en su totalidad.                                                                         ¶ﬁ∫Ã}t           Las teclas ^A y ^D fijan los margenes de la  izquierda        y derecha  respectivamente  y  la  posicion  actual  del        cursor. El texto escrito con los margenes  fijados  sera        colocado normalmente entre ellos. Moviendo  las  flechas        del cursor, su posicion puede ser usada  dentro  de  los        margenes, escribir en ambos y fijar una nueva posicion.                                                                          Intentalo ahora fijandolos. Despues usa la tecla ^S  la        cual anula los margenes fijados por defecto. Estos  son:        izquierda-4 y derecha-61. Estos son los lados en los que        la pantalla de M.S.X empieza  normalmente  con  T.V.  Si        tiene  monitor  puede  cambiarlos  presionando  ^STOP  y        definiendolos nuevamente.                                                                                                                                                                         Puede encontrar o reponer un texto usando la tecla ^O.        El TASWORD  repondra  o  encontrara  desde  la  posicion        actual del cursor  hasta  el  lugar  corecto  que  elija        (generalmente   usando  ^CURSOR    ARRIBA    para     el        comienzo del fichero ), y  despues  ^O  para  reponer  o        encontrar.                                                                                                                     ¶ﬁ∫Ã}t                    Intenta ahora usando el sistema de  busqueda,        encontrar la palabra      " bueno ".                                                                                                       Usa ^CURSOR ARRIBA para ir al  principio  del        texto.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
